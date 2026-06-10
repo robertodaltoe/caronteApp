@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Orario globale{% endblock %}
+
+{% block extra_style %}
+<style>
+.orario-table {
+    border-collapse: collapse;
+    font-size: .78rem;
+    width: 100%;
+    table-layout: fixed;
+}
+.orario-table th, .orario-table td {
+    border: 1px solid #e5eaf0;
+    padding: 6px 10px;
+    text-align: center;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.orario-table thead th {
+    background: var(--blu);
+    color: white;
+    font-size: .75rem;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.orario-table thead th.ora-th {
+    width: 140px;
+    min-width: 140px;
+    text-align: center;
+}
+.orario-table td.classe-cell {
+    position: sticky;
+    left: 0;
+    background: #f0f4f8;
+    font-size: .88rem;
+    white-space: nowrap;
+    z-index: 1;
+    border-right: 2px solid #d1d5db;
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
+}
+.orario-table thead th.classe-col {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #1e3a5c;
+    width: 76px;
+    min-width: 76px;
+}
+.orario-table tbody tr:nth-child(even) td { background: #f8fafc; }
+.orario-table tbody tr:hover td { background: #eff6ff; }
+.orario-table td.ora-cell {
+    font-weight: 800;
+    color: var(--grigio);
+    background: #f0f4f8 !important;
+    font-size: .8rem;
+}
+.cell-doc  { font-weight: 700; color: var(--blu); font-size: .82rem; }
+.cell-mat  { color: var(--grigio); font-size: .73rem; font-style: italic; }
+.cell-pot  { color: #7c3aed; font-size: .72rem; }
+.cell-vuota { color: #d1d5db; font-size: .8rem; }
+
+/* TAB GIORNI */
+.tab-giorni {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.tab-giorno {
+    padding: 7px 18px; border-radius: 8px;
+    font-size: .88rem; font-weight: 700;
+    cursor: pointer; text-decoration: none;
+    border: 2px solid #e5eaf0;
+    color: var(--blu); background: white;
+    transition: all .12s;
+}
+.tab-giorno:hover  { border-color: var(--blu); background: #eff6ff; }
+.tab-giorno.attivo { background: var(--blu); color: white; border-color: var(--blu); }
+
+.orario-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #e5eaf0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">📅 Orario globale istituto</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            {{ classi|length }} classi · {{ ore_list|length }} ore ·
+            <strong>{{ giorni_nomi[giorno_sel] }}</strong>
+        </p>
+    </div>
+    <a href="{{ url_for('sync.index') }}" class="btn btn-primary btn-sm">⚙ Gestione orario</a>
+</div>
+
+<!-- TAB GIORNI -->
+<div class="tab-giorni">
+    {% for g in giorni_con_orario %}
+    <a href="?giorno={{ g }}"
+       class="tab-giorno {{ 'attivo' if g == giorno_sel else '' }}">
+        {{ giorni_nomi[g] }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- TABELLA — ore in colonna (prima col), classi in riga -->
+<div class="orario-wrap">
+<table class="orario-table">
+    <thead>
+        <tr>
+            <th class="classe-col">Classe</th>
+            {% for ora in ore_list %}
+            <th class="ora-th">{{ ora }}ª</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+    {% for classe in classi %}
+    <tr>
+        <td class="classe-cell">
+            <a href="#" onclick="apriOrarioClasse('{{ classe }}', {{ giorno_sel }}); return false;"
+               style="color:var(--blu); text-decoration:none; font-weight:700;">{{ classe }}</a>
+        </td>
+        {% for ora in ore_list %}
+        {% set slots = griglia.get(classe, {}).get(ora, []) %}
+        {% set slot = slots[0] if slots else none %}
+        <td>
+            {% if slot %}
+                {% if slot.tipo_ora == 'potenziamento' %}
+                    <div class="cell-pot">POT</div>
+                {% elif slot.tipo_ora == 'lezione' and slot.id_docente %}
+                    {% set doc = docenti_map.get(slot.id_docente) %}
+                    {% if doc %}
+                    <div class="cell-doc">{{ doc.cognome[:11] }}</div>
+                    {% if slot.materia %}
+                    <div class="cell-mat">{{ slot.materia[:14] }}</div>
+                    {% endif %}
+                    {% set nomi_extra = [] %}
+                    {% for extra in slots[1:] %}
+                    {% set doc2 = docenti_map.get(extra.id_docente) %}
+                    {% if doc2 and doc2.cognome != doc.cognome and doc2.cognome not in nomi_extra %}
+                    {% set _ = nomi_extra.append(doc2.cognome) %}
+                    <div style="font-size:.68rem; color:#7c3aed; font-weight:600;">+ {{ doc2.cognome[:10] }}</div>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                {% else %}
+                    <span class="cell-vuota">—</span>
+                {% endif %}
+            {% else %}
+                <span class="cell-vuota">·</span>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+
+<!-- MODAL ORARIO CLASSE -->
+<div id="modal-orario" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
+     z-index:300; align-items:center; justify-content:center;" onclick="if(event.target===this)chiudiModal()">
+    <div style="background:white; border-radius:14px; padding:24px; width:500px;
+                max-width:95vw; max-height:85vh; overflow-y:auto;
+                box-shadow:0 20px 60px rgba(0,0,0,.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 id="modal-titolo" style="font-size:1.1rem; font-weight:800; color:var(--blu);"></h3>
+            <button onclick="chiudiModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;">&times;</button>
+        </div>
+        <div id="modal-corpo"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+// Dati orario pre-caricati per ogni classe
+const ORARIO_DATI = {};
+{% for classe in classi %}
+ORARIO_DATI["{{ classe }}"] = {
+    {% for ora in ore_list %}
+    {% set slot = griglia.get(classe, {}).get(ora) %}
+    {% set slots_js = griglia.get(classe, {}).get(ora, []) %}
+    {% set slot_js = slots_js[0] if slots_js else none %}
+    "{{ ora }}": {% if slot_js and slot_js.tipo_ora == "lezione" and slot_js.id_docente %}{% set doc = docenti_map.get(slot_js.id_docente) %}{"doc":"{{ doc.cognome if doc else '' }}","mat":"{{ (slot_js.materia or '')|replace('"',' ') }}","tipo":"lezione"}{% elif slot_js and slot_js.tipo_ora == "potenziamento" %}{"doc":"Potenziamento","mat":"","tipo":"potenziamento"}{% else %}null{% endif %},
+    {% endfor %}
+};
+{% endfor %}
+
+const GIORNI_NOMI = {{ giorni_nomi | tojson }};
+const ORE_FASCE = {"1":"7:45-8:40","2":"8:40-9:35","3":"9:35-10:40","4":"10:40-11:30","5":"11:30-12:25","6":"12:25-13:25","7":"13:25-14:25","8":"14:25-15:25","9":"15:25-16:25"};
+
+function apriOrarioClasse(classe, giorno) {
+    const dati = ORARIO_DATI[classe] || {};
+    document.getElementById("modal-titolo").textContent = classe + " — " + (GIORNI_NOMI[giorno] || "");
+
+    const ore = Object.keys(dati).map(Number).sort((a,b)=>a-b);
+    let rows = "";
+    ore.forEach((ora, i) => {
+        const s = dati[ora];
+        const bg = i%2===0 ? "#f8fafc" : "white";
+        const fascia = ORE_FASCE[String(ora)] || "";
+        if (!s) {
+            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#d1d5db;">'+ora+'ª</td><td colspan="2" style="padding:8px;color:#d1d5db;">—</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
+        } else if (s.tipo === "potenziamento") {
+            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#7c3aed;">'+ora+'ª</td><td colspan="2" style="padding:8px;color:#7c3aed;font-style:italic;">Potenziamento</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
+        } else {
+            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#6b7280;">'+ora+'ª</td><td style="padding:8px;font-weight:700;color:#0a1f35;">'+s.doc+'</td><td style="padding:8px;color:#6b7280;font-style:italic;font-size:.85rem;">'+s.mat+'</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
+        }
+    });
+
+    document.getElementById("modal-corpo").innerHTML =
+        '<table style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr>' +
+        '<th style="background:#0a1f35;color:white;padding:8px 12px;text-align:center;width:50px;">Ora</th>' +
+        '<th style="background:#0a1f35;color:white;padding:8px 12px;text-align:left;">Docente</th>' +
+        '<th style="background:#0a1f35;color:white;padding:8px 12px;text-align:left;">Materia</th>' +
+        '<th style="background:#0a1f35;color:white;padding:8px 12px;text-align:left;width:110px;">Fascia</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>';
+
+    document.getElementById("modal-orario").style.display = "flex";
+}
+
+function chiudiModal() {
+    document.getElementById("modal-orario").style.display = "none";
+}
+document.addEventListener("keydown", e => { if(e.key==="Escape") chiudiModal(); });
+</script>
+{% endblock %}

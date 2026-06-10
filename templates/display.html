@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="30">
+    <title>Supplenze — {{ data_sel.strftime('%d/%m/%Y') }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --font:       'Open Sans', 'Segoe UI', Arial, sans-serif;
+            --blu:        #0a1f35;
+            --blu-header: #0f2d4a;
+            --blu-line:   #1e5080;
+            --verde-acc:  #00c94a;
+            --rosso-acc:  #ff3333;
+            --giallo-acc: #ffe033;
+            --viola-acc:  #c084fc;
+            --azzurro:    #60a5fa;
+            --grigio:     rgba(255,255,255,.38);
+            --bg:         #07111e;
+        }
+        html, body { min-height:100%; background:var(--bg); color:white; font-family:var(--font); -webkit-font-smoothing:antialiased; }
+
+        header { background:var(--blu-header); border-bottom:3px solid var(--blu-line); padding:10px 40px; min-height:76px; display:flex; align-items:center; justify-content:space-between; }
+        .header-left .scuola { font-size:1.2rem; font-weight:700; }
+        .header-left .sotto  { font-size:.82rem; color:var(--grigio); margin-top:3px; }
+        .orologio { font-size:2.8rem; font-weight:800; letter-spacing:3px; font-variant-numeric:tabular-nums; }
+        .data-it  { font-size:.85rem; color:var(--grigio); margin-top:2px; text-align:right; text-transform:capitalize; }
+
+        .banner { background:linear-gradient(90deg,#0f2d4a,#1a4a7a); padding:10px 40px; font-size:.85rem; font-weight:600; color:var(--grigio); border-bottom:1px solid rgba(255,255,255,.07); display:flex; justify-content:space-between; align-items:center; }
+        .banner strong { color:white; }
+        .nav-date { display:flex; gap:6px; align-items:center; }
+        .nav-btn { padding:4px 10px; border-radius:6px; background:rgba(255,255,255,.12); color:white; text-decoration:none; font-size:.9rem; font-weight:700; }
+        .nav-btn:hover { background:rgba(255,255,255,.22); }
+        input[type=date].nav-date-inp { padding:4px 8px; border-radius:6px; border:none; background:rgba(255,255,255,.12); color:white; font-family:var(--font); font-size:.82rem; cursor:pointer; }
+
+        .sezione-ora { padding:18px 40px 6px; }
+        .ora-header { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+        .ora-num { width:54px; height:54px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); flex-shrink:0; }
+        .ora-num.corrente { background:rgba(255,224,51,.18); color:var(--giallo-acc); border-color:rgba(255,224,51,.4); box-shadow:0 0 14px rgba(255,224,51,.2); }
+        .ora-fascia { font-size:1.1rem; color:var(--grigio); }
+        .adesso-label { font-size:.65rem; font-weight:800; color:var(--giallo-acc); text-transform:uppercase; letter-spacing:.5px; background:rgba(255,224,51,.12); padding:2px 8px; border-radius:10px; display:none; }
+        .ora-corrente-row .adesso-label { display:inline-block; }
+
+        .box-row { display:flex; flex-wrap:wrap; gap:12px; padding-bottom:18px; }
+        .box { flex: 1 1 210px; min-width: 190px; max-width: 360px; min-height: 116px; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:3px; border-left:4px solid transparent; transition:transform .12s; }
+        .box:hover { transform:translateY(-2px); }
+
+        .box.assegnata        { background:rgba(0,201,74,.10);  border-left-color:rgba(0,201,74,.45); }
+        .box.scoperta         { background:rgba(255,51,51,.12); border-left-color:rgba(255,51,51,.45); }
+        .box.non_assegnabile  { background:rgba(120,80,200,.12);border-left-color:rgba(120,80,200,.45); }
+        .box.ora-corrente.assegnata      { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
+        .box.ora-corrente.scoperta       { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
+        .box.ora-corrente.non_assegnabile{ background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
+
+        .box-classe { font-size:1.7rem; font-weight:800; line-height:1; }
+        .assegnata       .box-classe { color:white; }
+        .scoperta        .box-classe { color:var(--rosso-acc); }
+        .non_assegnabile .box-classe { color:var(--viola-acc); }
+
+        .box-materia { font-size:1.1rem; color:var(--grigio); font-style:italic; }
+
+        .box-sost { font-size:1.3rem; font-weight:700; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .assegnata       .box-sost { color:var(--verde-acc); }
+        .scoperta        .box-sost { color:var(--rosso-acc); }
+        .non_assegnabile .box-sost { color:var(--viola-acc); font-size:.9rem; }
+
+        .box-aula { font-size:.92rem; color:rgba(255,255,255,.9); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .box-aula.override { color:var(--giallo-acc); opacity:.8; }
+
+        .tipo-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:10px; margin-top:3px; font-size:.82rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; width:fit-content; }
+        .tipo-recupero      { background:rgba(255,224,51,.12); color:var(--giallo-acc); border:1px solid rgba(255,224,51,.3); }
+        .tipo-pagamento     { background:rgba(255,120,60,.13); color:#ff9966;            border:1px solid rgba(255,120,60,.3); }
+        .tipo-completamento { background:rgba(140,200,255,.1); color:#99ccff;            border:1px solid rgba(140,200,255,.2); }
+        .tipo-potenziamento { background:rgba(0,201,74,.13);   color:var(--verde-acc);   border:1px solid rgba(0,201,74,.3); }
+        .tipo-disposizione  { background:rgba(200,200,200,.08);color:#aaaaaa;            border:1px solid rgba(200,200,200,.2); }
+        .tipo-scambio       { background:rgba(96,165,250,.12); color:var(--azzurro);     border:1px solid rgba(96,165,250,.3); }
+
+        /* Box classe libera — ENTRA DOPO / ESCE PRIMA */
+        .box.classe-libera {
+            background: rgba(251,191,36,.10);
+            border-left-color: rgba(251,191,36,.5);
+            min-height: 80px;
+        }
+        .box.classe-libera.ora-corrente { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
+        .box-cl-label  { font-size:.72rem; font-weight:700; text-transform:uppercase;
+            letter-spacing:.5px; color:#fbbf24; opacity:.8; margin-bottom:2px; }
+        .box-cl-classe { font-size:1.7rem; font-weight:800; color:white; }
+        .box-cl-testo  { font-size:1.1rem; font-weight:700; color:#fbbf24; margin-top:3px; }
+        .box-cl-doc    { font-size:.82rem; color:rgba(255,255,255,.38); margin-top:2px; }
+
+        /* Box migrazione gruppo */
+        .box.migrazione {
+            background: rgba(96,165,250,.10);
+            border-left-color: rgba(96,165,250,.45);
+            min-height: 80px;
+        }
+        .box.migrazione.ora-corrente { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
+        .box-mig-label { font-size:.72rem; font-weight:700; text-transform:uppercase;
+            letter-spacing:.5px; color:var(--azzurro); opacity:.7; margin-bottom:2px; }
+        .box-mig-classi { font-size:1.5rem; font-weight:800; color:white; }
+        .box-mig-dest { font-size:1rem; color:var(--azzurro); font-weight:600; margin-top:2px; }
+        .box-mig-att { font-size:.8rem; color:var(--grigio); font-style:italic; margin-top:2px; }
+
+        .vuoto { display:flex; flex-direction:column; align-items:center; justify-content:center; height:calc(100vh - 180px); color:rgba(255,255,255,.2); gap:16px; }
+        .vuoto .icona { font-size:5rem; }
+        .vuoto p { font-size:1.5rem; font-weight:300; }
+
+        footer { position:fixed; bottom:0; left:0; right:0; background:rgba(10,31,53,.96); border-top:1px solid rgba(255,255,255,.07); padding:8px 40px; display:flex; justify-content:space-between; align-items:center; font-size:.72rem; color:rgba(255,255,255,.28); backdrop-filter:blur(8px); }
+        .divider { border:none; border-top:1px solid rgba(255,255,255,.05); margin:0 40px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <div class="scuola">IIS "Leonardo da Vinci" — Chiavenna</div>
+        <div class="sotto">Variazioni orario giornaliero — solo informazioni di servizio</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+        {%- set GIORNI_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'] -%}
+        {%- set MESI_IT   = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'] -%}
+        <div class="data-it" style="margin:0; text-align:right;">
+            {{ GIORNI_IT[data_sel.weekday()] }}<br>{{ data_sel.day }} {{ MESI_IT[data_sel.month] }} {{ data_sel.year }}
+        </div>
+        <div class="orologio" id="clock">--:--</div>
+    </div>
+</header>
+
+<div class="banner">
+    <div>
+        Supplenze del <strong>{{ data_sel.strftime('%d/%m/%Y') }}</strong>
+        &nbsp;·&nbsp;
+        {% set sup_v = supplenze | rejectattr('stato','eq','annullata') | list %}
+        {% set n_a = sup_v | selectattr('stato','eq','assegnata') | list | length %}
+        {% set n_s = sup_v | selectattr('stato','eq','scoperta')  | list | length %}
+        <strong style="color:var(--verde-acc);">{{ n_a }} assegnate</strong>
+        {% if n_s > 0 %}&nbsp;·&nbsp;<strong style="color:var(--rosso-acc);">{{ n_s }} scoperte</strong>{% endif %}
+    </div>
+    <div class="nav-date">
+        <a class="nav-btn" href="/display?data={{ (data_sel - timedelta(days=1)).isoformat() }}">‹</a>
+        <input type="date" class="nav-date-inp" id="nav-data" value="{{ data_sel.isoformat() }}">
+        <a class="nav-btn" href="/display?data={{ (data_sel + timedelta(days=1)).isoformat() }}">›</a>
+        <a class="nav-btn" href="/display" style="font-size:.8rem;font-weight:600;">Oggi</a>
+    </div>
+</div>
+
+{% set sup_visibili = supplenze | rejectattr('stato','eq','annullata') | list %}
+{% set orari = {1:'7:45–8:40',2:'8:40–9:35',3:'9:35–10:40',4:'10:40–11:30',5:'11:30–12:25',6:'12:25–13:25',7:'13:25–14:25',8:'14:25–15:25',9:'15:25–16:25'} %}
+{% set tipi_label = {'recupero':'Recupero','completamento':'Completamento','potenziamento':'Potenziamento','disposizione':'Disposizione','pagamento':'Pagamento','scambio':'Scambio ore'} %}
+
+{% if sup_visibili %}
+    {% set ore_usate = sup_visibili | map(attribute='ora') | unique | sort | list %}
+    {% for ora in ore_usate %}
+        {% set sups_ora = sup_visibili | selectattr('ora','eq',ora) | list %}
+        <div class="sezione-ora" data-ora="{{ ora }}">
+            <div class="ora-header">
+                <div class="ora-num" id="ora-num-{{ ora }}">{{ ora }}</div>
+                <div>
+                    <div style="font-size:1.2rem; font-weight:700;">{{ ora }}ª ora</div>
+                    <div class="ora-fascia">{{ orari.get(ora, '') }}</div>
+                </div>
+                <span class="adesso-label">▶ adesso</span>
+            </div>
+            <div class="box-row">
+                {% for s in sups_ora %}
+                    {# Materia dell'assente in quell'ora #}
+                    {% set mat_key = (s.id_assente, s.ora) %}
+                    {% set materia = slot_map.get(mat_key, '') %}
+                    {# Aula: prima override, poi standard #}
+                    {% set aula_ov  = override_map.get(s.id) %}
+                    {% set aula_std = aule_map.get(s.classe) %}
+                    {% set aula_info = aula_ov if aula_ov else aula_std %}
+                <div class="box {{ s.stato }}" data-ora="{{ s.ora }}">
+                    <div class="box-classe">{{ s.classe }}</div>
+                    {% if materia %}
+                    <div class="box-materia">{{ materia }}</div>
+                    {% endif %}
+                    <div class="box-sost">
+                        {% if s.stato == 'non_assegnabile' %}🚫 N/A
+                        {% elif s.sostituto %}
+                            {{- s.sostituto.cognome[:3] | upper -}}.{{- s.sostituto.nome[0] ~ '.' if s.sostituto.nome else '' }}
+                        {% else %}⚠ SCOPERTA{% endif %}
+                    </div>
+                    {% if aula_info %}
+                    <div class="box-aula {{ 'override' if aula_ov else '' }}">
+                        {% if aula_ov %}⚑ {% endif %}Aula {{ aula_info.aula }} · {{ aula_info.sede.replace(' - ', ' · ') }}
+                    </div>
+                    {% endif %}
+                    {% if s.stato == 'assegnata' %}
+                    {% set mat_sost_key = (s.id_sostituto, s.ora) %}
+                    {% set mat_sost = slot_map.get(mat_sost_key, '') %}
+                    {% if mat_sost %}
+                    <span class="tipo-badge tipo-{{ s.tipo }}">{{ mat_sost }}</span>
+                    {% elif s.sostituto and s.sostituto.materia %}
+                    <span class="tipo-badge tipo-{{ s.tipo }}">{{ s.sostituto.materia.split(',')[0].strip() }}</span>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {# Box classi libere per questa ora #}
+            {% set cl_ora = classi_libere | selectattr('ore') | list %}
+            {% set cl_questa_ora = [] %}
+            {% for cl in classi_libere %}{% if ora in cl.ore %}{% set _ = cl_questa_ora.append(cl) %}{% endif %}{% endfor %}
+            {% if cl_questa_ora %}
+            <div class="box-row" style="margin-top:-6px; padding-top:0;">
+                {% for cl in cl_questa_ora %}
+                <div class="box classe-libera" data-ora="{{ ora }}">
+                    <div class="box-cl-label">🚫 Classe libera</div>
+                    <div class="box-cl-classe">{{ cl.classe }}</div>
+                    <div class="box-cl-testo">{{ cl.testo }}</div>
+                    {% if cl.docente %}
+                    <div class="box-cl-doc">{{ cl.docente.cognome }}{% if cl.docente.nome %} {{ cl.docente.nome[0] }}.{% endif %}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {# Box migrazione gruppo per questa ora #}
+            {% set mig_ora = migrazione_per_ora.get(ora, []) %}
+            {% if mig_ora %}
+            <div class="box-row" style="margin-top:-6px; padding-top:0;">
+                {% for m in mig_ora %}
+                <div class="box migrazione" data-ora="{{ ora }}">
+                    <div class="box-mig-label">🔀 Gruppo in migrazione</div>
+                    <div class="box-mig-classi">{{ m.classe_orig }}</div>
+                    <div class="box-mig-dest">→ {{ m.classe_dest }}</div>
+                    {% if m.attivita %}
+                    <div class="box-mig-att">{{ m.attivita }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% if not loop.last %}<hr class="divider">{% endif %}
+    {% endfor %}
+{% else %}
+<div class="vuoto"><div class="icona">✅</div><p>Nessuna variazione per oggi</p></div>
+{% endif %}
+
+<footer>
+    <span>🔄 Aggiornamento ogni 30 secondi</span>
+    <span>I motivi delle assenze non sono visibili — solo informazioni di servizio</span>
+    <span id="last-update">—</span>
+</footer>
+
+<script>
+const FASCE=[{ora:1,s:[7,45],e:[8,40]},{ora:2,s:[8,40],e:[9,35]},{ora:3,s:[9,35],e:[10,40]},
+             {ora:4,s:[10,40],e:[11,30]},{ora:5,s:[11,30],e:[12,25]},{ora:6,s:[12,25],e:[13,25]},
+             {ora:7,s:[13,25],e:[14,25]},{ora:8,s:[14,25],e:[15,25]},{ora:9,s:[15,25],e:[16,25]}];
+function oraCorrente(now){const t=now.getHours()*60+now.getMinutes();for(const f of FASCE)if(t>=f.s[0]*60+f.s[1]&&t<f.e[0]*60+f.e[1])return f.ora;return null;}
+function tick(){
+    const now=new Date();
+    document.getElementById('clock').textContent=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('last-update').textContent='Ultimo aggiornamento: '+now.toLocaleTimeString('it-IT');
+    const ora=oraCorrente(now);
+    document.querySelectorAll('.sezione-ora').forEach(el=>{
+        const o=parseInt(el.dataset.ora), c=o===ora;
+        el.querySelector('.adesso-label').style.display=c?'inline-block':'none';
+        el.querySelector('.ora-num').classList.toggle('corrente',c);
+    });
+    document.querySelectorAll('.box[data-ora]').forEach(el=>{
+        el.classList.toggle('ora-corrente',parseInt(el.dataset.ora)===ora);
+    });
+}
+tick(); 
+// Scorrimento continuo: ogni 3 secondi avanza di una supplenza
+let _tickIdx = 0;
+function autoScroll() {
+    const cards = document.querySelectorAll('.sup-card');
+    if (cards.length <= 1) return;
+    _tickIdx = (_tickIdx + 1) % cards.length;
+    cards[_tickIdx].scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+setInterval(tick, 30000);   // aggiorna dati ogni 30s
+setInterval(autoScroll, 3000);  // scorre ogni 3s
+document.getElementById('nav-data').addEventListener('change',function(){if(this.value)window.location.href='/display?data='+this.value;});
+</script>
+</body>
+</html>

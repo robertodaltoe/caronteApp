@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Prepara bozze email — Banca ore{% endblock %}
+
+{% block extra_style %}
+<style>
+.docenti-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:16px; box-sizing:border-box; }
+.doc-card { display:flex; align-items:center; gap:6px; padding:6px 10px;
+    border:2px solid #e5eaf0; border-radius:8px; cursor:pointer;
+    transition:all .12s; background:white; }
+.doc-card:hover { border-color:var(--blu); background:#f0f6ff; }
+.doc-card.selezionato { border-color:var(--blu); background:#dbeafe; }
+.doc-card.no-email { opacity:.45; cursor:not-allowed; }
+.doc-card input[type=checkbox] { width:16px; height:16px; flex-shrink:0; }
+.doc-nome { font-size:.85rem; font-weight:700; color:var(--blu); }
+.doc-email { font-size:.72rem; color:var(--grigio); }
+.barra-azioni { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:10px 14px; background:#f8fafc; border-radius:8px;
+    border:1px solid #e5eaf0; margin-bottom:16px; }
+.contatore { font-size:.82rem; font-weight:700; color:var(--blu);
+    background:#dbeafe; padding:4px 12px; border-radius:12px; }
+textarea { width:100%; border:1px solid #d1d5db; border-radius:8px;
+    padding:10px 12px; font-family:var(--font); font-size:.88rem;
+    resize:vertical; line-height:1.5; }
+.segnaposto { font-size:.75rem; color:var(--grigio); margin-top:4px; }
+.segnaposto code { background:#f0f4f8; padding:1px 5px; border-radius:3px;
+    font-size:.8em; color:#374151; }
+#log-risultati { margin-top:16px; font-size:.82rem; }
+.log-ok  { color:#166534; } .log-err { color:#b91c1c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">✉ Prepara bozze email — Banca ore</h1>
+        <p style="font-size:.83rem; color:var(--grigio); margin-top:3px;">
+            Seleziona i docenti, scrivi oggetto e testo, poi clicca
+            <strong>Crea bozze in Mail.app</strong>. Ogni bozza si apre con il PDF allegato — tu la rivedi e la invii.
+        </p>
+    </div>
+    <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">← Report</a>
+</div>
+
+<div class="card" style="margin-bottom:16px; padding:16px 20px;">
+    <h2 style="margin-bottom:12px;">📝 Oggetto e testo (uguali per tutti i selezionati)</h2>
+
+    <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-weight:700; font-size:.88rem;">Oggetto *</label>
+        <input type="text" id="oggetto"
+               value="Report banca ore — A.S. 2025/2026"
+               style="width:100%; padding:8px 12px; border:1px solid #d1d5db;
+                      border-radius:8px; font-size:.88rem;">
+    </div>
+
+    <div class="form-group">
+        <label style="font-weight:700; font-size:.88rem;">Corpo del messaggio *</label>
+        <textarea id="corpo" rows="8">Gentile prof. {COGNOME},
+
+in allegato trovi il tuo report individuale della banca ore relativo all'a.s. 2025/2026.
+
+Ti preghiamo di verificare i dati e di comunicare eventuali discrepanze entro e non oltre il 10 giugno 2026.
+
+Cordiali saluti,
+Segreteria — IIS "Leonardo da Vinci" Chiavenna</textarea>
+        <p class="segnaposto">
+            Segnaposto disponibili: <code>{COGNOME}</code> cognome del docente &nbsp;·&nbsp;
+            <code>{NOME}</code> nome &nbsp;·&nbsp; <code>{EMAIL}</code> indirizzo email
+        </p>
+    </div>
+</div>
+
+<div class="card" style="padding:14px 14px;">
+    <div class="barra-azioni">
+        <button class="btn btn-sm btn-primary" onclick="selezionaTutti()">☑ Seleziona tutti</button>
+        <button class="btn btn-sm" style="background:#6b7280;color:white;"
+                onclick="deselezionaTutti()">☐ Deseleziona tutti</button>
+        <button class="btn btn-sm" style="background:#374151;color:white;"
+                onclick="selezionaSoloConEmail()">📧 Solo con email</button>
+        <span class="contatore" id="contatore">0 selezionati</span>
+        <div id="btn-group" style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+            <!-- Mac: AppleScript con allegato -->
+            <button id="btn-mac" class="btn btn-success"
+                    onclick="creaBozze('mac')" style="display:none;">
+                🍎 Apri bozze in Mail.app
+            </button>
+            <!-- Windows: PowerShell Outlook -->
+            <button id="btn-ps1" class="btn btn-success"
+                    onclick="creaBozze('ps1')" style="display:none;">
+                🪟 Script Outlook (.ps1)
+            </button>
+            <!-- Tutti: ZIP con .eml + PDF -->
+            <button id="btn-eml" class="btn"
+                    style="background:#6366f1; color:white; display:none;"
+                    onclick="creaBozze('eml')">
+                📦 Scarica .eml + PDF (ZIP)
+            </button>
+        </div>
+    </div>
+
+    <!-- Nota metodi -->
+    <div style="font-size:.78rem; color:var(--grigio); margin-bottom:12px; padding:8px 12px;
+                background:#f8fafc; border-radius:6px; border:1px solid #e5eaf0;">
+        <strong>🍎 Mail.app</strong> Mac — apre ogni bozza con PDF allegato, invii manualmente &nbsp;·&nbsp;
+        <strong>🪟 Script .ps1</strong> Windows Outlook — scarica e lancia lo script per aprire le bozze &nbsp;·&nbsp;
+        <strong>📦 ZIP .eml</strong> Tutti — doppio click su ogni .eml nel tuo client di posta
+    </div>
+    <h2 style="margin-bottom:10px;">👥 Docenti ({{ docenti|length }})</h2>
+
+    <div class="docenti-grid">
+        {% for d in docenti %}
+        <label class="doc-card {% if not d.email %}no-email{% endif %}"
+               id="card-{{ d.id }}"
+               onclick="toggleCard({{ d.id }}, {{ 'true' if d.email else 'false' }})">
+            <input type="checkbox" id="chk-{{ d.id }}"
+                   value="{{ d.id }}"
+                   {% if not d.email %}disabled{% endif %}
+                   onchange="aggiornaContatore()"
+                   onclick="event.stopPropagation()">
+            <div>
+                <div class="doc-nome">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</div>
+                <div class="doc-email">
+                    {% if d.email %}{{ d.email }}
+                    {% else %}<span style="color:#b91c1c;">⚠ email mancante</span>{% endif %}
+                </div>
+            </div>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div id="log-risultati"></div>
+</div>
+
+<script>
+function toggleCard(id, hasEmail) {
+    if (!hasEmail) return;
+    const chk  = document.getElementById('chk-' + id);
+    const card = document.getElementById('card-' + id);
+    chk.checked = !chk.checked;
+    card.classList.toggle('selezionato', chk.checked);
+    aggiornaContatore();
+}
+
+function aggiornaContatore() {
+    const n = [...document.querySelectorAll('.docenti-grid input[type=checkbox]:checked')].length;
+    document.getElementById('contatore').textContent = n + ' selezionati';
+}
+
+function selezionaTutti() {
+    document.querySelectorAll('.docenti-grid input[type=checkbox]:not(:disabled)').forEach(c => {
+        c.checked = true;
+        document.getElementById('card-' + c.value).classList.add('selezionato');
+    });
+    aggiornaContatore();
+}
+
+function deselezionaTutti() {
+    document.querySelectorAll('.docenti-grid input[type=checkbox]').forEach(c => {
+        c.checked = false;
+        document.getElementById('card-' + c.value).classList.remove('selezionato');
+    });
+    aggiornaContatore();
+}
+
+function selezionaSoloConEmail() {
+    deselezionaTutti();
+    selezionaTutti();
+}
+
+// ── Rilevamento OS ──────────────────────────────────────────
+function rilevaOS() {
+    const ua = navigator.userAgent;
+    if (/Mac/i.test(ua) && !/iPhone|iPad/i.test(ua)) return 'mac';
+    if (/Win/i.test(ua)) return 'windows';
+    return 'altro';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    selezionaTutti();
+    const os = rilevaOS();
+    if (os === 'mac') {
+        document.getElementById('btn-mac').style.display = 'inline-flex';
+    } else if (os === 'windows') {
+        document.getElementById('btn-ps1').style.display = 'inline-flex';
+    }
+    // .eml ZIP sempre disponibile come alternativa
+    document.getElementById('btn-eml').style.display = 'inline-flex';
+});
+
+// ── Raccolta dati comune ─────────────────────────────────────
+function raccogliDati() {
+    const ids     = [...document.querySelectorAll('.docenti-grid input[type=checkbox]:checked')].map(c => c.value);
+    const oggetto = document.getElementById('oggetto').value.trim();
+    const corpo   = document.getElementById('corpo').value.trim();
+    if (!ids.length) { alert('Seleziona almeno un docente.'); return null; }
+    if (!oggetto)    { alert('Inserisci un oggetto.'); return null; }
+    if (!corpo)      { alert('Inserisci il corpo del messaggio.'); return null; }
+    return {ids, oggetto, corpo};
+}
+
+function setBtnLoading(tipo, loading) {
+    const map = {mac:'btn-mac', ps1:'btn-ps1', eml:'btn-eml'};
+    const btn = document.getElementById(map[tipo]);
+    if (!btn) return;
+    btn.disabled = loading;
+    if (loading) btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = loading ? '⏳ Generazione...' : btn.dataset.orig;
+}
+
+function mostraLog(data) {
+    let html = `<div style="padding:10px 14px; border-radius:8px; margin-bottom:8px;
+        background:${data.ok ? '#f0fdf4' : '#fef2f2'};
+        border:1px solid ${data.ok ? '#bbf7d0' : '#fecaca'};">
+        <strong>${data.msg}</strong></div>`;
+    if (data.risultati) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
+        data.risultati.forEach(r => {
+            html += `<span style="font-size:.78rem;padding:2px 8px;border-radius:10px;
+                background:${r.ok?'#dcfce7':'#fee2e2'};color:${r.ok?'#166534':'#b91c1c'};">
+                ${r.ok?'✓':'✗'} ${r.cognome||r.id}${r.msg?' — '+r.msg:''}</span>`;
+        });
+        html += '</div>';
+    }
+    document.getElementById('log-risultati').innerHTML = html;
+}
+
+// ── Mac: AppleScript ─────────────────────────────────────────
+async function creaBozze(tipo) {
+    const d = raccogliDati(); if (!d) return;
+    setBtnLoading(tipo, true);
+    const log = document.getElementById('log-risultati');
+    const desc = {mac:'Apertura bozze in Mail.app', ps1:'Generazione script PowerShell', eml:'Creazione archivio .eml + PDF'};
+    log.innerHTML = `<p style="color:var(--grigio);">⏳ ${desc[tipo]} — attendi...</p>`;
+
+    const endpoint = {mac:'/mail-bozze/invia-mac', ps1:'/mail-bozze/scarica-ps1', eml:'/mail-bozze/scarica-eml'}[tipo];
+
+    try {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({docenti_ids: d.ids, oggetto: d.oggetto, corpo: d.corpo})
+        });
+
+        if (tipo === 'mac') {
+            const data = await res.json();
+            mostraLog(data);
+        } else {
+            // Download ZIP / PS1
+            if (!res.ok) {
+                const err = await res.json().catch(()=>({}));
+                log.innerHTML = `<p style="color:#b91c1c;">Errore: ${err.msg||res.statusText}</p>`;
+            } else {
+                const blob  = await res.blob();
+                const fname = res.headers.get('Content-Disposition')?.match(/filename=(.+)/)?.[1] || 'bozze.zip';
+                const url   = URL.createObjectURL(blob);
+                const a     = document.createElement('a');
+                a.href = url; a.download = fname; a.click();
+                URL.revokeObjectURL(url);
+                const n = d.ids.length;
+                log.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:#f0fdf4;
+                    border:1px solid #bbf7d0;"><strong>✓ ${fname} scaricato — ${n} file generati.</strong>
+                    ${tipo==='eml' ? '<br><small>Estrai lo ZIP, fai doppio click su ogni .eml per aprirlo nel tuo client di posta e invia.</small>' :
+                    '<br><small>Esegui lo script con: <code>powershell -ExecutionPolicy Bypass -File ${fname}</code></small>'}
+                    </div>`;
+            }
+        }
+    } catch(e) {
+        log.innerHTML = `<p style="color:#b91c1c;">Errore: ${e.message}</p>`;
+    } finally {
+        setBtnLoading(tipo, false);
+    }
+}
+</script>
+{% endblock %}

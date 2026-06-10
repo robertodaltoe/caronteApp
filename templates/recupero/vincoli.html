@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Disponibilità docenti — Recupero{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🗓 Disponibilità docenti per i recuperi</h1>
+</div>
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
+     color:var(--grigio); border-left:4px solid #7c3aed;">
+    Aggiungi una riga per ogni fascia oraria disponibile. Puoi aggiungerne quante vuoi per giorno
+    (es. giovedì 8:00–10:00 <em>e</em> giovedì 12:00–13:00 = due righe).
+    Se un docente non ha vincoli impostati, il sistema userà il default: tutti i giorni lun–ven, 08:00–13:00.
+</div>
+
+{% set GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì'] %}
+
+{% for rd in disponibili %}
+<div class="card" style="margin-bottom:14px; padding:0; overflow:hidden;">
+    <!-- Header docente -->
+    <div style="background:#f0f4ff; padding:8px 16px; display:flex;
+                justify-content:space-between; align-items:center;">
+        <div>
+            <strong style="color:var(--blu);">
+                {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+            </strong>
+            <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
+                {{ rd.docente.materia or '' }}
+            </span>
+            {% if not rd.vincoli %}
+            <span style="font-size:.72rem; background:#fef3c7; color:#92400e;
+                         padding:1px 7px; border-radius:8px; margin-left:8px;">
+                ⚠ Nessun vincolo — usa default (tutti i giorni 08:00–13:00)
+            </span>
+            {% endif %}
+        </div>
+        {% if rd.vincoli %}
+        <form method="post" style="margin:0;"
+              onsubmit="return confirm('Eliminare tutta la disponibilità di {{ rd.docente.cognome }}?')">
+            <input type="hidden" name="azione" value="elimina_tutti">
+            <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
+            <button type="submit" class="btn btn-sm"
+                    style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;
+                           font-size:.74rem;">🗑 Azzera</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Fasce esistenti -->
+    {% if rd.vincoli %}
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th style="width:120px;">Giorno</th>
+                <th style="width:90px;">Dalle</th>
+                <th style="width:90px;">Alle</th>
+                <th>Note</th>
+                <th style="width:44px; text-align:center;">✖</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for v in rd.vincoli %}
+        <tr>
+            <td style="font-weight:700; color:var(--blu); font-size:.88rem;">
+                {{ GIORNI[v.giorno] }}
+            </td>
+            <td style="font-size:.88rem;">{{ v.ora_inizio }}</td>
+            <td style="font-size:.88rem;">{{ v.ora_fine }}</td>
+            <td style="font-size:.82rem; color:var(--grigio);">{{ v.note or '—' }}</td>
+            <td style="text-align:center;">
+                <form method="post" style="margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ v.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Form aggiungi fascia -->
+    <form method="post" style="padding:10px 14px; background:#fafbfc;
+                                border-top:1px solid #e5eaf0;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
+        <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Giorno</label><br>
+                <select name="giorno" required
+                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% for i, g in enumerate(GIORNI) %}
+                    <option value="{{ i }}">{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Dalle</label><br>
+                <input type="time" name="ora_inizio" value="08:00"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Alle</label><br>
+                <input type="time" name="ora_fine" value="16:00"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="font-size:.72rem; color:var(--grigio);">Note (facoltativo)</label><br>
+                <input type="text" name="note" placeholder="Es. solo mattina"
+                       style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">+ Aggiungi fascia</button>
+        </div>
+    </form>
+</div>
+{% endfor %}
+
+<script>
+// Passa enumerate a Jinja (già disponibile lato server)
+</script>
+{% endblock %}

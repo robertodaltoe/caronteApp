@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifica' if evento else 'Nuovo' }} Evento Istituzionale{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:20px;">
+    {{ '✏️ Modifica' if evento else '+ Nuovo' }} evento istituzionale
+</h1>
+
+<form method="post" id="form-ist">
+<div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+
+<!-- COLONNA SX -->
+<div class="card" style="flex:1; min-width:300px; padding:20px;">
+
+    <div class="form-group">
+        <label>Tipo *</label>
+        <select name="tipo" id="sel-tipo" required onchange="aggiornaTipo()">
+            {% for k, v in tipi.items() %}
+            <option value="{{ k }}" {% if evento and evento.tipo == k %}selected{% endif %}>
+                {{ v.emoji }} {{ v.label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Titolo *</label>
+        <input type="text" name="titolo" required value="{{ evento.titolo if evento else '' }}"
+               placeholder="Es. Collegio docenti — settembre 2025">
+    </div>
+
+    <div class="form-group">
+        <label>Data *</label>
+        <input type="date" name="data" required value="{{ data_sel }}">
+    </div>
+
+    <div style="display:flex; gap:12px;">
+        <div class="form-group" style="flex:1;">
+            <label>Ora inizio</label>
+            <input type="time" name="ora_inizio" value="{{ evento.ora_inizio or '' }}">
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label>Ora fine</label>
+            <input type="time" name="ora_fine" value="{{ evento.ora_fine or '' }}">
+        </div>
+    </div>
+
+    <!-- Solo per CdC / Scrutini -->
+    <div class="form-group" id="sez-classe" style="display:none;">
+        <label>Classe</label>
+        <select name="classe">
+            <option value="">— nessuna —</option>
+            {% for c in classi %}
+            <option value="{{ c }}" {% if evento and evento.classe == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Solo per Dipartimenti -->
+    <div class="form-group" id="sez-dip" style="display:none;">
+        <label>Dipartimento</label>
+        <select name="id_dipartimento">
+            <option value="">— nessuno —</option>
+            {% for d in dipartimenti %}
+            <option value="{{ d.id }}"
+                {% if evento and evento.id_dipartimento == d.id %}selected{% endif %}>
+                {{ d.sigla }} — {{ d.nome }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Note</label>
+        <textarea name="note" rows="2">{{ evento.note or '' }}</textarea>
+    </div>
+
+    <div id="info-bucket" style="padding:8px 12px; border-radius:6px; font-size:.8rem;
+         background:var(--blu-light); color:var(--blu); border-left:3px solid var(--blu-med);">
+    </div>
+</div>
+
+<!-- COLONNA DX — Partecipanti -->
+<div class="card" style="flex:1; min-width:300px; padding:20px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:8px;">👥 Partecipanti</h3>
+    <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
+        Il preset è calcolato automaticamente dal tipo evento. Puoi modificarlo.
+    </p>
+    <div style="margin-bottom:8px;">
+        <button type="button" onclick="selTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Tutti</button>
+        <button type="button" onclick="deselTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Nessuno</button>
+    </div>
+    <div style="max-height:420px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px;">
+        {% for d in docenti %}
+        <label style="display:flex; align-items:center; gap:8px; padding:5px 8px;
+               border-radius:6px; cursor:pointer; font-size:.84rem;"
+               class="doc-row" onmouseover="this.style.background='#f0f4f8'"
+               onmouseout="this.style.background=''">
+            <input type="checkbox" name="docenti_ids" value="{{ d.id }}"
+                   class="doc-check"
+                   {% if (evento and d.id in docenti_selezionati) or
+                         (not evento and d.id in preset_ids) %}checked{% endif %}>
+            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+            {% if d.materia %}<span style="font-size:.72rem; color:var(--grigio); margin-left:4px;">{{ d.materia }}</span>{% endif %}
+        </label>
+        {% endfor %}
+    </div>
+</div>
+
+</div>
+
+<div style="margin-top:16px; display:flex; gap:10px;">
+    <button type="submit" class="btn btn-success">✓ Salva</button>
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
+</div>
+</form>
+
+<script>
+const TIPI_INFO = {
+    collegio:           {bucket:'A', txt:'Bucket A — max 40h annue (art.44 lett.a)'},
+    consiglio_classe:   {bucket:'B', txt:'Bucket B — max 40h annue (art.44 lett.b)', classe:true},
+    dipartimento:       {bucket:'B', txt:'Bucket B — max 40h annue', dip:true},
+    riunione_materia:   {bucket:'B', txt:'Bucket B — max 40h annue', dip:true},
+    glo:                {bucket:'B', txt:'Bucket B — GLO (art.44 lett.b)', classe:true},
+    incontro_famiglie:  {bucket:'A', txt:'Bucket A — informazione famiglie'},
+    scrutinio:          {bucket:null, txt:'Atto dovuto — fuori conteggio 40+40h', classe:true},
+    formazione:         {bucket:'A', txt:'Bucket A — ore residue formazione'},
+    riunione_referenti: {bucket:'B', txt:'Bucket B — referenti dipartimento', dip:true},
+    altro:              {bucket:'A', txt:'Bucket A'},
+};
+const PRESET_IDS = new Set({{ preset_ids | tojson }});
+
+function aggiornaTipo() {
+    const tipo = document.getElementById('sel-tipo').value;
+    const info = TIPI_INFO[tipo] || {};
+    document.getElementById('sez-classe').style.display = info.classe ? 'block' : 'none';
+    document.getElementById('sez-dip').style.display    = info.dip    ? 'block' : 'none';
+    const box = document.getElementById('info-bucket');
+    const colori = {A:'var(--blu-light),var(--blu),var(--blu-med)', B:'#dcfce7,#166534,#86efac', null:'#f3f4f6,#6b7280,#d1d5db'};
+    const c = (colori[info.bucket] || colori[null]).split(',');
+    box.style.background  = c[0]; box.style.color = c[1]; box.style.borderColor = c[2];
+    box.textContent = info.txt || '';
+}
+function selTutti()  { document.querySelectorAll('.doc-check').forEach(c => c.checked = true); }
+function deselTutti(){ document.querySelectorAll('.doc-check').forEach(c => c.checked = false); }
+document.addEventListener('DOMContentLoaded', aggiornaTipo);
+</script>
+{% endblock %}

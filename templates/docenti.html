@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Docenti{% endblock %}
+
+{% block extra_style %}
+<style>
+.row-conferma { background: #fff7ed !important; }
+.row-conferma td { border-top: 2px solid #f59e0b; border-bottom: 2px solid #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">Elenco docenti</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            {{ docenti|length }} docenti
+        </p>
+    </div>
+    <a href="{{ url_for('docenti.nuovo') }}" class="btn btn-success">+ Nuovo docente</a>
+</div>
+
+{% set conferma_id = request.args.get('conferma_elimina', type=int) %}
+
+<div class="card" style="padding:0; overflow:hidden;">
+<table>
+    <thead>
+        <tr>
+            <th style="width:130px;">Cognome</th>
+            <th style="width:100px;">Nome</th>
+            <th>Materia</th>
+            <th style="text-align:center; width:60px;">H/sett</th>
+            <th style="width:130px;">Tipo contratto</th>
+            <th style="text-align:center; width:130px;">Colloqui</th>
+            <th style="text-align:center; width:80px;">Stato</th>
+            <th style="text-align:center; width:160px;">Azioni</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for d in docenti %}
+    {% set is_conferma = (conferma_id == d.id) %}
+    <tr {% if is_conferma %}class="row-conferma"{% endif %}>
+        <td>
+            <strong>{{ d.cognome }}</strong>
+            {% if d.ruolo == 'itp' %}
+            <span style="display:inline-block; font-size:.68rem; background:#f5f3ff;
+                          color:#7c3aed; border:1px solid #c4b5fd; border-radius:4px;
+                          padding:1px 6px; font-weight:700; margin-left:4px;">ITP</span>
+            {% endif %}
+        </td>
+        <td style="white-space:nowrap;">
+            {% if d.nome %}{{ d.nome }}
+            {% else %}<span style="color:#f59e0b; font-size:.8rem;">⚠</span>
+            {% endif %}
+        </td>
+        <td style="color:var(--grigio); font-size:.88rem;">{{ d.materia or '—' }}</td>
+        <td style="text-align:center;">{{ d.ore_contratto }}h</td>
+        <td>
+            {% if d.tipo_contratto %}
+                <span class="badge badge-grigio">{{ d.tipo_contratto }}</span>
+            {% else %}
+                <span style="color:#f59e0b; font-size:.8rem;">⚠ da completare</span>
+            {% endif %}
+        </td>
+        <td style="text-align:center; white-space:nowrap; font-size:.82rem; color:var(--grigio);">
+            {{ d.colloqui_label if d.colloqui_label != '—' else '—' }}
+        </td>
+        <td style="text-align:center;">
+            {% if d.attivo %}<span class="badge badge-verde">Attivo</span>
+            {% else %}<span class="badge badge-grigio">Non attivo</span>{% endif %}
+        </td>
+        <td style="text-align:center; white-space:nowrap;">
+
+            {% if is_conferma %}
+            <!-- CONFERMA ELIMINAZIONE -->
+            <span style="font-size:.82rem; color:var(--rosso); font-weight:600; margin-right:8px;">
+                Eliminare definitivamente?
+            </span>
+            <form method="post" action="{{ url_for('docenti.elimina', id=d.id) }}"
+                  style="display:inline;">
+                <input type="hidden" name="forza" value="1">
+                <button class="btn btn-danger btn-sm" type="submit">Sì, elimina</button>
+            </form>
+            <a href="{{ url_for('docenti.lista') }}"
+               class="btn btn-primary btn-sm" style="margin-left:4px;">Annulla</a>
+
+            {% else %}
+            <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">
+            <a href="{{ url_for('docenti.modifica', id=d.id) }}"
+               class="btn btn-primary btn-sm">✏️</a>
+            <form method="post" action="{{ url_for('docenti.elimina', id=d.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Eliminare {{ d.cognome }}?')">
+                <button class="btn btn-danger btn-sm" type="submit" title="Elimina">✖</button>
+            </form>
+            {% if g.utente is defined and g.utente.ruolo == 'ds' %}
+            <form method="post" action="{{ url_for('docenti.anonimizza', id=d.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Anonimizzare {{ d.cognome }}? I dati anagrafici saranno rimossi, i dati operativi conservati (art.17 GDPR).')">
+                <button class="btn btn-sm" type="submit"
+                        style="background:#78350f; color:white; font-size:.75rem;"
+                        title="Anonimizza (GDPR art.17)">🔒</button>
+            </form>
+            {% endif %}
+            </div>
+            {% endif %}
+
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% endblock %}

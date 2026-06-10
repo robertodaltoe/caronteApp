@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Gestione Utenti{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">👥 Gestione Utenti</h1>
+        <p style="color:var(--grigio); font-size:.85rem;">Accesso al sistema — ruoli e permessi</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('auth.log_accessi') }}" class="btn btn-primary btn-sm">📋 Log accessi</a>
+        <a href="{{ url_for('auth.nuovo_utente') }}" class="btn btn-success btn-sm">+ Nuovo utente</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:120px;">Username</th>
+                <th>Nome</th>
+                <th style="width:160px;">Ruolo</th>
+                <th style="width:100px; text-align:center;">Stato</th>
+                <th style="width:160px;">Ultimo accesso</th>
+                <th style="width:160px; text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in utenti %}
+        <tr>
+            <td><strong>{{ u.username }}</strong></td>
+            <td><strong>{{ u.cognome }}</strong> {{ u.nome }}</td>
+            <td>
+                {% set colori = {'ds':'badge-rosso','dsga':'badge-viola','segreteria':'badge-blu','display':'badge-grigio'} %}
+                <span class="badge {{ colori.get(u.ruolo,'badge-grigio') }}">{{ u.ruolo_label }}</span>
+            </td>
+            <td style="text-align:center;">
+                {% if u.attivo %}
+                <span class="badge badge-verde">Attivo</span>
+                {% else %}
+                <span class="badge badge-grigio">Disattivo</span>
+                {% endif %}
+            </td>
+            <td style="font-size:.82rem; color:var(--grigio);">
+                {{ u.ultimo_accesso.strftime('%d/%m/%Y %H:%M') if u.ultimo_accesso else '—' }}
+            </td>
+            <td style="text-align:center;">
+                <div style="display:flex; gap:4px; justify-content:center;">
+                    <a href="{{ url_for('auth.modifica_utente', id=u.id) }}"
+                       class="btn btn-primary btn-sm">✏️</a>
+                    {% if u.id != session.get('utente_id') %}
+                    <form method="post" action="{{ url_for('auth.elimina_utente', id=u.id) }}"
+                          onsubmit="return confirm('Eliminare {{ u.username }}?')"
+                          style="display:inline;">
+                        <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

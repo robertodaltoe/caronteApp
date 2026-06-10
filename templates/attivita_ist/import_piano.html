@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Import Piano Attività 2025/26{% endblock %}
+{% block content %}
+<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:16px;">📥 Import Piano Attività 2025/26</h1>
+
+{% if gia_importati > 0 %}
+<div class="card" style="padding:16px; border-left:4px solid var(--giallo); background:var(--giallo-bg); margin-bottom:16px;">
+    <strong>⚠ Già importati {{ gia_importati }} eventi dal piano.</strong>
+    La re-importazione è sicura: salta i duplicati e aggiunge solo gli eventi mancanti.
+</div>
+{% endif %}
+
+<div class="card" style="padding:20px; max-width:600px;">
+    <p style="margin-bottom:16px; font-size:.9rem; line-height:1.6;">
+        Importa gli eventi calendarizzati nel Piano Annuale delle Attività 2025/26.
+        Poiché siamo già a giugno 2026, verranno importati i soli eventi rimanenti:
+    </p>
+    <ul style="font-size:.85rem; color:var(--grigio); margin-bottom:20px; padding-left:20px; line-height:1.8;">
+        <li>🗳 <strong>Scrutini finali</strong> — 6, 8, 9, 10 giugno 2026</li>
+        <li>🏛 <strong>Collegio dei docenti</strong> — 12 giugno 2026</li>
+        <li>📖 <strong>Riunione per materie</strong> — 12 giugno 2026</li>
+        <li>👨‍👩‍👧 <strong>Incontro con le famiglie</strong> — 12 giugno 2026</li>
+        <li>🏛 <strong>Collegio dei docenti</strong> — 1 settembre 2026</li>
+    </ul>
+    <p style="font-size:.8rem; color:var(--grigio); margin-bottom:20px;">
+        I partecipanti vengono pre-compilati automaticamente in base al tipo evento
+        (tutti i docenti per i Collegi, docenti della classe per gli Scrutini, ecc.).
+        Potrai modificarli manualmente dopo l'import.
+    </p>
+    <form method="post" style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-success">✓ Importa ora</button>
+        <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
+    </form>
+</div>
+{% endblock %}

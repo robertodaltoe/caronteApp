@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifica' if docente else 'Nuovo' }} docente{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+    <h1 style="font-size:1.4rem; color:var(--blu); margin:0;">
+        {{ 'Modifica' if docente else 'Nuovo' }} docente
+        {% if docente %}
+        <span style="font-size:1rem; color:var(--grigio); font-weight:400; margin-left:8px;">
+            — {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}
+        </span>
+        {% endif %}
+    </h1>
+    {% if docente %}
+    <div style="display:flex; align-items:center; gap:6px;">
+        {% if id_prev %}
+        <a href="{{ url_for('docenti.modifica', id=id_prev) }}"
+           style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px;
+                  background:var(--blu); color:white; border-radius:8px;
+                  font-size:.84rem; font-weight:700; text-decoration:none;"
+           title="Docente precedente">← Prec.</a>
+        {% else %}
+        <span style="padding:6px 12px; background:#e5eaf0; color:#9ca3af;
+                      border-radius:8px; font-size:.84rem;">← Prec.</span>
+        {% endif %}
+        <a href="{{ url_for('docenti.lista') }}"
+           style="padding:6px 12px; background:#f0f4f8; color:var(--blu);
+                  border-radius:8px; font-size:.84rem; font-weight:600;
+                  text-decoration:none;">Lista</a>
+        {% if id_next %}
+        <a href="{{ url_for('docenti.modifica', id=id_next) }}"
+           style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px;
+                  background:var(--blu); color:white; border-radius:8px;
+                  font-size:.84rem; font-weight:700; text-decoration:none;"
+           title="Docente successivo">Succ. →</a>
+        {% else %}
+        <span style="padding:6px 12px; background:#e5eaf0; color:#9ca3af;
+                      border-radius:8px; font-size:.84rem;">Succ. →</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="card" style="max-width:580px;">
+    <form method="post">
+        <div style="display:flex; gap:16px;">
+            <div class="form-group" style="flex:2;">
+                <label>Cognome *</label>
+                <input type="text" name="cognome" required
+                       value="{{ docente.cognome if docente else '' }}"
+                       placeholder="Es. FERRARI" style="text-transform:uppercase;">
+            </div>
+            <div class="form-group" style="flex:2;">
+                <label>Nome</label>
+                <input type="text" name="nome"
+                       value="{{ docente.nome if docente else '' }}"
+                       placeholder="Es. Marco">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Materie insegnate (a.s. corrente)</label>
+            <div id="mat-badges" style="display:flex; flex-wrap:wrap; gap:4px; min-height:24px; margin-bottom:6px;"></div>
+            <div style="border:1px solid #d1d5db; border-radius:8px; max-height:200px;
+                        overflow-y:auto; background:#fafbfc;">
+                {% if materie %}
+                {% for dip in materie | groupby('id_dipartimento') %}
+                {% set dip_obj = materie | selectattr('id_dipartimento','eq',dip.grouper) | first %}
+                <div>
+                    <div style="padding:5px 12px 3px; font-size:.7rem; font-weight:700;
+                                text-transform:uppercase; letter-spacing:.5px;
+                                color:white; background:var(--blu); position:sticky; top:0;">
+                        {{ dip_obj.dipartimento.nome if dip_obj.dipartimento else '' }}
+                    </div>
+                    {% for m in dip.list %}
+                    <label style="display:flex; align-items:center; gap:10px;
+                                  padding:5px 12px; cursor:pointer; border-bottom:1px solid #f0f2f5;"
+                           onmouseover="this.style.background='#f0f4f8'"
+                           onmouseout="this.style.background=''">
+                        <input type="checkbox" name="materie_ids" value="{{ m.id }}"
+                               {% if m.id in mat_assegnate %}checked{% endif %}
+                               class="mat-cb"
+                               data-sigla="{{ m.sigla }}"
+                               data-nome="{{ m.nome }}"
+                               data-color="{{ loop.cycle('#1e40af','#0369a1','#166534','#92400e','#b45309','#5b21b6','#374151') }}"
+                               style="width:15px; height:15px; cursor:pointer; accent-color:var(--blu);">
+                        <span style="font-size:.86rem;">{{ m.nome }}</span>
+                        <span style="font-size:.7rem; color:var(--grigio); margin-left:auto;
+                                     font-family:monospace;">{{ m.sigla }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div style="padding:12px; font-size:.82rem; color:var(--grigio);">
+                    Nessuna materia disponibile — configura il roster.
+                </div>
+                {% endif %}
+            </div>
+            <div style="margin-top:4px; font-size:.72rem; color:var(--grigio);">
+                La prima materia selezionata aggiorna il campo "materia" del profilo.
+            </div>
+
+        <div style="display:flex; gap:16px;">
+            <div class="form-group" style="flex:1;">
+                <label>Ore settimanali contratto</label>
+                <input type="number" name="ore_contratto" min="0" max="24"
+                       value="{{ docente.ore_contratto if docente else 18 }}">
+            </div>
+            <div class="form-group" style="flex:2;">
+                <label>Tipo contratto</label>
+                <select name="tipo_contratto">
+                    <option value="">— non specificato —</option>
+                    {% set tc = docente.tipo_contratto if docente else '' %}
+                    <option value="TI"         {% if tc=='TI' %}selected{% endif %}>TI — Tempo indeterminato</option>
+                    <option value="TD_annuale" {% if tc=='TD_annuale' %}selected{% endif %}>TD — Tempo determinato annuale</option>
+                    <option value="TD_GS"      {% if tc=='TD_GS' %}selected{% endif %}>TD — Fino al termine attività didattiche</option>
+                    <option value="supplente"  {% if tc=='supplente' %}selected{% endif %}>Supplente breve</option>
+                    <option value="potenziamento" {% if tc=='potenziamento' %}selected{% endif %}>Organico potenziamento</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- RUOLO DIDATTICO -->
+        <div style="background:#fef9c3; border:1px solid #fde047; border-radius:8px;
+                    padding:14px 16px; margin-bottom:16px;">
+            <label style="display:block; font-size:.88rem; font-weight:700;
+                           color:#854d0e; margin-bottom:10px;">
+                👤 Ruolo didattico
+            </label>
+            <div style="display:flex; gap:12px;">
+                {% set ruolo_val = docente.ruolo if docente and docente.ruolo else 'titolare' %}
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;
+                               padding:10px 16px; border:2px solid;
+                               border-radius:8px; flex:1;
+                               border-color:{{ '#166534' if ruolo_val == 'titolare' else '#d1d5db' }};
+                               background:{{ '#f0fdf4' if ruolo_val == 'titolare' else 'white' }};"
+                       id="lbl-titolare">
+                    <input type="radio" name="ruolo" value="titolare"
+                           {% if ruolo_val == 'titolare' %}checked{% endif %}
+                           onchange="aggiornaRuolo(this)"
+                           style="width:16px; height:16px;">
+                    <div>
+                        <div style="font-weight:700; font-size:.88rem; color:#166534;">
+                            📚 Docente titolare
+                        </div>
+                        <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                            Docente principale della materia
+                        </div>
+                    </div>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;
+                               padding:10px 16px; border:2px solid;
+                               border-radius:8px; flex:1;
+                               border-color:{{ '#7c3aed' if ruolo_val == 'itp' else '#d1d5db' }};
+                               background:{{ '#f5f3ff' if ruolo_val == 'itp' else 'white' }};"
+                       id="lbl-itp">
+                    <input type="radio" name="ruolo" value="itp"
+                           {% if ruolo_val == 'itp' %}checked{% endif %}
+                           onchange="aggiornaRuolo(this)"
+                           style="width:16px; height:16px;">
+                    <div>
+                        <div style="font-weight:700; font-size:.88rem; color:#7c3aed;">
+                            🔧 ITP — Compresenza
+                        </div>
+                        <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                            Insegnante Tecnico Pratico (laboratorio)
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- TIPO SERVIZIO / CONTRATTO -->
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;
+                    padding:14px 16px; margin-bottom:16px;">
+            <label style="display:block; font-size:.88rem; font-weight:700;
+                           color:#0369a1; margin-bottom:12px;">
+                📋 Tipo di servizio
+            </label>
+
+            <!-- SELECT: tipo servizio (più affidabile dei radio in tutti i browser) -->
+            {% if not docente or (not docente.altra_scuola and not docente.part_time) %}
+                {% set tipo_sel = 'full' %}
+            {% elif docente and docente.part_time and not docente.altra_scuola %}
+                {% set tipo_sel = 'part_time' %}
+            {% else %}
+                {% set tipo_sel = 'multi_sede' %}
+            {% endif %}
+            <div class="form-group" style="margin-bottom:14px;">
+                <select name="tipo_servizio" id="sel-tipo-servizio"
+                        onchange="aggiornaTipoServizio(this.value)"
+                        style="font-size:.88rem; font-weight:600;">
+                    <option value="full"       {% if tipo_sel == 'full' %}selected{% endif %}>
+                        Contratto esclusivo — solo questa sede
+                    </option>
+                    <option value="part_time"  {% if tipo_sel == 'part_time' %}selected{% endif %}>
+                        Part-time — solo questa sede
+                    </option>
+                    <option value="multi_sede" {% if tipo_sel == 'multi_sede' %}selected{% endif %}>
+                        Altro contratto — più scuole
+                    </option>
+                </select>
+                <div id="desc-tipo" style="font-size:.74rem; color:var(--grigio); margin-top:6px; padding:6px 10px;
+                     background:#f8fafc; border-radius:6px;"></div>
+            </div>
+
+            <!-- SEZ PART-TIME: ore contratto -->
+            <div id="sez-pt" style="display:none; background:#fefce8; border:1px solid #fde047;
+                 border-radius:6px; padding:10px 14px; margin-bottom:10px;">
+                <label style="font-size:.82rem; font-weight:700; color:#854d0e;">
+                    Ore settimanali contratto part-time
+                </label>
+                <input type="number" name="ore_contratto_pt" min="1" max="17"
+                       value="{{ docente.ore_contratto_pt or '' if docente else '' }}"
+                       placeholder="Es. 9" style="width:120px; margin-top:6px;">
+                <p style="font-size:.73rem; color:#92400e; margin-top:5px;">
+                    Il CCNL prevede per i part-time: permesso personale 2 gg (invece di 3 per TD),
+                    proporzionale alle ore di servizio. Inserisci le ore effettive di contratto.
+                </p>
+            </div>
+
+            <!-- SEZ MULTI SEDE: altra scuola + giorni presenza + orario spezzato -->
+            <div id="sez-multi" style="display:none;">
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label style="font-size:.82rem; font-weight:700;">Altra scuola / istituto</label>
+                    <input type="text" name="altra_scuola"
+                           value="{{ docente.altra_scuola or '' if docente else '' }}"
+                           placeholder="Es. IIS Besta — Sondrio">
+                </div>
+
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label style="font-size:.82rem; font-weight:700;">Giorni di presenza qui</label>
+                    <p style="font-size:.73rem; color:var(--grigio); margin-bottom:6px;">
+                        Spunta i giorni in cui il docente è fisicamente in questa sede.
+                        Nessuna selezione = tutti i giorni.
+                    </p>
+                    {% set gp = docente.giorni_presenza_list if docente else [] %}
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        {% for g_val, g_label in [(0,'Lun'),(1,'Mar'),(2,'Mer'),(3,'Gio'),(4,'Ven'),(5,'Sab')] %}
+                        <label style="display:flex; align-items:center; gap:5px; padding:5px 12px;
+                            border:2px solid {% if g_val in gp %}#0369a1{% else %}#e5eaf0{% endif %};
+                            border-radius:8px; cursor:pointer; font-size:.84rem; font-weight:600;
+                            background:{% if g_val in gp %}#e0f2fe{% else %}white{% endif %};
+                            color:{% if g_val in gp %}#0369a1{% else %}var(--grigio){% endif %};">
+                            <input type="checkbox" name="giorni_presenza" value="{{ g_val }}"
+                                   {% if g_val in gp %}checked{% endif %}
+                                   style="width:14px; height:14px;">
+                            {{ g_label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:.82rem; font-weight:700;">Orario spezzato
+                        <span style="font-weight:400; color:var(--grigio);">
+                            — nei giorni in cui è presente, da quale ora va all'altra scuola
+                        </span>
+                    </label>
+                    <p style="font-size:.73rem; color:var(--grigio); margin-bottom:8px;">
+                        Es. "da giovedì alla 3ª ora non è più disponibile". Lascia vuoto se non applicabile.
+                    </p>
+                    {% set giorni_nomi = ['Lun','Mar','Mer','Gio','Ven','Sab'] %}
+                    {% set ora_uscita = docente.ora_uscita_map if docente else {} %}
+                    <div style="display:flex; flex-direction:column; gap:6px;" id="sez-orario-spezzato">
+                        {% for g_val, g_label in [(0,'Lun'),(1,'Mar'),(2,'Mer'),(3,'Gio'),(4,'Ven'),(5,'Sab')] %}
+                        <div style="display:flex; align-items:center; gap:10px;"
+                             class="riga-ora-uscita" data-g="{{ g_val }}">
+                            <span style="font-size:.84rem; font-weight:600; min-width:40px; color:var(--grigio);">
+                                {{ g_label }}
+                            </span>
+                            <span style="font-size:.78rem; color:var(--grigio);">parte per altra sede dalla</span>
+                            <select name="ora_uscita_{{ g_val }}"
+                                    style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                                <option value="">— non applicabile —</option>
+                                {% for o in range(1,10) %}
+                                <option value="{{ o }}" {% if ora_uscita.get(g_val) == o %}selected{% endif %}>{{ o }}ª ora</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Email istituzionale</label>
+            <input type="text" name="email"
+                   pattern="[^@]+@[^@]+\.[^@]+"
+                   title="Inserisci un indirizzo email valido oppure lascia vuoto"
+                   value="{{ docente.email if docente and docente.email and docente.email != 'None' else '' }}"
+                   placeholder="nome.cognome@istituto.it">
+        </div>
+
+        <!-- COLLOQUI FISSI -->
+        <div style="background:var(--blu-light); border-radius:8px; padding:16px; margin-bottom:16px;">
+            <label style="display:block; font-size:.88rem; font-weight:700;
+                           color:var(--blu); margin-bottom:12px;">
+                👨‍👩‍👧 Colloqui settimanali fissi
+                <span style="font-weight:400; color:var(--grigio);">
+                    (esclusi automaticamente dai suggerimenti supplenze)
+                </span>
+            </label>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:2; margin-bottom:0;">
+                    <label>Giorno</label>
+                    <select name="colloqui_giorno">
+                        <option value="">— nessun colloquio fisso —</option>
+                        {% set cg = docente.colloqui_giorno if docente else None %}
+                        <option value="0" {% if cg==0 %}selected{% endif %}>Lunedì</option>
+                        <option value="1" {% if cg==1 %}selected{% endif %}>Martedì</option>
+                        <option value="2" {% if cg==2 %}selected{% endif %}>Mercoledì</option>
+                        <option value="3" {% if cg==3 %}selected{% endif %}>Giovedì</option>
+                        <option value="4" {% if cg==4 %}selected{% endif %}>Venerdì</option>
+                        <option value="5" {% if cg==5 %}selected{% endif %}>Sabato</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label>Dalle ore</label>
+                    <select name="colloqui_ora_inizio">
+                        <option value="">—</option>
+                        {% for o in range(1,10) %}
+                        <option value="{{ o }}"
+                            {% if docente and docente.colloqui_ora_inizio == o %}selected{% endif %}>
+                            {{ o }}ª
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label>Alle ore</label>
+                    <select name="colloqui_ora_fine">
+                        <option value="">—</option>
+                        {% for o in range(1,10) %}
+                        <option value="{{ o }}"
+                            {% if docente and docente.colloqui_ora_fine == o %}selected{% endif %}>
+                            {{ o }}ª
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        {% if docente %}
+        <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="attivo"
+                       {% if docente.attivo %}checked{% endif %}
+                       style="width:18px; height:18px;">
+                Docente attivo (visibile nei form supplenze)
+            </label>
+        </div>
+        {% endif %}
+
+        <!-- Eccezioni colloqui -->
+        {% if docente and docente.colloqui_giorno is not none %}
+        <div class="form-group" style="margin-top:8px;">
+            <div style="background:#f8fafc; border:1px solid #e5eaf0; border-radius:8px; padding:14px 16px;">
+                <p style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
+                    📅 Date eccezione colloqui
+                    <span style="font-weight:400; color:var(--grigio); font-size:.82rem;">
+                        — date in cui i colloqui si svolgono al pomeriggio/online (nessuna indisponibilità mattutina)
+                    </span>
+                </p>
+                <div style="font-size:.76rem; color:var(--grigio); margin-bottom:10px;">
+                    Ogni riga è un periodo (Dal / Al) in cui i colloqui sono al pomeriggio/online.
+                    Lascia "Al" vuoto per una data singola.
+                    <a href="{{ url_for('docenti.eccezioni_istituto') }}" target="_blank"
+                       style="color:var(--blu); font-weight:700;">→ Gestisci per tutto l'istituto</a>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px;
+                             margin-bottom:6px; font-size:.75rem; font-weight:700; color:var(--grigio);">
+                    <span>Dal</span><span>Al</span><span>Note</span><span></span>
+                </div>
+                <div id="eccezioni-container">
+                {% for e in eccezioni %}
+                <div class="eccezione-riga" style="display:grid; grid-template-columns:1fr 1fr 1fr auto;
+                             gap:8px; margin-bottom:8px; align-items:center;">
+                    <input type="date" name="eccezione_data[]"
+                           value="{{ e.data.isoformat() }}">
+                    <input type="date" name="eccezione_data_fine[]"
+                           value="{{ e.data_fine.isoformat() if e.data_fine else '' }}">
+                    <input type="text" name="eccezione_note[]"
+                           value="{{ e.note or '' }}"
+                           placeholder="Es. pomeriggio online">
+                    <button type="button" onclick="this.closest('.eccezione-riga').remove()"
+                            style="background:none; border:none; color:var(--rosso);
+                                   cursor:pointer; font-size:1.1rem;">✕</button>
+                </div>
+                {% endfor %}
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" style="margin-top:6px;"
+                        onclick="aggiungiEccezione()">
+                    + Aggiungi periodo
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button class="btn btn-success" type="submit">
+                {{ 'Salva modifiche' if docente else 'Aggiungi docente' }}
+            </button>
+            <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary">Annulla</a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+const DESC_TIPO = {
+    full:       'Docente a tempo pieno o indeterminato solo in questo istituto.',
+    part_time:  'Contratto ridotto esclusivamente con noi. Impatta i limiti CCNL (es. permessi: 2 gg invece di 3).',
+    multi_sede: 'Serve su più istituti. Nei suggerimenti supplenze compare il badge "Altro contratto".',
+};
+
+function aggiornaTipoServizio(tipo) {
+    if (!tipo) tipo = document.getElementById('sel-tipo-servizio')?.value || 'full';
+    // Aggiorna descrizione
+    const desc = document.getElementById('desc-tipo');
+    if (desc) desc.textContent = DESC_TIPO[tipo] || '';
+    // Mostra/nasconde sezioni
+    document.getElementById('sez-pt').style.display    = tipo === 'part_time'   ? 'block' : 'none';
+    document.getElementById('sez-multi').style.display = tipo === 'multi_sede'  ? 'block' : 'none';
+}
+
+function aggiornaRuolo(radio) {
+    const lTit = document.getElementById('lbl-titolare');
+    const lItp = document.getElementById('lbl-itp');
+    if (radio.value === 'titolare') {
+        lTit.style.borderColor = '#166534'; lTit.style.background = '#f0fdf4';
+        lItp.style.borderColor = '#d1d5db'; lItp.style.background = 'white';
+    } else {
+        lItp.style.borderColor = '#7c3aed'; lItp.style.background = '#f5f3ff';
+        lTit.style.borderColor = '#d1d5db'; lTit.style.background = 'white';
+    }
+}
+
+// Init tipo servizio al caricamento
+document.addEventListener('DOMContentLoaded', function() {
+    aggiornaTipoServizio(null);
+});
+
+function aggiungiEccezione() {
+    const container = document.getElementById('eccezioni-container');
+    const div = document.createElement('div');
+    div.className = 'eccezione-riga';
+    div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;';
+    div.innerHTML = `
+        <input type="date" name="eccezione_data[]">
+        <input type="date" name="eccezione_data_fine[]">
+        <input type="text" name="eccezione_note[]" placeholder="Es. pomeriggio online">
+        <button type="button" onclick="this.closest('.eccezione-riga').remove()"
+                style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:1.1rem;">✕</button>
+    `;
+    container.appendChild(div);
+    div.querySelector('input[type=date]').focus();
+}
+// Badge materie selezionate
+function aggiornaBadgeMaterie() {
+    const container = document.getElementById('mat-badges');
+    if (!container) return;
+    container.innerHTML = '';
+    document.querySelectorAll('input.mat-cb:checked').forEach(cb => {
+        const badge = document.createElement('span');
+        const color = cb.dataset.color || '#374151';
+        badge.title = cb.dataset.nome || '';
+        badge.style.cssText = `display:inline-flex;align-items:center;gap:3px;padding:2px 8px;
+            border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;
+            background:${color};color:white;`;
+        badge.innerHTML = cb.dataset.sigla + ' <span style="opacity:.7;font-size:.65rem;">✕</span>';
+        badge.addEventListener('click', () => {
+            cb.checked = false;
+            aggiornaBadgeMaterie();
+        });
+        container.appendChild(badge);
+    });
+}
+document.querySelectorAll('input.mat-cb').forEach(cb => {
+    cb.addEventListener('change', aggiornaBadgeMaterie);
+});
+aggiornaBadgeMaterie();
+</script>
+{% endblock %}
+{% endblock %}

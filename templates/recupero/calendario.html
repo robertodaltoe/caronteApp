@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Calendario Recupero{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">📅 Calendario lezioni di recupero</h1>
+    <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{{ url_for('recupero.export_xlsx') }}" class="btn btn-sm"
+           style="background:#166534; color:white;">📊 Scarica XLSX</a>
+    </div>
+</div>
+
+<!-- Genera bozza -->
+<div class="card" style="padding:14px 18px; margin-bottom:16px; border-left:4px solid #0369a1;">
+    <form method="post" action="{{ url_for('recupero.genera_bozza') }}"
+          onsubmit="return document.getElementById('chk-conferma').checked || (alert('Seleziona la casella di conferma') || false)">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div>
+                <strong style="color:#0369a1; font-size:.9rem;">🤖 Genera bozza automatica</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Distribuisce le lezioni rispettando disponibilità docenti e senza sovrapposizioni per gli alunni.
+                    <strong style="color:#dc2626;">Sovrascrive le lezioni esistenti.</strong>
+                </div>
+            </div>
+            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="chk-conferma" name="conferma_elimina" value="1">
+                Confermo — elimina le lezioni esistenti e genera la bozza
+            </label>
+            <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white;">
+                🤖 Genera bozza
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Form aggiungi lezione -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi lezione</h3>
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="min-width:220px; flex:2;">
+                <label style="font-size:.75rem; color:var(--grigio);">Gruppo *</label><br>
+                <select name="id_gruppo" required
+                        style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    <option value="">— seleziona gruppo —</option>
+                    {% for g in gruppi %}
+                    <option value="{{ g.id }}"
+                            {% if g.ore_pianificate >= 10 %}disabled{% endif %}>
+                        {{ g.materia }} —
+                        {% if g.docente %}{{ g.docente.cognome }}{% endif %}
+                        ({{ g.classi }})
+                        [{{ g.ore_pianificate }}h/10h]
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Data *</label><br>
+                <select name="data" required style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% set GIORNI = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'] %}
+                    {% for d in date_disponibili %}
+                    <option value="{{ d.isoformat() }}">{{ GIORNI[d.weekday()] }} {{ d.strftime('%d/%m') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Dalle</label><br>
+                <input type="time" name="ora_inizio" value="08:00" required
+                       style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Alle</label><br>
+                <input type="time" name="ora_fine" value="10:00" required
+                       style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Aula</label><br>
+                <input type="text" name="aula" placeholder="Es. 12"
+                       style="width:80px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
+        </div>
+    </form>
+</div>
+
+<!-- Vista calendario per data -->
+{% if lezioni_per_data %}
+{% set GIORNI_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'] %}
+{% set MESI_IT = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'] %}
+{% for data in lezioni_per_data.keys() | sort %}
+<div class="card" style="margin-bottom:12px; padding:0; overflow:hidden;">
+    <div style="background:var(--blu); color:white; padding:8px 14px; font-weight:700; font-size:.9rem;">
+        {{ GIORNI_IT[data.weekday()] }} {{ data.day }} {{ MESI_IT[data.month] }} {{ data.year }}
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:100px;">Orario</th>
+                <th>Materia</th>
+                <th style="width:160px;">Docente</th>
+                <th>Classi</th>
+                <th style="width:70px; text-align:center;">Alunni</th>
+                <th style="width:60px;">Aula</th>
+                <th style="width:50px; text-align:center;">✖</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for l, g in lezioni_per_data[data] | sort(attribute='0.ora_inizio') %}
+        <tr>
+            <td style="font-size:.86rem; white-space:nowrap; font-weight:700;">
+                {{ l.ora_inizio }}–{{ l.ora_fine }}
+                <span style="font-size:.72rem; color:var(--grigio);">({{ l.durata_ore }}h)</span>
+            </td>
+            <td><strong>{{ g.materia }}</strong></td>
+            <td style="font-size:.86rem;">
+                {% if g.docente %}{{ g.docente.cognome }}{% if g.docente.nome %} {{ g.docente.nome[0] }}.{% endif %}{% endif %}
+            </td>
+            <td style="font-size:.84rem;">{{ g.classi }}</td>
+            <td style="text-align:center; font-size:.84rem;">{{ g.n_alunni or '—' }}</td>
+            <td style="font-size:.84rem;">{{ l.aula or '—' }}</td>
+            <td style="text-align:center;">
+                <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ l.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessuna lezione pianificata. Aggiungi la prima dal form sopra.
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Agenda{% endblock %}
+
+{% block extra_style %}
+<style>
+.agenda-section { margin-bottom: 24px; }
+.agenda-section h2 { font-size:1rem; font-weight:800; color:var(--blu);
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;
+    padding-bottom:6px; border-bottom:2px solid var(--blu-light); }
+.auto-badge { font-size:.7rem; background:#e0e7ff; color:#3730a3;
+    border-radius:4px; padding:1px 6px; font-weight:700; margin-left:4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">📅 Agenda eventi futuri</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Da oggi in avanti — tutte le voci sono eliminabili
+        </p>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('indisponibilita.nuova') }}" class="btn btn-sm"
+           style="background:#0369a1; color:white;">⛔ + Indisponibilità</a>
+        <a href="{{ url_for('attivita.lista') }}" class="btn btn-sm btn-primary">
+            🗺 Uscite e Progetti</a>
+    </div>
+</div>
+
+<!-- INDISPONIBILITÀ FUTURE -->
+<div class="card agenda-section">
+    <h2>⛔ Indisponibilità ({{ indisp_accorpate|length }} voci)</h2>
+    {% if indisp_accorpate %}
+    <table>
+        <thead>
+            <tr>
+                <th style="width:120px;">Data</th><th style="width:120px;">Docente</th><th style="width:90px;">Ore</th>
+                <th style="width:160px;">Motivo</th><th>Note</th><th style="width:180px;text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for i in indisp_accorpate %}
+        <tr>
+            <td style="font-size:.88rem; white-space:nowrap;">
+                {{ i.data.strftime('%a %d/%m/%Y') }}
+            </td>
+            <td><strong>{{ i.cognome }}</strong></td>
+            <td style="font-size:.88rem;">{{ i.ore_label }}</td>
+            <td>
+                <span class="badge badge-grigio">{{ i.motivo }}</span>
+                {% if i.auto %}<span class="auto-badge">AUTO</span>{% endif %}
+            </td>
+            <td style="color:var(--grigio); font-size:.82rem; max-width:200px;
+                       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                {{ i.note or '—' }}
+            </td>
+            <td>
+                <div style="display:flex; gap:4px; justify-content:center; flex-wrap:nowrap;">
+                <a href="{{ url_for('indisponibilita.modifica', id=i.prima_id, next=request.url) }}"
+                   class="btn btn-primary btn-sm">✏️</a>
+                <form method="post"
+                      action="{{ url_for('agenda.elimina_gruppo_indisp') }}"
+                      onsubmit="return confirm('Eliminare {% if i.ids|length > 1 %}{{ i.ids|length }} indisponibilità{% else %}questa indisponibilità{% endif %}?')"
+                      style="display:inline;">
+                    <input type="hidden" name="ids"
+                           value="{{ i.ids | join(',') }}">
+                    <button class="btn btn-danger btn-sm" type="submit">
+                        Elimina{% if i.ids|length > 1 %} ({{ i.ids|length }}){% endif %}
+                    </button>
+                </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grigio); padding:16px 0;">
+        Nessuna indisponibilità registrata per i prossimi giorni.
+    </p>
+    {% endif %}
+</div>
+
+<!-- ASSENZE FUTURE -->
+<div class="card agenda-section">
+    <h2>🔴 Assenze future ({{ assenze_future|length }} voci)</h2>
+    {% if assenze_future %}
+    <table>
+        <thead>
+            <tr><th style="width:120px;">Data</th><th style="width:120px;">Docente</th><th style="width:90px;">Ore</th>
+                <th style="width:150px;">Tipo</th><th>Note</th><th style="width:180px;text-align:center;">Azioni</th></tr>
+        </thead>
+        <tbody>
+        {% for a in assenze_future %}
+        <tr>
+            <td style="font-size:.88rem; white-space:nowrap;">
+                {{ a.data.strftime('%a %d/%m/%Y') }}
+            </td>
+            <td><strong>{{ a.docente.cognome }}</strong></td>
+            <td style="font-size:.88rem;">
+                {% if a.ora_inizio == 1 and a.ora_fine == 9 %}Intera giornata
+                {% elif a.ora_inizio == a.ora_fine %}{{ a.ora_inizio }}ª ora
+                {% else %}{{ a.ora_inizio }}ª–{{ a.ora_fine }}ª{% endif %}
+            </td>
+            <td>
+                <span class="badge badge-grigio">{{ a.motivo }}</span>
+                {% if a.note_interne and a.note_interne.startswith('Auto') %}
+                <span class="auto-badge">AUTO</span>
+                {% endif %}
+            </td>
+            <td style="color:var(--grigio); font-size:.82rem; max-width:200px;
+                       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                {{ a.note_interne or '—' }}
+            </td>
+            <td>
+                <div style="display:flex; gap:4px; justify-content:center;">
+                <a href="{{ url_for('assenze.modifica', id=a.id, next=request.url) }}"
+                   class="btn btn-primary btn-sm">✏️</a>
+                <form method="post" action="{{ url_for('assenze.elimina', id=a.id) }}"
+                      onsubmit="return confirm('Eliminare assenza e supplenze collegate?')"
+                      style="display:inline;">
+                    <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+                </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grigio); padding:16px 0;">
+        Nessuna assenza futura registrata.
+    </p>
+    {% endif %}
+</div>
+
+<!-- SUPPLENZE FUTURE -->
+{% if supplenze_future %}
+<div class="card agenda-section">
+    <h2>📋 Supplenze future ({{ supplenze_future|length }} voci)</h2>
+    <table>
+        <thead>
+            <tr><th style="width:120px;">Data</th><th style="width:40px;text-align:center;">Ora</th><th style="width:80px;text-align:center;">Classe</th>
+                <th style="width:110px;">Assente</th><th style="width:110px;">Sostituto</th><th style="width:90px;text-align:center;">Stato</th><th style="width:180px;text-align:center;">Azioni</th></tr>
+        </thead>
+        <tbody>
+        {% for s in supplenze_future %}
+        <tr>
+            <td style="font-size:.88rem; white-space:nowrap;">
+                {{ s.data.strftime('%a %d/%m/%Y') }}
+            </td>
+            <td>{{ s.ora }}ª</td>
+            <td><strong>{{ s.classe }}</strong></td>
+            <td style="font-size:.88rem; color:var(--grigio);">
+                {{ s.assente.cognome if s.assente else '—' }}
+            </td>
+            <td style="font-size:.88rem;">
+                {{ s.sostituto.cognome if s.sostituto else '—' }}
+            </td>
+            <td>
+                {% if s.stato == 'assegnata' %}
+                <span class="badge badge-verde">✓ Assegnata</span>
+                {% else %}
+                <span class="badge badge-rosso">⚠ Scoperta</span>
+                {% endif %}
+            </td>
+            <td>
+                <div style="display:flex; gap:4px; justify-content:center;">
+                <a href="{{ url_for('supplenze.modifica', id=s.id, next=request.url) }}"
+                   class="btn btn-primary btn-sm">✏️</a>
+                <form method="post" action="{{ url_for('supplenze.annulla', id=s.id) }}"
+                      onsubmit="return confirm('Annullare supplenza?')" style="display:inline;">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- CAMBI QUADRO FUTURI -->
+{% if cambi_futuri %}
+<div class="card agenda-section">
+    <h2>🔄 Cambi quadro futuri ({{ cambi_futuri|length }} voci)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:120px;">Data</th>
+                <th style="width:40px;text-align:center;">Ora</th>
+                <th style="width:80px;text-align:center;">Classe</th>
+                <th style="width:110px;">Cede</th>
+                <th style="width:110px;">Copre</th>
+                <th style="width:120px;text-align:center;">Tipo</th>
+                <th style="width:120px;">Restituzione</th>
+                <th style="width:180px;text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for sc in cambi_futuri %}
+        <tr>
+            <td style="font-size:.88rem; white-space:nowrap;">
+                {{ sc.data_cessione.strftime('%a %d/%m/%Y') }}
+            </td>
+            <td>{{ sc.ora_cessione }}ª</td>
+            <td><strong>{{ sc.classe or '—' }}</strong></td>
+            <td style="font-size:.88rem;">
+                {{ sc.docente_cede.cognome if sc.docente_cede else '—' }}
+            </td>
+            <td style="font-size:.88rem;">
+                {{ sc.docente_copre.cognome if sc.docente_copre else
+                   '<span style="color:var(--grigio);">—</span>' }}
+            </td>
+            <td>
+                <span class="badge badge-grigio">{{ sc.tipo }}</span>
+            </td>
+            <td style="font-size:.82rem; color:var(--grigio);">
+                {% if sc.data_restituzione_prevista %}
+                    {{ sc.data_restituzione_prevista.strftime('%d/%m/%Y') }}
+                    {% if sc.ora_restituzione %} · {{ sc.ora_restituzione }}ª{% endif %}
+                {% else %}—{% endif %}
+            </td>
+            <td style="text-align:right; padding-right:12px;">
+                <div style="display:flex; gap:4px; justify-content:center;">
+                    <a href="{{ url_for('cambi.modifica', id=sc.id, next=request.url) }}"
+                       class="btn btn-primary btn-sm">✏️</a>
+                    <form method="post"
+                          action="{{ url_for('cambi.annulla', id=sc.id) }}"
+                          onsubmit="return confirm('Annullare questo scambio?')"
+                          style="display:inline;">
+                        <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

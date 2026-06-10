@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Report {{ docente.cognome }} — {{ oggi.strftime('%d/%m/%Y') }}</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family: 'Open Sans', Arial, sans-serif; font-size:10pt;
+       color:#1e2939; padding:10px 16px; }
+h1 { font-size:14pt; color:#1a3a5c; margin-bottom:4px; }
+.sub { font-size:9pt; color:#6b7280; margin-bottom:16px; }
+.testata { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+.box { border:1px solid #e5eaf0; border-radius:6px; padding:10px 14px;
+       text-align:center; flex:1; min-width:80px; }
+.box .val { font-size:16pt; font-weight:800; line-height:1; }
+.box .lbl { font-size:7pt; color:#6b7280; text-transform:uppercase;
+            letter-spacing:.5px; margin-top:3px; }
+.verde  { color:#1a7a4a; } .rosso { color:#b91c1c; }
+.giallo { color:#92610a; } .grigio { color:#6b7280; }
+
+table { width:100%; border-collapse:collapse; font-size:9pt; margin-bottom:16px; }
+th { background:#1a3a5c; color:white; padding:6px 8px; text-align:left;
+     font-weight:600; font-size:8pt; }
+td { padding:5px 8px; border-bottom:1px solid #e5eaf0; }
+tr.totali td { font-weight:700; background:#e8f0f7; }
+
+.badge { display:inline-block; padding:1px 8px; border-radius:10px;
+         font-size:7.5pt; font-weight:700; }
+.badge-verde { background:#d4f0e0; color:#1a7a4a; }
+.badge-rosso { background:#fde8e8; color:#b91c1c; }
+.badge-giallo{ background:#fff3cd; color:#92610a; }
+.badge-grigio{ background:#e5e7eb; color:#6b7280; }
+
+.programmata { background:#eff6ff !important; color:#1e40af; }
+.programmata td { color:#374151; }
+.badge-programmata { background:#dbeafe; color:#1e40af; font-size:7pt;
+    font-weight:700; padding:1px 6px; border-radius:8px; border:1px solid #93c5fd; }
+
+.footer { margin-top:20px; font-size:8pt; color:#9ca3af;
+          border-top:1px solid #e5eaf0; padding-top:8px;
+          display:flex; justify-content:space-between; }
+
+@page { size: A4 landscape; margin: 12mm 14mm; }
+@media print {
+    body { padding:10px; }
+    
+    @page { margin: 1.5cm; }
+}
+</style>
+</head>
+<body>
+
+
+
+<h1>{{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}</h1>
+<div class="sub">
+    {% if docente.materia %}{{ docente.materia }} · {% endif %}
+    {{ docente.ore_contratto }}h/sett
+    {% if docente.tipo_contratto %} · {{ docente.tipo_contratto }}{% endif %}
+    &nbsp;—&nbsp; Aggiornato il {{ oggi.strftime('%d/%m/%Y') }}
+</div>
+
+<!-- SALDI -->
+<div class="testata">
+    <div class="box">
+        <div class="val verde">+{{ saldi.supplenze }}h</div>
+        <div class="lbl">Supplenze svolte</div>
+    </div>
+    <div class="box">
+        <div class="val rosso">-{{ saldi.permessi }}h</div>
+        <div class="lbl">Permessi orari</div>
+    </div>
+    <div class="box">
+        <div class="val rosso">-{{ saldi.civica }}h</div>
+        <div class="lbl">Ed. Civica libero</div>
+    </div>
+    <div class="box">
+        <div class="val rosso">-{{ saldi.permessi + saldi.civica }}h</div>
+        <div class="lbl">Totale a recupero</div>
+    </div>
+    {% if saldi.pagamento > 0 %}
+    <div class="box">
+        <div class="val giallo">{{ saldi.pagamento }}h</div>
+        <div class="lbl">Ore a pagamento</div>
+    </div>
+    {% endif %}
+    <div class="box" style="border-color:{% if saldo_lordo > 0 %}#1a7a4a{% elif saldo_lordo < 0 %}#b91c1c{% else %}#e5e7eb{% endif %};">
+        <div class="val {% if saldo_lordo > 0 %}verde{% elif saldo_lordo < 0 %}rosso{% else %}grigio{% endif %}">
+            {% if saldo_lordo > 0 %}+{% endif %}{{ saldo_lordo }}h
+        </div>
+        <div class="lbl">Saldo lordo</div>
+    </div>
+    <div class="box" style="border-color:{% if saldo_netto > 0 %}#1a7a4a{% elif saldo_netto < 0 %}#b91c1c{% else %}#e5e7eb{% endif %};">
+        <div class="val {% if saldo_netto > 0 %}verde{% elif saldo_netto < 0 %}rosso{% else %}grigio{% endif %}">
+            {% if saldo_netto > 0 %}+{% endif %}{{ saldo_netto }}h
+        </div>
+        <div class="lbl">Saldo netto</div>
+    </div>
+</div>
+
+<!-- STORICO -->
+{% if storico %}
+<table>
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th style="text-align:center;">+ Supplenze</th>
+            <th style="text-align:center;">- Permessi</th>
+            <th style="text-align:center;">- Ed. Civica</th>
+            <th style="text-align:center;">€ Pagamento</th>
+            <th style="text-align:center;">Delta</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for riga in storico %}
+    {% set delta = riga.supplenze - riga.permessi - riga.civica %}
+    {% set futura = riga.data and riga.data > oggi %}
+    <tr{% if futura %} class="programmata"{% endif %}>
+        <td>
+            {{ riga.data.strftime('%d/%m/%Y') if riga.data else '—' }}
+            {% if futura %}<span class="badge-programmata">PROGRAMMATA</span>{% endif %}
+        </td>
+        <td style="text-align:center;">
+            {% if riga.supplenze > 0 %}<span class="verde">+{{ riga.supplenze }}h</span>{% else %}—{% endif %}
+        </td>
+        <td style="text-align:center;">
+            {% if riga.permessi > 0 %}<span class="rosso">-{{ riga.permessi }}h</span>{% else %}—{% endif %}
+        </td>
+        <td style="text-align:center;">
+            {% if riga.civica > 0 %}<span class="rosso">-{{ riga.civica }}h</span>{% else %}—{% endif %}
+        </td>
+        <td style="text-align:center;">
+            {% if riga.pagamento > 0 %}<span class="giallo">{{ riga.pagamento }}h</span>{% else %}—{% endif %}
+        </td>
+        <td style="text-align:center; font-weight:700;"
+            class="{% if delta > 0 %}verde{% elif delta < 0 %}rosso{% else %}grigio{% endif %}">
+            {% if delta > 0 %}+{% endif %}{{ delta }}h
+        </td>
+    </tr>
+    {% endfor %}
+    <tr class="totali">
+        <td>TOTALE</td>
+        <td style="text-align:center;" class="verde">+{{ saldi.supplenze }}h</td>
+        <td style="text-align:center;" class="rosso">-{{ saldi.permessi }}h</td>
+        <td style="text-align:center;" class="rosso">-{{ saldi.civica }}h</td>
+        <td style="text-align:center;" class="giallo">
+            {% if saldi.pagamento > 0 %}{{ saldi.pagamento }}h{% else %}—{% endif %}
+        </td>
+        <td style="text-align:center;"
+            class="{% if saldo_lordo > 0 %}verde{% elif saldo_lordo < 0 %}rosso{% else %}grigio{% endif %}">
+            {% if saldo_lordo > 0 %}+{% endif %}{{ saldo_lordo }}h
+        </td>
+    </tr>
+    </tbody>
+</table>
+{% endif %}
+
+{% if supplenze %}
+<table>
+    <thead>
+        <tr><th>Data supplenza</th><th>Ora</th><th>Classe</th><th>Tipo</th></tr>
+    </thead>
+    <tbody>
+    {% for s in supplenze %}
+    <tr>
+        <td>{{ s.data.strftime('%d/%m/%Y') }}</td>
+        <td>{{ s.ora }}ª</td>
+        <td><strong>{{ s.classe }}</strong></td>
+        <td>{{ s.tipo }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<div style="margin-top:18px; border-top:1px solid #cbd5e1; padding-top:10px; font-size:7.5pt; color:#374151;">
+
+    <div style="display:flex; gap:24px; margin-bottom:8px;">
+        <div><strong>Ore a pagamento:</strong> Supplenze già prese in carico per il pagamento durante l'anno con comunicazione ufficiale.</div>
+        <div><strong>Saldo lordo:</strong> Supplenze svolte − Permessi orari − Ore non lavorate per attività di Ed. Civica.</div>
+        <div><strong>Saldo netto:</strong> Saldo effettivo da considerare per compilare la cella C-D44 nel Modulo A (liquidazione FIS).</div>
+    </div>
+
+    <div style="background:#fef9c3; border:1px solid #fde047; border-radius:4px;
+                padding:5px 10px; font-size:7pt; color:#713f12; margin-bottom:8px;">
+        <strong>N.B.</strong> Le supplenze svolte <strong>prima del 25/05/2026</strong> non sono registrate con la data esatta di svolgimento,
+        ma con la data della settimana di riferimento (data di importazione dal file Excel di banca ore).
+    </div>
+
+    <div class="footer" style="display:flex; justify-content:space-between; margin-top:6px;">
+        <span>IIS "Leonardo da Vinci" — Chiavenna</span>
+        <span>Report generato il {{ oggi.strftime('%d/%m/%Y') }}</span>
+    </div>
+</div>
+
+</body>
+</html>

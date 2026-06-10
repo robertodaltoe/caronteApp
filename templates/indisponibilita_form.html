@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Indisponibilità{% endblock %}
+
+{% block extra_style %}
+<style>
+.indisp-riga {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    position: relative;
+}
+.indisp-riga .riga-num {
+    font-size: .72rem;
+    font-weight: 800;
+    color: var(--grigio);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 10px;
+}
+.ore-check {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+.ore-check label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .85rem;
+    font-weight: 600;
+    transition: all .12s;
+    user-select: none;
+}
+.ore-check input[type=checkbox] { display: none; }
+.ore-check input[type=checkbox]:checked + span {
+    color: white;
+}
+.ore-check label:has(input:checked) {
+    background: var(--blu);
+    border-color: var(--blu);
+    color: white;
+}
+.modal-fields { display: none; }
+.modal-fields.visible { display: flex; gap: 12px; flex-wrap: wrap; }
+.rimuovi-riga {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: none;
+    border: none;
+    color: var(--grigio);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color .1s;
+}
+.rimuovi-riga:hover { color: var(--rosso); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">⛔ Nuova indisponibilità</h1>
+    <a href="{{ url_for('dashboard.index', data=data_sel) }}"
+       class="btn btn-primary btn-sm">← Dashboard</a>
+</div>
+
+<form method="post" id="form-indisp">
+<input type="hidden" name="n_righe" id="n_righe" value="1">
+
+<div id="righe-container">
+<!-- Prima riga generata da JS -->
+</div>
+
+<div style="display:flex; gap:10px; margin-top:8px;">
+    <button type="button" class="btn btn-primary btn-sm"
+            onclick="aggiungiRiga()">
+        + Aggiungi indisponibilità
+    </button>
+    <button type="submit" class="btn btn-success">
+        ✓ Salva tutte
+    </button>
+    <a href="{{ url_for('dashboard.index', data=data_sel) }}"
+       class="btn btn-primary">Annulla</a>
+</div>
+</form>
+
+<script>
+const DOC_NOMI = {{ docenti_json | safe }};
+const MOTIVI = [
+    {% for val, label in motivi %}
+    {val: "{{ val }}", label: "{{ label }}"},
+    {% endfor %}
+];
+const GIORNI = [
+    {% for i, g in giorni %}
+    {val: {{ i }}, label: "{{ g }}"},
+    {% endfor %}
+];
+
+let nRighe = 0;
+
+function aggiungiRiga() {
+    const idx = nRighe++;
+    document.getElementById('n_righe').value = nRighe;
+
+    const div = document.createElement('div');
+    div.className = 'indisp-riga';
+    div.id = `riga-${idx}`;
+    div.innerHTML = `
+        <button type="button" class="rimuovi-riga"
+                onclick="rimuoviRiga(${idx})" title="Rimuovi">✕</button>
+        <div class="riga-num">Riga ${idx + 1}</div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+
+            <!-- Docente -->
+            <div class="form-group" style="flex:0 0 200px; margin-bottom:0;">
+                <label>Docente *</label>
+                <select name="id_docente[${idx}]" required style="width:100%;">
+                    <option value="">— Docente —</option>
+                    ${Object.entries(DOC_NOMI).map(([id, nome]) =>
+                        `<option value="${id}">${nome}</option>`
+                    ).join('')}
+                </select>
+            </div>
+
+            <!-- Motivo -->
+            <div class="form-group" style="flex:0 0 200px; margin-bottom:0;">
+                <label>Motivo</label>
+                <select name="motivo[${idx}]" style="width:100%;">
+                    ${MOTIVI.map(m => `<option value="${m.val}">${m.label}</option>`).join('')}
+                </select>
+            </div>
+
+            <!-- Modalità -->
+            <div class="form-group" style="flex:0 0 160px; margin-bottom:0;">
+                <label>Modalità</label>
+                <select name="tipo[${idx}]" onchange="cambiaTipo(${idx}, this.value)"
+                        style="width:100%;">
+                    <option value="singola">📅 Giorno singolo</option>
+                    <option value="intervallo">📅📅 Più giorni</option>
+                    <option value="settimanale">🔁 Ogni settimana</option>
+                </select>
+            </div>
+
+        </div>
+
+        <!-- Campi data dinamici -->
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-top:10px;">
+
+            <!-- SINGOLA -->
+            <div id="f-singola-${idx}" class="modal-fields visible">
+                <div class="form-group" style="flex:0 0 160px; margin-bottom:0;">
+                    <label>Data *</label>
+                    <input type="date" name="data[${idx}]"
+                           value="{{ data_sel }}" style="width:100%;">
+                </div>
+            </div>
+
+            <!-- INTERVALLO -->
+            <div id="f-intervallo-${idx}" class="modal-fields">
+                <div class="form-group" style="flex:0 0 150px; margin-bottom:0;">
+                    <label>Dal *</label>
+                    <input type="date" name="data_inizio[${idx}]"
+                           value="{{ data_sel }}" style="width:100%;">
+                </div>
+                <div class="form-group" style="flex:0 0 150px; margin-bottom:0;">
+                    <label>Al *</label>
+                    <input type="date" name="data_fine[${idx}]"
+                           value="{{ data_sel }}" style="width:100%;">
+                </div>
+            </div>
+
+            <!-- SETTIMANALE -->
+            <div id="f-settimanale-${idx}" class="modal-fields">
+                <div class="form-group" style="flex:0 0 auto; margin-bottom:0;">
+                    <label>Giorno/i *</label>
+                    <div class="ore-check">
+                        ${GIORNI.map(g => `
+                        <label>
+                            <input type="checkbox" name="giorno_sett[${idx}][]" value="${g.val}">
+                            <span>${g.label.slice(0,3)}</span>
+                        </label>`).join('')}
+                    </div>
+                </div>
+                <div class="form-group" style="flex:0 0 150px; margin-bottom:0;">
+                    <label>Dal *</label>
+                    <input type="date" name="sett_inizio[${idx}]"
+                           value="{{ data_sel }}" style="width:100%;">
+                </div>
+                <div class="form-group" style="flex:0 0 150px; margin-bottom:0;">
+                    <label>Al *</label>
+                    <input type="date" name="sett_fine[${idx}]"
+                           value="{{ data_sel }}" style="width:100%;">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Ore con checkbox -->
+        <div class="form-group" style="margin-top:10px; margin-bottom:0;">
+            <label>Ore
+                <span style="font-weight:400; color:var(--grigio); font-size:.82rem;">
+                    (nessuna selezione = tutta la giornata)
+                </span>
+            </label>
+            <div class="ore-check">
+                <label>
+                    <input type="checkbox" name="ore[${idx}][]" value="">
+                    <span>Tutta</span>
+                </label>
+                ${[1,2,3,4,5,6,7,8,9].map(o => `
+                <label>
+                    <input type="checkbox" name="ore[${idx}][]" value="${o}">
+                    <span>${o}ª</span>
+                </label>`).join('')}
+            </div>
+        </div>
+
+        <!-- Note -->
+        <div class="form-group" style="margin-top:10px; margin-bottom:0;">
+            <label>Note</label>
+            <input type="text" name="note[${idx}]" maxlength="150"
+                   style="width:100%; box-sizing:border-box;"
+                   placeholder="Opzionale">
+        </div>
+    `;
+
+    document.getElementById('righe-container').appendChild(div);
+
+    // Gestisci checkbox "Tutta" — deseleziona le altre e viceversa
+    const checkTutta = div.querySelector(`input[value=""]`);
+    const checkOre   = div.querySelectorAll(`input[type=checkbox][value]:not([value=""])`);
+    checkTutta.addEventListener('change', function() {
+        if (this.checked) checkOre.forEach(c => c.checked = false);
+    });
+    checkOre.forEach(c => c.addEventListener('change', function() {
+        if (this.checked) checkTutta.checked = false;
+    }));
+}
+
+function cambiaTipo(idx, tipo) {
+    ['singola','intervallo','settimanale'].forEach(t => {
+        const el = document.getElementById(`f-${t}-${idx}`);
+        if (el) el.classList.toggle('visible', t === tipo);
+    });
+}
+
+function rimuoviRiga(idx) {
+    const el = document.getElementById(`riga-${idx}`);
+    if (el) {
+        el.remove();
+        // Aggiorna il contatore delle righe visibili
+        document.getElementById('n_righe').value =
+            document.querySelectorAll('.indisp-riga').length;
+    }
+}
+
+// Aggiungi prima riga automaticamente
+aggiungiRiga();
+</script>
+
+{% endblock %}

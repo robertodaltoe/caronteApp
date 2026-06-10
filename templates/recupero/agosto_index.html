@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Organizza Sessione di Recupero — Agosto{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">📝 Organizza Sessione di Recupero — {{ anno }}</h1>
+        {% if periodo %}
+        <p style="font-size:.84rem; color:var(--grigio);">
+            {{ periodo.data_inizio.strftime('%d/%m/%Y') }} – {{ periodo.data_fine.strftime('%d/%m/%Y') }}
+            &nbsp;|&nbsp; {{ periodo.ora_inizio }}–{{ periodo.ora_fine }}
+            &nbsp;|&nbsp; Scritti 24–27/8 · Orali 28/8
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px;">
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:var(--blu);">{{ gruppi|length }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Gruppi prova</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ tot_alunni }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Alunni</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#0369a1;">{{ tot_lezioni }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Prove pianificate</div>
+    </div>
+</div>
+
+{% macro step(num, color, icon, label, endpoint, desc, last=false) %}
+<div style="display:grid; grid-template-columns:32px 1fr; gap:12px;
+            {% if not last %}align-items:stretch{% endif %}">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:50%; background:{{ color }};
+                    color:white; font-weight:800; font-size:.88rem;
+                    display:flex; align-items:center; justify-content:center; flex-shrink:0;">{{ num }}</div>
+        {% if not last %}<div style="width:2px; flex:1; background:#e5eaf0; margin-top:4px;"></div>{% endif %}
+    </div>
+    <a href="{{ url_for(endpoint) }}" class="card"
+       style="padding:14px 18px; text-decoration:none; display:flex;
+              align-items:center; gap:14px; border-left:4px solid {{ color }}; margin-bottom:0;">
+        <div style="font-size:1.6rem;">{{ icon }}</div>
+        <div>
+            <div style="font-weight:700; color:{{ color }};">{{ label }}</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">{{ desc }}</div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+</div>
+{% endmacro %}
+
+<div style="font-size:.78rem; font-weight:700; color:var(--grigio);
+            text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">
+    Sequenza di lavoro
+</div>
+
+<div style="display:flex; flex-direction:column; gap:8px;">
+    {{ step('1','var(--blu)','👨‍🏫','Verifica docenti disponibili',
+        'recupero.docenti',
+        'Controlla chi ha contratto TI o TD annuale — saranno titolari e commissari') }}
+    {{ step('2','#0369a1','🔗','Crea gruppi prova',
+        'recupero.agosto_proposte',
+        'Tutti gli alunni sospesi (corso + studio individuale) — tipo prova e durata per materia') }}
+    {{ step('3','#166534','📅','Pianifica il calendario prove',
+        'recupero.agosto_calendario',
+        'Bozza automatica: scritti 24–27/8, orali 28/8 · Commissario proposto automaticamente') }}
+    {{ step('4','#166534','✅','Verifica copertura prove',
+        'recupero.agosto_copertura',
+        'Controlla che ogni alunno abbia la sua prova pianificata per ogni materia sospesa') }}
+    {{ step('5','#92400e','📊','Esporta XLSX',
+        'recupero.agosto_export_xlsx',
+        'Una scheda per materia — versione famiglie e versione docenti con commissari', last=true) }}
+</div>
+{% endblock %}

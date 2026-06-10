@@ -1,0 +1,1073 @@
+{% extends "base.html" %}
+{% block title %}Nuova attività fuori aula{% endblock %}
+
+{% block extra_style %}
+<style>
+.giorni-check { display:flex; gap:8px; flex-wrap:wrap; }
+.giorno-lbl {
+    display:flex; align-items:center; gap:6px; padding:6px 12px;
+    border:2px solid #d1d5db; border-radius:8px; cursor:pointer;
+    font-size:.88rem; font-weight:600; transition:all .15s;
+    user-select:none;
+}
+.giorno-lbl:hover { border-color:var(--blu-med); }
+.giorno-lbl input { display:none; }
+.giorno-lbl.selezionato { background:var(--blu); color:white; border-color:var(--blu); }
+.sez { display:none; }
+.sez.attiva { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:6px;">{% if attivita %}✏️ Modifica attività{% else %}🗺 Nuova attività fuori aula{% endif %}</h1>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
+    Genera automaticamente indisponibilità, assenze per gli accompagnatori
+    e disponibilità a supplire per i docenti rimasti senza classe.
+</p>
+
+<div class="card" style="max-width:680px;">
+<form method="post" action="{% if attivita %}{{ url_for('attivita.modifica', id=attivita.id) }}{% endif %}">
+<!-- Dati docenti per autocomplete -->
+<script id="docenti-json" type="application/json">
+[{% for d in docenti %}
+  {"id": {{ d.id }},
+   "cognome": "{{ d.cognome }}",
+   "nome": "{{ d.nome or '' }}",
+   "materia": "{{ d.materia or '' }}"}{% if not loop.last %},{% endif %}
+{% endfor %}]
+</script>
+
+    <!-- TIPO -->
+    <div class="form-group">
+        <label>Tipo attività *</label>
+        <select name="tipo" required>
+            {% for val, label in tipi %}
+            <option value="{{ val }}" {% if attivita and attivita.tipo == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Descrizione
+            <span style="font-weight:400; color:var(--grigio);">(es. "Visita Museo del Cinema Torino")</span>
+        </label>
+        <input type="text" name="descrizione" maxlength="200"
+               value="{{ attivita.descrizione if attivita else '' }}"
+               placeholder="Opzionale ma utile per le comunicazioni">
+    </div>
+
+    <!-- CLASSI -->
+    <div class="form-group">
+        <label>Classi coinvolte *</label>
+        <div style="border:1px solid #d1d5db; border-radius:8px; padding:12px 16px; background:#fafafa;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:.8rem; color:var(--grigio);">Seleziona una o più classi</span>
+                <button type="button" onclick="selTutte(false)"
+                        style="font-size:.75rem; color:var(--rosso); background:none; border:none;
+                               cursor:pointer; text-decoration:underline;">
+                    Deseleziona tutto
+                </button>
+            </div>
+            {% for indirizzo, classi in classi_per_ind.items() %}
+            <div style="margin-bottom:10px;">
+                <div style="font-size:.75rem; font-weight:700; color:var(--blu);
+                             text-transform:uppercase; letter-spacing:.5px;
+                             margin-bottom:5px; display:flex; align-items:center; gap:8px;">
+                    {{ indirizzo }}
+                    <button type="button"
+                            onclick="selIndirizzo('{{ indirizzo }}', this)"
+                            style="font-size:.72rem; color:var(--blu-med); background:none;
+                                   border:1px solid var(--blu-med); border-radius:4px;
+                                   padding:1px 6px; cursor:pointer;">
+                        tutti
+                    </button>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                    {% for classe in classi %}
+                    <label class="classe-chk" data-ind="{{ indirizzo }}"
+                           style="display:flex; align-items:center; gap:5px;
+                                  padding:4px 10px; border:2px solid #e5eaf0;
+                                  border-radius:6px; cursor:pointer; font-size:.85rem;
+                                  font-weight:600; transition:all .12s; user-select:none;">
+                        <input type="checkbox" name="classi_sel" value="{{ classe }}"
+                               style="display:none;">
+                        {{ classe }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <small style="color:var(--grigio); font-size:.78rem; margin-top:4px; display:block;">
+            Oppure inserisci manualmente:
+            <input type="text" name="classi_manual" placeholder="Es. 3A LSU, 4B LLI"
+                   style="display:inline; width:auto; padding:3px 8px; font-size:.82rem;
+                          border:1px solid #d1d5db; border-radius:4px; margin-left:4px;">
+        </small>
+        <!-- Campo hidden con le classi selezionate -->
+        <input type="hidden" name="classi" id="classi-hidden">
+    </div>
+
+    <!-- ACCOMPAGNATORI AUTOCOMPLETE -->
+    <div class="form-group" id="row-accompagnatori">
+        <label>Docenti accompagnatori
+            <span style="font-weight:400; color:var(--grigio);">
+                (lascia vuoto per FSL)
+            </span>
+        </label>
+
+        <!-- Tag docenti selezionati -->
+        <div id="acc-tags" style="display:flex; flex-wrap:wrap; gap:6px;
+             min-height:32px; margin-bottom:8px;"></div>
+
+        <!-- Input autocomplete -->
+        <div style="position:relative;">
+            <input type="text" id="acc-input"
+                   placeholder="Scrivi cognome per cercare..."
+                   autocomplete="off"
+                   style="width:100%;">
+            <div id="acc-dropdown"
+                 style="display:none; position:absolute; top:100%; left:0; right:0;
+                        background:white; border:1px solid #d1d5db; border-top:none;
+                        border-radius:0 0 8px 8px; max-height:220px; overflow-y:auto;
+                        z-index:100; box-shadow:0 4px 12px rgba(0,0,0,.12);">
+            </div>
+        </div>
+
+        <!-- Campo hidden con gli id selezionati -->
+        <input type="hidden" name="accompagnatori_ids" id="acc-ids-hidden">
+
+        <!-- Dati docenti per JS (passati via data attribute) -->
+        <div id="acc-data" style="display:none;"
+             data-docenti="{{ docenti | map(attribute='id') | list | join(',') }}">
+        </div>
+    </div>
+
+    <!-- PERIODO -->
+    <div style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+            <label>Data inizio *</label>
+            <input type="date" name="data_inizio" required value="{{ attivita.data_inizio.isoformat() if attivita else oggi.isoformat() }}">
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label>Data fine *</label>
+            <input type="date" name="data_fine" required value="{{ attivita.data_fine.isoformat() if attivita else oggi.isoformat() }}">
+        </div>
+    </div>
+
+    <!-- ORE — selezione singole ore non consecutive -->
+    <div class="form-group">
+        <label>Ore coinvolte
+            <span style="font-weight:400; color:var(--grigio);">(vuoto = intera giornata)</span>
+        </label>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px;
+                    border:1px solid #d1d5db; border-radius:8px; background:#fafafa;">
+            {% set ore_sel = attivita.ore_list if attivita and attivita.ore_list else [] %}
+            {% for o in ore_list %}
+            <label style="display:flex; align-items:center; gap:5px; padding:5px 12px;
+                           border:2px solid {% if o in ore_sel %}var(--blu){% else %}#e5eaf0{% endif %};
+                           border-radius:8px; cursor:pointer; font-size:.88rem; font-weight:600;
+                           background:{% if o in ore_sel %}var(--blu){% else %}white{% endif %};
+                           color:{% if o in ore_sel %}white{% else %}var(--blu){% endif %};
+                           transition:all .12s; user-select:none;"
+                   class="ora-lbl" onclick="toggleOraLbl(this)">
+                <input type="checkbox" name="ore_singole" value="{{ o }}"
+                       style="display:none;"
+                       {% if o in ore_sel %}checked{% endif %}>
+                {{ o }}ª
+            </label>
+            {% endfor %}
+        </div>
+        <p style="font-size:.76rem; color:var(--grigio); margin-top:5px;">
+            Clicca per selezionare/deselezionare. Nessuna selezione = intera giornata.
+        </p>
+        <!-- Campi hidden compatibili con logica esistente -->
+        <input type="hidden" name="ora_inizio" id="hidden-ora-ini"
+               value="{{ attivita.ora_inizio if attivita else '' }}">
+        <input type="hidden" name="ora_fine"   id="hidden-ora-fine"
+               value="{{ attivita.ora_fine if attivita else '' }}">
+    </div>
+
+    <!-- RICORRENZA -->
+    <div class="form-group">
+        <label>Ricorrenza</label>
+        <div style="display:flex; gap:12px; margin-bottom:10px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600;">
+                <input type="radio" name="ricorrenza" value="giornaliera"
+                       {% if not attivita or attivita.ricorrenza == 'giornaliera' %}checked{% endif %}
+                       onchange="cambiaRicorrenza('giornaliera')">
+                📅 Tutti i giorni del periodo
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600;">
+                <input type="radio" name="ricorrenza" value="settimanale"
+                       {% if attivita and attivita.ricorrenza == 'settimanale' %}checked{% endif %}
+                       onchange="cambiaRicorrenza('settimanale')">
+                🔁 Solo certi giorni della settimana
+            </label>
+        </div>
+        <div id="sez-settimanale" class="sez">
+            <div class="giorni-check" id="giorni-container">
+                {% for num, nome in giorni %}
+                <label class="giorno-lbl" id="glbl-{{ num }}"
+                       onclick="toggleGiorno({{ num }}, this)">
+                    <input type="checkbox" name="giorni_settimana" value="{{ num }}">
+                    {{ nome[:3] }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Note interne</label>
+        <textarea name="note" rows="2" placeholder="Opzionale">{{ attivita.note if attivita else '' }}</textarea>
+    </div>
+
+    <!-- RIEPILOGO EFFETTI -->
+    <div style="background:var(--blu-light); border-radius:8px; padding:14px 18px;
+                margin-bottom:16px; font-size:.83rem; color:var(--blu);">
+        <strong>Cosa verrà generato automaticamente:</strong>
+        <ul style="margin-top:6px; padding-left:18px; line-height:1.8;">
+            <li>Indisponibilità + assenza (no banca ore) per ogni accompagnatore</li>
+            <li>Le classi coinvolte non genereranno supplenze scoperte</li>
+            <li>I docenti con lezione in quelle classi risulteranno disponibili
+                per supplenze di tipo <strong>Completamento</strong></li>
+        </ul>
+    </div>
+
+    <!-- GRUPPO RIMANENTE -->
+    <div style="background:#fef9c3; border:1px solid #fde047; border-radius:8px;
+                padding:14px 18px; margin-bottom:16px;">
+        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="gruppo_rimanente" value="1" id="chk-gruppo-r"
+                   {% if attivita and attivita.gruppo_rimanente %}checked{% endif %}
+                   style="width:16px; height:16px; margin-top:2px; flex-shrink:0;"
+                   onchange="toggleGruppoRimanente()">
+            <div style="flex:1;">
+                <span style="font-weight:700; color:#854d0e; font-size:.92rem;">
+                    🔀 Gruppo rimanente (classe parzialmente in aula)
+                </span>
+                <p style="font-size:.8rem; color:#713f12; margin-top:4px;">
+                    Una parte della classe è fuori aula, il gruppo rimasto va sorvegliato.<br>
+                    <strong>Effetto:</strong> docenti indisponibili, classe NON scoperta.
+                </p>
+            </div>
+        </label>
+
+        <!-- Sezione attività collegata — appare solo se gruppo_rimanente è attivo -->
+        <div id="sez-gruppo-att" style="display:none; margin-top:14px; border-top:1px solid #fde047; padding-top:14px;">
+            <p style="font-size:.82rem; font-weight:700; color:#854d0e; margin-bottom:10px;">
+                👥 Collega un'attività per il gruppo rimasto in aula:
+            </p>
+            <div style="display:flex; gap:16px; margin-bottom:12px;">
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:.85rem; font-weight:600;">
+                    <input type="radio" name="gruppo_att_mode" id="radio-esistente" value="esistente"
+                           {% if attivita and attivita.id_attivita_gruppo %}checked{% endif %}
+                           onchange="switchGruppoMode('esistente')">
+                    🔗 Collega attività esistente
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:.85rem; font-weight:600;">
+                    <input type="radio" name="gruppo_att_mode" id="radio-nuova" value="nuova"
+                           {% if not attivita or not attivita.id_attivita_gruppo %}checked{% endif %}
+                           onchange="switchGruppoMode('nuova')">
+                    ➕ Crea nuova attività
+                </label>
+            </div>
+
+            <!-- OPZIONE A: Seleziona esistente -->
+            <div id="sez-esistente" style="display:{% if attivita and attivita.id_attivita_gruppo %}block{% else %}none{% endif %};">
+                <select name="id_attivita_gruppo" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid #d1d5db;">
+                    <option value="">— Seleziona attività —</option>
+                    {% for att_exist in attivita_esistenti %}
+                    <option value="{{ att_exist.id }}"
+                        {% if attivita and attivita.id_attivita_gruppo == att_exist.id %}selected{% endif %}>
+                        [{{ att_exist.id }}] {{ att_exist.tipo_label }} — {{ att_exist.descrizione or 'senza descrizione' }}
+                        ({{ att_exist.data_inizio.strftime('%d/%m') }}{% if att_exist.data_fine != att_exist.data_inizio %}–{{ att_exist.data_fine.strftime('%d/%m') }}{% endif %})
+                    </option>
+                    {% endfor %}
+                </select>
+                <p style="font-size:.76rem; color:#713f12; margin-top:6px;">
+                    Es. seleziona "Progetto BIM" se il gruppo rimasto è già gestito da quell'attività.
+                </p>
+            </div>
+
+            <!-- OPZIONE B: Crea nuova inline -->
+            <div id="sez-nuova" style="display:{% if not attivita or not attivita.id_attivita_gruppo %}block{% else %}none{% endif %};">
+                <div style="background:white; border:1px solid #e5eaf0; border-radius:8px; padding:14px;">
+                    <div style="display:flex; gap:12px; margin-bottom:10px;">
+                        <div style="flex:1;">
+                            <label style="font-size:.78rem; font-weight:700; color:var(--grigio);">Tipo</label>
+                            <select name="gruppo_tipo" style="width:100%; padding:6px 10px; border-radius:5px; border:1px solid #d1d5db; font-size:.85rem;">
+                                <option value="progetto">📐 Progetto</option>
+                                <option value="fsl">🏫 FSL</option>
+                                <option value="migrazione_gruppo">🔀 Migrazione Gruppo</option>
+                            </select>
+                        </div>
+                        <div style="flex:2;">
+                            <label style="font-size:.78rem; font-weight:700; color:var(--grigio);">Descrizione</label>
+                            <input type="text" name="gruppo_descrizione"
+                                   placeholder="Es. Gruppo rimanente → 4A LSP"
+                                   style="width:100%; padding:6px 10px; border-radius:5px; border:1px solid #d1d5db; font-size:.85rem;">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <div style="flex:1;">
+                            <label style="font-size:.78rem; font-weight:700; color:var(--grigio);">Docenti sorveglianti</label>
+                            <input type="text" name="gruppo_acc_ids" id="gruppo-acc-input"
+                                   placeholder="Cerca docente..."
+                                   style="width:100%; padding:6px 10px; border-radius:5px; border:1px solid #d1d5db; font-size:.85rem;">
+                            <input type="hidden" name="gruppo_accompagnatori_ids" id="gruppo-acc-hidden">
+                            <div id="gruppo-acc-tags" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
+                        </div>
+                    </div>
+                    <p style="font-size:.76rem; color:var(--grigio); margin-top:8px;">
+                        ℹ️ Date e classi vengono copiate dall'attività principale. L'attività viene creata al salvataggio.
+                    </p>
+                </div>
+                <input type="hidden" name="id_attivita_gruppo" value="">
+            </div>
+        </div>
+    </div>
+
+    <!-- MIGRAZIONE GRUPPO PER ORA -->
+    <div id="sez-migrazione" style="display:none; margin-top:14px; border-top:1px solid #fde047; padding-top:14px;">
+        <p style="font-size:.82rem; font-weight:700; color:#854d0e; margin-bottom:6px;">
+            🗺 Pianificazione migrazione per ora:
+        </p>
+        <p style="font-size:.78rem; color:#713f12; margin-bottom:12px;">
+            Per ogni ora indica la classe in cui migra il gruppo. La ☑ associa automaticamente
+            il docente di quella classe in quell'ora — si disattiva se è assente/indisponibile.
+        </p>
+
+        <!-- Classi disponibili per autocomplete migrazione -->
+        <script id="classi-json" type="application/json">
+        {{ classi_per_ind.values() | sum(start=[]) | tojson }}
+        </script>
+        <!-- Date dell'attività per la griglia -->
+        <script id="date-attivita-json" type="application/json">
+        []
+        </script>
+
+        <!-- GRIGLIA MIGRAZIONE: righe = ore, colonne = giorni dell'attività -->
+        <div id="mig-griglia-container" style="overflow-x:auto;">
+            <div id="mig-griglia-loading" style="color:#713f12; font-size:.82rem; font-style:italic;">
+                ⏳ Compila le date e le classi dell'attività per vedere la griglia...
+            </div>
+            <div id="mig-griglia" style="display:none;"></div>
+        </div>
+
+        <!-- Campi hidden per il submit — popolati da JS -->
+        <div id="mig-hidden-fields"></div>
+
+        <p style="font-size:.76rem; color:#713f12; margin-top:10px;">
+            ℹ️ Il gruppo non genera supplenze scoperte in nessuna ora.
+            Le classi con ☑ auto ricevono una nota di sorveglianza nel registro.
+        </p>
+    </div>
+
+    <!-- RICONOSCI ORE FUORI SERVIZIO -->
+    <div id="sez-ore-acc" style="background:#f0fdf4; border:1px solid #86efac;
+         border-radius:8px; padding:14px 18px; margin-bottom:16px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;
+                      font-weight:700; color:#166534; font-size:.92rem;">
+            <input type="checkbox" name="riconosci_ore_acc" value="1" id="chk-ore-acc"
+                   {% if not attivita or attivita.riconosci_ore_acc %}checked{% endif %}
+                   style="width:16px; height:16px;" onchange="toggleOreAcc()">
+            ✅ Riconosci ore fuori servizio agli accompagnatori come credito banca ore
+        </label>
+        <div id="sez-ore-acc-dettaglio" style="margin-top:12px;">
+            <p style="font-size:.8rem; color:#166534; margin-bottom:12px;">
+                I badge verdi sono le ore in cui il docente è <strong>libero</strong>
+                (nessuna lezione). Quelli grigi sono ore con lezione. Clicca per selezionare/deselezionare.
+            </p>
+            <!-- Badge per accompagnatore — generati via JS -->
+            <div id="ore-badge-container"></div>
+            <!-- Campi hidden per il submit -->
+            <input type="hidden" name="ore_acc_inizio" id="inp-ore-ini">
+            <input type="hidden" name="ore_acc_fine"   id="inp-ore-fine">
+            <!-- Ore selezionate (per ogni docente) -->
+            <input type="hidden" name="ore_acc_ids"    id="inp-ore-ids">
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button class="btn btn-success" type="submit">{% if attivita %}✓ Salva modifiche{% else %}✓ Registra attività{% endif %}</button>
+        <a href="{{ url_for('attivita.lista') }}" class="btn btn-primary">Annulla</a>
+    </div>
+
+</form>
+</div>
+
+<script>
+function toggleGruppoRimanente() {
+    const chk = document.getElementById('chk-gruppo-r');
+    const attivo = chk && chk.checked;
+    const sez = document.getElementById('sez-gruppo-att');
+    if (sez) sez.style.display = attivo ? 'block' : 'none';
+    aggiornaVisibilitaMigrazione();
+}
+
+function aggiornaVisibilitaMigrazione() {
+    const chk = document.getElementById('chk-gruppo-r');
+    const attivo = chk && chk.checked;
+    const tipoSel = document.querySelector('[name=gruppo_tipo]')?.value || '';
+    const mig = document.getElementById('sez-migrazione');
+    if (mig) mig.style.display = (attivo && tipoSel === 'migrazione_gruppo') ? 'block' : 'none';
+}
+
+// ── GRIGLIA MIGRAZIONE GRUPPO ──────────────────────────────
+const CLASSI_MIG = (() => {
+    try { return JSON.parse(document.getElementById('classi-json').textContent); }
+    catch(e) { return []; }
+})();
+
+// Stato migrazione: { 'ora_data': { classe, usaAuto, docente, disponibile, motivo } }
+const migStato = {};
+
+// Recupera le date dell'attività in base ai campi del form
+function getMigDate() {
+    const ini  = document.querySelector('[name=data_inizio]')?.value;
+    const fin  = document.querySelector('[name=data_fine]')?.value;
+    const ric  = document.querySelector('[name=ricorrenza]:checked')?.value || 'giornaliera';
+    const gs   = [...document.querySelectorAll('[name=giorni_settimana]:checked')].map(c=>parseInt(c.value));
+    if (!ini || !fin) return [];
+    const dates = [];
+    let cur = new Date(ini + 'T00:00:00');
+    const end = new Date(fin + 'T00:00:00');
+    while (cur <= end && dates.length < 30) {
+        const wd = cur.getDay() === 0 ? 6 : cur.getDay() - 1; // 0=lun
+        const isoDate = cur.toISOString().slice(0,10);
+        if (ric === 'settimanale') {
+            if (gs.includes(wd)) dates.push({iso: isoDate, wd, label: cur.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit'})});
+        } else {
+            if (wd < 6) dates.push({iso: isoDate, wd, label: cur.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit'})});
+        }
+        cur.setDate(cur.getDate()+1);
+    }
+    return dates;
+}
+
+async function aggiornaGrigliaMigrazione() {
+    const chk = document.getElementById('chk-gruppo-r');
+    if (!chk || !chk.checked) return;
+    const dates = getMigDate();
+    const container = document.getElementById('mig-griglia');
+    const loading   = document.getElementById('mig-griglia-loading');
+    if (!dates.length) {
+        loading.style.display = 'block'; container.style.display = 'none'; return;
+    }
+    loading.style.display = 'none'; container.style.display = 'block';
+    const idAtt = {% if attivita %}{{ attivita.id }}{% else %}null{% endif %};
+
+    // Costruisce la tabella
+    let html = '<table style="border-collapse:collapse; font-size:.82rem; width:100%;">';
+    // Header: colonne = date
+    html += '<thead><tr><th style="background:#fef08a; padding:6px 10px; width:40px;">Ora</th>';
+    dates.forEach(d => {
+        const parti = d.label.split(' ');  // es. ['ven', '29/05']
+        const linea1 = parti[0] ? parti[0].toUpperCase() : '';
+        const linea2 = parti[1] || '';
+        html += '<th style="background:#fef08a; padding:4px 6px; min-width:95px; text-align:center; border-right:1px solid #fde047;"><span style="display:block; font-size:.65rem; color:#92400e; text-transform:uppercase; letter-spacing:.5px;">' + linea1 + '</span><span style="display:block; font-size:.75rem; font-weight:800; color:#292524;">' + linea2 + '</span></th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    for (let ora = 1; ora <= 9; ora++) {
+        html += '<tr style="border-bottom:1px solid #fde047;">';
+        html += '<td style="padding:4px 6px; font-weight:700; color:#854d0e; text-align:center; font-size:.78rem;">' + ora + 'ª</td>';
+        dates.forEach(d => {
+            const key = ora + '_' + d.iso;
+            const st  = migStato[key] || {};
+            html += '<td style="padding:3px 4px; vertical-align:top; text-align:center;">';
+            // Input classe con autocomplete
+            html += '<div style="position:relative;">';
+            html += '<input type="text" id="mig-cl-' + key + '" data-key="' + key + '" data-ora="' + ora + '" data-data="' + d.iso + '" data-wd="' + d.wd + '"';
+            html += ' value="' + (st.classe||'') + '" placeholder="classe" autocomplete="off" maxlength="7"';
+            html += ' style="width:70px; padding:3px 5px; border:1px solid #fde047; border-radius:4px; font-size:.78rem; font-family:monospace; background:#fffbeb; text-transform:uppercase;"';
+            html += ' oninput="migInputChange(this)" onfocus="migDropdownShow(this)" onblur="setTimeout(()=>migDropdownHide(this.dataset.key),200)">';
+            html += '<div id="mig-dd-' + key + '" style="display:none; position:absolute; top:100%; left:0; min-width:90px; background:white; border:1px solid #d1d5db; border-radius:0 0 6px 6px; box-shadow:0 4px 12px rgba(0,0,0,.12); z-index:200; max-height:180px; overflow-y:auto;"></div>';
+            html += '</div>';
+            // Checkbox auto + info docente
+            html += '<div id="mig-auto-' + key + '" style="margin-top:4px; min-height:20px;">' + (st.classe ? _migAutoHtml(key, st) : '') + '</div>';
+            html += '</td>';
+        });
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    aggiornaMigHiddenFields();
+}
+
+function _migAutoHtml(key, st) {
+    if (!st.classe) return '';
+    if (!st.docente) return '<em style="font-size:.72rem;color:#9ca3af">caricamento...</em>';
+    const disp = st.disponibile !== false;
+    const color = disp ? '#166534' : '#9ca3af';
+    const title = disp ? st.docente.cognome : (st.motivo || 'non disponibile');
+    // Usa template literal per evitare apici annidati
+    const dis = disp ? '' : 'disabled';
+    const chk = st.usaAuto ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:4px;cursor:${disp?'pointer':'not-allowed'}">` +
+        `<input type="checkbox" data-mig-key="${key}" ${chk} ${dis} onchange="migCheckChange(this.dataset.migKey,this)">` +
+        `<span style="font-size:.71rem;color:${color};font-weight:700">${title}${disp?'':' ✗'}</span>` +
+        '</label>';
+}
+
+async function migInputChange(input) {
+    const key = input.dataset.key;
+    const ora = parseInt(input.dataset.ora);
+    const data = input.dataset.data;
+    const wd   = parseInt(input.dataset.wd);
+    const cl   = input.value.trim().toUpperCase();
+
+    migDropdownShow(input);
+    
+    if (!migStato[key]) migStato[key] = {};
+    migStato[key].classe   = cl;
+    migStato[key].usaAuto  = false;
+    migStato[key].docente  = null;
+
+    const autoDiv = document.getElementById('mig-auto-' + key);
+    if (autoDiv && cl.length >= 2) {
+        autoDiv.innerHTML = '<span style="font-size:.72rem; color:#9ca3af;">⏳</span>';
+        // Chiama API per trovare il docente
+        const idAtt = {% if attivita %}{{ attivita.id }}{% else %}null{% endif %};
+        const params = new URLSearchParams({classe:cl, ora, giorno:wd, data, ...(idAtt ? {id_attivita:idAtt} : {})});
+        try {
+            const r = await fetch('/api/docente-classe-ora?' + params);
+            const d = await r.json();
+            migStato[key].docente     = d.docente;
+            migStato[key].disponibile = d.disponibile !== false;
+            migStato[key].motivo      = d.motivo;
+            // Se disponibile, attiva auto di default
+            if (d.docente && d.disponibile !== false) migStato[key].usaAuto = true;
+        } catch(e) {
+            migStato[key].docente = null;
+        }
+        autoDiv.innerHTML = _migAutoHtml(key, migStato[key]);
+    } else if (autoDiv) {
+        autoDiv.innerHTML = '';
+    }
+    aggiornaMigHiddenFields();
+}
+
+function migCheckChange(key, chk) {
+    if (!migStato[key]) migStato[key] = {};
+    migStato[key].usaAuto = chk.checked;
+    aggiornaMigHiddenFields();
+}
+
+function migDropdownShow(input) {
+    const key = input.dataset.key;
+    const q   = input.value.trim().toUpperCase();
+    const drop = document.getElementById('mig-dd-' + key);
+    if (!drop) return;
+    const matches = q.length < 1 ? CLASSI_MIG : CLASSI_MIG.filter(c => c.toUpperCase().includes(q));
+    if (!matches.length) { drop.style.display = 'none'; return; }
+    drop.innerHTML = '';
+    matches.slice(0,10).forEach(cl => {
+        const item = document.createElement('div');
+        item.textContent = cl;
+        item.style.cssText = 'padding:4px 8px; cursor:pointer; font-size:.76rem; font-weight:700; font-family:monospace; border-bottom:1px solid #f0f4f8;';
+        item.addEventListener('mouseenter', () => item.style.background = '#fef9c3');
+        item.addEventListener('mouseleave', () => item.style.background = 'white');
+        item.addEventListener('mousedown', e => {
+            e.preventDefault();
+            input.value = cl;
+            drop.style.display = 'none';
+            migInputChange(input);
+        });
+        drop.appendChild(item);
+    });
+    drop.style.display = 'block';
+}
+
+function migDropdownHide(key) {
+    const drop = document.getElementById('mig-dd-' + key);
+    if (drop) drop.style.display = 'none';
+}
+
+function aggiornaMigHiddenFields() {
+    const div = document.getElementById('mig-hidden-fields');
+    if (!div) return;
+    div.innerHTML = '';
+    Object.entries(migStato).forEach(([key, st]) => {
+        if (!st.classe) return;
+        const [ora, data] = key.split('_');
+        // mig_classe_{ora}_{data}, mig_auto_{ora}_{data}, mig_doc_{ora}_{data}
+        const mk = ora + '_' + data;
+        div.innerHTML += '<input type="hidden" name="mig_classe_' + mk + '" value="' + st.classe + '">';
+        div.innerHTML += '<input type="hidden" name="mig_auto_'   + mk + '" value="' + (st.usaAuto?'1':'0') + '">';
+        div.innerHTML += '<input type="hidden" name="mig_doc_'    + mk + '" value="' + (st.docente?.id||'') + '">';
+        div.innerHTML += '<input type="hidden" name="mig_data_'   + mk + '" value="' + data + '">';
+        div.innerHTML += '<input type="hidden" name="mig_ora_'    + mk + '" value="' + ora + '">';
+    });
+}
+
+// Aggiorna griglia quando cambiano date/ricorrenza
+document.addEventListener('DOMContentLoaded', () => {
+    ['[name=data_inizio]','[name=data_fine]'].forEach(sel => {
+        document.querySelector(sel)?.addEventListener('change', aggiornaGrigliaMigrazione);
+    });
+    document.querySelectorAll('[name=ricorrenza]').forEach(r => {
+        r.addEventListener('change', aggiornaGrigliaMigrazione);
+    });
+    document.querySelectorAll('[name=giorni_settimana]').forEach(r => {
+        r.addEventListener('change', aggiornaGrigliaMigrazione);
+    });
+    {% if attivita and attivita.gruppo_rimanente %}
+    // Pre-carica stato esistente
+    const slotsEsistenti = [{% for s in (migrazione_slots or []) %}{"ora":{{ s.ora }},"classe_dest":"{{ s.classe_dest or '' }}","usa_auto":{{ 'true' if s.usa_docente_automatico else 'false' }},"id_doc":{{ s.id_docente_assegnato or 'null' }}}{% if not loop.last %},{% endif %}{% endfor %}];
+    // Avvia griglia con un delay per attendere il DOM
+    setTimeout(aggiornaGrigliaMigrazione, 300);
+    {% endif %}
+});
+function switchGruppoMode(mode) {
+    document.getElementById('sez-esistente').style.display = mode === 'esistente' ? 'block' : 'none';
+    document.getElementById('sez-nuova').style.display = mode === 'nuova' ? 'block' : 'none';
+}
+// Init al caricamento
+document.addEventListener('DOMContentLoaded', () => {
+    const chk = document.getElementById('chk-gruppo-r');
+    if (chk && chk.checked) toggleGruppoRimanente();
+});
+
+// ── ORE SINGOLE NON CONSECUTIVE ─────────────────────────
+function toggleOraLbl(lbl) {
+    setTimeout(() => {
+        const chk = lbl.querySelector('input');
+        const sel = chk.checked;
+        lbl.style.background    = sel ? 'var(--blu)' : 'white';
+        lbl.style.color         = sel ? 'white'       : 'var(--blu)';
+        lbl.style.borderColor   = sel ? 'var(--blu)'  : '#e5eaf0';
+        aggiornaHiddenOreAtt();
+    }, 0);
+}
+
+function aggiornaHiddenOreAtt() {
+    const ore = [...document.querySelectorAll('[name=ore_singole]:checked')]
+        .map(c => parseInt(c.value)).sort((a,b)=>a-b);
+    document.getElementById('hidden-ora-ini').value  = ore.length ? ore[0]             : '';
+    document.getElementById('hidden-ora-fine').value = ore.length ? ore[ore.length-1]  : '';
+}
+
+// Aggiorna anche quando cambia per la griglia migrazione
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[name=ore_singole]').forEach(chk => {
+        chk.addEventListener('change', () => {
+            aggiornaHiddenOreAtt();
+            aggiornaGrigliaMigrazione();
+        });
+    });
+    aggiornaHiddenOreAtt();
+
+    // Mostra/nascondi griglia migrazione al cambio tipo nel gruppo
+    document.querySelector('[name=gruppo_tipo]')?.addEventListener('change', aggiornaVisibilitaMigrazione);
+    // Stato iniziale
+    aggiornaVisibilitaMigrazione();
+});
+
+function cambiaRicorrenza(tipo) {
+    const sez = document.getElementById('sez-settimanale');
+    sez.style.display = tipo === 'settimanale' ? 'block' : 'none';
+}
+
+// Pre-selezione in modalità modifica
+document.addEventListener('DOMContentLoaded', () => {
+    {% if attivita %}
+    // Classi già selezionate
+    const classiSel = {{ attivita.classi_list | tojson }};
+    document.querySelectorAll('.classe-chk').forEach(lbl => {
+        const val = lbl.querySelector('input').value;
+        if (classiSel.includes(val)) {
+            lbl.querySelector('input').checked = true;
+            lbl.classList.add('sel');
+        }
+    });
+    aggiornaHidden();
+
+    // Giorni settimana già selezionati
+    const giorniSel = {{ attivita.giorni_sett_list | tojson }};
+    if (giorniSel.length) {
+        document.getElementById('sez-settimanale').style.display = 'block';
+        giorniSel.forEach(g => {
+            const lbl = document.getElementById('glbl-' + g);
+            if (lbl) {
+                lbl.querySelector('input').checked = true;
+                lbl.classList.add('selezionato');
+            }
+        });
+    }
+
+    // Accompagnatori già selezionati — pre-popola come tag
+    const accEsistenti = [{% for d in attivita.accompagnatori %}
+        {id: {{ d.id }}, cognome: '{{ d.cognome }}', nome: '{{ d.nome or '' }}', materia: '{{ d.materia or '' }}'}{% if not loop.last %},{% endif %}
+    {% endfor %}];
+    accEsistenti.forEach(d => {
+        if (typeof selezionati !== 'undefined') selezionati.set(d.id, d);
+    });
+    if (typeof renderTags !== 'undefined') renderTags();
+    if (typeof aggiornaAccIds !== 'undefined') aggiornaAccIds();
+    {% endif %}
+});
+
+function toggleGiorno(num, lbl) {
+    const chk = lbl.querySelector('input');
+    setTimeout(() => {
+        lbl.classList.toggle('selezionato', chk.checked);
+    }, 0);
+}
+</script>
+
+<style>
+.classe-chk:hover { border-color: var(--blu-med) !important; }
+.classe-chk.sel {
+    background: var(--blu);
+    color: white;
+    border-color: var(--blu) !important;
+}
+</style>
+
+<script>
+// Toggle singola classe
+document.querySelectorAll('.classe-chk').forEach(lbl => {
+    lbl.addEventListener('click', () => {
+        setTimeout(() => {
+            const chk = lbl.querySelector('input');
+            lbl.classList.toggle('sel', chk.checked);
+            aggiornaHidden();
+        }, 0);
+    });
+});
+
+function selIndirizzo(ind, btn) {
+    const lbls = document.querySelectorAll('.classe-chk[data-ind="' + ind + '"]');
+    const tutteSelezionate = [...lbls].every(l => l.classList.contains('sel'));
+    lbls.forEach(lbl => {
+        const chk = lbl.querySelector('input');
+        chk.checked = !tutteSelezionate;
+        lbl.classList.toggle('sel', !tutteSelezionate);
+    });
+    aggiornaHidden();
+}
+
+function selTutte(stato) {
+    document.querySelectorAll('.classe-chk').forEach(lbl => {
+        const chk = lbl.querySelector('input');
+        chk.checked = stato;
+        lbl.classList.toggle('sel', stato);
+    });
+    aggiornaHidden();
+}
+
+function aggiornaHidden() {
+    const sel = [...document.querySelectorAll('.classe-chk input:checked')]
+        .map(c => c.value);
+    const manual = document.querySelector('[name=classi_manual]').value.trim();
+    // Usa virgola come separatore — le classi contengono spazi (es. "4A LSP")
+    const extra = manual ? manual.split(',').map(c=>c.trim()).filter(Boolean) : [];
+    const tutte = [...new Set([...sel, ...extra])];
+    document.getElementById('classi-hidden').value = tutte.join(',');
+}
+
+// ── ORE BADGE ────────────────────────────────────────────────
+// selezione per accompagnatore, badge verdi=libero grigio=lezione
+
+function toggleOreAcc() {
+    const chk = document.getElementById('chk-ore-acc');
+    const det = document.getElementById('sez-ore-acc-dettaglio');
+    if (det) det.style.display = chk && chk.checked ? 'block' : 'none';
+    if (chk && chk.checked) aggiornaOreBadge();
+}
+toggleOreAcc();
+
+// Mappa docId -> Set di ore selezionate
+const oreSelezionate = {};
+// Precarica valori esistenti (modifica)
+{% if attivita and attivita.ore_acc_inizio and attivita.ore_acc_fine %}
+const _iniExist = {{ attivita.ore_acc_inizio }};
+const _fineExist = {{ attivita.ore_acc_fine }};
+{% else %}
+const _iniExist = null, _fineExist = null;
+{% endif %}
+
+function aggiornaOreBadge() {
+    const chk = document.getElementById('chk-ore-acc');
+    if (!chk || !chk.checked) return;
+    const accIds = document.getElementById('acc-ids-hidden').value;
+    if (!accIds) {
+        document.getElementById('ore-badge-container').innerHTML =
+            '<p style="color:#6b7280; font-size:.82rem; font-style:italic;">Aggiungi almeno un accompagnatore per vedere le ore disponibili.</p>';
+        return;
+    }
+    const dataIni  = document.querySelector('[name=data_inizio]')?.value;
+    const dataFin  = document.querySelector('[name=data_fine]')?.value;
+    if (!dataIni || !dataFin) return;
+    const ric      = document.querySelector('[name=ricorrenza]:checked')?.value || 'giornaliera';
+    const oraIni   = document.querySelector('[name=ora_inizio]')?.value || '';
+    const oraFine  = document.querySelector('[name=ora_fine]')?.value || '';
+    const giorniSel= [...document.querySelectorAll('[name=giorni_settimana]:checked')].map(c=>c.value).join(',');
+
+    const idAttivita = {% if attivita %}"{{ attivita.id }}"{% else %}""{% endif %};
+    const params = new URLSearchParams({acc_ids:accIds, data_inizio:dataIni, data_fine:dataFin,
+        ricorrenza:ric, giorni_sett:giorniSel, ora_inizio:oraIni, ora_fine:oraFine,
+        ...(idAttivita ? {id_attivita: idAttivita} : {})});
+
+    fetch('/api/ore-libere-accompagnatori?' + params)
+        .then(r => r.json())
+        .then(renderBadge)
+        .catch(e => {
+            document.getElementById('ore-badge-container').innerHTML =
+                '<p style="color:#dc2626;font-size:.82rem;">Errore nel caricamento.</p>';
+        });
+}
+
+function renderBadge(data) {
+    const container = document.getElementById('ore-badge-container');
+    if (!data.docenti || !data.docenti.length) {
+        container.innerHTML = '<p style="color:#6b7280;font-size:.82rem;font-style:italic;">Nessun accompagnatore.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    data.docenti.forEach(doc => {
+        // Init ore selezionate per questo docente
+        if (!oreSelezionate[doc.id]) {
+            oreSelezionate[doc.id] = new Set();
+            // Pre-seleziona range esistente se in modifica
+            if (_iniExist && _fineExist) {
+                for (let o = _iniExist; o <= _fineExist; o++) {
+                    if (doc.ore_libere_comuni.includes(o)) oreSelezionate[doc.id].add(o);
+                }
+            }
+        }
+
+        const libereSet = new Set(doc.ore_libere_comuni);
+
+        const blocco = document.createElement('div');
+        blocco.style.cssText = 'margin-bottom:14px; padding:10px 12px; background:white; border-radius:8px; border:1px solid #d1fae5;';
+
+        const nome = document.createElement('div');
+        nome.style.cssText = 'font-weight:700; font-size:.88rem; color:#166534; margin-bottom:8px;';
+        nome.textContent = doc.cognome + (doc.nome ? ' ' + doc.nome[0] + '.' : '');
+        if (!doc.ore_libere_comuni.length) {
+            nome.innerHTML += ' <span style="color:#9ca3af; font-weight:400; font-size:.78rem;">(nessuna ora libera)</span>';
+        }
+        blocco.appendChild(nome);
+
+        const badges = document.createElement('div');
+        badges.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px;';
+
+        for (let ora = 1; ora <= 9; ora++) {
+            const libero = libereSet.has(ora);
+            const selezionato = oreSelezionate[doc.id].has(ora);
+
+            const badge = document.createElement('button');
+            badge.type = 'button';
+            badge.dataset.ora = ora;
+            badge.dataset.docId = doc.id;
+            badge.textContent = ora + 'ª';
+            aggiornaBadgeStile(badge, libero, selezionato);
+
+            if (libero) {
+                badge.addEventListener('click', () => {
+                    const sel = oreSelezionate[doc.id];
+                    if (sel.has(ora)) sel.delete(ora);
+                    else sel.add(ora);
+                    aggiornaBadgeStile(badge, true, sel.has(ora));
+                    aggiornaHiddenOre();
+                });
+            }
+            badges.appendChild(badge);
+        }
+        blocco.appendChild(badges);
+        container.appendChild(blocco);
+    });
+
+    aggiornaHiddenOre();
+}
+
+function aggiornaBadgeStile(badge, libero, selezionato) {
+    badge.style.cssText = `padding:5px 12px; border-radius:8px; font-size:.85rem; font-weight:700;
+        border:2px solid; cursor:${libero ? 'pointer' : 'default'}; transition:all .12s;
+        background:${selezionato ? '#166534' : libero ? '#dcfce7' : '#f3f4f6'};
+        color:${selezionato ? 'white' : libero ? '#166534' : '#9ca3af'};
+        border-color:${selezionato ? '#166534' : libero ? '#86efac' : '#e5e7eb'};`;
+}
+
+function aggiornaHiddenOre() {
+    // Calcola range globale: min e max tra tutte le ore selezionate di tutti i docenti
+    let oreGlobali = new Set();
+    Object.values(oreSelezionate).forEach(set => set.forEach(o => oreGlobali.add(o)));
+    const arr = [...oreGlobali].sort((a,b)=>a-b);
+    document.getElementById('inp-ore-ini').value  = arr.length ? arr[0] : '';
+    document.getElementById('inp-ore-fine').value = arr.length ? arr[arr.length-1] : '';
+    document.getElementById('inp-ore-ids').value  = arr.join(',');
+}
+
+// Aggiorna badge quando cambiano accompagnatori, date o ore attività
+document.addEventListener('DOMContentLoaded', () => {
+    const _orig = window.aggiornaAccIds;
+    if (_orig) {
+        window.aggiornaAccIds = function() {
+            _orig();
+            setTimeout(aggiornaOreBadge, 150);
+        };
+        window.aggiornaAccIds = window.aggiornaAccIds;
+    }
+    ['[name=data_inizio]','[name=data_fine]','[name=ora_inizio]','[name=ora_fine]']
+        .forEach(sel => {
+            document.querySelector(sel)?.addEventListener('change', aggiornaOreBadge);
+        });
+    {% if attivita and attivita.accompagnatori %}
+    setTimeout(aggiornaOreBadge, 400);
+    {% endif %}
+});
+
+// Aggiorna hidden prima del submit
+document.querySelector('form').addEventListener('submit', e => {
+    aggiornaHidden();
+    aggiornaAccIds();
+});
+
+// Aggiorna anche quando si digita nel campo manuale
+document.querySelector('[name=classi_manual]').addEventListener('input', aggiornaHidden);
+</script>
+
+<!-- AUTOCOMPLETE ACCOMPAGNATORI -->
+<style>
+.acc-tag {
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--blu); color:white; padding:4px 10px;
+    border-radius:20px; font-size:.85rem; font-weight:600;
+}
+.acc-tag .rm {
+    cursor:pointer; font-size:1rem; line-height:1;
+    opacity:.7; transition:opacity .12s;
+}
+.acc-tag .rm:hover { opacity:1; }
+.acc-drop-item {
+    padding:9px 14px; cursor:pointer; font-size:.88rem;
+    border-bottom:1px solid #f0f4f8; transition:background .1s;
+}
+.acc-drop-item:hover, .acc-drop-item.attivo { background:var(--blu-light); }
+.acc-drop-item .cognome { font-weight:700; }
+.acc-drop-item .det { font-size:.78rem; color:var(--grigio); margin-left:6px; }
+</style>
+
+<script>
+// Esposto globalmente per pre-selezione in modifica
+let selezionati = new Map();
+let renderTags, aggiornaAccIds;
+
+(function() {
+    const DOCENTI = JSON.parse(document.getElementById('docenti-json').textContent);
+
+    const input    = document.getElementById('acc-input');
+    const dropdown = document.getElementById('acc-dropdown');
+    const tagsDiv  = document.getElementById('acc-tags');
+
+    let focusIdx = -1;
+    let itemsVisibili = [];
+
+    function nomeTotale(d) {
+        return d.cognome + (d.nome ? ' ' + d.nome : '');
+    }
+
+    renderTags = function() {
+        tagsDiv.innerHTML = '';
+        selezionati.forEach((d, id) => {
+            const tag = document.createElement('span');
+            tag.className = 'acc-tag';
+            tag.innerHTML = nomeTotale(d) +
+                (d.materia ? ' <small style="opacity:.7;">· ' + d.materia + '</small>' : '') +
+                ' <span class="rm" data-id="' + id + '">×</span>';
+            tag.querySelector('.rm').addEventListener('click', () => {
+                selezionati.delete(id);
+                renderTags();
+                aggiornaAccIds();
+            });
+            tagsDiv.appendChild(tag);
+        });
+    }
+
+    aggiornaAccIds = window.aggiornaAccIds = function() {
+        document.getElementById('acc-ids-hidden').value =
+            [...selezionati.keys()].join(',');
+    }
+    window.aggiornaAccIds = aggiornaAccIds;
+
+    function mostraDropdown(query) {
+        if (query.length < 1) { dropdown.style.display = 'none'; return; }
+        const q = query.toUpperCase();
+        itemsVisibili = DOCENTI.filter(d =>
+            !selezionati.has(d.id) &&
+            (d.cognome.toUpperCase().includes(q) ||
+             (d.nome || '').toUpperCase().includes(q))
+        ).slice(0, 8);
+
+        if (!itemsVisibili.length) { dropdown.style.display = 'none'; return; }
+
+        dropdown.innerHTML = '';
+        focusIdx = 0;
+        itemsVisibili.forEach((d, idx) => {
+            const div = document.createElement('div');
+            div.className = 'acc-drop-item' + (idx === 0 ? ' attivo' : '');
+            div.dataset.idx = idx;
+            div.innerHTML = '<span class="cognome">' + d.cognome + '</span>' +
+                (d.nome ? ' ' + d.nome : '') +
+                (d.materia ? '<span class="det">· ' + d.materia + '</span>' : '');
+            div.addEventListener('mousedown', e => {
+                e.preventDefault();
+                seleziona(d);
+            });
+            dropdown.appendChild(div);
+        });
+        dropdown.style.display = 'block';
+    }
+
+    function seleziona(d) {
+        selezionati.set(d.id, d);
+        renderTags();
+        aggiornaAccIds();
+        input.value = '';
+        dropdown.style.display = 'none';
+        focusIdx = -1;
+        input.focus();
+    }
+
+    function aggiorniFocus() {
+        dropdown.querySelectorAll('.acc-drop-item').forEach((el, i) => {
+            el.classList.toggle('attivo', i === focusIdx);
+        });
+    }
+
+    input.addEventListener('input', () => mostraDropdown(input.value));
+
+    input.addEventListener('keydown', e => {
+        const n = itemsVisibili.length;
+        if (!n) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusIdx = Math.min(focusIdx + 1, n - 1);
+            aggiorniFocus();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusIdx = Math.max(focusIdx - 1, 0);
+            aggiorniFocus();
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (focusIdx >= 0 && focusIdx < n) {
+                e.preventDefault();
+                seleziona(itemsVisibili[focusIdx]);
+            }
+        } else if (e.key === 'Escape') {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+    });
+})();
+</script>
+{% endblock %}

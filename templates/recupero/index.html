@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Organizza Corsi di Recupero{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">📚 Organizza Corsi di Recupero — {{ anno }}</h1>
+        <p style="font-size:.84rem; color:var(--grigio);">Periodo: 18 giugno – 1 luglio 2026</p>
+    </div>
+</div>
+
+<!-- Statistiche -->
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px;">
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:var(--blu);">{{ docenti_disp|length }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Docenti disponibili</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#0369a1;">{{ gruppi|length }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Gruppi creati</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ tot_alunni }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Alunni iscritti</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#92400e;">{{ tot_ore }}h</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Ore pianificate</div>
+    </div>
+</div>
+
+{% macro step(num, color, icon, label, endpoint, desc, last=false) %}
+<div style="display:grid; grid-template-columns:32px 1fr; gap:12px;
+            {% if not last %}align-items:stretch{% endif %}">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:50%; background:{{ color }};
+                    color:white; font-weight:800; font-size:.88rem;
+                    display:flex; align-items:center; justify-content:center; flex-shrink:0;">{{ num }}</div>
+        {% if not last %}<div style="width:2px; flex:1; background:#e5eaf0; margin-top:4px;"></div>{% endif %}
+    </div>
+    <a href="{{ url_for(endpoint) }}" class="card"
+       style="padding:14px 18px; text-decoration:none; display:flex;
+              align-items:center; gap:14px; border-left:4px solid {{ color }}; margin-bottom:0;">
+        <div style="font-size:1.6rem;">{{ icon }}</div>
+        <div>
+            <div style="font-weight:700; color:{{ color }};">{{ label }}</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">{{ desc }}</div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+</div>
+{% endmacro %}
+
+<div style="font-size:.78rem; font-weight:700; color:var(--grigio);
+            text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">
+    Sequenza di lavoro
+</div>
+
+<div style="display:flex; flex-direction:column; gap:8px;">
+    {{ step('1', 'var(--blu)', '👨‍🎓', 'Importa alunni con giudizio sospeso',
+        'recupero.alunni',
+        'Carica il file XLSX dal registro — filtra automaticamente "corso di recupero"') }}
+    {{ step('2', '#0369a1', '👨‍🏫', 'Seleziona docenti disponibili',
+        'recupero.docenti',
+        'Aggiungi i docenti che hanno dato disponibilità per i corsi') }}
+    {{ step('3', '#7c3aed', '🗓', 'Imposta disponibilità oraria docenti',
+        'recupero.vincoli',
+        'Giorni e fasce orarie (facoltativo — default: lun–ven 08:00–13:00)') }}
+    {{ step('4', '#0891b2', '🔗', 'Abbina gruppi e docenti',
+        'recupero.proposte',
+        'Il sistema propone i gruppi dai recuperi importati — tu scegli il docente') }}
+    {{ step('5', '#166534', '📅', 'Pianifica il calendario',
+        'recupero.calendario',
+        'Genera la bozza anti-sovrapposizioni o inserisci le lezioni manualmente') }}
+    {{ step('6', '#166534', '✅', 'Verifica copertura',
+        'recupero.copertura',
+        'Controlla che ogni alunno con recupero abbia almeno una lezione pianificata') }}
+    {{ step('7', '#92400e', '📊', 'Esporta XLSX',
+        'recupero.export_xlsx',
+        'Una scheda per materia — versione famiglie e versione docenti (uso interno)', last=true) }}
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Modifica cambio quadro{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">
+    ✏️ Modifica cambio quadro
+</h1>
+
+<div class="card" style="max-width:620px;">
+<form method="post">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <!-- CESSIONE -->
+    <h3 style="font-size:.95rem; font-weight:700; color:var(--blu);
+               margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #e5eaf0;">
+        Cessione
+    </h3>
+
+    <div class="form-group">
+        <label>Docente che cede *</label>
+        <select name="id_docente_cede" required>
+            {% for d in docenti %}
+            <option value="{{ d.id }}"
+                {% if d.id == scambio.id_docente_cede %}selected{% endif %}>
+                {{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Docente che copre</label>
+        <select name="id_docente_copre">
+            <option value="">— nessuno —</option>
+            {% for d in docenti %}
+            <option value="{{ d.id }}"
+                {% if scambio.id_docente_copre == d.id %}selected{% endif %}>
+                {{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+            <label>Data cessione *</label>
+            <input type="date" name="data_cessione" required
+                   value="{{ scambio.data_cessione.isoformat() }}">
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label>Ora *</label>
+            <select name="ora_cessione" required>
+                {% for o in ore_list %}
+                <option value="{{ o }}"
+                    {% if o == scambio.ora_cessione %}selected{% endif %}>
+                    {{ o }}ª ora
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label>Classe</label>
+            <select name="classe">
+                <option value="">— nessuna —</option>
+                {% for c in classi %}
+                <option value="{{ c }}"
+                    {% if c == scambio.classe %}selected{% endif %}>
+                    {{ c }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Tipo</label>
+        <select name="tipo">
+            {% for val, label in [
+                ('scambio',      '🔄 Scambio ore'),
+                ('recupero',     '♻ Recupero ore'),
+                ('completamento','C Completamento'),
+            ] %}
+            <option value="{{ val }}"
+                {% if val == scambio.tipo %}selected{% endif %}>
+                {{ label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- RESTITUZIONE -->
+    <h3 style="font-size:.95rem; font-weight:700; color:var(--blu);
+               margin-top:20px; margin-bottom:12px; padding-bottom:6px;
+               border-bottom:1px solid #e5eaf0;">
+        Restituzione prevista
+        <span style="font-weight:400; color:var(--grigio);">(opzionale)</span>
+    </h3>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:160px;">
+            <label>Data restituzione</label>
+            <input type="date" name="data_restituzione_prevista"
+                   value="{{ scambio.data_restituzione_prevista.isoformat() if scambio.data_restituzione_prevista else '' }}">
+        </div>
+        <div class="form-group" style="flex:1; min-width:120px;">
+            <label>Ora restituzione</label>
+            <select name="ora_restituzione">
+                <option value="">—</option>
+                {% for o in ore_list %}
+                <option value="{{ o }}"
+                    {% if scambio.ora_restituzione == o %}selected{% endif %}>
+                    {{ o }}ª ora
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex:1; min-width:120px;">
+            <label>Classe restituzione</label>
+            <input type="text" name="classe_restituzione"
+                   value="{{ scambio.classe_restituzione or '' }}"
+                   style="text-transform:uppercase;">
+        </div>
+    </div>
+
+    <!-- NOTE -->
+    <div class="form-group">
+        <label>Note display
+            <span style="font-weight:400; color:var(--grigio);">(visibili nel display pubblico)</span>
+        </label>
+        <input type="text" name="note_display"
+               value="{{ scambio.note_display or '' }}" maxlength="200">
+    </div>
+
+    <div class="form-group">
+        <label>Note interne</label>
+        <textarea name="note_interne" rows="2">{{ scambio.note_interne or '' }}</textarea>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn btn-success" type="submit">✓ Salva</button>
+        <a href="{{ next or url_for('cambi.lista') }}"
+           class="btn btn-primary">Annulla</a>
+    </div>
+</form>
+</div>
+{% endblock %}

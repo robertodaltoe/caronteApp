@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Attività Istituzionali{% endblock %}
+
+{% block extra_style %}
+<style>
+.bucket-bar { display:inline-flex; align-items:center; gap:6px; }
+.bucket-pill { padding:2px 10px; border-radius:12px; font-size:.75rem; font-weight:700; }
+.pill-a  { background:#dbeafe; color:#1e40af; }
+.pill-b  { background:#dcfce7; color:#166534; }
+.pill-no { background:#f3f4f6; color:#6b7280; }
+.ev-row:hover { background:#f8fafc; }
+.tipo-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+.dot-collegio         { background:#3b82f6; }
+.dot-consiglio_classe { background:#8b5cf6; }
+.dot-dipartimento     { background:#10b981; }
+.dot-riunione_materia { background:#6ee7b7; }
+.dot-glo              { background:#f59e0b; }
+.dot-incontro_famiglie{ background:#ec4899; }
+.dot-scrutinio        { background:#6b7280; }
+.dot-formazione       { background:#0ea5e9; }
+.dot-riunione_referenti{ background:#84cc16; }
+.dot-altro            { background:#d1d5db; }
+/* Azioni sempre su una riga */
+.azioni-row { display:flex; gap:4px; align-items:center; flex-wrap:nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">🏛 Attività Istituzionali</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{{ url_for('attivita_ist.form') }}" class="btn btn-success btn-sm">+ Nuovo evento</a>
+        <a href="{{ url_for('attivita_ist.import_piano') }}" class="btn btn-sm btn-primary">📥 Import piano</a>
+        <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm" style="background:#7c3aed;color:white;">📚 Dipartimenti/Materie</a>
+        <a href="{{ url_for('attivita_ist.assegnazioni') }}" class="btn btn-sm" style="background:#0369a1;color:white;">👤 Roster docenti</a>
+    </div>
+</div>
+
+<!-- FILTRI -->
+<div class="card" style="padding:12px 16px; margin-bottom:16px;">
+    <form method="get" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+        <select name="tipo" style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <option value="">Tutti i tipi</option>
+            {% for k, v in tipi.items() %}
+            <option value="{{ k }}" {% if tipo_f == k %}selected{% endif %}>{{ v.emoji }} {{ v.label }}</option>
+            {% endfor %}
+        </select>
+        <select name="mese" style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <option value="">Tutti i mesi</option>
+            {% for m, nome in [('9','Settembre'),('10','Ottobre'),('11','Novembre'),('12','Dicembre'),
+                                ('1','Gennaio'),('2','Febbraio'),('3','Marzo'),('4','Aprile'),
+                                ('5','Maggio'),('6','Giugno'),('7','Luglio'),('8','Agosto')] %}
+            <option value="{{ m }}" {% if mese_f == m %}selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="anno" value="{{ anno }}">
+        <button type="submit" class="btn btn-sm btn-primary">Filtra</button>
+        <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Reset</a>
+    </form>
+</div>
+
+<!-- TABELLA EVENTI -->
+<div class="card">
+    {% if eventi %}
+    <table style="table-layout:auto; width:100%;">
+        <thead>
+            <tr>
+                <th style="white-space:nowrap;">Data</th>
+                <th style="white-space:nowrap;">Orario</th>
+                <th style="width:140px;">Tipo</th>
+                <th>Titolo / Classe</th>
+                <th style="width:74px;">Bucket</th>
+                <th style="width:54px; text-align:center;">N. doc.</th>
+                <th style="width:104px; text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for e in eventi %}
+        <tr class="ev-row">
+            <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
+                <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
+            </td>
+            <td style="font-size:.84rem; white-space:nowrap;">
+                {% if e.ora_inizio %}{{ e.ora_inizio }}{% if e.ora_fine %}–{{ e.ora_fine }}{% endif %}
+                <br><span style="color:var(--grigio);">{{ '%.1f'|format(e.durata_ore) }}h</span>
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                <span class="tipo-dot dot-{{ e.tipo }}"></span>
+                <span style="font-size:.82rem;">{{ e.tipo_emoji }} {{ e.tipo_label }}</span>
+            </td>
+            <td>
+                <strong style="font-size:.92rem;">{{ e.titolo }}</strong>
+                {%- if e.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ e.classe }}</span>{% endif %}
+                {%- if e.dipartimento %} <span style="font-size:.72rem; color:var(--grigio);">{{ e.dipartimento.sigla }}</span>{% endif %}
+            </td>
+            <td>
+                {% if e.bucket == 'A' %}<span class="bucket-pill pill-a">A</span>
+                {% elif e.bucket == 'B' %}<span class="bucket-pill pill-b">B</span>
+                {% else %}<span class="bucket-pill pill-no">—</span>{% endif %}
+            </td>
+            <td style="text-align:center;">
+                <span style="font-size:.9rem; font-weight:700;">{{ e.partecipanti|length }}</span>
+            </td>
+            <td style="text-align:center;">
+                <div class="azioni-row" style="justify-content:center;">
+                    <a href="{{ url_for('attivita_ist.presenze', id=e.id) }}"
+                       class="btn btn-sm" style="background:#0369a1;color:white;padding:3px 7px;" title="Presenze">✅</a>
+                    <a href="{{ url_for('attivita_ist.form', id=e.id) }}"
+                       class="btn btn-primary btn-sm" style="padding:3px 7px;" title="Modifica">✏️</a>
+                    <form method="post" action="{{ url_for('attivita_ist.elimina', id=e.id) }}"
+                          onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">
+                        <button class="btn btn-danger btn-sm" type="submit"
+                                style="padding:3px 7px;">✖</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center; color:var(--grigio); padding:32px;">
+        Nessun evento trovato.<br>
+        <a href="{{ url_for('attivita_ist.form') }}" class="btn btn-success" style="margin-top:12px;">+ Aggiungi</a>
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

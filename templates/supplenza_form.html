@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Nuova supplenza{% endblock %}
+
+{% block extra_style %}
+<style>
+.classe-libera-box {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: 8px;
+    background: var(--viola-bg); border: 2px solid #c4b5fd;
+    cursor: pointer; margin-bottom: 16px;
+    transition: background .15s;
+}
+.classe-libera-box:hover { background: #ddd6fe; }
+.classe-libera-box input[type=checkbox] {
+    width: 20px; height: 20px; cursor: pointer;
+    accent-color: var(--viola); flex-shrink: 0;
+}
+.classe-libera-box .cl-label {
+    font-weight: 700; color: var(--viola); font-size: .95rem;
+}
+.classe-libera-box .cl-sub {
+    font-size: .8rem; color: #7c3aed; font-weight: 400; margin-top: 2px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">Registra supplenza</h1>
+<div class="card" style="max-width:600px;">
+    <form method="post">
+        <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="data" required value="{{ data_sel }}">
+        </div>
+        <div class="form-group">
+            <label>Ora *</label>
+            <select name="ora" required>
+                {% for num, label in ore.items() %}
+                <option value="{{ num }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Classe *</label>
+            <input type="text" name="classe" required placeholder="Es. 3A LSU"
+                   style="text-transform:uppercase;">
+        </div>
+
+        <!-- CLASSE SCOPERTA BOX -->
+        <label class="classe-libera-box" for="chk-classe-libera"
+               onclick="toggleClasseLibera()">
+            <input type="checkbox" id="chk-classe-libera" name="classe_scoperta" value="1">
+            <div>
+                <div class="cl-label">🚫 Classe scoperta — NON ASSEGNABILE</div>
+                <div class="cl-sub">
+                    Ingresso posticipato, uscita anticipata o altra variazione senza sostituto.
+                    La classe apparirà in viola nel display.
+                </div>
+            </div>
+        </label>
+
+        <!-- Nota display classe scoperta -->
+        <div id="nota-classe-libera" style="display:none; margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="color:var(--viola);">Motivo visibile nel display *</label>
+                <select name="note_display" id="sel-nota-libera"
+                        style="border-color:#c4b5fd;">
+                    <option value="INGRESSO POSTICIPATO">🕐 Ingresso posticipato</option>
+                    <option value="USCITA ANTICIPATA">🕔 Uscita anticipata</option>
+                    <option value="CLASSE SCOPERTA">🔴 Classe scoperta</option>
+                    <option value="ALTRO">📌 Altro (specifica sotto)</option>
+                </select>
+            </div>
+            <div id="nota-libera-custom" style="display:none; margin-top:8px;">
+                <input type="text" id="inp-nota-custom" placeholder="Descrizione breve (es. RIENTRO ORE 10:00)"
+                       maxlength="60" style="border-color:#c4b5fd;">
+            </div>
+        </div>
+
+        <!-- Sezione sostituto — nascosta se classe scoperta -->
+        <div id="sezione-sostituto">
+            <div class="form-group">
+                <label>Docente assente</label>
+                <select name="id_assente">
+                    <option value="">— non specificato —</option>
+                    {% for d in docenti %}
+                    <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Sostituto</label>
+                <select name="id_sostituto">
+                    <option value="">— da assegnare —</option>
+                    {% for d in docenti %}
+                    <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" id="row-tipo">
+                <label>Tipo supplenza</label>
+                <select name="tipo">
+                    <option value="recupero">♻ Recupero</option>
+                    <option value="pagamento">€ Pagamento</option>
+                    <option value="completamento">C Completamento</option>
+                    <option value="potenziamento">P Potenziamento</option>
+                    <option value="non_assegnabile">🚫 Classe libera / Esce prima</option>
+                    <option value="disposizione">D Disposizione</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Note interne</label>
+            <textarea name="note" rows="2" placeholder="Opzionale"></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <button class="btn btn-success" type="submit">Registra supplenza</button>
+            <a href="{{ url_for('dashboard.index', data=data_sel) }}"
+               class="btn btn-primary">Annulla</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleClasseLibera() {
+    setTimeout(() => {
+        const chk  = document.getElementById('chk-classe-libera');
+        const sez  = document.getElementById('sezione-sostituto');
+        const nota = document.getElementById('nota-classe-libera');
+        sez.style.display  = chk.checked ? 'none'  : 'block';
+        nota.style.display = chk.checked ? 'block' : 'none';
+        const rowTipo = document.getElementById('row-tipo');
+        if (rowTipo) rowTipo.style.display = chk.checked ? 'none' : 'block';
+    }, 0);
+}
+
+document.getElementById('sel-nota-libera').addEventListener('change', function() {
+    const custom = document.getElementById('nota-libera-custom');
+    const inp    = document.getElementById('inp-nota-custom');
+    if (this.value === 'ALTRO') {
+        custom.style.display = 'block';
+        inp.required = true;
+    } else {
+        custom.style.display = 'none';
+        inp.required = false;
+    }
+});
+
+// Prima del submit: se ALTRO, usa il valore custom nel select
+document.querySelector('form').addEventListener('submit', function() {
+    const sel = document.getElementById('sel-nota-libera');
+    const inp = document.getElementById('inp-nota-custom');
+    if (sel.value === 'ALTRO' && inp.value.trim()) {
+        sel.value = inp.value.trim().toUpperCase();
+    }
+});
+</script>
+{% endblock %}

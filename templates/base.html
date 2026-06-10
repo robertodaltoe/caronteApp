@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Supplenze{% endblock %} — IIS Da Vinci</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --font:      'Open Sans', 'Segoe UI', Arial, sans-serif;
+            --blu:       #1a3a5c;
+            --blu-med:   #2d5f8a;
+            --blu-light: #e8f0f7;
+            --verde:     #1a7a4a;
+            --verde-bg:  #d4f0e0;
+            --rosso:     #b91c1c;
+            --rosso-bg:  #fde8e8;
+            --giallo:    #92610a;
+            --giallo-bg: #fff3cd;
+            --viola:     #6d28d9;
+            --viola-bg:  #ede9fe;
+            --grigio:    #6b7280;
+            --bg:        #f0f4f8;
+            --white:     #ffffff;
+            --radius:    8px;
+            --shadow:    0 2px 8px rgba(0,0,0,.10);
+        }
+        body {
+            font-family: var(--font);
+            font-size: 16px;
+            line-height: 1.5;
+            background: var(--bg);
+            color: #1e2939;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+        :focus-visible { outline: 3px solid var(--blu-med); outline-offset: 2px; }
+
+        /* NAV */
+        nav {
+            background: var(--blu);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 56px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.25);
+            flex-wrap: wrap;
+        }
+        nav .brand {
+            color: white; font-weight: 700; font-size: 1rem;
+            margin-right: auto; letter-spacing: .2px;
+        }
+        nav a {
+            color: rgba(255,255,255,.82); text-decoration: none;
+            padding: 6px 12px; border-radius: 6px;
+            font-size: .88rem; font-weight: 500; transition: background .15s;
+        }
+        nav a:hover, nav a.active { background: rgba(255,255,255,.15); color: white; }
+        nav a.nav-cambi { color: #c4b5fd; }
+        nav a.nav-cambi:hover { background: rgba(196,181,253,.15); color: #ddd6fe; }
+
+        /* CONTAINER */
+        .container { max-width: 1280px; margin: 0 auto; padding: 28px 20px; }
+
+        /* FLASH */
+        .flash {
+            padding: 12px 18px; border-radius: var(--radius);
+            margin-bottom: 16px; font-weight: 600; font-size: .92rem;
+        }
+        .flash.success { background: var(--verde-bg); color: var(--verde); border-left: 4px solid var(--verde); }
+        .flash.warning { background: var(--giallo-bg); color: var(--giallo); border-left: 4px solid #e0a800; }
+        .flash.error   { background: var(--rosso-bg);  color: var(--rosso);  border-left: 4px solid var(--rosso); }
+        .flash.info    { background: var(--blu-light);  color: var(--blu);    border-left: 4px solid var(--blu-med); }
+
+        /* CARD */
+        .card {
+            background: var(--white); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; font-weight: 700; color: var(--blu);
+            margin-bottom: 16px; border-bottom: 2px solid var(--blu-light);
+            padding-bottom: 10px;
+        }
+
+        /* TABLE */
+        table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+        th {
+            background: var(--blu); color: white; padding: 11px 14px;
+            text-align: left; font-weight: 600; font-size: .8rem;
+            letter-spacing: .3px; text-transform: uppercase;
+        }
+        td { padding: 10px 14px; border-bottom: 1px solid #e5eaf0; vertical-align: middle; }
+        tr:hover td { background: var(--blu-light); }
+
+        /* BADGE */
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: .73rem; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+        }
+        .badge-verde  { background: var(--verde-bg);  color: var(--verde); }
+        .badge-rosso  { background: var(--rosso-bg);  color: var(--rosso); }
+        .badge-giallo { background: var(--giallo-bg); color: var(--giallo); }
+        .badge-grigio { background: #e5e7eb;           color: var(--grigio); }
+        .badge-viola  { background: var(--viola-bg);  color: var(--viola); }
+        .badge-blu    { background: #dbeafe;              color: #1e40af; }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-block; padding: 8px 18px; border-radius: 6px;
+            font-family: var(--font); font-size: .88rem; font-weight: 600;
+            cursor: pointer; border: none; text-decoration: none;
+            transition: opacity .15s; line-height: 1.4;
+        }
+        .btn:hover  { opacity: .85; }
+        .btn-primary { background: var(--blu-med); color: white; }
+        .btn-success { background: var(--verde);   color: white; }
+        .btn-danger  { background: var(--rosso);   color: white; }
+        .btn-viola   { background: var(--viola);   color: white; }
+        .btn-sm { padding: 5px 12px; font-size: .82rem; }
+
+        /* FORM */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: .85rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 9px 12px; border: 1px solid #d1d5db;
+            border-radius: 6px; font-family: var(--font); font-size: .92rem; background: white; color: #1e2939;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: var(--blu-med); box-shadow: 0 0 0 3px rgba(45,95,138,.15);
+        }
+
+        /* STATS */
+        .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat-box {
+            background: white; border-radius: var(--radius); padding: 18px 24px;
+            box-shadow: var(--shadow); flex: 1; min-width: 130px; text-align: center;
+        }
+        .stat-box .num { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+        .stat-box .lbl { font-size: .72rem; font-weight: 600; color: var(--grigio); margin-top: 4px; text-transform: uppercase; letter-spacing: .6px; }
+        .stat-box.verde .num { color: var(--verde); }
+        .stat-box.rosso .num { color: var(--rosso); }
+        .stat-box.blu   .num { color: var(--blu); }
+        .stat-box.viola .num { color: var(--viola); }
+    .nav-dropdown { position:relative; display:inline-block; }
+.nav-dropdown > a { cursor:pointer; }
+.nav-drop-menu { display:none; position:absolute; top:100%; left:0; z-index:9999;
+    background:#1e3a5f; border-radius:0 0 8px 8px; min-width:220px;
+    box-shadow:0 4px 16px rgba(0,0,0,.3); padding:4px 0; }
+.nav-drop-menu a { display:block; padding:8px 16px; color:rgba(255,255,255,.9);
+    font-size:.84rem; text-decoration:none; white-space:nowrap; }
+.nav-drop-menu a:hover { background:rgba(255,255,255,.1); }
+.nav-dropdown.open .nav-drop-menu { display:block; }
+</style>
+    {% block extra_style %}{% endblock %}
+</head>
+<body>
+
+<nav>
+    <span class="brand">📋 Supplenze — IIS Da Vinci</span>
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <a href="{{ url_for('assenze.nuova') }}" style="color:#fca5a5; font-weight:700;">📋 Assenze</a>
+    <a href="{{ url_for('attivita.lista') }}">📁 Fuori sede</a>
+    <a href="{{ url_for('attivita_ist.lista') }}">🏛 Att. Ist.</a>
+    <a href="{{ url_for('docenti.lista') }}">Docenti</a>
+    <a href="{{ url_for('aule.lista') }}">🏫 Aule</a>
+    <a href="{{ url_for('impostazioni.index') }}">⚙ Impostazioni</a>
+    <a href="{{ url_for('sync.orario_globale') }}">📅 Vista orario</a>
+    <a href="{{ url_for('report.index') }}">📊 Report</a>
+    <div class="nav-dropdown" id="nav-recupero">
+        <a href="#" onclick="toggleNavDrop('nav-recupero'); return false;">📚 Recupero ▾</a>
+        <div class="nav-drop-menu">
+            <a href="{{ url_for('recupero.index') }}">📚 Organizza Corsi</a>
+            <a href="{{ url_for('recupero.agosto_index') }}">📝 Organizza Sessione di Recupero</a>
+        </div>
+    </div>
+    <a href="{{ url_for('display.display') }}" target="_blank">📺 Display</a>
+    {% if g.utente is defined and g.utente.ruolo == 'ds' %}
+{# Utenti → spostato in Impostazioni #}
+    {% endif %}
+    <a href="{{ url_for('auth.cambia_pin') }}" style="color:rgba(255,255,255,.5); font-size:.82rem;">🔒 PIN</a>
+    {% if g.utente is defined %}
+    <span style="color:rgba(255,255,255,.35); font-size:.75rem;">
+        {{ g.utente.nome }} · {{ g.utente.ruolo_label }}
+    </span>
+    {% endif %}
+    <a href="{{ url_for('auth.logout') }}" style="color:rgba(255,255,255,.5); font-size:.82rem;">Esci</a>
+</nav>
+
+<div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</div>
+
+{% block extra_script %}{% endblock %}
+<style>
+th.sortable-col {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+th.sortable-col:hover {
+    background: rgba(255,255,255,.07);
+    color: #93c5fd;
+}
+th.sort-asc::after  { content: ' ↑'; opacity: .9; font-size: .8em; }
+th.sort-desc::after { content: ' ↓'; opacity: .9; font-size: .8em; }
+table thead th { vertical-align: middle; }
+        table { table-layout: auto; width: 100%; }
+        table td, table th { overflow: hidden; text-overflow: ellipsis; }
+</style>
+<script>
+(function() {
+    function parseVal(cell) {
+        const txt = cell.textContent.trim();
+        // Data gg/mm/yyyy o gg/mm
+        const m = txt.match(/^(\d{1,2})\/(\d{2})(?:\/(\d{4}))?/);
+        if (m) {
+            const y = m[3] || '2026';
+            return new Date(`${y}-${m[2]}-${m[1].padStart(2,'0')}`).getTime() || 0;
+        }
+        // Numero con + o - o h
+        const n = parseFloat(txt.replace(/[^0-9.\-+]/g, ''));
+        if (!isNaN(n)) return n;
+        return txt.toLowerCase();
+    }
+
+    function sortTable(table, colIdx, asc) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+            const ca = a.cells[colIdx];
+            const cb = b.cells[colIdx];
+            if (!ca || !cb) return 0;
+            const va = parseVal(ca), vb = parseVal(cb);
+            if (va < vb) return asc ? -1 : 1;
+            if (va > vb) return asc ? 1 : -1;
+            return 0;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    function initTable(table) {
+        const ths = table.querySelectorAll('thead th');
+        ths.forEach((th, idx) => {
+            th.classList.add('sortable-col');
+            let asc = true;
+            th.addEventListener('click', () => {
+                // Rimuovi indicatori da tutte le th di questa tabella
+                ths.forEach(t => t.classList.remove('sort-asc','sort-desc'));
+                sortTable(table, idx, asc);
+                th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+                asc = !asc;
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('table').forEach(t => {
+            if (t.querySelector('thead') && t.querySelector('tbody')) {
+                initTable(t);
+            }
+        });
+    });
+})();
+</script>
+<script>
+function toggleNavDrop(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+    document.addEventListener('click', function handler(e) {
+        if (!el.contains(e.target)) {
+            el.classList.remove('open');
+            document.removeEventListener('click', handler);
+        }
+    });
+}
+</script>
+</body>
+</html>

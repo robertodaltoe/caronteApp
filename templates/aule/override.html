@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Override aula{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">🏫 Aula temporanea</h1>
+    <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+        {{ supplenza.classe }} — {{ supplenza.data.strftime('%d/%m/%Y') }} — {{ supplenza.ora }}ª ora
+    </p>
+</div>
+
+{% if aula_std %}
+<div class="card" style="border-left:4px solid #3b82f6; margin-bottom:16px;">
+    <p style="font-size:.88rem;">
+        <strong>Aula standard:</strong> Aula {{ aula_std.aula }} — {{ aula_std.sede }}
+    </p>
+</div>
+{% endif %}
+
+<div class="card">
+    <form method="post">
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+            <div class="form-group" style="flex:0 0 180px; margin-bottom:0;">
+                <label>Aula temporanea *</label>
+                <select name="aula" required>
+                    <option value="">— aula —</option>
+                    <optgroup label="Aule numerate">
+                        {% for i in range(1, 39) %}
+                        <option value="{{ i }}"
+                            {% if override and override.aula == i|string %}selected{% endif %}>
+                            Aula {{ i }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Spazi speciali">
+                        {% for a in ['Aula Magna','Lab. Informatica','Lab. Linguistico','Lab. BIM','Palestrone','Palestrina'] %}
+                        <option value="{{ a }}"
+                            {% if override and override.aula == a %}selected{% endif %}>
+                            {{ a }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+            <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+                <label>Sede *</label>
+                <select name="sede" required>
+                    <option value="">— sede —</option>
+                    {% for s in sedi %}
+                    <option value="{{ s }}"
+                        {% if override and override.sede == s %}selected{% endif %}>
+                        {{ s }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Note (opzionale)</label>
+            <input type="text" name="note" maxlength="200"
+                   value="{{ override.note if override else '' }}"
+                   placeholder="Es. Lavori in corso in aula 12">
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:16px;">
+            <button class="btn btn-success" type="submit">Salva aula temporanea</button>
+            {% if override %}
+            <button class="btn btn-danger" type="submit" name="rimuovi" value="1"
+                    onclick="return confirm('Ripristinare l\'aula standard?')">
+                Ripristina standard
+            </button>
+            {% endif %}
+            <a href="{{ next or url_for('dashboard.index') }}" class="btn btn-primary">Annulla</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

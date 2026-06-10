@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Nuovo cambio orario{% endblock %}
+
+{% block extra_style %}
+<style>
+.riga-cambio {
+    background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px;
+    padding: 16px; margin-bottom: 12px; position: relative;
+}
+.riga-cambio .riga-num {
+    font-size: .75rem; font-weight: 700; color: var(--blu);
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
+}
+.btn-rimuovi-riga {
+    position: absolute; top: 12px; right: 12px;
+    background: none; border: none; color: var(--rosso);
+    font-size: 1.2rem; cursor: pointer; padding: 2px 6px;
+    border-radius: 4px; transition: background .12s;
+}
+.btn-rimuovi-riga:hover { background: var(--rosso-bg); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:6px;">
+    Registra cambi quadro orario
+</h1>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
+    Puoi aggiungere più righe per lo stesso giorno — ogni riga è uno scambio separato.
+</p>
+
+<div class="card" style="max-width:700px;">
+<form method="post" id="form-cambi">
+
+    <!-- DATA COMUNE -->
+    <div style="display:flex; gap:16px; margin-bottom:16px;">
+        <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Data *</label>
+            <input type="date" name="data_comune" required value="{{ data_sel }}"
+                   id="data-comune">
+        </div>
+        <div class="form-group" style="flex:2; margin-bottom:0;">
+            <label>Tipo *</label>
+            <select name="tipo_comune" id="tipo-comune">
+                {% for val, label in tipi %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div style="border-bottom:1px solid #e5eaf0; margin-bottom:16px;"></div>
+
+    <!-- RIGHE SCAMBI -->
+    <div id="righe-container">
+        <!-- Prima riga (template) -->
+        <div class="riga-cambio" id="riga-0">
+            <div class="riga-num">Scambio #1</div>
+            <button type="button" class="btn-rimuovi-riga" onclick="rimuoviRiga(0)"
+                    style="display:none;">×</button>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:0 0 90px; margin-bottom:0;">
+                    <label>Ora *</label>
+                    <select name="ora[]" required>
+                        {% for o in ore_list %}
+                        <option value="{{ o }}">{{ o }}ª</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+                    <label>Docente che cede *</label>
+                    <select name="id_docente_cede[]" required>
+                        <option value="">— seleziona —</option>
+                        {% for d in docenti %}
+                        <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:0 0 130px; margin-bottom:0;">
+                    <label>Classe *</label>
+                    <select name="classe[]" required>
+                        <option value="">— classe —</option>
+                        {% for c in classi %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+                    <label>Docente che copre</label>
+                    <select name="id_docente_copre[]">
+                        <option value="">— da definire —</option>
+                        {% for d in docenti %}
+                        <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <!-- Restituzione e note per questa riga -->
+            <div style="display:flex; gap:12px; margin-top:10px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+                    <label style="font-size:.8rem;">Restituzione prevista</label>
+                    <input type="date" name="data_restituzione[]">
+                </div>
+                <div class="form-group" style="flex:2; min-width:200px; margin-bottom:0;">
+                    <label style="font-size:.8rem;">Nota display</label>
+                    <input type="text" name="note_display[]" maxlength="100"
+                           placeholder="Opzionale">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PULSANTE AGGIUNGI RIGA -->
+    <button type="button" onclick="aggiungiRiga()"
+            class="btn btn-primary btn-sm" style="margin-bottom:20px;">
+        + Aggiungi altro scambio nello stesso giorno
+    </button>
+
+    <div style="border-top:1px solid #e5eaf0; padding-top:16px; display:flex; gap:10px;">
+        <button class="btn btn-success" type="submit">
+            ✓ Registra tutti gli scambi
+        </button>
+        <a href="{{ url_for('cambi.lista') }}" class="btn btn-primary">Annulla</a>
+    </div>
+
+</form>
+</div>
+
+<!-- Template riga (nascosto, clonato via JS) -->
+<template id="tpl-riga">
+<div class="riga-cambio" id="riga-__N__">
+    <div class="riga-num">Scambio #__NP1__</div>
+    <button type="button" class="btn-rimuovi-riga" onclick="rimuoviRiga(__N__)">×</button>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:0 0 90px; margin-bottom:0;">
+            <label>Ora *</label>
+            <select name="ora[]" required>
+                {% for o in ore_list %}
+                <option value="{{ o }}">{{ o }}ª</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+            <label>Docente che cede *</label>
+            <select name="id_docente_cede[]" required>
+                <option value="">— seleziona —</option>
+                {% for d in docenti %}
+                <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex:0 0 130px; margin-bottom:0;">
+            <label>Classe *</label>
+            <select name="classe[]" required>
+                <option value="">— classe —</option>
+                {% for c in classi %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+            <label>Docente che copre</label>
+            <select name="id_docente_copre[]">
+                <option value="">— da definire —</option>
+                {% for d in docenti %}
+                <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div style="display:flex; gap:12px; margin-top:10px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+            <label style="font-size:.8rem;">Restituzione prevista</label>
+            <input type="date" name="data_restituzione[]">
+        </div>
+        <div class="form-group" style="flex:2; min-width:200px; margin-bottom:0;">
+            <label style="font-size:.8rem;">Nota display</label>
+            <input type="text" name="note_display[]" maxlength="100"
+                   placeholder="Opzionale">
+        </div>
+    </div>
+</div>
+</template>
+
+<script>
+let _rigaCount = 1;
+
+function aggiungiRiga() {
+    const n = _rigaCount++;
+    const tpl = document.getElementById('tpl-riga').innerHTML
+        .replaceAll('__N__', n)
+        .replaceAll('__NP1__', n + 1);
+    const div = document.createElement('div');
+    div.innerHTML = tpl;
+    document.getElementById('righe-container').appendChild(div.firstElementChild);
+    // Mostra il pulsante rimuovi sulla prima riga se ci sono 2+
+    aggiornaRimuovi();
+}
+
+function rimuoviRiga(n) {
+    const el = document.getElementById('riga-' + n);
+    if (el) el.remove();
+    aggiornaRimuovi();
+    rinumeraRighe();
+}
+
+function aggiornaRimuovi() {
+    const righe = document.querySelectorAll('.riga-cambio');
+    righe.forEach(r => {
+        const btn = r.querySelector('.btn-rimuovi-riga');
+        if (btn) btn.style.display = righe.length > 1 ? 'block' : 'none';
+    });
+}
+
+function rinumeraRighe() {
+    document.querySelectorAll('.riga-cambio .riga-num').forEach((el, i) => {
+        el.textContent = 'Scambio #' + (i + 1);
+    });
+}
+</script>
+
+{% endblock %}

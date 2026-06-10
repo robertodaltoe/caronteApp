@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Export Excel banca ore{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">📤 Export banca ore → Excel</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Aggiorna il file Banca_Ore_Docenti_v3.xlsm con i dati del database
+        </p>
+    </div>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary btn-sm">← Report</a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+    <!-- AGGIORNA SETTIMANA -->
+    <div class="card">
+        <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:16px;">
+            📅 Aggiorna settimana specifica
+        </h2>
+        <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
+            Compila le colonne supplenze, permessi, civica e delta nel foglio
+            <strong>sett.N</strong> del file Excel con i dati presenti nel database.
+        </p>
+        <form method="post">
+            <input type="hidden" name="azione" value="sett">
+            <div class="form-group">
+                <label>Settimana da aggiornare</label>
+                <select name="sett_n" required>
+                    {% for s in settimane %}
+                    {% if s.data %}
+                    <option value="{{ s.n }}"
+                        {% if s.n == settimane|last|attr('n') %}selected{% endif %}>
+                        sett.{{ s.n }} — {{ s.titolo }}
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-primary" type="submit">
+                ✓ Aggiorna foglio settimana
+            </button>
+        </form>
+    </div>
+
+    <!-- AGGIORNA RIEPILOGO -->
+    <div class="card">
+        <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:16px;">
+            📊 Aggiorna foglio Riepilogo
+        </h2>
+        <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
+            Aggiorna il foglio <strong>Riepilogo</strong> con i saldi totali di tutti
+            i docenti — supplenze, permessi, ore civica, pagamenti, saldo lordo ed effettivo.
+        </p>
+        <form method="post"
+              onsubmit="return confirm('Aggiornare il Riepilogo con i dati attuali del database?')">
+            <input type="hidden" name="azione" value="riepilogo">
+            <button class="btn btn-success" type="submit">
+                ✓ Aggiorna Riepilogo completo
+            </button>
+        </form>
+        <p style="font-size:.78rem; color:var(--grigio); margin-top:12px;">
+            ⚠ Sovrascrive i valori calcolati nel Riepilogo. Le formule Excel
+            potrebbero essere sostituite da valori fissi.
+        </p>
+    </div>
+
+</div>
+
+{% endblock %}

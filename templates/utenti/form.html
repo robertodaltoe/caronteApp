@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifica' if utente else 'Nuovo' }} Utente{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">
+        {{ '✏️ Modifica utente' if utente else '➕ Nuovo utente' }}
+    </h1>
+</div>
+
+<div class="card" style="max-width:480px;">
+    <form method="post">
+        <div class="form-group">
+            <label>Username *</label>
+            <input type="text" name="username"
+                   value="{{ utente.username if utente else '' }}"
+                   {% if utente %}readonly style="background:#f9fafb;"{% endif %}
+                   required placeholder="es. mario.rossi">
+        </div>
+        <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label>Cognome *</label>
+                <input type="text" name="cognome"
+                       value="{{ utente.cognome if utente else '' }}"
+                       required placeholder="es. Rossi">
+            </div>
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label>Nome *</label>
+                <input type="text" name="nome"
+                       value="{{ utente.nome if utente else '' }}"
+                       required placeholder="es. Mario">
+            </div>
+        </div>
+        <div style="margin-bottom:16px;"></div>
+        <div class="form-group">
+            <label>Ruolo *</label>
+            <select name="ruolo" required>
+                {% for val, label in ruoli.items() %}
+                <option value="{{ val }}"
+                    {% if utente and utente.ruolo == val %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:6px;">
+                <strong>DS:</strong> accesso completo + gestione utenti ·
+                <strong>DSGA:</strong> accesso completo ·
+                <strong>Segreteria:</strong> supplenze + report ·
+                <strong>Display:</strong> solo visualizzazione
+            </div>
+        </div>
+
+        {% if utente %}
+        <div class="form-group">
+            <label>Nuovo PIN (lascia vuoto per non cambiarlo)</label>
+            <input type="password" name="pin_nuovo" minlength="4" placeholder="Min. 4 cifre">
+        </div>
+        <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="attivo" {% if utente.attivo %}checked{% endif %}>
+                Utente attivo
+            </label>
+        </div>
+        {% else %}
+        <div class="form-group">
+            <label>PIN iniziale *</label>
+            <input type="password" name="pin" required minlength="4" placeholder="Min. 4 cifre">
+        </div>
+        {% endif %}
+
+        <div style="display:flex; gap:8px; margin-top:20px;">
+            <button class="btn btn-success" type="submit">
+                {{ 'Salva modifiche' if utente else 'Crea utente' }}
+            </button>
+            <a href="{{ url_for('auth.lista_utenti') }}" class="btn btn-primary">Annulla</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

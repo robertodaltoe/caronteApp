@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Indisponibilità ricorrenti{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">🔁 Indisponibilità ricorrenti</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Valide per tutto l'anno scolastico — escluse automaticamente dai suggerimenti
+        </p>
+    </div>
+    <a href="{{ url_for('indisponibilita.nuova') }}" class="btn btn-success">
+        + Aggiungi
+    </a>
+</div>
+
+{% if ricorrenti %}
+<div class="card" style="padding:0; overflow:hidden;">
+<table>
+    <thead>
+        <tr>
+            <th>Docente</th>
+            <th>Giorno</th>
+            <th>Ora</th>
+            <th>Motivo</th>
+            <th>Note</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for ir in ricorrenti %}
+    <tr>
+        <td><strong>{{ ir.docente.cognome }}
+            {% if ir.docente.nome %} {{ ir.docente.nome }}{% endif %}
+        </strong></td>
+        <td>{{ ir.giorno_nome }}</td>
+        <td>
+            {% if ir.ora %}{{ ir.ora }}ª ora
+            {% else %}Tutta la giornata{% endif %}
+        </td>
+        <td><span class="badge badge-grigio">{{ ir.motivo }}</span></td>
+        <td style="color:var(--grigio); font-size:.85rem;">{{ ir.note or '—' }}</td>
+        <td>
+            <form method="post"
+                  action="{{ url_for('indisponibilita.disattiva_ricorrente', id=ir.id) }}"
+                  onsubmit="return confirm('Disattivare questa indisponibilità ricorrente?')"
+                  style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit">Disattiva</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    <p style="font-size:1.1rem; margin-bottom:12px;">
+        Nessuna indisponibilità ricorrente configurata.
+    </p>
+    <a href="{{ url_for('indisponibilita.nuova') }}" class="btn btn-success">
+        + Aggiungi colloqui fissi
+    </a>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:0; background:var(--blu-light); border:none;">
+    <p style="font-size:.83rem; color:var(--blu);">
+        <strong>Come funziona:</strong> le indisponibilità ricorrenti vengono controllate
+        automaticamente ogni volta che il sistema suggerisce un sostituto.
+        Un docente con colloqui ogni lunedì 3ª ora non comparirà mai nei suggerimenti
+        per il lunedì alla 3ª ora, senza bisogno di inserirlo ogni settimana.
+    </p>
+</div>
+
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni{% endblock %}
+{% block extra_style %}
+<style>
+.sez-card { background:white; border-radius:10px; border:1px solid #e5eaf0;
+    padding:18px 20px; margin-bottom:12px; }
+.sez-title { font-size:1rem; font-weight:800; color:var(--blu);
+    margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+.sez-desc { font-size:.82rem; color:var(--grigio); margin-bottom:14px; }
+.imp-link { display:flex; align-items:center; justify-content:space-between;
+    padding:9px 12px; border-radius:7px; border:1px solid #e5eaf0;
+    margin-bottom:6px; background:#fafbfc; text-decoration:none;
+    color:var(--blu); font-size:.88rem; font-weight:600; transition:all .1s; }
+.imp-link:hover { background:#f0f4ff; border-color:#b6c8e0; }
+.imp-link .badge-count { font-size:.72rem; background:#e5eaf0; color:var(--grigio);
+    border-radius:10px; padding:1px 8px; font-weight:700; }
+.imp-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:700px){ .imp-grid { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">⚙ Impostazioni</h1>
+    <span style="font-size:.82rem; color:var(--grigio);">{{ oggi.strftime('%d/%m/%Y') }}</span>
+</div>
+
+<div class="imp-grid">
+
+<!-- ── CALENDARIO SCOLASTICO ───────────────────────── -->
+<div class="sez-card">
+    <div class="sez-title">📅 Calendario scolastico</div>
+    <div class="sez-desc">Sospensioni didattiche, festività e periodo dell'anno scolastico.</div>
+    <a href="{{ url_for('impostazioni.sospensioni') }}" class="imp-link">
+        📅 Sospensioni didattiche
+        <span>→</span>
+    </a>
+    <a href="{{ url_for('impostazioni.anno_scolastico') }}" class="imp-link">
+        🗓 Anno scolastico
+        <span>→</span>
+    </a>
+</div>
+
+<!-- ── ORARIO ──────────────────────────────────────── -->
+<div class="sez-card">
+    <div class="sez-title">🕐 Orario</div>
+    <div class="sez-desc">Importazione e gestione dell'orario docenti.</div>
+    <a href="{{ url_for('sync.index') }}" class="imp-link">
+        📥 Importa / modifica orario
+        <span>→</span>
+    </a>
+</div>
+
+<!-- ── ISTITUTO ────────────────────────────────────── -->
+<div class="sez-card">
+    <div class="sez-title">🏫 Istituto</div>
+    <div class="sez-desc">Dati dell'istituto e parametri economici.</div>
+    <a href="{{ url_for('impostazioni.dati_istituto') }}" class="imp-link">
+        🏫 Dati istituto
+        <span>→</span>
+    </a>
+    <a href="{{ url_for('impostazioni.dati_istituto') }}" class="imp-link">
+        💶 Costo ora supplenza
+        <span>→</span>
+    </a>
+</div>
+
+<!-- ── DOCENTI E MATERIE ───────────────────────────── -->
+<div class="sez-card">
+    <div class="sez-title">📚 Docenti e materie</div>
+    <div class="sez-desc">Dipartimenti, materie e assegnazioni per anno scolastico.</div>
+    <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="imp-link">
+        📚 Dipartimenti e materie
+        <span class="badge-count">{{ n_dip }} dip. · {{ n_materie }} mat.</span>
+    </a>
+    <a href="{{ url_for('attivita_ist.assegnazioni') }}" class="imp-link">
+        👤 Roster docenti-materie
+        <span class="badge-count">{{ n_docenti }} docenti</span>
+    </a>
+    <a href="{{ url_for('impostazioni.cambio_anno') }}" class="imp-link">
+        🔄 Cambio anno scolastico
+        <span>→</span>
+    </a>
+</div>
+
+<!-- ── SISTEMA ─────────────────────────────────────── -->
+<div class="sez-card">
+    <div class="sez-title">🔧 Sistema</div>
+    <div class="sez-desc">Utenti, accessi e backup del database.</div>
+    <a href="{{ url_for('auth.lista_utenti') }}" class="imp-link">
+        👥 Gestione utenti e PIN
+        <span>→</span>
+    </a>
+    <a href="{{ url_for('auth.cambia_pin') }}" class="imp-link">
+        🔒 Cambia PIN
+        <span>→</span>
+    </a>
+    <a href="{{ url_for('impostazioni.backup') }}" class="imp-link">
+        💾 Backup database
+        <span>→</span>
+    </a>
+</div>
+
+</div>
+{% endblock %}

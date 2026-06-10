@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Roster Docenti-Materie {{ anno }}{% endblock %}
+{% block extra_style %}
+<style>
+.doc-card {
+    border:1px solid #e5eaf0; border-radius:8px;
+    margin-bottom:6px; background:white; overflow:hidden;
+}
+.doc-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 14px; cursor:pointer; user-select:none; gap:8px;
+}
+.doc-header:hover { background:#f8fafc; }
+.doc-nome { font-weight:700; font-size:.9rem; color:var(--blu); }
+.doc-ruolo { font-size:.7rem; color:var(--grigio); margin-left:5px; }
+.doc-body { padding:6px 14px 12px; border-top:1px solid #f0f2f5; display:none; }
+.doc-body.aperto { display:block; }
+.toggle-icon { font-size:.75rem; color:var(--grigio); flex-shrink:0; }
+/* Badge inline (riga chiusa) */
+.badge-inline { display:inline-flex; align-items:center; padding:1px 7px;
+    border-radius:10px; font-size:.68rem; font-weight:700;
+    color:white; margin-left:3px; }
+/* Chip materie */
+.mat-chip {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 9px; border-radius:12px; font-size:.75rem; font-weight:600;
+    cursor:pointer; border:1.5px solid transparent; transition:all .1s;
+}
+.mat-chip.selezionata   { background:var(--blu); color:white; border-color:var(--blu); }
+.mat-chip.deselezionata { background:#f3f4f6; color:#6b7280; border-color:#e5eaf0; }
+.mat-chip.selezionata:hover   { background:#1e3a5f; }
+.mat-chip.deselezionata:hover { background:#e5eaf0; color:var(--blu); }
+.dip-label {
+    font-size:.67rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:.5px; margin-top:6px; margin-bottom:2px;
+}
+.filtro-dip {
+    padding:3px 10px; border-radius:12px; font-size:.78rem; cursor:pointer;
+    border:1.5px solid #e5eaf0; background:white; transition:all .1s;
+}
+.filtro-dip.attivo { background:var(--blu); color:white; border-color:var(--blu); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">👤 Roster Docenti-Materie — {{ anno }}</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">⚙ Impostazioni</a>
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">← Lista eventi</a>
+</div>
+
+<div class="card" style="padding:9px 14px; margin-bottom:10px; font-size:.82rem; color:var(--grigio);">
+    Clicca sul nome del docente per aprire il pannello materie. Seleziona le materie (blu = selezionata).
+    <strong>Salva in fondo.</strong>
+</div>
+
+<!-- Filtri -->
+<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+    <span style="font-size:.78rem; color:var(--grigio);">Filtra:</span>
+    <button type="button" class="filtro-dip attivo" onclick="filtraDip('')" id="fdip-tutti">Tutti</button>
+    {% for dip in dipartimenti %}
+    <button type="button" class="filtro-dip" onclick="filtraDip('{{ dip.sigla }}')"
+            id="fdip-{{ dip.sigla }}">{{ dip.sigla }}</button>
+    {% endfor %}
+    <input type="text" id="cerca-doc" placeholder="Cerca cognome…" oninput="cercaDoc(this.value)"
+           style="padding:3px 8px; border:1px solid #d1d5db; border-radius:5px;
+                  font-size:.78rem; width:130px; margin-left:8px;">
+    <button type="button" onclick="apriTutti()" class="btn btn-sm"
+            style="background:#f0f4f8;color:var(--blu);font-size:.76rem;padding:3px 10px;">▼ Apri tutti</button>
+    <button type="button" onclick="chiudiTutti()" class="btn btn-sm"
+            style="background:#f0f4f8;color:var(--blu);font-size:.76rem;padding:3px 10px;">▲ Chiudi tutti</button>
+</div>
+
+<form method="post" id="form-roster">
+<div id="hidden-assegn"></div>
+
+{% set DIP_COLORS = ['#1e40af','#0369a1','#166534','#92400e','#b45309','#5b21b6','#374151'] %}
+
+{% for d in docenti %}
+{% set mat_ids_sel = assegn | selectattr(0, 'equalto', d.id) | map(attribute=1) | list %}
+
+<div class="doc-card" id="card-{{ d.id }}" data-cognome="{{ d.cognome | lower }}">
+
+    {# HEADER — sempre visibile #}
+    <div class="doc-header" onclick="toggleCard({{ d.id }})">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px; flex:1; min-width:0;">
+            <span class="doc-nome">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</span>
+            <span class="doc-ruolo">{{ d.ruolo or '' }}</span>
+            {# Badge materie selezionate — visibili quando il card è chiuso #}
+            <span id="badges-{{ d.id }}" style="display:inline-flex; flex-wrap:wrap; gap:3px; margin-left:4px;">
+            {% for dip_idx, dip in dipartimenti | enumerate %}
+                {% set dip_color = DIP_COLORS[dip_idx % DIP_COLORS|length] %}
+                {% set mat_dip = materie | selectattr('id_dipartimento', 'equalto', dip.id) | list %}
+                {% for m in mat_dip %}
+                {% if (d.id, m.id) in assegn %}
+                <span class="badge-inline" style="background:{{ dip_color }};"
+                      data-did="{{ d.id }}" data-mid="{{ m.id }}" data-color="{{ dip_color }}">
+                    {{ m.sigla }}
+                </span>
+                {% endif %}
+                {% endfor %}
+            {% endfor %}
+            </span>
+        </div>
+        <span class="toggle-icon" id="icon-{{ d.id }}">▼</span>
+    </div>
+
+    {# BODY — collassabile #}
+    <div class="doc-body" id="body-{{ d.id }}">
+    {% for dip_idx, dip in dipartimenti | enumerate %}
+        {% set dip_color = DIP_COLORS[dip_idx % DIP_COLORS|length] %}
+        {% set mat_dip = materie | selectattr('id_dipartimento', 'equalto', dip.id) | list %}
+        {% if mat_dip %}
+        <div>
+            <div class="dip-label" style="color:{{ dip_color }};">{{ dip.sigla }}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:2px;">
+            {% for m in mat_dip %}
+            {% set sel = (d.id, m.id) in assegn %}
+            <span class="mat-chip {{ 'selezionata' if sel else 'deselezionata' }}"
+                  data-did="{{ d.id }}" data-mid="{{ m.id }}"
+                  data-color="{{ dip_color }}"
+                  title="{{ m.nome }}"
+                  onclick="toggleMat(this)">
+                {{ m.sigla }}
+            </span>
+            {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+<div style="margin-top:16px; display:flex; gap:10px; align-items:center;
+            position:sticky; bottom:16px;">
+    <button type="submit" class="btn btn-success"
+            style="box-shadow:0 2px 8px rgba(0,0,0,.15);">💾 Salva roster</button>
+    <span style="font-size:.8rem; color:var(--grigio); background:white;
+                 padding:4px 10px; border-radius:6px; border:1px solid #e5eaf0;">
+        Le modifiche non sono salvate finché non premi il bottone.
+    </span>
+</div>
+</form>
+
+<script>
+// ── Toggle card ──────────────────────────────────────────────────────
+function toggleCard(did) {
+    const body = document.getElementById(`body-${did}`);
+    const icon = document.getElementById(`icon-${did}`);
+    const open = body.classList.toggle('aperto');
+    icon.textContent = open ? '▲' : '▼';
+}
+function apriTutti() {
+    document.querySelectorAll('.doc-card:not([style*="none"])').forEach(card => {
+        const did = card.id.replace('card-','');
+        const body = document.getElementById(`body-${did}`);
+        const icon = document.getElementById(`icon-${did}`);
+        if (body) { body.classList.add('aperto'); icon.textContent = '▲'; }
+    });
+}
+function chiudiTutti() {
+    document.querySelectorAll('.doc-card').forEach(card => {
+        const did = card.id.replace('card-','');
+        const body = document.getElementById(`body-${did}`);
+        const icon = document.getElementById(`icon-${did}`);
+        if (body) { body.classList.remove('aperto'); icon.textContent = '▼'; }
+    });
+}
+
+// ── Toggle materia ────────────────────────────────────────────────────
+function toggleMat(chip) {
+    const sel = chip.classList.contains('selezionata');
+    chip.classList.toggle('selezionata', !sel);
+    chip.classList.toggle('deselezionata', sel);
+    sincronizzaBadge(chip.dataset.did);
+}
+
+function sincronizzaBadge(did) {
+    const container = document.getElementById(`badges-${did}`);
+    if (!container) return;
+    container.innerHTML = '';
+    document.querySelectorAll(`#body-${did} .mat-chip.selezionata`).forEach(chip => {
+        const span = document.createElement('span');
+        span.className = 'badge-inline';
+        span.style.background = chip.dataset.color || '#374151';
+        span.dataset.did = chip.dataset.did;
+        span.dataset.mid = chip.dataset.mid;
+        span.textContent = chip.textContent.trim();
+        container.appendChild(span);
+    });
+}
+
+// ── Filtri ────────────────────────────────────────────────────────────
+function filtraDip(sigla) {
+    document.querySelectorAll('.filtro-dip').forEach(b => b.classList.remove('attivo'));
+    document.getElementById(sigla ? `fdip-${sigla}` : 'fdip-tutti').classList.add('attivo');
+    document.querySelectorAll('.doc-card').forEach(card => {
+        card.style.display = '';
+    });
+    document.querySelectorAll('.dip-label').forEach(lbl => {
+        lbl.closest('div').style.opacity =
+            (!sigla || lbl.textContent.trim() === sigla) ? '1' : '0.2';
+    });
+}
+function cercaDoc(val) {
+    const q = val.toLowerCase().trim();
+    document.querySelectorAll('.doc-card').forEach(card => {
+        card.style.display = (!q || card.dataset.cognome.includes(q)) ? '' : 'none';
+    });
+}
+
+// ── Submit ────────────────────────────────────────────────────────────
+document.getElementById('form-roster').addEventListener('submit', function() {
+    const div = document.getElementById('hidden-assegn');
+    div.innerHTML = '';
+    document.querySelectorAll('.mat-chip.selezionata').forEach(chip => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = `dm_${chip.dataset.did}_${chip.dataset.mid}`;
+        inp.value = '1';
+        div.appendChild(inp);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Storico prospetti{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">🖨 Storico prospetti supplenze</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            {{ prospetti|length }} file salvati
+        </p>
+    </div>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-sm">
+        ← Dashboard
+    </a>
+</div>
+
+{% if prospetti %}
+<div class="card" style="padding:0; overflow:hidden;">
+<table>
+    <thead>
+        <tr>
+            <th>File</th>
+            <th style="text-align:center;">Data</th>
+            <th style="text-align:center;">Dimensione</th>
+            <th style="text-align:right; padding-right:16px;">Azioni</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for p in prospetti %}
+    <tr>
+        <td>
+            <span style="font-family:monospace; font-size:.88rem;">{{ p.nome }}</span>
+        </td>
+        <td style="text-align:center; color:var(--grigio); font-size:.88rem;">
+            {{ p.data.strftime('%d/%m/%Y') }}
+        </td>
+        <td style="text-align:center; color:var(--grigio); font-size:.85rem;">
+            {{ (p.size / 1024) | round(1) }} KB
+        </td>
+        <td style="text-align:right; padding-right:16px;">
+            <a href="{{ url_for('report.scarica_prospetto', nome=p.nome) }}"
+               class="btn btn-success btn-sm">⬇ Scarica</a>
+            <form method="post"
+                  action="{{ url_for('report.elimina_prospetto', nome=p.nome) }}"
+                  onsubmit="return confirm('Eliminare {{ p.nome }}?')"
+                  style="display:inline; margin-left:4px;">
+                <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    <p style="font-size:1.1rem; margin-bottom:12px;">
+        Nessun prospetto salvato.
+    </p>
+    <p style="font-size:.88rem;">
+        Genera il primo dalla dashboard cliccando
+        <strong>🖨 Prospetto</strong>.
+    </p>
+</div>
+{% endif %}
+
+{% endblock %}

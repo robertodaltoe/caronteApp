@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Dipartimenti e Materie{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">📚 Dipartimenti e Materie</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">⚙ Impostazioni</a>
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">← Lista eventi</a>
+</div>
+
+{% for dip in dipartimenti %}
+<div class="card" style="margin-bottom:16px; padding:16px 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 style="font-size:1rem; color:var(--blu);">
+            <span style="background:var(--blu); color:white; border-radius:4px; padding:2px 8px; font-size:.78rem; margin-right:6px;">{{ dip.sigla }}</span>
+            {{ dip.nome }}
+        </h2>
+        <button onclick="toggleEdit('dip-{{ dip.id }}')" class="btn btn-sm btn-primary" style="font-size:.75rem;">✏ Modifica</button>
+    </div>
+
+    <!-- Form modifica dipartimento (nascosto) -->
+    <form method="post" action="{{ url_for('attivita_ist.salva_dipartimento') }}"
+          id="dip-{{ dip.id }}" style="display:none; background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:10px;">
+        <input type="hidden" name="id" value="{{ dip.id }}">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+            <div><label style="font-size:.75rem;">Nome</label><input type="text" name="nome" value="{{ dip.nome }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:220px;"></div>
+            <div><label style="font-size:.75rem;">Sigla</label><input type="text" name="sigla" value="{{ dip.sigla }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:80px;"></div>
+            <div><label style="font-size:.75rem;">Ordine</label><input type="number" name="ordine" value="{{ dip.ordine }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:60px;"></div>
+            <button type="submit" class="btn btn-success btn-sm">Salva</button>
+        </div>
+    </form>
+
+    <!-- Tabella materie -->
+    <table style="width:100%; font-size:.83rem;">
+        <thead><tr>
+            <th style="width:80px;">Sigla</th><th>Nome</th>
+            <th style="width:160px;">Cod. orario</th>
+            <th style="width:180px;">Indirizzi</th>
+            <th style="width:60px; text-align:center;">✏</th>
+        </tr></thead>
+        <tbody>
+        {% for m in dip.materie %}
+        <tr>
+            <td><code style="background:#f3f4f6; padding:1px 5px; border-radius:3px;">{{ m.sigla }}</code></td>
+            <td>{{ m.nome }}</td>
+            <td style="color:var(--grigio); font-size:.78rem;">{{ m.codice_orario or '—' }}</td>
+            <td style="font-size:.72rem;">{{ m.indirizzi | join(', ') }}</td>
+            <td style="text-align:center;">
+                <button onclick="toggleEdit('mat-{{ m.id }}')" class="btn btn-sm btn-primary" style="font-size:.7rem; padding:2px 6px;">✏</button>
+            </td>
+        </tr>
+        <tr id="mat-{{ m.id }}" style="display:none; background:#f8fafc;">
+            <td colspan="5" style="padding:10px;">
+                <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}">
+                    <input type="hidden" name="id" value="{{ m.id }}">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                        <div><label style="font-size:.72rem;">Nome</label><input type="text" name="nome" value="{{ m.nome }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:200px;"></div>
+                        <div><label style="font-size:.72rem;">Sigla</label><input type="text" name="sigla" value="{{ m.sigla }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:90px;"></div>
+                        <div>
+                            <label style="font-size:.72rem;">Dipartimento</label>
+                            <select name="id_dipartimento" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem;">
+                                {% for d2 in dipartimenti %}
+                                <option value="{{ d2.id }}" {% if d2.id == dip.id %}selected{% endif %}>{{ d2.sigla }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div><label style="font-size:.72rem;">Cod. orario</label><input type="text" name="codice_orario" value="{{ m.codice_orario or '' }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:110px;"></div>
+                        <div>
+                            <label style="font-size:.72rem;">Indirizzi</label><br>
+                            {% for ind in ['LLI','LSC','LSP','LSU','AFM','RIM','CAT'] %}
+                            <label style="font-size:.72rem; margin-right:4px;">
+                                <input type="checkbox" name="indirizzi" value="{{ ind }}"
+                                    {% if ind in m.indirizzi %}checked{% endif %}>{{ ind }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">Salva</button>
+                    </div>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Aggiungi nuova materia -->
+    <details style="margin-top:10px;">
+        <summary style="font-size:.8rem; cursor:pointer; color:var(--blu);">+ Aggiungi materia a {{ dip.sigla }}</summary>
+        <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}" style="margin-top:8px; background:#f0f4f8; padding:10px; border-radius:8px;">
+            <input type="hidden" name="id_dipartimento" value="{{ dip.id }}">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                <div><label style="font-size:.72rem;">Nome *</label><input type="text" name="nome" required style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:180px;"></div>
+                <div><label style="font-size:.72rem;">Sigla *</label><input type="text" name="sigla" required style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:90px;"></div>
+                <div><label style="font-size:.72rem;">Cod. orario</label><input type="text" name="codice_orario" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:110px;"></div>
+                <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">Aggiungi</button>
+            </div>
+        </form>
+    </details>
+</div>
+{% endfor %}
+
+<!-- Nuovo dipartimento -->
+<div class="card" style="padding:16px 20px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Nuovo dipartimento</h3>
+    <form method="post" action="{{ url_for('attivita_ist.salva_dipartimento') }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+        <div><label style="font-size:.75rem;">Nome *</label><input type="text" name="nome" required style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:200px;"></div>
+        <div><label style="font-size:.75rem;">Sigla *</label><input type="text" name="sigla" required style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:80px;"></div>
+        <div><label style="font-size:.75rem;">Ordine</label><input type="number" name="ordine" value="{{ dipartimenti|length + 1 }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:60px;"></div>
+        <button type="submit" class="btn btn-success btn-sm">Crea</button>
+    </form>
+</div>
+
+<script>
+function toggleEdit(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Cambi quadro orario{% endblock %}
+
+{% block extra_style %}
+<style>
+.badge-aperto      { background:#dbeafe; color:#1e40af; }
+.badge-restituito  { background:var(--verde-bg); color:var(--verde); }
+.badge-annullato   { background:#e5e7eb; color:var(--grigio); }
+.badge-ritardo     { background:var(--rosso-bg); color:var(--rosso); }
+.giorni-tag { font-size:.75rem; color:var(--grigio); margin-left:6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">Cambi quadro orario</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Scambi ore, ferie concordate, sorveglianze — con tracciamento restituzione
+        </p>
+    </div>
+    <a href="{{ url_for('cambi.nuovo') }}" class="btn btn-success">+ Nuovo cambio</a>
+</div>
+
+<!-- SCAMBI APERTI -->
+{% if aperti %}
+<div class="card" style="margin-bottom:20px; border-left:4px solid #f59e0b;">
+    <h2>⏳ Scambi aperti ({{ aperti|length }})</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align:center;">Data</th>
+                <th style="text-align:center;width:40px;">Ora</th>
+                <th style="text-align:center;width:90px;white-space:nowrap;">Classe</th>
+                <th style="text-align:center;">Cede</th>
+                <th style="text-align:center;">Copre</th>
+                <th style="text-align:center;width:130px;">Tipo</th>
+                <th style="text-align:center;">Restituzione</th>
+                <th style="text-align:center;width:80px;">Giorni</th>
+                <th style="text-align:right;padding-right:12px;width:180px;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for sc in aperti %}
+        <tr>
+            <td>{{ sc.data_cessione.strftime('%d/%m/%Y') }}</td>
+            <td><strong>{{ sc.ora_cessione }}ª</strong></td>
+            <td style="text-align:center;white-space:nowrap;"><strong>{{ sc.classe or '—' }}</strong></td>
+            <td><strong>{{ sc.docente_cede.cognome }}</strong></td>
+            <td>
+                {% if sc.docente_copre %}
+                    {{ sc.docente_copre.cognome }}
+                {% else %}
+                    <span style="color:var(--grigio);">—</span>
+                {% endif %}
+            </td>
+            <td><span class="badge badge-grigio">{{ sc.tipo }}</span></td>
+            <td>
+                {% if sc.data_restituzione_prevista %}
+                    {% if sc.restituzione_in_ritardo %}
+                        <span class="badge badge-ritardo">
+                            ⚠ {{ sc.data_restituzione_prevista.strftime('%d/%m') }} SCADUTA
+                        </span>
+                    {% else %}
+                        {{ sc.data_restituzione_prevista.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                {% else %}
+                    <span style="color:var(--grigio);">Non definita</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge {{ 'badge-ritardo' if sc.giorni_aperti > 60 else 'badge-aperto' }}">
+                    {{ sc.giorni_aperti }} gg
+                </span>
+            </td>
+            <td style="white-space:nowrap;">
+                <!-- Form restituzione inline -->
+                <button class="btn btn-success btn-sm"
+                    onclick="document.getElementById('rest-{{ sc.id }}').style.display='block';this.style.display='none'">
+                    ✓ Restituito
+                </button>
+                <div id="rest-{{ sc.id }}" style="display:none; margin-top:6px;">
+                    <form method="post" action="{{ url_for('cambi.segna_restituito', id=sc.id) }}">
+                        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                            <input type="date" name="data_restituzione"
+                                value="{{ oggi.isoformat() }}"
+                                style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                            <select name="ora_restituzione"
+                                style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                                <option value="">Ora</option>
+                                {% for o in range(1,10) %}
+                                <option value="{{ o }}">{{ o }}ª</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="classe_restituzione"
+                                placeholder="Classe" maxlength="10"
+                                style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px;
+                                       font-size:.82rem; width:80px; text-transform:uppercase;">
+                            <button class="btn btn-success btn-sm" type="submit">Salva</button>
+                        </div>
+                    </form>
+                </div>
+                <a href="{{ url_for('cambi.modifica', id=sc.id, next=request.url) }}"
+                   class="btn btn-primary btn-sm" style="margin-left:4px;">✏️</a>
+                <form method="post" action="{{ url_for('cambi.annulla', id=sc.id) }}"
+                      onsubmit="return confirm('Annullare questo scambio?')"
+                      style="display:inline; margin-left:4px;">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:20px; text-align:center; color:var(--grigio); padding:40px;">
+    Nessuno scambio aperto.
+</div>
+{% endif %}
+
+<!-- STORICO CHIUSI -->
+{% if chiusi %}
+<div class="card">
+    <h2>📋 Storico scambi (ultimi 30)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align:center;">Data</th>
+                <th style="text-align:center;width:40px;">Ora</th>
+                <th style="text-align:center;width:90px;white-space:nowrap;">Classe</th>
+                <th style="text-align:center;">Cede</th>
+                <th style="text-align:center;">Copre</th>
+                <th style="text-align:center;width:130px;">Tipo</th>
+                <th style="text-align:center;">Restituito il</th>
+                <th style="text-align:center;width:90px;">Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for sc in chiusi %}
+        <tr>
+            <td>{{ sc.data_cessione.strftime('%d/%m/%Y') }}</td>
+            <td>{{ sc.ora_cessione }}ª</td>
+            <td style="text-align:center;white-space:nowrap;"><strong>{{ sc.classe or '—' }}</strong></td>
+            <td>{{ sc.docente_cede.cognome }}</td>
+            <td>{{ sc.docente_copre.cognome if sc.docente_copre else '—' }}</td>
+            <td><span class="badge badge-grigio">{{ sc.tipo }}</span></td>
+            <td>
+                {% if sc.data_restituzione_effettiva %}
+                    {{ sc.data_restituzione_effettiva.strftime('%d/%m/%Y') }}
+                    {% if sc.ora_restituzione %} — {{ sc.ora_restituzione }}ª{% endif %}
+                    {% if sc.classe_restituzione %} — {{ sc.classe_restituzione }}{% endif %}
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                <span class="badge {{ 'badge-restituito' if sc.stato=='restituito' else 'badge-annullato' }}">
+                    {{ sc.stato }}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Configurazione email{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('report.index') }}"
+       style="color:var(--grigio); font-size:.85rem; text-decoration:none;">
+        ← Report
+    </a>
+    <h1 style="font-size:1.4rem; color:var(--blu); font-weight:800; margin-top:4px;">
+        ✉ Configurazione invio email
+    </h1>
+</div>
+
+<div class="card" style="max-width:600px;">
+    <h2>Credenziali Gmail (App Password)</h2>
+    <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
+        Per usare Gmail in modo sicuro serve una <strong>App Password</strong>.<br>
+        Vai su
+        <a href="https://myaccount.google.com/apppasswords" target="_blank"
+           style="color:var(--blu-med);">myaccount.google.com/apppasswords</a>
+        → crea una password per "Mail" → incollala qui sotto.
+    </p>
+
+    <form method="post">
+
+        <div class="form-group">
+            <label>Email mittente (tua email istituzionale)</label>
+            <input type="email" name="smtp_user" required
+                   value="{{ cfg.smtp_user }}">
+        </div>
+
+        <div class="form-group">
+            <label>Nome visualizzato nel mittente</label>
+            <input type="text" name="smtp_from"
+                   value="{{ cfg.smtp_from }}"
+                   placeholder="Es. Roberto Dal Toe &lt;roberto.daltoe@davincichiavenna.edu.it&gt;">
+        </div>
+
+        <div class="form-group">
+            <label>App Password Gmail (16 caratteri senza spazi)</label>
+            <input type="password" name="smtp_password"
+                   placeholder="{% if cfg.smtp_password %}●●●●●●●●●●●●●●●● (già configurata — lascia vuoto per non cambiare){% else %}Incolla qui la App Password{% endif %}"
+                   autocomplete="new-password">
+            {% if cfg.smtp_password %}
+            <small style="color:var(--verde); font-size:.78rem;">
+                ✓ App Password già configurata
+            </small>
+            {% else %}
+            <small style="color:var(--rosso); font-size:.78rem;">
+                ⚠ App Password non ancora configurata
+            </small>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <button class="btn btn-success" type="submit" name="azione" value="salva">
+                💾 Salva configurazione
+            </button>
+            <button class="btn btn-primary" type="submit" name="azione" value="test">
+                🔌 Testa connessione
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="max-width:600px; margin-top:0;">
+    <h2>Come ottenere la App Password</h2>
+    <ol style="padding-left:20px; font-size:.88rem; line-height:2; color:#374151;">
+        <li>Vai su <strong>myaccount.google.com</strong></li>
+        <li>Clicca <strong>Sicurezza</strong> nel menu a sinistra</li>
+        <li>Assicurati che la <strong>Verifica in due passaggi</strong> sia attiva</li>
+        <li>Cerca <strong>Password per le app</strong> (in fondo alla sezione Sicurezza)</li>
+        <li>Seleziona app: <strong>Mail</strong> → Seleziona dispositivo: <strong>Mac</strong></li>
+        <li>Clicca <strong>Genera</strong> → copia i 16 caratteri</li>
+        <li>Incollali nel campo qui sopra (puoi togliere gli spazi)</li>
+    </ol>
+</div>
+
+{% endblock %}

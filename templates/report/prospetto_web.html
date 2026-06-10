@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Prospetto {{ data_sel.strftime('%d/%m/%Y') }}{% endblock %}
+
+{% block extra_style %}
+<style>
+.prosp-header { display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+.sezione-ist { margin-bottom:20px; }
+.ist-row { display:flex; align-items:center; gap:10px; padding:8px 12px;
+    border-radius:8px; border:1px solid #e5eaf0; margin-bottom:6px;
+    background:white; }
+.ist-tipo { font-size:.78rem; font-weight:700; padding:2px 8px;
+    border-radius:10px; white-space:nowrap; }
+.ist-ore  { font-size:.82rem; color:var(--grigio); white-space:nowrap; min-width:90px; }
+.ist-titolo { font-size:.88rem; font-weight:600; flex:1; }
+.ist-n    { font-size:.82rem; color:var(--grigio); white-space:nowrap; }
+.ist-presenze { font-size:.78rem; white-space:nowrap; }
+.badge-scrutinio { background:#f3f4f6; color:#374151; }
+.badge-collegio  { background:#dbeafe; color:#1e40af; }
+.badge-cdc       { background:#ede9fe; color:#5b21b6; }
+.badge-dip       { background:#d1fae5; color:#065f46; }
+.badge-altro     { background:#f3f4f6; color:#6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prosp-header">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu); font-weight:800;">
+            Prospetto del {{ giorno_it }} {{ data_sel.day }} {{ mese_it }} {{ data_sel.year }}
+        </h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Supplenze e attività istituzionali
+        </p>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <a href="{{ url_for('report.prospetto_web', data_str=(data_sel - timedelta(days=1)).isoformat()) }}"
+           class="btn btn-sm btn-primary">‹</a>
+        <a href="{{ url_for('report.prospetto_web') }}"
+           class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">Oggi</a>
+        <a href="{{ url_for('report.prospetto_web', data_str=(data_sel + timedelta(days=1)).isoformat()) }}"
+           class="btn btn-sm btn-primary">›</a>
+        <a href="{{ url_for('report.prospetto', data_str=data_sel.isoformat()) }}"
+           class="btn btn-sm" style="background:#166534; color:white;">⬇ XLSX</a>
+        <a href="{{ url_for('dashboard.index', data=data_sel.isoformat()) }}"
+           class="btn btn-sm btn-primary">← Dashboard</a>
+    </div>
+</div>
+
+{# ── ATTIVITÀ ISTITUZIONALI ─────────────────────────────────── #}
+{% if eventi_ist %}
+<div class="sezione-ist">
+    <h2 style="font-size:1rem; font-weight:700; color:#7c3aed; margin-bottom:10px;">
+        🏛 Attività istituzionali
+    </h2>
+    {% for ev in eventi_ist %}
+    {% set n_pres = ev.presenze | selectattr('stato','eq','presente')    | list | length %}
+    {% set n_ass  = ev.presenze | selectattr('stato','eq','assente')     | list | length %}
+    {% set n_gius = ev.presenze | selectattr('stato','eq','giustificato')| list | length %}
+    {% set n_part = ev.partecipanti | length %}
+    <div class="ist-row">
+        <span class="ist-tipo
+            {% if ev.tipo == 'scrutinio' %}badge-scrutinio
+            {% elif ev.tipo == 'collegio' %}badge-collegio
+            {% elif ev.tipo == 'consiglio_classe' %}badge-cdc
+            {% elif 'dipartimento' in ev.tipo %}badge-dip
+            {% else %}badge-altro{% endif %}">
+            {{ ev.tipo_emoji }} {{ ev.tipo_label }}
+        </span>
+        <span class="ist-ore">
+            {% if ev.ora_inizio %}{{ ev.ora_inizio }}{% if ev.ora_fine %}–{{ ev.ora_fine }}{% endif %}
+            · {{ '%.1f'|format(ev.durata_ore) }}h{% else %}—{% endif %}
+        </span>
+        <span class="ist-titolo">
+            {{ ev.titolo }}
+            {% if ev.classe %}<span class="badge badge-blu" style="font-size:.72rem;">{{ ev.classe }}</span>{% endif %}
+            {% if ev.dipartimento %}<span style="font-size:.72rem; color:var(--grigio);">{{ ev.dipartimento.sigla }}</span>{% endif %}
+        </span>
+        <span class="ist-n">{{ n_part }} doc.</span>
+        <span class="ist-presenze">
+            {% if ev.presenze %}
+                <span style="color:#16a34a; font-weight:700;">{{ n_pres }}✓</span>
+                {% if n_ass %}<span style="color:#dc2626; font-weight:700; margin-left:4px;">{{ n_ass }}✗</span>{% endif %}
+                {% if n_gius %}<span style="color:#d97706; font-weight:700; margin-left:4px;">{{ n_gius }}~</span>{% endif %}
+            {% else %}<span style="color:var(--grigio);">—</span>{% endif %}
+        </span>
+        <a href="{{ url_for('attivita_ist.presenze', id=ev.id) }}"
+           class="btn btn-sm" style="background:#7c3aed; color:white;
+           padding:3px 8px; font-size:.75rem;">✅ Presenze</a>
+        {% if ev.tipo == 'scrutinio' %}
+        <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=ev.id) }}"
+           class="btn btn-sm btn-primary" style="padding:3px 8px; font-size:.75rem;"
+           title="Gestisci sostituzioni scrutinio">👥 Sostituzioni</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ── SUPPLENZE ──────────────────────────────────────────────── #}
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <h2 style="margin:0;">📋 Supplenze
+            {% set n_a = supplenze | selectattr('stato','eq','assegnata') | list | length %}
+            {% set n_s = supplenze | selectattr('stato','eq','scoperta')  | list | length %}
+            <span style="font-size:.8rem; font-weight:400; color:var(--grigio); margin-left:8px;">
+                <span style="color:#16a34a;">{{ n_a }} assegnate</span>
+                {% if n_s %} · <span style="color:#dc2626;">{{ n_s }} scoperte</span>{% endif %}
+            </span>
+        </h2>
+    </div>
+    {% if supplenze %}
+    <table style="table-layout:fixed; width:100%;">
+        <thead>
+            <tr>
+                <th style="width:44px; text-align:center;">Ora</th>
+                <th style="width:80px;">Classe</th>
+                <th style="width:130px;">Assente</th>
+                <th style="width:150px;">Sostituto</th>
+                <th style="width:100px;">Tipo</th>
+                <th style="width:80px;">Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in supplenze %}
+        <tr {% if s.stato == 'scoperta' %}style="background:#fff5f5;"{% endif %}>
+            <td style="text-align:center;"><strong>{{ s.ora }}ª</strong></td>
+            <td><strong>{{ s.classe }}</strong></td>
+            <td style="font-size:.86rem; color:var(--grigio);">
+                {% if s.assente %}{{ s.assente.cognome }}{% else %}—{% endif %}
+            </td>
+            <td style="font-size:.88rem;">
+                {% if s.sostituto %}<strong>{{ s.sostituto.cognome }}</strong>
+                {% elif s.stato == 'non_assegnabile' %}<span style="color:#7c3aed;">N/A</span>
+                {% else %}<span style="color:#dc2626;">⚠ Scoperta</span>{% endif %}
+            </td>
+            <td>
+                {% set lbl = {'recupero':'Recupero','pagamento':'Pagamento','scambio':'Scambio',
+                    'completamento':'Complet.','potenziamento':'Potenzi.','disposizione':'Disposiz.'} %}
+                <span style="font-size:.8rem; color:var(--grigio);">{{ lbl.get(s.tipo, s.tipo) }}</span>
+            </td>
+            <td>
+                {% if s.stato == 'assegnata' %}
+                    <span class="badge badge-verde">✓</span>
+                {% elif s.stato == 'scoperta' %}
+                    <span class="badge badge-rosso">⚠</span>
+                {% else %}
+                    <span class="badge badge-grigio">{{ s.stato }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center; color:var(--grigio); padding:24px;">
+        Nessuna supplenza per questa data.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

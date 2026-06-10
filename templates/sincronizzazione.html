@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Sincronizzazione orario{% endblock %}
+
+{% block extra_style %}
+<style>
+.log-row-ok      { border-left: 4px solid var(--verde); }
+.log-row-warning { border-left: 4px solid #f59e0b; }
+.log-row-errore  { border-left: 4px solid var(--rosso); }
+.stat-mini { display:inline-flex; align-items:center; gap:6px;
+             padding:6px 14px; background:var(--blu-light);
+             border-radius:8px; font-size:.88rem; font-weight:600; color:var(--blu); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">🔄 Sincronizzazione orario</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Aggiorna l'orario docenti senza perdere dati storici
+        </p>
+    </div>
+</div>
+
+<!-- STATO ATTUALE -->
+<div class="card" style="margin-bottom:20px;">
+    <h2>📊 Stato orario attuale</h2>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
+        <span class="stat-mini">📅 {{ slot_count }} slot totali</span>
+        <span class="stat-mini">👥 {{ doc_con_orario }} docenti con orario</span>
+        <span class="stat-mini">
+            📂 File: <strong>{{ file_corrente or 'nessun file trovato' }}</strong>
+        </span>
+    </div>
+</div>
+
+<!-- AGGIORNA ORARIO -->
+<div class="card" style="margin-bottom:20px;">
+    <h2>⬆ Aggiorna orario</h2>
+    <p style="color:var(--grigio); font-size:.88rem; margin-bottom:16px;">
+        Carica un nuovo file Excel oppure usa quello già presente in <code>data/</code>.
+        Le supplenze e la banca ore esistenti non vengono toccate.
+    </p>
+    <form method="post" action="{{ url_for('sync.importa') }}"
+          enctype="multipart/form-data">
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div class="form-group" style="flex:2; margin-bottom:0;">
+                <label>Carica nuovo file orario (opzionale)</label>
+                <input type="file" name="file_orario" accept=".xlsx,.xlsm"
+                       style="padding:6px;">
+            </div>
+            <button class="btn btn-success" type="submit"
+                    onclick="return confirm('Aggiornare l\'orario? L\'operazione sovrascrive tutti gli slot orario.')">
+                🔄 Aggiorna orario
+            </button>
+        </div>
+        <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
+            Se non carichi un file, viene usato automaticamente
+            <strong>{{ file_corrente or 'nessun file trovato' }}</strong>.
+        </p>
+    </form>
+</div>
+
+<!-- ALIAS DOCENTI -->
+<div class="card" style="margin-bottom:20px;">
+    <h2>🔗 Alias docenti</h2>
+    <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
+        Se il nome nel file Excel non corrisponde esattamente al database,
+        crea un alias. Es. "MONTEMANARO" → MONTEMARANO.
+    </p>
+
+    <!-- Form nuovo alias -->
+    <form method="post" action="{{ url_for('sync.nuovo_alias') }}"
+          style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;">
+        <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+            <label>Nome nel file Excel</label>
+            <input type="text" name="nome_file" required
+                   placeholder="Es. MONTEMANARO"
+                   style="text-transform:uppercase;">
+        </div>
+        <div class="form-group" style="flex:2; min-width:200px; margin-bottom:0;">
+            <label>Docente nel database</label>
+            <select name="id_docente" required>
+                <option value="">— seleziona —</option>
+                {% for d in docenti %}
+                <option value="{{ d.id }}">
+                    {{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="btn btn-primary" type="submit">+ Aggiungi alias</button>
+    </form>
+
+    <!-- Lista alias esistenti -->
+    {% if alias %}
+    <table>
+        <thead>
+            <tr><th>Nome nel file</th><th>→</th><th>Docente database</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for a in alias %}
+        <tr>
+            <td><code>{{ a.nome_file }}</code></td>
+            <td style="color:var(--grigio);">→</td>
+            <td>
+                <strong>{{ a.docente.cognome }}</strong>
+                {% if a.docente.nome %} {{ a.docente.nome }}{% endif %}
+            </td>
+            <td>
+                <form method="post"
+                      action="{{ url_for('sync.elimina_alias', id=a.id) }}"
+                      onsubmit="return confirm('Eliminare questo alias?')"
+                      style="display:inline;">
+                    <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grigio); font-size:.88rem;">
+        Nessun alias configurato. Se l'importazione segnala docenti non riconosciuti,
+        aggiungili qui.
+    </p>
+    {% endif %}
+</div>
+
+<!-- LOG IMPORTAZIONI -->
+{% if logs %}
+<div class="card">
+    <h2>📋 Storico importazioni (ultime 10)</h2>
+    <table>
+        <thead>
+            <tr><th>Data/ora</th><th>File</th><th>Slot</th>
+                <th>Nuovi</th><th>Non riconosciuti</th><th>Esito</th></tr>
+        </thead>
+        <tbody>
+        {% for log in logs %}
+        <tr class="log-row-{{ log.esito }}">
+            <td style="font-size:.85rem;">
+                {{ log.data_ora.strftime('%d/%m/%Y %H:%M') if log.data_ora }}
+            </td>
+            <td style="font-size:.82rem; color:var(--grigio);">{{ log.file_nome }}</td>
+            <td style="text-align:center;">{{ log.slot_totali }}</td>
+            <td style="text-align:center;">
+                {% if log.docenti_nuovi > 0 %}
+                    <span class="badge badge-verde">+{{ log.docenti_nuovi }}</span>
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                {% set nr = log.non_riconosciuti | from_json if log.non_riconosciuti else [] %}
+                {% if nr %}
+                    <span class="badge badge-giallo">⚠ {{ nr | join(', ') }}</span>
+                {% else %}
+                    <span style="color:var(--grigio);">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if log.esito == 'ok' %}
+                    <span class="badge badge-verde">✓ OK</span>
+                {% elif log.esito == 'warning' %}
+                    <span class="badge badge-giallo">⚠ Warning</span>
+                {% else %}
+                    <span class="badge badge-rosso">✗ Errore</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

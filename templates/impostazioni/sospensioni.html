@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Sospensioni didattiche<script>
+function toggleEdit(id) {
+    const row  = document.getElementById('row-' + id);
+    const edit = document.getElementById('edit-' + id);
+    const vis  = edit.style.display === 'none';
+    edit.style.display = vis ? '' : 'none';
+    row.style.opacity  = vis ? '0.4' : '';
+}
+</script>
+{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">📅 Sospensioni didattiche</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #f59e0b;">
+    In questi giorni <strong>non vengono generate supplenze</strong> e l'inserimento di assenze è bloccato con avviso.
+    I giorni festivi domenicali sono già esclusi automaticamente.
+</div>
+
+<!-- FORM AGGIUNGI -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi sospensione</h3>
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Dal *</label><br>
+                <input type="date" name="data_inizio" required
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Al (vuoto = solo un giorno)</label><br>
+                <input type="date" name="data_fine"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label style="font-size:.75rem; color:var(--grigio);">Descrizione *</label><br>
+                <input type="text" name="descrizione" required placeholder="Es. Ponte 2 giugno"
+                       style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Tipo</label><br>
+                <select name="tipo" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% for k, v in tipi.items() %}
+                    <option value="{{ k }}">{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-success btn-sm">Aggiungi</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ELENCO -->
+<div class="card" style="padding:0; overflow:hidden;">
+    {% if sospensioni %}
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th style="width:110px;">Dal</th>
+                <th style="width:110px;">Al</th>
+                <th>Descrizione</th>
+                <th style="width:180px;">Tipo</th>
+                <th style="width:44px; text-align:center;">✕</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sospensioni %}
+        {% set passata = s.data_fine < oggi %}
+        {% set colori = {
+            'festività_nazionale':'#dbeafe,#1e40af',
+            'sospensione_regionale':'#dcfce7,#166534',
+            'sospensione_istituto':'#ede9fe,#5b21b6',
+            'vacanze_natale':'#fef3c7,#92400e',
+            'vacanze_pasqua':'#fce7f3,#9d174d',
+            'vacanze_estate':'#fff7ed,#c2410c',
+            'altro':'#f3f4f6,#6b7280'
+        } %}
+        {% set col = colori.get(s.tipo, '#f3f4f6,#6b7280').split(',') %}
+
+        {# Riga visualizzazione #}
+        <tr id="row-{{ s.id }}" {% if passata %}style="opacity:.5;"{% endif %}>
+            <td style="font-size:.86rem; white-space:nowrap;">
+                <strong>{{ s.data_inizio.strftime('%d/%m/%Y') }}</strong>
+            </td>
+            <td style="font-size:.86rem; white-space:nowrap;">
+                {% if s.is_singolo %}—
+                {% else %}<strong>{{ s.data_fine.strftime('%d/%m/%Y') }}</strong>{% endif %}
+            </td>
+            <td style="font-size:.88rem;">
+                {{ s.descrizione }}
+                {% if passata %}<span style="font-size:.7rem; color:var(--grigio); margin-left:6px;">passata</span>{% endif %}
+            </td>
+            <td>
+                <span style="padding:2px 8px; border-radius:10px; font-size:.74rem; font-weight:700;
+                             background:{{ col[0] }}; color:{{ col[1] }};">
+                    {{ s.tipo_label }}
+                </span>
+            </td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ s.id }})"
+                        title="Modifica">✏️</button>
+                <form method="post" onsubmit="return confirm('Eliminare?')"
+                      style="display:inline; margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ s.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+
+        {# Riga modifica (nascosta) #}
+        <tr id="edit-{{ s.id }}" style="display:none; background:#f0f4ff;">
+            <td colspan="5" style="padding:10px 14px;">
+                <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ s.id }}">
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Dal</label><br>
+                        <input type="date" name="data_inizio" required
+                               value="{{ s.data_inizio.isoformat() }}"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Al</label><br>
+                        <input type="date" name="data_fine"
+                               value="{{ s.data_fine.isoformat() }}"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div style="flex:1; min-width:180px;">
+                        <label style="font-size:.72rem; color:var(--grigio);">Descrizione</label><br>
+                        <input type="text" name="descrizione" required
+                               value="{{ s.descrizione }}"
+                               style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Tipo</label><br>
+                        <select name="tipo" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                            {% for k, v in tipi.items() %}
+                            <option value="{{ k }}" {% if k == s.tipo %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+                        <button type="button" class="btn btn-sm"
+                                style="background:#e5eaf0; color:var(--blu);"
+                                onclick="toggleEdit({{ s.id }})">Annulla</button>
+                    </div>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding:32px; color:var(--grigio);">
+        Nessuna sospensione configurata.
+    </div>
+    {% endif %}
+</div>
+<script>
+function toggleEdit(id) {
+    const row  = document.getElementById('row-' + id);
+    const edit = document.getElementById('edit-' + id);
+    const vis  = edit.style.display === 'none';
+    edit.style.display = vis ? '' : 'none';
+    row.style.opacity  = vis ? '0.4' : '';
+}
+</script>
+{% endblock %}

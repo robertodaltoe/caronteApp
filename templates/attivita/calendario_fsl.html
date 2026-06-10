@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}Calendario FSL — {{ attivita.descrizione }}{% endblock %}
+
+{% block extra_style %}
+<style>
+.fsl-grid {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #e5eaf0;
+}
+.fsl-table {
+    border-collapse: collapse;
+    font-size: .82rem;
+    min-width: 600px;
+}
+.fsl-table th, .fsl-table td {
+    border: 1px solid #e5eaf0;
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+}
+.fsl-table thead th {
+    background: var(--blu); color: white;
+    padding: 8px 12px; font-size: .78rem;
+    white-space: nowrap;
+}
+.fsl-table thead th.doc-col {
+    background: #1e3a5c; text-align: left; padding-left: 14px;
+    min-width: 130px; position: sticky; left: 0; z-index: 2;
+}
+.fsl-table tbody td.doc-cell {
+    background: #f0f4f8; font-weight: 700; font-size: .85rem;
+    padding: 8px 14px; text-align: left; white-space: nowrap;
+    position: sticky; left: 0; z-index: 1; border-right: 2px solid #d1d5db;
+}
+.slot-cell {
+    width: 90px; height: 52px; cursor: pointer;
+    transition: background .1s;
+    position: relative;
+}
+.slot-cell:hover { background: #eff6ff !important; }
+.slot-cell.attivo {
+    background: #dcfce7 !important;
+    cursor: pointer;
+}
+.slot-cell.attivo::after {
+    content: attr(data-label);
+    display: block;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #166534;
+    padding: 2px 4px;
+    line-height: 1.3;
+}
+/* Popup ore */
+.ore-popup {
+    display: none;
+    position: absolute;
+    top: 100%; left: 50%; transform: translateX(-50%);
+    background: white; border: 1px solid #e5eaf0;
+    border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    padding: 10px; z-index: 100;
+    min-width: 180px;
+}
+.ore-popup.visibile { display: block; }
+.ore-popup label {
+    display: flex; align-items: center; gap:6px;
+    padding: 3px 6px; cursor: pointer; font-size: .82rem;
+    border-radius: 4px; transition: background .1s;
+}
+.ore-popup label:hover { background: #f0f4f8; }
+.ore-popup .ore-btn-row {
+    display: flex; gap: 6px; margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid #f0f4f8;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <div>
+        <h1 style="font-size:1.3rem; color:var(--blu);">
+            🏫 Calendario FSL — {{ attivita.descrizione or attivita.tipo_label }}
+        </h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            {{ attivita.classi_list | join(', ') }} ·
+            {{ attivita.data_inizio.strftime('%d/%m/%Y') }} → {{ attivita.data_fine.strftime('%d/%m/%Y') }}
+        </p>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <button id="btn-salva" class="btn btn-success">✓ Salva calendario</button>
+        <a href="{{ url_for('attivita.lista') }}" class="btn btn-primary">← Attività</a>
+    </div>
+</div>
+
+<div class="card" style="padding:12px 16px; margin-bottom:16px; font-size:.82rem; color:var(--grigio);">
+    Clicca su una cella per indicare le ore in cui quel docente sorveglia quel giorno.
+    <strong style="color:var(--blu);">Verde = impegnato.</strong>
+    Le assenze e supplenze verranno rigenerate automaticamente al salvataggio.
+</div>
+
+<!-- GRIGLIA -->
+<div class="fsl-grid">
+<table class="fsl-table" id="fsl-table">
+    <thead>
+        <tr>
+            <th class="doc-col">Docente</th>
+            {% for data in date_list %}
+            <th data-giorno="{{ data.weekday() }}" data-data="{{ data.isoformat() }}">
+                {{ data.strftime('%a') }}<br>
+                <span style="font-size:.82rem; font-weight:400;">{{ data.strftime('%d/%m') }}</span>
+            </th>
+            {% endfor %}
+
+        </tr>
+    </thead>
+    <tbody>
+    {% for doc in docenti %}
+    <tr>
+        <td class="doc-cell" style="min-width:160px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                <span>{{ doc.cognome }}</span>
+                <button class="btn btn-sm"
+                        style="background:#e0f2fe; color:#0369a1; font-size:.68rem;
+                               padding:2px 7px; white-space:nowrap; flex-shrink:0;"
+                        onclick="copiaRiga({{ doc.id }})"
+                        title="Propaga il pattern di questo docente a tutte le settimane">
+                    ↻
+                </button>
+            </div>
+        </td>
+        {% for data in date_list %}
+        {% set cell_key = doc.id|string + '_' + data.isoformat() %}
+        {% set slot_esistente = slot_map.get(cell_key) %}
+        <td class="slot-cell {% if slot_esistente %}attivo{% endif %}"
+            data-doc="{{ doc.id }}"
+            data-data="{{ data.isoformat() }}"
+            data-giorno="{{ data.weekday() }}"
+            data-ora-ini="{{ slot_esistente.ora_inizio if slot_esistente else '' }}"
+            data-ora-fine="{{ slot_esistente.ora_fine if slot_esistente else '' }}"
+            data-ore-exact="{{ slot_esistente.ore_json if slot_esistente and slot_esistente.ore_json else '' }}"
+            {% if slot_esistente %}
+            data-label="{{ slot_esistente.ore_json.replace(',', 'ª ') + 'ª' if slot_esistente.ore_json else slot_esistente.ora_inizio|string + 'ª–' + slot_esistente.ora_fine|string + 'ª' }}"
+            {% endif %}
+            onclick="apriOrePopup(this)">
+        </td>
+        {% endfor %}
+
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- POPUP ORE (uno solo, riposizionato) -->
+<div id="ore-popup" class="ore-popup">
+    <div style="font-size:.75rem; font-weight:700; color:var(--grigio); margin-bottom:6px;">
+        Ore di sorveglianza:
+    </div>
+    <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;" id="ore-badges">
+        {% for o in range(1, 10) %}
+        <label class="ore-badge-btn" data-ora="{{ o }}"
+               style="padding:4px 10px; border:1.5px solid #e5e7eb; border-radius:6px;
+                      font-size:.8rem; font-weight:700; cursor:pointer; user-select:none;
+                      transition: all .1s;">
+            {{ o }}ª
+        </label>
+        {% endfor %}
+    </div>
+    <div class="ore-btn-row">
+        <button class="btn btn-success btn-sm" onclick="confermaCella()">✓ Ok</button>
+        <button class="btn btn-danger btn-sm" onclick="svuotaCella()">✕ Rimuovi</button>
+        <button class="btn btn-primary btn-sm" onclick="chiudiPopup()">✖</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+let cellAttiva = null;
+let oreSelezionate = new Set();
+
+// Stile badge ore nel popup
+function aggiornaBadgeStile() {
+    document.querySelectorAll('.ore-badge-btn').forEach(b => {
+        const sel = oreSelezionate.has(parseInt(b.dataset.ora));
+        b.style.background    = sel ? '#166534' : 'white';
+        b.style.color         = sel ? 'white'   : '#374151';
+        b.style.borderColor   = sel ? '#166534' : '#e5e7eb';
+    });
+}
+
+// Click sui badge nel popup
+document.querySelectorAll('.ore-badge-btn').forEach(b => {
+    b.addEventListener('click', () => {
+        const o = parseInt(b.dataset.ora);
+        if (oreSelezionate.has(o)) oreSelezionate.delete(o);
+        else oreSelezionate.add(o);
+        aggiornaBadgeStile();
+    });
+});
+
+function apriOrePopup(cell) {
+    cellAttiva = cell;
+    oreSelezionate = new Set();
+
+    // Pre-carica ore esatte (se disponibili) altrimenti usa range
+    const oreExact = cell.dataset.oreExact || '';
+    if (oreExact) {
+        oreExact.split(',').forEach(o => { const n=parseInt(o); if(n) oreSelezionate.add(n); });
+    } else {
+        const iniEsist  = parseInt(cell.dataset.oraIni);
+        const fineEsist = parseInt(cell.dataset.oraFine);
+        if (iniEsist && fineEsist) {
+            for (let o = iniEsist; o <= fineEsist; o++) oreSelezionate.add(o);
+        }
+    }
+    aggiornaBadgeStile();
+
+    // Posiziona popup
+    const popup = document.getElementById('ore-popup');
+    const rect  = cell.getBoundingClientRect();
+    popup.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+    popup.style.left = (rect.left + window.scrollX) + 'px';
+    popup.style.transform = 'none';
+    popup.classList.add('visibile');
+}
+
+function chiudiPopup() {
+    document.getElementById('ore-popup').classList.remove('visibile');
+    cellAttiva = null;
+}
+
+function confermaCella() {
+    if (!cellAttiva || oreSelezionate.size === 0) { chiudiPopup(); return; }
+    const arr = [...oreSelezionate].sort((a,b)=>a-b);
+    cellAttiva.dataset.oreExact = arr.join(',');           // es. "1,2,4,5"
+    cellAttiva.dataset.oraIni   = arr[0];
+    cellAttiva.dataset.oraFine  = arr[arr.length-1];
+    // Label mostra le ore esatte non il range
+    const label = arr.map(o => o + 'ª').join(' ');
+    cellAttiva.dataset.label = label;
+    cellAttiva.classList.add('attivo');
+    chiudiPopup();
+}
+
+function svuotaCella() {
+    if (!cellAttiva) return;
+    cellAttiva.dataset.oraIni   = '';
+    cellAttiva.dataset.oraFine  = '';
+    cellAttiva.dataset.oreExact = '';
+    cellAttiva.dataset.label    = '';
+    cellAttiva.classList.remove('attivo');
+    chiudiPopup();
+}
+
+// Chiudi popup cliccando fuori
+document.addEventListener('click', e => {
+    const popup = document.getElementById('ore-popup');
+    if (popup.classList.contains('visibile') &&
+        !popup.contains(e.target) &&
+        !e.target.classList.contains('slot-cell')) {
+        chiudiPopup();
+    }
+});
+
+// Copia il pattern della prima settimana di un docente a tutte le settimane successive
+function copiaRiga(docId) {
+    const cells = [...document.querySelectorAll(`.slot-cell[data-doc="${docId}"]`)];
+    if (!cells.length) return;
+
+    // Trova la prima settimana (date più basse per ogni giorno della settimana)
+    const primaSettimana = {}; // giorno_settimana -> cell
+    cells.forEach(cell => {
+        const g = cell.dataset.giorno;
+        if (!primaSettimana[g]) primaSettimana[g] = cell;
+        else if (cell.dataset.data < primaSettimana[g].dataset.data) {
+            primaSettimana[g] = cell;
+        }
+    });
+
+    // Conta quante celle ha già la prima settimana
+    const celleAttivePrimaSettimana = Object.values(primaSettimana).filter(
+        c => c.dataset.oraIni && c.dataset.oraFine
+    );
+
+    if (celleAttivePrimaSettimana.length === 0) {
+        alert('Nessuna ora impostata nella prima settimana per questo docente.');
+        return;
+    }
+
+    let copiate = 0;
+    cells.forEach(cell => {
+        const g = cell.dataset.giorno;
+        const modello = primaSettimana[g];
+        // Non sovrascrivere la prima settimana stessa
+        if (!modello || cell.dataset.data === modello.dataset.data) return;
+        // Applica le stesse ore del modello
+        if (modello.dataset.oraIni && modello.dataset.oraFine) {
+            cell.dataset.oraIni   = modello.dataset.oraIni;
+            cell.dataset.oraFine  = modello.dataset.oraFine;
+            cell.dataset.oreExact = modello.dataset.oreExact || '';
+            cell.dataset.label    = modello.dataset.label || modello.dataset.oraIni + 'ª–' + modello.dataset.oraFine + 'ª';
+            cell.classList.add('attivo');
+            copiate++;
+        } else {
+            // Se il modello è vuoto, svuota anche le altre
+            cell.dataset.oraIni  = '';
+            cell.dataset.oraFine = '';
+            cell.dataset.label   = '';
+            cell.classList.remove('attivo');
+        }
+    });
+
+    // Feedback visivo
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = `✓ ${copiate} celle`;
+    btn.style.background = '#dcfce7';
+    btn.style.color = '#166534';
+    setTimeout(() => {
+        btn.textContent = orig;
+        btn.style.background = '';
+        btn.style.color = '';
+    }, 2000);
+}
+
+// Salva
+document.getElementById('btn-salva').addEventListener('click', async () => {
+    const slots = [];
+    document.querySelectorAll('.slot-cell.attivo').forEach(cell => {
+        if (cell.dataset.oraIni && cell.dataset.oraFine) {
+            slots.push({
+                id_docente: cell.dataset.doc,
+                data:       cell.dataset.data,
+                ora_inizio: cell.dataset.oraIni,
+                ora_fine:   cell.dataset.oraFine,
+                ore_exact:  cell.dataset.oreExact || '',
+            });
+        }
+    });
+
+    const btn = document.getElementById('btn-salva');
+    btn.textContent = 'Salvataggio...';
+    btn.disabled = true;
+
+    const res = await fetch('{{ url_for("attivita.slot_accompagnatori", id=attivita.id) }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({slots})
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+        btn.textContent = '✓ Salvato!';
+        btn.style.background = '#166534';
+        setTimeout(() => {
+            btn.textContent = '✓ Salva calendario';
+            btn.style.background = '';
+            btn.disabled = false;
+        }, 2000);
+    } else {
+        btn.textContent = 'Errore!';
+        btn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Banca Ore{% endblock %}
+
+{% block extra_style %}
+<style>
+.banca-table th, .banca-table td { text-align: center; }
+.banca-table td:first-child { text-align: left; }
+.num-pos { color: var(--verde); font-weight: 700; }
+.num-neg { color: var(--rosso); font-weight: 700; }
+.num-zero { color: var(--grigio); }
+.saldo-bar {
+    display: inline-block; height: 8px; border-radius: 4px;
+    vertical-align: middle; margin-left: 6px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">Banca Ore docenti</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Anno scolastico 2025/26 — {{ docenti|length }} docenti attivi
+        </p>
+    </div>
+</div>
+
+<!-- LEGENDA -->
+<div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; font-size:.82rem;">
+    <span style="background:var(--verde-bg); color:var(--verde); padding:4px 12px; border-radius:20px; font-weight:600;">
+        ▲ Supplenze svolte = credito
+    </span>
+    <span style="background:var(--rosso-bg); color:var(--rosso); padding:4px 12px; border-radius:20px; font-weight:600;">
+        ▼ Permessi + Ed.Civica = da recuperare
+    </span>
+    <span style="background:var(--giallo-bg); color:var(--giallo); padding:4px 12px; border-radius:20px; font-weight:600;">
+        € Ore a pagamento
+    </span>
+</div>
+
+<!-- TABELLA -->
+<div class="card" style="padding:0; overflow:hidden;">
+<table class="banca-table">
+    <thead>
+        <tr>
+            <th style="text-align:left; width:200px;">Docente</th>
+            <th>H<br><small>contr.</small></th>
+            <th style="background:#1a4a2a; color:white;">
+                ▲ Supplenze<br><small>svolte</small>
+            </th>
+            <th style="background:#5c1a1a; color:white;">
+                ▼ Permessi<br><small>orari</small>
+            </th>
+            <th style="background:#5c1a1a; color:white;">
+                ▼ Ed. Civica<br><small>libero</small>
+            </th>
+            <th style="background:#5c3a00; color:white;">
+                € Pagamento<br><small>ore</small>
+            </th>
+            <th style="background:var(--blu); color:white; width:120px;">
+                Saldo<br><small>netto</small>
+            </th>
+            <th style="background:var(--blu); color:white;">
+                Situazione
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for d in docenti %}
+    {% set dati = banca.get(d.id, {}) %}
+    {% set supplenze_h = dati.get('supplenze', 0) %}
+    {% set permessi_h  = dati.get('permessi', 0) %}
+    {% set civica_h    = dati.get('civica', 0) %}
+    {% set pagamento_h = dati.get('pagamento', 0) %}
+    {% set saldo       = supplenze_h - permessi_h - civica_h %}
+    <tr>
+        <td>
+            <strong>{{ d.cognome }}</strong>
+            {% if d.nome %} <span style="color:var(--grigio); font-size:.85rem;">{{ d.nome }}</span>{% endif %}
+        </td>
+        <td style="color:var(--grigio); font-size:.88rem;">{{ d.ore_contratto }}h</td>
+
+        <!-- Supplenze svolte -->
+        <td>
+            {% if supplenze_h > 0 %}
+                <span class="num-pos">+{{ "%.0f"|format(supplenze_h) }}h</span>
+            {% else %}
+                <span class="num-zero">—</span>
+            {% endif %}
+        </td>
+
+        <!-- Permessi orari -->
+        <td>
+            {% if permessi_h > 0 %}
+                <span class="num-neg">-{{ "%.0f"|format(permessi_h) }}h</span>
+            {% else %}
+                <span class="num-zero">—</span>
+            {% endif %}
+        </td>
+
+        <!-- Ed. Civica -->
+        <td>
+            {% if civica_h > 0 %}
+                <span class="num-neg">-{{ "%.0f"|format(civica_h) }}h</span>
+            {% else %}
+                <span class="num-zero">—</span>
+            {% endif %}
+        </td>
+
+        <!-- Pagamento -->
+        <td>
+            {% if pagamento_h > 0 %}
+                <span style="color:var(--giallo); font-weight:700;">
+                    {{ "%.0f"|format(pagamento_h) }}h
+                </span>
+            {% else %}
+                <span class="num-zero">—</span>
+            {% endif %}
+        </td>
+
+        <!-- Saldo netto -->
+        <td>
+            {% if saldo > 0 %}
+                <span class="num-pos">+{{ "%.0f"|format(saldo) }}h</span>
+            {% elif saldo < 0 %}
+                <span class="num-neg">{{ "%.0f"|format(saldo) }}h</span>
+            {% else %}
+                <span class="num-zero">0h</span>
+            {% endif %}
+        </td>
+
+        <!-- Situazione -->
+        <td>
+            {% if saldo > 2 %}
+                <span class="badge badge-verde">Credito</span>
+            {% elif saldo < -2 %}
+                <span class="badge badge-rosso">Recupero</span>
+            {% elif saldo < 0 %}
+                <span class="badge badge-giallo">Lieve debito</span>
+            {% else %}
+                <span class="badge badge-grigio">OK</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% endblock %}

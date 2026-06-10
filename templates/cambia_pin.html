@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Cambia PIN{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">🔒 Cambia PIN di accesso</h1>
+
+<div class="card" style="max-width:400px;">
+    <form method="post">
+        <div class="form-group">
+            <label>PIN attuale</label>
+            <input type="password" name="pin_attuale" required
+                   maxlength="8" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+            <label>Nuovo PIN (minimo 4 cifre)</label>
+            <input type="password" name="pin_nuovo" required
+                   maxlength="8" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label>Conferma nuovo PIN</label>
+            <input type="password" name="pin_conferma" required
+                   maxlength="8" autocomplete="new-password">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <button class="btn btn-success" type="submit">Aggiorna PIN</button>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Annulla</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

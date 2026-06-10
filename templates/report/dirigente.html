@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Report Dirigente{% endblock %}
+
+{% block extra_style %}
+<style>
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:16px; margin-bottom:24px; }
+.kpi-box { background:white; border-radius:8px; box-shadow:var(--shadow);
+    padding:20px; text-align:center; }
+.kpi-box .num { font-size:2.4rem; font-weight:800; line-height:1; }
+.kpi-box .lbl { font-size:.72rem; font-weight:600; color:var(--grigio);
+    text-transform:uppercase; letter-spacing:.5px; margin-top:6px; }
+.situazione-badge { display:inline-block; padding:6px 20px; border-radius:20px;
+    font-size:1rem; font-weight:800; letter-spacing:.5px; }
+.sit-verde  { background:var(--verde-bg); color:var(--verde); }
+.sit-giallo { background:var(--giallo-bg); color:var(--giallo); }
+.sit-rosso  { background:var(--rosso-bg); color:var(--rosso); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <a href="{{ url_for('report.index') }}"
+           style="color:var(--grigio); font-size:.85rem; text-decoration:none;">
+            ← Report
+        </a>
+        <h1 style="font-size:1.4rem; color:var(--blu); font-weight:800; margin-top:4px;">
+            📈 Report per il Dirigente
+        </h1>
+        <p style="color:var(--grigio); font-size:.85rem;">
+            IIS "Leonardo da Vinci" — Chiavenna &nbsp;·&nbsp;
+            Aggiornato il {{ oggi.strftime('%d/%m/%Y') }}
+        </p>
+    </div>
+    <button onclick="window.print()"
+            class="btn btn-primary">🖨 Stampa</button>
+</div>
+
+<!-- SITUAZIONE COMPLESSIVA -->
+<div class="card" style="margin-bottom:20px; text-align:center; padding:28px;">
+    <p style="font-size:.85rem; color:var(--grigio); margin-bottom:8px;">
+        SITUAZIONE COMPLESSIVA BANCA ORE
+    </p>
+    <span class="situazione-badge sit-{{ situazione[1] }}">
+        {{ situazione[0] }}
+    </span>
+    <p style="font-size:.82rem; color:var(--grigio); margin-top:12px;">
+        {{ perc_ok }}% dei docenti in equilibrio (±2h)
+    </p>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid">
+    <div class="kpi-box">
+        <div class="num" style="color:var(--blu);">{{ n_docenti }}</div>
+        <div class="lbl">Docenti monitorati</div>
+    </div>
+    <div class="kpi-box">
+        <div class="num" style="color:var(--grigio);">{{ equilibrio }}</div>
+        <div class="lbl">In equilibrio</div>
+    </div>
+    <div class="kpi-box">
+        <div class="num" style="color:var(--verde);">{{ credito }}</div>
+        <div class="lbl">In credito</div>
+    </div>
+    <div class="kpi-box">
+        <div class="num" style="color:var(--rosso);">{{ debito }}</div>
+        <div class="lbl">In debito</div>
+    </div>
+    <div class="kpi-box" style="border-top:4px solid var(--rosso);">
+        <div class="num" style="color:var(--rosso);">{{ critico }}</div>
+        <div class="lbl">Situazioni critiche (&gt;5h)</div>
+    </div>
+</div>
+
+<!-- ORE AGGREGATE -->
+<div class="card" style="margin-bottom:20px;">
+    <h2>Ore aggregate — anno in corso</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+                gap:16px; margin-top:8px;">
+        <div>
+            <div style="font-size:1.8rem; font-weight:800; color:var(--verde);">
+                {{ tot_supplenze }}h
+            </div>
+            <div style="font-size:.8rem; color:var(--grigio); margin-top:2px;">
+                Supplenze coperte internamente
+            </div>
+        </div>
+        <div>
+            <div style="font-size:1.8rem; font-weight:800; color:var(--rosso);">
+                {{ tot_permessi }}h
+            </div>
+            <div style="font-size:.8rem; color:var(--grigio); margin-top:2px;">
+                Permessi orari accumulati
+            </div>
+        </div>
+        <div>
+            <div style="font-size:1.8rem; font-weight:800; color:var(--rosso);">
+                {{ tot_civica }}h
+            </div>
+            <div style="font-size:.8rem; color:var(--grigio); margin-top:2px;">
+                Ore Ed. Civica libero
+            </div>
+        </div>
+        <div>
+            <div style="font-size:1.8rem; font-weight:800; color:var(--giallo);">
+                {{ tot_pagamento }}h
+            </div>
+            <div style="font-size:.8rem; color:var(--grigio); margin-top:2px;">
+                Ore richieste a pagamento
+            </div>
+        </div>
+        <div>
+            <div style="font-size:1.8rem; font-weight:800; color:var(--blu);">
+                ~{{ (tot_supplenze * 30)|int }}€
+            </div>
+            <div style="font-size:.8rem; color:var(--grigio); margin-top:2px;">
+                Valore stimato supplenze interne
+                <span style="font-size:.72rem;">(~30€/h MAD)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SITUAZIONI CRITICHE -->
+{% if casi_critici %}
+<div class="card" style="margin-bottom:20px; border-left:4px solid var(--rosso);">
+    <h2>⚠ Situazioni critiche (debito &gt; 5h)</h2>
+    <p style="color:var(--grigio); font-size:.83rem; margin-bottom:12px;">
+        Questi docenti richiedono un colloquio o una pianificazione di recupero.
+    </p>
+    <table>
+        <thead>
+            <tr><th>#</th><th>Debito</th><th>Situazione</th></tr>
+        </thead>
+        <tbody>
+        {% for caso in casi_critici %}
+        <tr>
+            <td><strong>Docente {{ loop.index }}</strong>
+                <span style="font-size:.75rem; color:var(--grigio);">
+                    (id:{{ caso.docente.id }})
+                </span>
+            </td>
+            <td><span class="badge badge-rosso">{{ caso.saldo }}h</span></td>
+            <td>
+                {% if caso.saldo <= -8 %}
+                    <span style="color:var(--rosso); font-weight:600;">Urgente</span>
+                {% else %}
+                    <span style="color:#92610a; font-weight:600;">Da monitorare</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p style="font-size:.75rem; color:var(--grigio); margin-top:10px;">
+        * I nomi non vengono mostrati in questo report per gestione separata.
+        Consulta il report completo in Banca Ore per i dettagli nominativi.
+    </p>
+</div>
+{% endif %}
+
+<!-- CREDITI ELEVATI -->
+{% if crediti_alti %}
+<div class="card" style="border-left:4px solid #f59e0b;">
+    <h2>💛 Crediti elevati (&gt;8h)</h2>
+    <p style="color:var(--grigio); font-size:.83rem; margin-bottom:12px;">
+        Docenti con molte ore di credito che difficilmente potranno essere smaltite.
+        Valutare se richiedono una pianificazione specifica.
+    </p>
+    <table>
+        <thead>
+            <tr><th>#</th><th>Credito accumulato</th></tr>
+        </thead>
+        <tbody>
+        {% for caso in crediti_alti %}
+        <tr>
+            <td><strong>Docente {{ loop.index }}</strong>
+                <span style="font-size:.75rem; color:var(--grigio);">
+                    (id:{{ caso.docente.id }})
+                </span>
+            </td>
+            <td><span class="badge badge-verde">+{{ caso.saldo }}h</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<style>@media print { .btn { display:none; } }</style>
+{% endblock %}

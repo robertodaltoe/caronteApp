@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Docenti disponibili — Recupero{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">👨‍🏫 Docenti disponibili</h1>
+</div>
+
+<!-- Form aggiungi -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi docente disponibile</h3>
+    <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="flex:2; min-width:200px;">
+            <label style="font-size:.75rem; color:var(--grigio);">Docente</label><br>
+            <select name="id_docente" required
+                    style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
+                <option value="">— seleziona —</option>
+                {% for d in non_ancora %}
+                <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                    {% if d.materia %} — {{ d.materia }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex:2; min-width:160px;">
+            <label style="font-size:.75rem; color:var(--grigio);">Note (facoltativo)</label><br>
+            <input type="text" name="note" placeholder="Es. disponibile solo mattina"
+                   style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
+    </form>
+</div>
+
+<!-- Elenco -->
+<div class="card" style="padding:0; overflow:hidden;">
+    {% if disponibili %}
+    <table>
+        <thead>
+            <tr>
+                <th>Docente</th>
+                <th style="width:200px;">Materia principale</th>
+                <th>Altre materie (roster)</th>
+                <th style="width:200px;">Note</th>
+                <th style="width:60px; text-align:center;">✖</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for rd in disponibili %}
+        <tr>
+            <td><strong>{{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}</strong></td>
+            <td style="font-size:.86rem;">{{ rd.docente.materia or '—' }}</td>
+            <td style="font-size:.82rem; color:var(--grigio);">
+                {% set altre = rd.docente.materie_ist %}
+                {% if altre %}
+                    {% for dm in altre %}
+                    <span style="background:#f0f4f8; padding:1px 6px; border-radius:4px;
+                                 margin:1px; display:inline-block;">{{ dm.materia.nome }}</span>
+                    {% endfor %}
+                {% else %}—{% endif %}
+            </td>
+            <td style="font-size:.82rem; color:var(--grigio);">{{ rd.note or '—' }}</td>
+            <td style="text-align:center;">
+                <form method="post" onsubmit="return confirm('Rimuovere?')" style="margin:0;">
+                    <input type="hidden" name="azione" value="rimuovi">
+                    <input type="hidden" name="id" value="{{ rd.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding:32px; color:var(--grigio);">
+        Nessun docente disponibile ancora. Aggiungili dal form sopra.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

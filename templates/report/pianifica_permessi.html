@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Pianificazione permessi{% endblock %}
+
+{% block extra_style %}
+<style>
+.doc-header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 18px; background:var(--blu); color:white;
+    border-radius:8px 8px 0 0; cursor:pointer;
+    user-select:none;
+}
+.doc-header:hover { background:#1e3a5c; }
+.doc-saldo { font-size:.88rem; opacity:.85; }
+.doc-body { background:white; border:1px solid #e5eaf0; border-top:none;
+    border-radius:0 0 8px 8px; padding:0; overflow:hidden; }
+.doc-block { margin-bottom:16px; }
+
+.opzioni-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.opzioni-table th { background:#f0f4f8; padding:7px 12px; text-align:left;
+    font-size:.75rem; font-weight:700; color:var(--grigio); white-space:nowrap; }
+.opzioni-table td { padding:7px 12px; border-bottom:1px solid #f3f4f6;
+    vertical-align:middle; }
+.opzioni-table tr:last-child td { border-bottom:none; }
+
+.ore-badge { display:inline-block; padding:2px 7px; border-radius:5px;
+    font-size:.75rem; font-weight:700; margin:1px; }
+.ore-lezione { background:#dbeafe; color:#1e40af; }
+.ore-perm    { background:#fef3c7; color:#92400e; }
+.ore-indisp  { background:#f3f4f6; color:#9ca3af; }
+
+.tag-fine    { background:#dcfce7; color:#166534; padding:2px 8px;
+    border-radius:5px; font-size:.75rem; font-weight:700; }
+.tag-inizio  { background:#eff6ff; color:#1e40af; padding:2px 8px;
+    border-radius:5px; font-size:.75rem; font-weight:700; }
+.tag-n       { background:#f5f3ff; color:#6d28d9; padding:2px 8px;
+    border-radius:5px; font-size:.75rem; font-weight:700; }
+
+.filtro-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    margin-bottom:18px; }
+.filtro-bar label { font-size:.83rem; color:var(--grigio); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <h1 style="font-size:1.3rem; color:var(--blu);">🗓 Pianificazione permessi orari</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Docenti con credito proiettato — giorni in cui conviene proporre il permesso per liberare la fine o l'inizio della giornata
+        </p>
+    </div>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary">← Report</a>
+</div>
+
+<!-- FILTRI -->
+<div class="filtro-bar card" style="padding:12px 16px;">
+    <label>Mostra solo credito ≥</label>
+    <select id="filtro-min" onchange="filtra()" style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.83rem;">
+        <option value="1">1h</option>
+        <option value="2">2h</option>
+        <option value="3" selected>3h</option>
+        <option value="4">4h</option>
+        <option value="5">5h</option>
+    </select>
+    <label style="margin-left:12px;">Tipo suggerimento:</label>
+    <select id="filtro-tipo" onchange="filtra()" style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.83rem;">
+        <option value="tutti">Entrambi</option>
+        <option value="fine">Solo fine giornata</option>
+        <option value="inizio">Solo inizio giornata</option>
+    </select>
+    <label style="margin-left:12px;">Permesso ≥ ore:</label>
+    <select id="filtro-ore" onchange="filtra()" style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.83rem;">
+        <option value="1">1h</option>
+        <option value="2" selected>2h</option>
+        <option value="3">3h</option>
+    </select>
+</div>
+
+<!-- LEGENDA -->
+<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+            padding:10px 16px; background:white; border-radius:8px;
+            border:1px solid #e5eaf0; margin-bottom:16px; font-size:.8rem;">
+    <span style="font-weight:700; color:var(--grigio);">Legenda:</span>
+    <span><span class="ore-badge ore-lezione">3ª</span> Ora di lezione</span>
+    <span><span class="ore-badge ore-perm">4ª</span> Permesso consigliato</span>
+    <span><span class="ore-badge ore-indisp">2ª</span> Impegnato (simulazione/attività) — no permesso</span>
+    <span style="margin-left:8px;"><span class="tag-fine">dalla Xª</span> Libera fine giornata</span>
+    <span><span class="tag-inizio">fino alla Xª</span> Libera inizio giornata</span>
+    <span><span class="tag-n">Nh</span> Ore di permesso</span>
+</div>
+
+{% if not risultati %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessun docente con credito proiettato.
+</div>
+{% endif %}
+
+{% for r in risultati %}
+<div class="doc-block" data-saldo="{{ r.sal_fin }}">
+    <div class="doc-header" onclick="toggle(this)">
+        <div>
+            <strong>{{ r.doc.cognome }}{% if r.doc.nome %} {{ r.doc.nome }}{% endif %}</strong>
+            {% if r.doc.materia %}
+            <span style="font-size:.8rem; opacity:.75; margin-left:8px;">{{ r.doc.materia }}</span>
+            {% endif %}
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <span class="doc-saldo">
+                eff. {% if r.sal_eff > 0 %}+{% endif %}{{ r.sal_eff }}h
+                {% if r.sal_prev != 0 %}
+                → proj. +{{ r.sal_fin }}h
+                {% endif %}
+            </span>
+            <span style="font-size:.9rem;">▾</span>
+        </div>
+    </div>
+    <div class="doc-body" style="display:none;">
+        <table class="opzioni-table">
+            <thead>
+                <tr>
+                    <th style="width:110px;">Data</th>
+                    <th style="width:80px;">Giorno</th>
+                    <th>Orario del giorno</th>
+                    <th class="col-fine">Fine giornata 🌅</th>
+                    <th class="col-inizio">Inizio giornata 🌄</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for op in r.opzioni %}
+            <tr class="opzione-row"
+                data-fine-n="{{ op.fine.n }}"
+                data-inizio-n="{{ op.inizio.n }}">
+                <td><strong>{{ op.data.strftime('%d/%m/%Y') }}</strong></td>
+                <td style="color:var(--grigio);">{{ op.giorno_nome }}</td>
+                <td>
+                    {% for ora in op.ore_totali %}
+                        {% if ora in op.ore_bloccate %}
+                        <span class="ore-badge ore-indisp" title="Impegnato (simulazione/attività)">{{ ora }}ª</span>
+                        {% elif ora in op.ore_permesso and ora >= op.fine.da %}
+                        <span class="ore-badge ore-perm" title="Permesso consigliato">{{ ora }}ª</span>
+                        {% else %}
+                        <span class="ore-badge ore-lezione" title="Ore che rimane">{{ ora }}ª</span>
+                        {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if op.fine.n >= 1 %}
+                    <span class="tag-fine">dalla {{ op.fine.da }}ª</span>
+                    <span class="tag-n">{{ op.fine.n }}h</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% if op.inizio.n >= 1 and op.inizio.da != op.fine.da %}
+                    <span class="tag-inizio">fino alla {{ op.inizio.a }}ª</span>
+                    <span class="tag-n">{{ op.inizio.n }}h</span>
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function toggle(header) {
+    const body = header.nextElementSibling;
+    const arrow = header.querySelector('span:last-child');
+    if (body.style.display === 'none') {
+        body.style.display = '';
+        arrow.textContent = '▴';
+    } else {
+        body.style.display = 'none';
+        arrow.textContent = '▾';
+    }
+}
+
+function filtra() {
+    const minSaldo = parseInt(document.getElementById('filtro-min').value);
+    const tipo     = document.getElementById('filtro-tipo').value;
+    const minOre   = parseInt(document.getElementById('filtro-ore').value);
+
+    document.querySelectorAll('.doc-block').forEach(block => {
+        const saldo = parseInt(block.dataset.saldo);
+        if (saldo < minSaldo) { block.style.display = 'none'; return; }
+        block.style.display = '';
+
+        // Filtra righe
+        let righeVisibili = 0;
+        block.querySelectorAll('.opzione-row').forEach(row => {
+            const fineN   = parseInt(row.dataset.fineN);
+            const inizioN = parseInt(row.dataset.inizioN);
+            let mostra = false;
+            if (tipo === 'tutti')   mostra = fineN >= minOre || inizioN >= minOre;
+            if (tipo === 'fine')    mostra = fineN >= minOre;
+            if (tipo === 'inizio')  mostra = inizioN >= minOre;
+            row.style.display = mostra ? '' : 'none';
+            if (mostra) righeVisibili++;
+        });
+        if (righeVisibili === 0) block.style.display = 'none';
+    });
+}
+
+// Espandi automaticamente i top 5
+document.querySelectorAll('.doc-block').forEach((block, i) => {
+    if (i < 5) {
+        const header = block.querySelector('.doc-header');
+        const body   = header.nextElementSibling;
+        const arrow  = header.querySelector('span:last-child');
+        body.style.display = '';
+        arrow.textContent = '▴';
+    }
+});
+
+// Applica filtri iniziali
+filtra();
+</script>
+{% endblock %}

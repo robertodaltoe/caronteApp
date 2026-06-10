@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Calendario prove agosto{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">← Agosto</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">📅 Calendario prove di recupero — Agosto</h1>
+</div>
+
+<!-- Genera bozza -->
+<div class="card" style="padding:14px 18px; margin-bottom:14px; border-left:4px solid #0369a1;">
+    <form method="post">
+        <input type="hidden" name="azione" value="genera_bozza">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div>
+                <strong style="color:#0369a1; font-size:.9rem;">🤖 Genera bozza automatica</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Scritti distribuiti 24–27/8 · Orali il 28/8 · No sovrapposizioni alunni ·
+                    Commissario proposto automaticamente (TI/TD annuale).
+                    <strong style="color:#dc2626;">Sovrascrive le prove esistenti.</strong>
+                </div>
+            </div>
+            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" name="conferma_elimina" value="1">
+                Confermo
+            </label>
+            <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white;">
+                🤖 Genera bozza
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Form aggiungi prova -->
+<div class="card" style="padding:14px 18px; margin-bottom:14px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi prova manualmente</h3>
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:2; min-width:200px;">
+                <label style="font-size:.74rem; color:var(--grigio);">Gruppo *</label><br>
+                <select name="id_gruppo" required
+                        style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                    <option value="">— seleziona —</option>
+                    {% for g in gruppi %}
+                    <option value="{{ g.id }}">
+                        {{ g.materia[:35] }} — {% if g.docente %}{{ g.docente.cognome }}{% endif %}
+                        ({{ TIPO_PROVA_LABEL.get(g.tipo_prova,'?') }} {{ g.durata_ore }}h)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.74rem; color:var(--grigio);">Data *</label><br>
+                <select name="data" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                    {% set GIORNI = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'] %}
+                    {% for d in date_disponibili %}
+                    <option value="{{ d.isoformat() }}">
+                        {{ GIORNI[d.weekday()] }} {{ d.strftime('%d/%m') }}
+                        {% if d.weekday() == 3 %}(Gio — orali){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.74rem; color:var(--grigio);">Dalle</label><br>
+                <input type="time" name="ora_inizio" value="08:00"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <div>
+                <label style="font-size:.74rem; color:var(--grigio);">Alle</label><br>
+                <input type="time" name="ora_fine" value="10:00"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <div style="min-width:180px; flex:1;">
+                <label style="font-size:.74rem; color:var(--grigio);">Commissario</label><br>
+                <select name="id_commissario"
+                        style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                    <option value="">— da assegnare —</option>
+                    {% for d in commissari_validi %}
+                    <option value="{{ d.id }}">
+                        {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                        <span style="color:var(--grigio);">({{ d.tipo_contratto }})</span>
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.74rem; color:var(--grigio);">Aula</label><br>
+                <input type="text" name="aula" placeholder="Es. 5"
+                       style="width:60px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
+        </div>
+    </form>
+</div>
+
+<!-- Vista calendario -->
+{% if lezioni_per_data %}
+{% set GIORNI_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'] %}
+{% set MESI_IT = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'] %}
+{% for data in lezioni_per_data.keys() | sort %}
+<div class="card" style="margin-bottom:12px; padding:0; overflow:hidden;">
+    <div style="background:{% if data.weekday() == 3 %}#7c3aed{% else %}var(--blu){% endif %};
+                color:white; padding:8px 14px; font-weight:700; font-size:.9rem;
+                display:flex; justify-content:space-between; align-items:center;">
+        <span>{{ GIORNI_IT[data.weekday()] }} {{ data.day }} {{ MESI_IT[data.month] }} {{ data.year }}</span>
+        {% if data.weekday() == 3 %}
+        <span style="font-size:.76rem; opacity:.8;">🗣 Giorno orali</span>
+        {% endif %}
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:100px;">Orario</th>
+                <th>Materia</th>
+                <th style="width:100px;">Tipo</th>
+                <th style="width:140px;">Titolare</th>
+                <th style="width:180px;">Commissario</th>
+                <th>Classi</th>
+                <th style="width:60px; text-align:center;">Alunni</th>
+                <th style="width:50px;">Aula</th>
+                <th style="width:44px; text-align:center;">✖</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for l, g in lezioni_per_data[data] | sort(attribute='0.ora_inizio') %}
+        <tr>
+            <td style="font-size:.86rem; font-weight:700; white-space:nowrap;">
+                {{ l.ora_inizio }}–{{ l.ora_fine }}
+            </td>
+            <td><strong style="font-size:.88rem;">{{ g.materia[:40] }}</strong></td>
+            <td style="font-size:.8rem;">
+                {{ TIPO_PROVA_LABEL.get(g.tipo_prova, '—') }}
+            </td>
+            <td style="font-size:.84rem;">
+                {% if g.docente %}{{ g.docente.cognome }}{% if g.docente.nome %} {{ g.docente.nome[0] }}.{% endif %}{% endif %}
+            </td>
+            <td>
+                <form method="post" action="{{ url_for('recupero.agosto_set_commissario') }}"
+                      style="display:flex; gap:4px; align-items:center;">
+                    <input type="hidden" name="id_gruppo" value="{{ g.id }}">
+                    <select name="id_commissario"
+                            onchange="this.form.submit()"
+                            style="padding:2px 5px; border:1px solid #d1d5db; border-radius:5px; font-size:.78rem;">
+                        <option value="">— nessuno —</option>
+                        {% for d in commissari_validi %}
+                        <option value="{{ d.id }}"
+                            {% if g.commissario and g.commissario.id == d.id %}selected{% endif %}>
+                            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                            ({{ d.tipo_contratto }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </td>
+            <td style="font-size:.82rem;">{{ g.classi }}</td>
+            <td style="text-align:center; font-size:.84rem;">{{ g.alunni|length }}</td>
+            <td style="font-size:.82rem;">{{ l.aula or '—' }}</td>
+            <td style="text-align:center;">
+                <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ l.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessuna prova pianificata. Genera la bozza automatica o aggiungi manualmente.
+</div>
+{% endif %}
+{% endblock %}

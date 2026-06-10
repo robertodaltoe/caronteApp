@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}Gestione Aule{% endblock %}
+
+{% block extra_style %}
+<style>
+.classi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+.classe-card {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.classe-card .nome { font-size: 1.1rem; font-weight: 800; color: var(--blu); }
+.classe-card .aula-assegnata { font-size: .82rem; color: var(--grigio); }
+.classe-card .aula-assegnata strong { color: #166534; }
+.classe-card.no-aula { border-left: 3px solid #f59e0b; }
+
+/* POPUP */
+.popup-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+}
+.popup-overlay.aperto { display: flex; }
+.popup-box {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    width: 580px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+.popup-box h3 { font-size: 1rem; font-weight: 700; color: var(--blu); margin-bottom: 4px; }
+.popup-box .sottotitolo { font-size: .82rem; color: var(--grigio); margin-bottom: 20px; }
+.aule-badges {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 20px;
+}
+.aula-badge {
+    padding: 7px 14px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .12s;
+    background: white;
+    color: #374151;
+    user-select: none;
+}
+.aula-badge:hover { border-color: var(--blu); color: var(--blu); background: #eff6ff; }
+.aula-badge.selezionato { border-color: var(--blu); background: var(--blu); color: white; }
+.sezione-label {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--grigio); margin: 12px 0 6px;
+    width: 100%;
+}
+.sedi-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+.sede-radio {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border: 1.5px solid #e5eaf0;
+    border-radius: 8px; cursor: pointer;
+    font-size: .85rem; font-weight: 500; color: #374151;
+    transition: all .12s;
+}
+.sede-radio:hover { border-color: var(--blu); background: #eff6ff; }
+.sede-radio.selezionata { border-color: var(--blu); background: #eff6ff; color: var(--blu); }
+.sede-radio input { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">🏫 Gestione Aule</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            {{ aule|length }} classi assegnate · {{ classi_mancanti|length }} da assegnare
+        </p>
+    </div>
+</div>
+
+{% if classi_mancanti %}
+<div class="card" style="border-left:4px solid #f59e0b; padding:12px 16px; margin-bottom:16px;">
+    <p style="font-size:.88rem; color:#92400e; font-weight:600;">
+        ⚠ {{ classi_mancanti|length }} classi senza aula: {{ classi_mancanti | join(', ') }}
+    </p>
+</div>
+{% endif %}
+
+<!-- GRIGLIA CLASSI -->
+<div class="classi-grid">
+    {% set tutte = (aule | sort(attribute='classe')) %}
+    {% for a in tutte %}
+    <div class="classe-card">
+        <div class="nome">{{ a.classe }}</div>
+        <div class="aula-assegnata">
+            <strong>Aula {{ a.aula }}</strong><br>
+            <span>{{ a.sede }}</span>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:4px; width:100%;"
+                data-classe="{{ a.classe }}"
+                data-aula="{{ a.aula }}"
+                data-sede="{{ a.sede }}"
+                data-azione="modifica">
+            Modifica
+        </button>
+    </div>
+    {% endfor %}
+    {% for c in classi_mancanti %}
+    <div class="classe-card no-aula">
+        <div class="nome">{{ c }}</div>
+        <div class="aula-assegnata" style="color:#92400e;">Nessuna aula assegnata</div>
+        <button class="btn btn-success btn-sm" style="margin-top:4px; width:100%;"
+                data-classe="{{ c }}"
+                data-aula=""
+                data-sede=""
+                data-azione="assegna">
+            Assegna
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- POPUP -->
+<div class="popup-overlay" id="popup-overlay" onclick="if(event.target===this)chiudiPopup()">
+    <div class="popup-box">
+        <h3 id="popup-titolo">Assegna aula</h3>
+        <div class="sottotitolo" id="popup-sottotitolo"></div>
+
+        <form method="post" action="{{ url_for('aule.salva') }}" id="form-aula">
+            <input type="hidden" name="classe" id="inp-classe">
+            <input type="hidden" name="aula"   id="inp-aula">
+            <input type="hidden" name="sede"   id="inp-sede">
+
+            <div class="sezione-label">Aule numerate</div>
+            <div class="aule-badges" id="badges-numerate">
+                {% for i in range(1, 39) %}
+                <span class="aula-badge" data-aula="{{ i }}" onclick="selAula(this)">{{ i }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="sezione-label">Spazi speciali</div>
+            <div class="aule-badges" id="badges-speciali">
+                {% for a in ['Aula Magna','Lab. Informatica','Lab. Linguistico','Lab. BIM','Palestrone','Palestrina'] %}
+                <span class="aula-badge" data-aula="{{ a }}" onclick="selAula(this)">{{ a }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="sezione-label">Sede</div>
+            <div class="sedi-grid">
+                {% for s in sedi %}
+                <label class="sede-radio" data-sede="{{ s }}" onclick="selSede(this)">
+                    <input type="radio" name="_sede_vis" value="{{ s }}">
+                    {{ s }}
+                </label>
+                {% endfor %}
+            </div>
+
+            <!-- Debug selezione corrente -->
+            <div style="font-size:.78rem; color:var(--grigio); margin-bottom:10px; min-height:18px;" id="debug-sel"></div>
+
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-success" type="submit" id="btn-salva" disabled>
+                    ✓ Salva
+                </button>
+                {% if tutte %}
+                <button class="btn btn-danger btn-sm" type="button"
+                        id="btn-rimuovi"
+                        onclick="if(confirm('Rimuovere aula per questa classe?')) rimuoviAula()">
+                    Rimuovi
+                </button>
+                {% endif %}
+                <button class="btn btn-primary" type="button" onclick="chiudiPopup()">✖</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Form rimozione -->
+<form method="post" id="form-rimuovi" style="display:none;">
+    <input type="hidden" name="classe" id="rimuovi-classe">
+</form>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+let aulaSelezionata = '', sedeSelezionata = '';
+
+function apriPopup(classe, aulaCorrente, sedeCorrente) {
+    document.getElementById('inp-classe').value = classe;
+    document.getElementById('popup-titolo').textContent =
+        aulaCorrente ? 'Modifica aula — ' + classe : 'Assegna aula — ' + classe;
+    document.getElementById('popup-sottotitolo').textContent =
+        aulaCorrente ? 'Attualmente: Aula ' + aulaCorrente + ' — ' + sedeCorrente : '';
+
+    // Mostra/nascondi bottone rimuovi
+    const btnRim = document.getElementById('btn-rimuovi');
+    if (btnRim) btnRim.style.display = aulaCorrente ? 'inline-flex' : 'none';
+
+    // Reset selezione
+    document.querySelectorAll('.aula-badge').forEach(b => b.classList.remove('selezionato'));
+    document.querySelectorAll('.sede-radio').forEach(r => r.classList.remove('selezionata'));
+    aulaSelezionata = ''; sedeSelezionata = '';
+
+    // Pre-seleziona valori correnti
+    if (aulaCorrente) {
+        const b = document.querySelector('.aula-badge[data-aula="' + aulaCorrente + '"]');
+        if (b) { b.classList.add('selezionato'); aulaSelezionata = aulaCorrente; }
+    }
+    if (sedeCorrente) {
+        const r = document.querySelector('.sede-radio[data-sede="' + sedeCorrente + '"]');
+        if (r) { r.classList.add('selezionata'); sedeSelezionata = sedeCorrente; }
+    }
+
+    aggiornaBottone();
+    document.getElementById('popup-overlay').classList.add('aperto');
+}
+
+function chiudiPopup() {
+    document.getElementById('popup-overlay').classList.remove('aperto');
+}
+
+function selAula(el) {
+    document.querySelectorAll('.aula-badge').forEach(b => b.classList.remove('selezionato'));
+    el.classList.add('selezionato');
+    aulaSelezionata = el.dataset.aula;
+    document.getElementById('inp-aula').value = aulaSelezionata;
+    console.log('aula:', aulaSelezionata, 'sede:', sedeSelezionata);
+    aggiornaBottone();
+}
+
+function selSede(el) {
+    document.querySelectorAll('.sede-radio').forEach(r => r.classList.remove('selezionata'));
+    el.classList.add('selezionata');
+    sedeSelezionata = el.dataset.sede;
+    document.getElementById('inp-sede').value = sedeSelezionata;
+    aggiornaBottone();
+}
+
+// Intercetta il submit per verificare i valori
+document.getElementById('form-aula').addEventListener('submit', function(e) {
+    const cl = document.getElementById('inp-classe').value;
+    const au = document.getElementById('inp-aula').value;
+    const se = document.getElementById('inp-sede').value;
+    if (!cl || !au || !se) {
+        e.preventDefault();
+        alert('Seleziona aula e sede prima di salvare.');
+    }
+});
+
+function aggiornaBottone() {
+    const ok = !!(aulaSelezionata && sedeSelezionata);
+    document.getElementById('btn-salva').disabled = !ok;
+    const dbg = document.getElementById('debug-sel');
+    if (dbg) {
+        if (aulaSelezionata && sedeSelezionata) {
+            dbg.textContent = 'Selezionato: Aula ' + aulaSelezionata + ' — ' + sedeSelezionata;
+            dbg.style.color = '#166534';
+        } else {
+            dbg.textContent = (!aulaSelezionata ? 'Seleziona un\'aula' : '') +
+                              (!sedeSelezionata ? (aulaSelezionata ? 'Seleziona la sede' : ' e la sede') : '');
+            dbg.style.color = '';
+        }
+    }
+}
+
+function rimuoviAula() {
+    const classe = document.getElementById('inp-classe').value;
+    // Trova id aula e submittalo
+    const form = document.getElementById('form-rimuovi');
+    document.getElementById('rimuovi-classe').value = classe;
+    // Cerca l'id corretto tramite fetch o redirect
+    window.location.href = '{{ url_for("aule.lista") }}?rimuovi=' + encodeURIComponent(classe);
+}
+
+// Listener delegato sui bottoni assegna/modifica
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-azione]');
+    if (!btn) return;
+    apriPopup(
+        btn.dataset.classe || '',
+        btn.dataset.aula   || '',
+        btn.dataset.sede   || ''
+    );
+});
+
+// Chiudi con ESC
+document.addEventListener('keydown', e => { if(e.key==='Escape') chiudiPopup(); });
+</script>
+{% endblock %}

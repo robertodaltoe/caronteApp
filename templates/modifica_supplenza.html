@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Modifica supplenza{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">
+    ✏️ Modifica supplenza — {{ supplenza.classe }}
+    {{ supplenza.data.strftime('%d/%m/%Y') }} {{ supplenza.ora }}ª ora
+</h1>
+
+<div class="card" style="max-width:580px;">
+<form method="post">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+            <label>Data *</label>
+            <input type="date" name="data" required
+                   value="{{ supplenza.data.isoformat() }}">
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label>Ora *</label>
+            <select name="ora" required>
+                {% for num, label in ore.items() %}
+                <option value="{{ num }}"
+                    {% if num == supplenza.ora %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Classe *</label>
+        <input type="text" name="classe" required
+               value="{{ supplenza.classe }}"
+               style="text-transform:uppercase;">
+    </div>
+
+    <div class="form-group">
+        <label>Docente assente</label>
+        <select name="id_assente">
+            <option value="">— nessuno —</option>
+            {% for d in docenti %}
+            <option value="{{ d.id }}"
+                {% if supplenza.id_assente == d.id %}selected{% endif %}>
+                {{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Sostituto</label>
+        <select name="id_sostituto">
+            <option value="">— nessuno (scoperta) —</option>
+            {% for d in docenti %}
+            <option value="{{ d.id }}"
+                {% if supplenza.id_sostituto == d.id %}selected{% endif %}>
+                {{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Tipo supplenza</label>
+        <select name="tipo">
+            {% for val, label in [('recupero','♻ Recupero'),('pagamento','€ Pagamento'),
+                ('scambio','SO Scambio ore'),('completamento','C Completamento'),
+                ('potenziamento','P Potenziamento'),('non_assegnabile','🚫 Classe libera / Esce prima'),('disposizione','D Disposizione')] %}
+            <option value="{{ val }}"
+                {% if val == supplenza.tipo %}selected{% endif %}>
+                {{ label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Note display
+            <span style="font-weight:400; color:var(--grigio);">(visibili nel display pubblico)</span>
+        </label>
+        <input type="text" name="note_display"
+               value="{{ supplenza.note_display or '' }}"
+               maxlength="200">
+    </div>
+
+    <div class="form-group">
+        <label>Note interne</label>
+        <textarea name="note" rows="2">{{ supplenza.note or '' }}</textarea>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn btn-success" type="submit">✓ Salva</button>
+        <a href="{{ next or url_for('dashboard.index', data=supplenza.data.isoformat()) }}"
+           class="btn btn-primary">Annulla</a>
+    </div>
+</form>
+</div>
+{% endblock %}

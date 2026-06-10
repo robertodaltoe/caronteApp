@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Import banca ore{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">📥 Import banca ore da file Excel</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Anteprima movimenti da importare — i doppioni sono esclusi automaticamente
+        </p>
+    </div>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary btn-sm">← Report</a>
+</div>
+
+{% if non_trovati %}
+<div class="card" style="border-left:4px solid #f59e0b; margin-bottom:16px;">
+    <p style="font-weight:700; color:#92400e; margin-bottom:6px;">
+        ⚠️ {{ non_trovati|length }} cognomi non trovati nel DB:
+    </p>
+    <p style="font-size:.85rem; color:var(--grigio);">
+        {{ non_trovati | join(', ') }}
+    </p>
+</div>
+{% endif %}
+
+{% if doppioni %}
+<div class="card" style="border-left:4px solid #6b7280; margin-bottom:16px;">
+    <p style="font-weight:700; color:var(--grigio); margin-bottom:4px;">
+        ℹ️ {{ doppioni|length }} movimenti già presenti nel DB (saltati):
+    </p>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        {% for d in doppioni[:5] %}{{ d.cognome }} sett.{{ d.sett_n }}{% if not loop.last %}, {% endif %}{% endfor %}
+        {% if doppioni|length > 5 %} e altri {{ doppioni|length - 5 }}…{% endif %}
+    </p>
+</div>
+{% endif %}
+
+{% if da_importare %}
+<form method="post">
+
+    <!-- Filtri tipo -->
+    <div class="card" style="margin-bottom:16px; padding:16px;">
+        <p style="font-weight:700; margin-bottom:10px;">Tipi da importare:</p>
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            {% for val, label in tipi %}
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" name="tipo_sel" value="{{ val }}" checked>
+                {{ label }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Anteprima per settimana -->
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:32px; padding-left:12px; text-align:center;">
+                    <input type="checkbox" id="sel-all" checked
+                           onchange="document.querySelectorAll('input[name=sett_sel]').forEach(c=>c.checked=this.checked)">
+                </th>
+                <th>Settimana</th>
+                <th style="text-align:center;">♻ Supplenze</th>
+                <th style="text-align:center;">📋 Permessi</th>
+                <th style="text-align:center;">📚 Civica</th>
+                <th style="text-align:center;">Totale movimenti</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for sn, movs in per_sett.items() %}
+        {% set sup_count  = movs | selectattr('tipo','eq','supplenza_recupero') | list | length %}
+        {% set perm_count = movs | selectattr('tipo','eq','permesso_orario')    | list | length %}
+        {% set civ_count  = movs | selectattr('tipo','eq','civica')             | list | length %}
+        <tr>
+            <td style="padding-left:12px;">
+                <input type="checkbox" name="sett_sel" value="{{ sn }}" checked>
+            </td>
+            <td>
+                <strong>sett.{{ sn }}</strong>
+                <span style="color:var(--grigio); font-size:.82rem; margin-left:6px;">
+                    {{ movs[0].data.strftime('%d/%m/%Y') if movs }}
+                </span>
+            </td>
+            <td style="text-align:center;">
+                {% if sup_count %}<span style="color:#166534; font-weight:600;">+{{ sup_count }}</span>{% else %}—{% endif %}
+            </td>
+            <td style="text-align:center;">
+                {% if perm_count %}<span style="color:#991b1b;">{{ perm_count }}</span>{% else %}—{% endif %}
+            </td>
+            <td style="text-align:center;">
+                {% if civ_count %}<span style="color:#92400e;">{{ civ_count }}</span>{% else %}—{% endif %}
+            </td>
+            <td style="text-align:center; font-weight:600;">{{ movs|length }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background:#f8fafc; font-weight:700;">
+                <td colspan="2" style="padding-left:12px;">TOTALE</td>
+                <td style="text-align:center; color:#166534;">
+                    +{{ da_importare | selectattr('tipo','eq','supplenza_recupero') | list | length }}
+                </td>
+                <td style="text-align:center; color:#991b1b;">
+                    {{ da_importare | selectattr('tipo','eq','permesso_orario') | list | length }}
+                </td>
+                <td style="text-align:center; color:#92400e;">
+                    {{ da_importare | selectattr('tipo','eq','civica') | list | length }}
+                </td>
+                <td style="text-align:center;">{{ da_importare|length }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    </div>
+
+    <!-- Opzione sovrascrittura -->
+    {% if doppioni %}
+    <div style="margin-bottom:14px; padding:12px 16px; background:#fef3c7;
+                border-radius:8px; border:1px solid #f59e0b;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="sovrascrivi" value="1" id="sovrascrivi">
+            <span style="font-weight:600; color:#92400e;">
+                ♻ Sovrascrivi settimane già importate
+            </span>
+        </label>
+        <p style="font-size:.82rem; color:#78350f; margin:6px 0 0 26px;">
+            Elimina i movimenti esistenti per le settimane selezionate e
+            reimporta i nuovi valori dal file. Usa questa opzione solo se hai
+            modificato dati nel file Excel dopo la prima importazione.
+        </p>
+    </div>
+    {% endif %}
+
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-success" type="submit" id="btn-importa">
+            ✓ Importa movimenti selezionati ({{ da_importare|length }})
+        </button>
+        <a href="{{ url_for('report.index') }}" class="btn btn-primary">Annulla</a>
+        <span style="color:var(--grigio); font-size:.82rem;" id="nota-doppioni">
+            I doppioni non verranno reimportati.
+        </span>
+    </div>
+
+    <script>
+    const cb = document.getElementById('sovrascrivi');
+    const btn = document.getElementById('btn-importa');
+    const nota = document.getElementById('nota-doppioni');
+    if (cb) {
+        cb.addEventListener('change', function() {
+            if (this.checked) {
+                btn.textContent = '♻ Reimporta (sovrascrittura) — ' +
+                    ({{ da_importare|length }} + {{ doppioni|length }}) + ' movimenti';
+                btn.style.background = '#92400e';
+                nota.textContent = 'I movimenti esistenti per le settimane selezionate verranno eliminati e riscritti.';
+            } else {
+                btn.textContent = '✓ Importa movimenti selezionati ({{ da_importare|length }})';
+                btn.style.background = '';
+                nota.textContent = 'I doppioni non verranno reimportati.';
+            }
+        });
+    }
+    </script>
+
+</form>
+{% else %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    <p style="font-size:1.1rem; margin-bottom:8px;">✅ Tutti i movimenti sono già stati importati.</p>
+    <p style="font-size:.88rem;">
+        {{ doppioni|length }} movimenti già presenti nel DB.
+    </p>
+</div>
+{% endif %}
+
+{% endblock %}

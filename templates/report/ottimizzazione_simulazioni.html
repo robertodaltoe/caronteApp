@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Ottimizzazione simulazioni{% endblock %}
+
+{% block extra_style %}
+<style>
+.giorno-section { margin-bottom:40px; }
+.giorno-header {
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--blu); color:white; padding:12px 20px;
+    border-radius:10px 10px 0 0; font-weight:700; font-size:1rem;
+}
+.grid-ottim {
+    display:grid; grid-template-columns:1fr 1fr; gap:20px;
+    padding:20px; background:white;
+    border:1px solid #e5eaf0; border-top:none;
+    border-radius:0 0 10px 10px;
+}
+.card-sups table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.card-sups th { background:#f0f4f8; padding:7px 10px; text-align:left; font-size:.75rem; font-weight:700; color:var(--grigio); }
+.card-sups td { padding:7px 10px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+.card-sups tr:last-child td { border-bottom:none; }
+
+.badge-deb { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:.72rem; font-weight:700; }
+.badge-cred { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; padding:2px 8px; border-radius:8px; font-size:.72rem; font-weight:700; }
+.badge-pari { background:#f9fafb; color:#6b7280; border:1px solid #e5e7eb; padding:2px 8px; border-radius:8px; font-size:.72rem; font-weight:700; }
+
+.candidato { display:inline-flex; align-items:center; gap:4px; margin-right:4px; margin-bottom:2px; }
+.cand-nome { font-weight:700; font-size:.8rem; color:var(--blu); }
+.cand-saldo { font-size:.72rem; }
+
+.card-perm { background:white; border:1px solid #e5eaf0; border-radius:8px; padding:16px; }
+.card-perm h4 { font-size:.85rem; font-weight:700; color:var(--blu); margin-bottom:10px; }
+.perm-row { display:flex; justify-content:space-between; align-items:center;
+            padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:.82rem; }
+.perm-row:last-child { border-bottom:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:24px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">⚖️ Ottimizzazione banca ore — giorni simulazione</h1>
+    <p style="color:var(--grigio); font-size:.85rem; margin-top:4px;">
+        Suggerisce i sostituti con saldo più negativo (priorità recupero) e i creditori da liberare con permesso
+    </p>
+</div>
+
+{% if not prospetto %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessuna simulazione futura trovata.
+</div>
+{% endif %}
+
+{% for data_sim, dati in prospetto.items() %}
+<div class="giorno-section">
+    <div class="giorno-header">
+        <span>📅 {{ data_sim.strftime('%A %d %B %Y') }}</span>
+        <span style="font-size:.85rem; font-weight:400;">
+            {{ dati.righe|length }} supplenze da coprire
+        </span>
+    </div>
+
+    <div class="grid-ottim">
+        <!-- SUPPLENZE DA ASSEGNARE -->
+        <div>
+            <h3 style="font-size:.88rem; font-weight:700; color:var(--blu); margin-bottom:12px;">
+                🔄 Supplenze — sostituti suggeriti per saldo
+            </h3>
+            <div class="card-sups" style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:35px;">Ora</th>
+                        <th style="width:70px;">Classe</th>
+                        <th style="width:90px;">Assente</th>
+                        <th>Candidati (per saldo ↑)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for riga in dati.righe %}
+                <tr>
+                    <td style="text-align:center; font-weight:800; color:var(--grigio);">
+                        {{ riga.supplenza.ora }}ª
+                    </td>
+                    <td style="font-weight:700;">{{ riga.supplenza.classe }}</td>
+                    <td style="color:var(--grigio); font-size:.78rem;">
+                        {{ riga.assente.cognome if riga.assente else '?' }}
+                    </td>
+                    <td>
+                        {% for c in riga.candidati %}
+                        <span class="candidato">
+                            <span class="cand-nome">{{ c.cognome }}</span>
+                            {% if c.tipo == 'debitore' %}
+                            <span class="badge-deb cand-saldo" title="Proiezione fine settimana">{{ c.saldo_proj }}h</span>
+                            {% elif c.tipo == 'creditore' %}
+                            <span class="badge-cred cand-saldo" title="Proiezione fine settimana">+{{ c.saldo_proj }}h</span>
+                            {% else %}
+                            <span class="badge-pari cand-saldo">0h</span>
+                            {% endif %}
+                        </span>
+                        {% if not loop.last %}<span style="color:#e5e7eb;">·</span>{% endif %}
+                        {% endfor %}
+                        {% if not riga.candidati %}
+                        <span style="color:#f59e0b; font-size:.78rem;">⚠ Nessun disponibile</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        <!-- CREDITORI DA LIBERARE -->
+        <div>
+            <h3 style="font-size:.88rem; font-weight:700; color:var(--blu); margin-bottom:12px;">
+                🌴 Creditori — candidati al permesso orario
+            </h3>
+            {% if dati.creditori %}
+            <div class="card-perm">
+                {% for c in dati.creditori %}
+                <div class="perm-row">
+                    <div>
+                        <strong>{{ c.docente.cognome }}</strong>
+                        <span style="color:var(--grigio); font-size:.78rem; margin-left:6px;">
+                            ore {{ c.ore | join(', ') }}ª
+                        </span>
+                    </div>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        {% if c.saldo_att != c.saldo %}
+                        <span style="color:var(--grigio); font-size:.72rem;">att. +{{ c.saldo_att }}h →</span>
+                        {% endif %}
+                        <span class="badge-cred">proj. +{{ c.saldo }}h</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--grigio); font-size:.82rem; font-style:italic;">
+                Nessun creditore disponibile per permesso quel giorno.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

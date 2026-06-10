@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Proposte gruppi recupero{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🔗 Proposte gruppi di recupero</h1>
+</div>
+
+{% if not proposte %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    <div style="font-size:2rem; margin-bottom:12px;">📥</div>
+    <strong>Nessun dato importato.</strong><br>
+    <span style="font-size:.84rem;">Vai prima in <a href="{{ url_for('recupero.alunni') }}">Alunni</a>
+    e importa il file dal registro elettronico.</span>
+</div>
+{% else %}
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
+     color:var(--grigio); border-left:4px solid #0369a1;">
+    Il sistema ha raggruppato gli alunni importati per <strong>materia + docente assegnante</strong>.
+    Per ogni riga scegli il docente disponibile per il recupero (preselezionato se coincide con
+    chi ha assegnato il debito) e clicca <strong>Crea gruppo</strong>.
+    Gli alunni vengono collegati automaticamente.
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table>
+        <thead>
+            <tr>
+                <th>Materia</th>
+                <th style="width:180px;">Docente assegnante</th>
+                <th style="width:120px; text-align:center;">Alunni</th>
+                <th>Classi</th>
+                <th style="width:220px;">Docente recupero</th>
+                <th style="width:100px; text-align:center;">Max ore</th>
+                <th style="width:110px; text-align:center;">Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in proposte %}
+        <tr style="{% if p.gruppo_esistente %}background:#f0fdf4;{% endif %}">
+            <td>
+                <strong style="font-size:.9rem;">{{ p.materia[:50] }}</strong>
+            </td>
+            <td style="font-size:.82rem; color:var(--grigio);">
+                {{ p.docente_raw[:40] }}
+                {% if p.rd_suggerito %}
+                <span style="display:block; font-size:.72rem; color:#166534; font-weight:700;">
+                    ✓ trovato: {{ p.rd_suggerito.docente.cognome }}
+                </span>
+                {% else %}
+                <span style="display:block; font-size:.72rem; color:#dc2626;">
+                    ✗ non disponibile
+                </span>
+                {% endif %}
+            </td>
+            <td style="text-align:center;">
+                <span style="font-size:1.1rem; font-weight:800; color:var(--blu);">{{ p.n_alunni }}</span>
+            </td>
+            <td style="font-size:.84rem;">{{ p.classi }}</td>
+            <td>
+                {% if not p.gruppo_esistente %}
+                <form method="post" action="{{ url_for('recupero.crea_da_proposta') }}"
+                      id="form-{{ loop.index }}">
+                    <input type="hidden" name="materia"     value="{{ p.materia }}">
+                    <input type="hidden" name="cognome_doc" value="{{ p.cognome_doc }}">
+                    <input type="hidden" name="classi"      value="{{ p.classi }}">
+                    <select name="id_rec_docente" required
+                            style="width:100%; padding:4px 6px; border:1px solid #d1d5db;
+                                   border-radius:6px; font-size:.82rem;">
+                        <option value="">— seleziona docente —</option>
+                        {% for rd in disponibili %}
+                        <option value="{{ rd.id }}"
+                            {% if p.rd_suggerito and p.rd_suggerito.id == rd.id %}selected{% endif %}>
+                            {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input type="number" name="max_ore" value="10" min="1" max="20"
+                               title="Max ore totali"
+                               style="width:55px; padding:3px 6px; border:1px solid #d1d5db;
+                                      border-radius:6px; font-size:.78rem;">
+                        <span style="font-size:.72rem; color:var(--grigio); align-self:center;">ore tot.</span>
+                        <input type="number" name="max_ore_giorno" value="2" min="1" max="4"
+                               title="Max ore al giorno"
+                               style="width:45px; padding:3px 6px; border:1px solid #d1d5db;
+                                      border-radius:6px; font-size:.78rem;">
+                        <span style="font-size:.72rem; color:var(--grigio); align-self:center;">h/g</span>
+                    </div>
+                </form>
+                {% else %}
+                <span style="font-size:.84rem; color:#166534; font-weight:700;">
+                    {{ p.gruppo_esistente.docente.cognome if p.gruppo_esistente.docente else '—' }}
+                </span>
+                {% endif %}
+            </td>
+            <td style="text-align:center;">
+                {% if not p.gruppo_esistente %}
+                <button type="submit" form="form-{{ loop.index }}"
+                        class="btn btn-success btn-sm"
+                        {% if not p.rd_suggerito %}style="opacity:.6;"{% endif %}>
+                    ✚ Crea
+                </button>
+                {% else %}
+                <span style="font-size:.8rem; background:#dcfce7; color:#166534;
+                             padding:2px 8px; border-radius:8px; font-weight:700;">
+                    ✓ Creato
+                </span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top:12px; font-size:.8rem; color:var(--grigio);">
+    <strong>{{ proposte|selectattr('gruppo_esistente')|list|length }}</strong> gruppi creati su
+    <strong>{{ proposte|length }}</strong> totali.
+    {% set n_no_doc = proposte|rejectattr('rd_suggerito')|list|length %}
+    {% if n_no_doc > 0 %}
+    <span style="color:#d97706; margin-left:8px;">
+        ⚠ {{ n_no_doc }} materie senza docente disponibile — aggiungi il docente dalla sezione
+        <a href="{{ url_for('recupero.docenti') }}">Docenti disponibili</a>.
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

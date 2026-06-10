@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+{% block title %}Registra assenza / variazione{% endblock %}
+{% block extra_style %}
+<style>
+.tipo-btn { display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:12px 10px; border:2px solid #e5eaf0; border-radius:10px; cursor:pointer;
+    background:white; transition:all .12s; font-size:.8rem; font-weight:600;
+    color:var(--grigio); gap:4px; min-width:90px; text-align:center; }
+.tipo-btn:hover { border-color:var(--blu-med); color:var(--blu); background:#f0f6ff; }
+.tipo-btn.attivo { border-color:var(--blu); background:var(--blu); color:white; }
+.tipo-btn .ico { font-size:1.4rem; }
+.durata-btn { padding:8px 16px; border:2px solid #e5eaf0; border-radius:8px;
+    cursor:pointer; background:white; font-size:.84rem; font-weight:600;
+    color:var(--grigio); transition:all .12s; }
+.durata-btn:hover { border-color:var(--blu-med); color:var(--blu); }
+.durata-btn.attivo { border-color:var(--blu); background:var(--blu); color:white; }
+.ore-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.ora-chip { padding:6px 14px; border:2px solid #e5eaf0; border-radius:20px;
+    cursor:pointer; font-size:.84rem; font-weight:700; color:var(--grigio);
+    background:white; transition:all .12s; user-select:none; }
+.ora-chip:hover { border-color:var(--blu-med); color:var(--blu); }
+.ora-chip.sel { border-color:var(--blu); background:var(--blu); color:white; }
+.ora-chip.fuori-orario { opacity:.35; cursor:not-allowed; }
+.sezione-tipo { display:none; }
+.sezione-tipo.vis { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:4px;">{% if assenza %}✏️ Modifica assenza{% else %}📋 Registra assenza / variazione orario{% endif %}</h1>
+<p style="color:var(--grigio); font-size:.82rem; margin-bottom:20px;">
+    Il tipo di assenza è visibile a segreteria, DS e DSGA. Il motivo specifico è visibile solo a DS e DSGA.
+</p>
+
+<form method="post" id="form-assenza">
+<div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+
+<!-- COLONNA SINISTRA -->
+<div class="card" style="flex:1; min-width:320px; padding:20px;">
+
+    <!-- DOCENTE -->
+    <div class="form-group">
+        <label>Docente *</label>
+        <select name="id_docente" id="sel-docente" required onchange="aggiornaOrarioDocente()">
+            <option value="">— seleziona —</option>
+            {% for d in docenti %}
+            <option value="{{ d.id }}" data-contratto="{{ d.tipo_contratto or '' }}"
+                data-pt="{{ 'true' if d.part_time else 'false' }}"
+                {% if assenza and assenza.id_docente == d.id %}selected{% endif %}>
+                {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- DURATA: 1 giorno / più giorni / periodico -->
+    <div class="form-group">
+        <label>Durata</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="durata-btn attivo" onclick="setDurata('singolo', this)">📅 Un giorno</button>
+            <button type="button" class="durata-btn" onclick="setDurata('range', this)">📆 Più giorni</button>
+            <button type="button" class="durata-btn" onclick="setDurata('periodico', this)">🔁 Periodico</button>
+        </div>
+    </div>
+
+    <!-- SINGOLO -->
+    <div id="sez-singolo">
+        <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="data" id="inp-data" required value="{{ data_sel }}"
+                   onchange="aggiornaOrarioDocente()">
+        </div>
+    </div>
+
+    <!-- RANGE -->
+    <div id="sez-range" style="display:none;">
+        <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1;">
+                <label>Dal *</label>
+                <input type="date" name="data_range_ini" id="inp-range-ini" value="{{ data_sel }}">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Al *</label>
+                <input type="date" name="data_range_fin" id="inp-range-fin" value="{{ data_sel }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- PERIODICO -->
+    <div id="sez-periodico" style="display:none;">
+        <div style="display:flex; gap:12px; margin-bottom:12px;">
+            <div class="form-group" style="flex:1;">
+                <label>Dal *</label>
+                <input type="date" name="data_per_ini" id="inp-per-ini" value="{{ data_sel }}">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Al *</label>
+                <input type="date" name="data_per_fin" id="inp-per-fin" value="{{ data_sel }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Giorni della settimana</label>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                {% for g, label in [('1','Lun'),('2','Mar'),('3','Mer'),('4','Gio'),('5','Ven'),('6','Sab')] %}
+                <label style="display:flex; align-items:center; gap:4px; padding:5px 10px;
+                    border:2px solid #e5eaf0; border-radius:8px; cursor:pointer; font-size:.82rem;">
+                    <input type="checkbox" name="giorni_sett" value="{{ g }}"
+                           style="width:14px; height:14px;">{{ label }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ORE: non consecutive -->
+    <div class="form-group" id="sez-ore">
+        <label>Ore
+            <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">
+                (nessuna selezione = intera giornata)
+            </span>
+        </label>
+        <div class="ore-grid" id="ore-grid">
+            <span class="ora-chip {% if not assenza %}sel{% endif %}" data-ora="0" onclick="toggleOra(this)" title="Tutta la giornata">Tutta</span>
+            {% for o in ore_list %}
+            {% set presel = assenza and (assenza.ora_inizio <= o <= assenza.ora_fine) %}
+            <span class="ora-chip {% if presel %}sel{% endif %}"
+                  data-ora="{{ o }}" onclick="toggleOra(this)">{{ o }}ª</span>
+            {% endfor %}
+        </div>
+        <p style="font-size:.75rem; color:var(--grigio); margin-top:5px;">
+            Le ore grigie non sono in orario per il docente e il giorno selezionato.
+        </p>
+    </div>
+    <!-- hidden fields per le ore selezionate -->
+    <div id="hidden-ore"></div>
+
+    <!-- PERMESSO ORARIO PER ATT. ISTITUZIONALI — sezione HH:MM -->
+    <div id="sez-ist-orario" style="display:none; margin-top:10px; padding:12px 14px;
+         background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">
+        <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:8px;">
+            🏛 Permesso per attività istituzionale (orario assoluto)
+        </div>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Dalle</label><br>
+                <input type="time" name="ora_ist_inizio" id="ora-ist-ini"
+                       value="{{ assenza.ora_ist_inizio if assenza and assenza.ora_ist_inizio else '' }}"
+                       style="padding:5px 8px; border:1px solid #bfdbfe; border-radius:6px;
+                              font-size:.88rem; width:100px;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Alle</label><br>
+                <input type="time" name="ora_ist_fine" id="ora-ist-fin"
+                       value="{{ assenza.ora_ist_fine if assenza and assenza.ora_ist_fine else '' }}"
+                       style="padding:5px 8px; border:1px solid #bfdbfe; border-radius:6px;
+                              font-size:.88rem; width:100px;">
+            </div>
+            <div id="ist-durata" style="font-size:.82rem; color:#1e40af; font-weight:700;
+                                         align-self:flex-end; padding-bottom:6px;"></div>
+        </div>
+        <div style="font-size:.74rem; color:#6b7280; margin-top:6px;">
+            Compila solo se il permesso riguarda un'attività istituzionale pomeridiana
+            (Collegio, CdC, ecc.). Le ore verranno segnate come <strong>debito in banca ore</strong>
+            (colonna separata) e la presenza all'evento sarà marcata
+            <strong>giustificato</strong>.<br>
+            Per permessi mattutini su ore di lezione usa i chip sopra.
+        </div>
+    </div>
+
+    <!-- FLAG CLASSE LIBERA -->
+    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;
+           padding:10px 14px; border:2px solid #e5eaf0; border-radius:8px;
+           background:#f8fafc;" id="lbl-cl">
+        <input type="checkbox" name="classe_libera" id="chk-cl" value="1"
+               onchange="toggleClasseLibera()"
+               {% if assenza and assenza.classe_libera %}checked{% endif %}
+               style="margin-top:2px; width:16px; height:16px; flex-shrink:0;">
+        <div>
+            <div style="font-weight:700; font-size:.86rem;">
+                🚫 Classe libera <span style="font-weight:400; color:var(--grigio);">— entra dopo / esce prima</span>
+            </div>
+            <div style="font-size:.74rem; color:var(--grigio); margin-top:2px;">
+                NON ASSEGNABILE. Nel display compare "ENTRA DOPO" o "ESCE PRIMA".
+            </div>
+        </div>
+    </label>
+
+</div>
+
+<!-- COLONNA DESTRA -->
+<div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:16px;">
+
+    <!-- TIPO ASSENZA — pulsanti visivi -->
+    <div class="card" style="padding:16px 20px;">
+        <label style="display:block; font-size:.85rem; font-weight:700; color:#374151; margin-bottom:10px;">
+            Tipo assenza *
+        </label>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            {% for tipo, ico, label in tipi_visivi %}
+            <button type="button" class="tipo-btn {% if (assenza and assenza.motivo == tipo) or (not assenza and loop.first) %}attivo{% endif %}"
+                    data-tipo="{{ tipo }}" onclick="setTipo('{{ tipo }}', this)">
+                <span class="ico">{{ ico }}</span>{{ label }}
+            </button>
+            {% endfor %}
+            <input type="hidden" name="motivo" id="hidden-motivo"
+                   value="{{ assenza.motivo if assenza else tipi_visivi[0][0] }}">
+        </div>
+
+
+        <!-- Box info dinamico -->
+        <div id="info-tipo" style="padding:8px 12px; border-radius:6px; font-size:.8rem;
+             background:var(--giallo-bg); color:var(--giallo); border-left:3px solid #e0a800;"></div>
+
+        <!-- ALERT SOSPENSIONE DIDATTICA -->
+        {% if sospensione_oggi %}
+        <div id="alert-sospensione" style="background:#fff7ed; border:1px solid #fed7aa;
+             border-radius:8px; padding:10px 14px; margin-bottom:12px;">
+            <div style="font-size:.85rem; font-weight:700; color:#92400e;">
+                ⚠ Giorno di sospensione didattica
+            </div>
+            <div style="font-size:.8rem; color:#78350f; margin-top:3px;">
+                {{ sospensione_oggi }} — le supplenze in classe non verranno generate,
+                ma l'assenza può essere registrata per attività istituzionali o scrutini.
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ALERT ATTIVITÀ ISTITUZIONALI DEL GIORNO -->
+        {% if eventi_ist_giorno %}
+        <div id="alert-ist" style="background:#eff6ff; border:1px solid #bfdbfe;
+             border-radius:8px; padding:10px 14px; margin-bottom:12px;">
+            <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:6px;">
+                🏛 Attività istituzionali in programma questo giorno:
+            </div>
+            {% for ev in eventi_ist_giorno %}
+            <div style="font-size:.8rem; color:#1e3a5f; margin-bottom:3px;">
+                <strong>{{ ev.tipo_emoji }} {{ ev.tipo_label }}</strong>
+                — {{ ev.titolo }}
+                {% if ev.ora_inizio %}· {{ ev.ora_inizio }}{% if ev.ora_fine %}–{{ ev.ora_fine }}{% endif %}{% endif %}
+                {% if ev.classe %}<span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 5px;font-size:.72rem;">{{ ev.classe }}</span>{% endif %}
+            </div>
+            {% endfor %}
+            <div style="font-size:.74rem; color:#6b7280; margin-top:5px;">
+                Se il docente era previsto a questa riunione, selezionando
+                <strong>🏫 Att. ist.</strong> la sua presenza verrà marcata come
+                <em>giustificato</em> automaticamente.
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ALERT CCNL -->
+        <div id="alert-ccnl" style="display:none; margin-top:8px; padding:8px 12px;
+             border-radius:6px; font-size:.8rem;"></div>
+    </div>
+
+    <!-- SEZIONE SPECIFICA PER TIPO -->
+
+    <!-- FERIE: ora per ora -->
+    <div class="card sezione-tipo" id="sez-ferie" style="padding:16px 20px;">
+        <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">🏖 Ore di ferie — sostituto per ogni ora</h3>
+        <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
+            Per ogni ora in cui il docente ha lezione indica chi lo sostituisce. Solo le ore in servizio sono mostrate.
+        </p>
+        <div id="ferie-ore-container">
+            <p style="color:var(--grigio); font-size:.82rem; font-style:italic;">
+                Seleziona docente e giorno per vedere le ore in servizio.
+            </p>
+        </div>
+    </div>
+
+    <!-- SCAMBIO ORARIO -->
+    <div class="card sezione-tipo" id="sez-scambio" style="padding:16px 20px;">
+        <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">🔄 Scambio orario</h3>
+        <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
+            Indica le ore cedute e (opzionale) quando vengono recuperate.
+            Non impatta la banca ore. Il docente B è già nominato come sostituto.
+        </p>
+        <div id="scambio-slots">
+            <div class="scambio-slot" style="border:1px solid #e5eaf0; border-radius:8px;
+                 padding:10px 14px; margin-bottom:8px;">
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <span style="font-size:.78rem; font-weight:700; color:var(--grigio); min-width:40px;">Cede</span>
+                    <input type="date" name="scambio_cede_data[]" style="flex:1; min-width:120px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                    <select name="scambio_cede_ora[]" style="width:80px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                        {% for o in ore_list %}<option value="{{ o }}">{{ o }}ª</option>{% endfor %}
+                    </select>
+                    <input type="text" name="scambio_cede_classe[]" placeholder="Classe" style="width:90px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem; text-transform:uppercase;">
+                </div>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                    <span style="font-size:.78rem; font-weight:700; color:#16a34a; min-width:40px;">Riceve</span>
+                    <select name="scambio_doc_b[]" style="flex:1; min-width:160px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                        <option value="">— docente B —</option>
+                        {% for d in docenti %}
+                        <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                    <span style="font-size:.78rem; font-weight:700; color:#9333ea; min-width:40px;">Recupero</span>
+                    <input type="date" name="scambio_rec_data[]" style="flex:1; min-width:120px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                    <select name="scambio_rec_ora[]" style="width:80px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+                        <option value="">—</option>
+                        {% for o in ore_list %}<option value="{{ o }}">{{ o }}ª</option>{% endfor %}
+                    </select>
+                    <input type="text" name="scambio_rec_classe[]" placeholder="Classe" style="width:90px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem; text-transform:uppercase;">
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-primary" style="margin-top:4px;"
+                onclick="aggiungiSlotScambio()">+ Aggiungi ora</button>
+    </div>
+
+    <!-- NOTE INTERNE -->
+    <div class="card" style="padding:14px 20px;">
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Note interne
+                <span style="font-weight:400; color:var(--grigio); font-size:.76rem;">
+                    — non visibili nel display
+                    {% if ruolo_utente in ['ds','dsga','segreteria'] %}
+                    · <span style="color:#92400e;">🔒 motivo specifico</span>
+                    {% endif %}
+                </span>
+            </label>
+            <textarea name="note_interne" rows="2"
+                      placeholder="Es. certificato medico, protocollo...">{{ assenza.note_interne or '' if assenza }}</textarea>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button class="btn btn-success" type="submit">✓ Registra</button>
+        <a href="{{ url_for('dashboard.index', data=data_sel) }}" class="btn btn-primary">Annulla</a>
+    </div>
+
+</div>
+</div>
+</form>
+
+<!-- Dati orario docenti per JS -->
+<script id="orari-json" type="application/json">{{ orari_docenti_json | tojson }}</script>
+<script id="utilizzi-json" type="application/json">{{ utilizzi_ccnl | tojson }}</script>
+
+<script>
+const ORARI = (() => { try { return JSON.parse(document.getElementById('orari-json').textContent); } catch(e) { return {}; } })();
+const UTILIZZI = (() => { try { return JSON.parse(document.getElementById('utilizzi-json').textContent); } catch(e) { return {}; } })();
+
+const TIPI_INFO = {
+    malattia:            {ico:'🤒', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    permesso_personale:  {ico:'📄', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    lutto:               {ico:'🕯', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    matrimonio:          {ico:'💍', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    permesso_sindacale:  {ico:'🗣', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    permesso_orario:     {ico:'📋', txt:'Aggiorna banca ore (–ore). Genera supplenza assegnabile.', banca:true},
+    ferie:               {ico:'🏖', txt:'Nessun impatto banca ore. Sostituto nominato per ogni ora.', banca:false},
+    classe_libera:       {ico:'🚫', txt:'NON ASSEGNABILE. "ENTRA DOPO" / "ESCE PRIMA" nel display.', banca:false},
+    ed_civica:           {ico:'📚', txt:'Aggiorna banca ore colonna Ed. Civica (–ore).', banca:true},
+    formazione:          {ico:'🎓', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    attivita_istituzionale:{ico:'🏫', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    scambio_orario:      {ico:'🔄', txt:'Non impatta banca ore. Sostituto già nominato.', banca:false},
+};
+
+const LIMITI = {
+    permesso_personale: {TI:{n:9,u:'giorni',nota:'3+6 gg/anno TI — CCNL art.15'}, TD:{n:3,u:'giorni',nota:'3 gg/anno TD — CCNL art.35'}},
+    lutto:      {'*':{n:3, u:'giorni',nota:'3 gg — CCNL art.35'}},
+    matrimonio: {'*':{n:15,u:'giorni',nota:'15 gg consecutivi — CCNL art.35'}},
+    formazione: {'*':{n:5, u:'giorni',nota:'5 gg/anno — CCNL art.36'}},
+    permesso_orario: {'*':{n:2,u:'ore',nota:'Max 2h/giorno — CCNL'}},
+    ferie:      {'*':{n:6, u:'giorni',nota:'Max 6 gg fuori sospensione — CCNL art.13'}},
+};
+
+let durataCorrente = 'singolo';
+let tipoCorrente   = document.getElementById('hidden-motivo').value;
+
+// ── DURATA ───────────────────────────────────────────────────
+function setDurata(tipo, btn) {
+    durataCorrente = tipo;
+    document.querySelectorAll('.durata-btn').forEach(b => b.classList.remove('attivo'));
+    btn.classList.add('attivo');
+    document.getElementById('sez-singolo').style.display  = tipo === 'singolo'   ? 'block' : 'none';
+    document.getElementById('sez-range').style.display    = tipo === 'range'     ? 'block' : 'none';
+    document.getElementById('sez-periodico').style.display= tipo === 'periodico' ? 'block' : 'none';
+    // Ore: solo per singolo e range (non periodico con giorni multipli variabili)
+    document.getElementById('sez-ore').style.display = 'block';
+    aggiornaOrarioDocente();
+}
+
+// ── TIPO ASSENZA ─────────────────────────────────────────────
+function setTipo(tipo, btn) {
+    tipoCorrente = tipo;
+    document.getElementById('hidden-motivo').value = tipo;
+    aggiornaSezioneIst();
+    document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('attivo'));
+    btn.classList.add('attivo');
+
+    // Mostra sezione specifica
+    document.querySelectorAll('.sezione-tipo').forEach(s => s.classList.remove('vis'));
+    if (tipo === 'ferie')         document.getElementById('sez-ferie').classList.add('vis');
+    if (tipo === 'scambio_orario')document.getElementById('sez-scambio').classList.add('vis');
+
+    // classe_libera automatica
+    const chkCL = document.getElementById('chk-cl');
+    if (tipo === 'classe_libera') { chkCL.checked = true; toggleClasseLibera(); }
+
+    // Info box
+    const info = TIPI_INFO[tipo] || {};
+    const box  = document.getElementById('info-tipo');
+    box.innerHTML = (info.banca ? '📊 ' : 'ℹ️ ') + (info.txt || '');
+    box.style.background   = info.banca ? 'var(--giallo-bg)' : 'var(--blu-light)';
+    box.style.borderColor  = info.banca ? '#e0a800'          : 'var(--blu-med)';
+    box.style.color        = info.banca ? 'var(--giallo)'    : 'var(--blu)';
+
+    aggiornaAlert();
+    aggiornaOrarioDocente();
+}
+
+// ── ORE ──────────────────────────────────────────────────────
+// Mostra/nascondi sezione permesso istituzionale
+function aggiornaSezioneIst() {
+    const tipo = document.getElementById('hidden-motivo').value;
+    const sez = document.getElementById('sez-ist-orario');
+    if (sez) sez.style.display = (tipo === 'permesso_orario') ? 'block' : 'none';
+}
+
+// Calcola durata HH:MM in tempo reale
+function calcolaDurataIst() {
+    const ini = document.getElementById('ora-ist-ini')?.value;
+    const fin = document.getElementById('ora-ist-fin')?.value;
+    const div = document.getElementById('ist-durata');
+    if (!div) return;
+    if (ini && fin) {
+        const [hi, mi] = ini.split(':').map(Number);
+        const [hf, mf] = fin.split(':').map(Number);
+        const tot = (hf * 60 + mf) - (hi * 60 + mi);
+        if (tot > 0) {
+            div.textContent = `${Math.floor(tot/60)}h ${tot%60>0 ? tot%60+'m' : ''}`.trim();
+            div.style.color = tot > 120 ? '#dc2626' : '#1e40af';
+            if (tot > 120) div.textContent += ' ⚠ supera 2h CCNL';
+        } else {
+            div.textContent = '';
+        }
+    } else {
+        div.textContent = '';
+    }
+}
+
+document.getElementById('ora-ist-ini')?.addEventListener('change', calcolaDurataIst);
+document.getElementById('ora-ist-fin')?.addEventListener('change', calcolaDurataIst);
+
+function toggleOra(chip) {
+    if (chip.classList.contains('fuori-orario')) return;
+    const ora = chip.dataset.ora;
+    if (ora === '0') {
+        // "Tutta" selezionato → deseleziona le singole
+        const eraSel = chip.classList.contains('sel');
+        document.querySelectorAll('.ora-chip:not([data-ora=\"0\"])').forEach(c => c.classList.remove('sel'));
+        chip.classList.toggle('sel', !eraSel);
+    } else {
+        document.querySelector('.ora-chip[data-ora=\"0\"]').classList.remove('sel');
+        chip.classList.toggle('sel');
+    }
+    aggiornaHiddenOre();
+    aggiornaFerieOre();
+}
+
+function aggiornaHiddenOre() {
+    const div = document.getElementById('hidden-ore');
+    const tutta = document.querySelector('.ora-chip[data-ora=\"0\"]').classList.contains('sel');
+    const sel   = [...document.querySelectorAll('.ora-chip.sel:not([data-ora=\"0\"])')].map(c => c.dataset.ora);
+    div.innerHTML = '';
+    if (!tutta && sel.length) {
+        sel.forEach(o => {
+            div.innerHTML += `<input type=\"hidden\" name=\"ore_scelte\" value=\"${o}\">`;
+        });
+    }
+    // se tutta o nessuna → nessun hidden → backend usa ora_inizio/ora_fine full
+}
+
+// ── ORARIO DOCENTE ────────────────────────────────────────────
+function getDataCorrente() {
+    if (durataCorrente === 'singolo')   return document.getElementById('inp-data').value;
+    if (durataCorrente === 'range')     return document.getElementById('inp-range-ini').value;
+    if (durataCorrente === 'periodico') return document.getElementById('inp-per-ini').value;
+    return '';
+}
+
+function aggiornaOrarioDocente() {
+    const docId = document.getElementById('sel-docente').value;
+    const data  = getDataCorrente();
+    if (!docId || !data) return;
+    const wd    = new Date(data).getDay(); // 0=dom
+    const giorno = wd === 0 ? 6 : wd - 1; // converti in 0=lun
+    const key   = `${docId}_${giorno}`;
+    const oreDocente = ORARI[key] || [];
+
+    document.querySelectorAll('.ora-chip:not([data-ora=\"0\"])').forEach(chip => {
+        const o = parseInt(chip.dataset.ora);
+        if (oreDocente.includes(o)) {
+            chip.classList.remove('fuori-orario');
+        } else {
+            chip.classList.remove('sel');
+            chip.classList.add('fuori-orario');
+        }
+    });
+    aggiornaFerieOre();
+    aggiornaAlert();
+}
+
+function aggiornaAlert() {
+    const docId = document.getElementById('sel-docente').value;
+    const box   = document.getElementById('alert-ccnl');
+    const limite = LIMITI[tipoCorrente];
+    if (!limite || !docId) { box.style.display = 'none'; return; }
+    const opt  = document.getElementById('sel-docente').selectedOptions[0];
+    const contr = (opt?.dataset?.contratto || '').toUpperCase();
+    const tc   = (contr.includes('INDET') || contr.includes('RUOLO')) ? 'TI' : 'TD';
+    const isPT = opt?.dataset?.pt === 'true';
+    // Part-time: permesso_personale limitato a 2 gg (CCNL proporzionale)
+    let l = limite[tc] || limite['*'];
+    if (isPT && tipoCorrente === 'permesso_personale') {
+        l = {n:2, u:'giorni', nota:'2 gg/anno — CCNL (part-time)'};
+    }
+    if (!l) { box.style.display = 'none'; return; }
+    // Per limiti orari (es. permesso_orario): usa chiave con data per confronto giornaliero
+    let usati;
+    if (l.u === 'ore') {
+        const dataVal = getDataCorrente();
+        usati = dataVal ? (UTILIZZI[`${docId}_${tipoCorrente}_${dataVal}`] || 0) : 0;
+    } else {
+        usati = UTILIZZI[`${docId}_${tipoCorrente}`] || 0;
+    }
+    const rim   = l.n - usati;
+    if (rim <= 0) {
+        box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
+            'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;margin-top:8px;';
+        box.innerHTML = `⛔ <strong>Limite raggiunto</strong> — ${l.nota}. Usati: ${usati}/${l.n} ${l.u}.`;
+    } else if (rim === 1) {
+        box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
+            'background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin-top:8px;';
+        box.innerHTML = `⚠ <strong>Quasi al limite</strong> — rimane 1 ${l.u.slice(0,-1)}. ${l.nota}.`;
+    } else { box.style.display = 'none'; }
+}
+
+// ── CLASSE LIBERA ─────────────────────────────────────────────
+function toggleClasseLibera() {
+    const chk = document.getElementById('chk-cl');
+    const lbl = document.getElementById('lbl-cl');
+    lbl.style.borderColor = chk.checked ? '#ef4444' : '#e5eaf0';
+    lbl.style.background  = chk.checked ? '#fef2f2' : '#f8fafc';
+}
+
+// ── FERIE ORA PER ORA ─────────────────────────────────────────
+function aggiornaFerieOre() {
+    if (tipoCorrente !== 'ferie') return;
+    const docId = document.getElementById('sel-docente').value;
+    const data  = getDataCorrente();
+    const cont  = document.getElementById('ferie-ore-container');
+    if (!docId || !data) { cont.innerHTML = '<p style="color:var(--grigio);font-size:.82rem;font-style:italic;">Seleziona docente e giorno.</p>'; return; }
+    const wd     = new Date(data).getDay();
+    const giorno = wd === 0 ? 6 : wd - 1;
+    const key    = `${docId}_${giorno}`;
+    const ore    = ORARI[key] || [];
+    if (!ore.length) { cont.innerHTML = '<p style="color:var(--grigio);font-size:.82rem;">Nessuna ora in servizio questo giorno.</p>'; return; }
+    let html = '';
+    ore.forEach(o => {
+        html += `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:.84rem;min-width:30px;">${o}ª</span>
+            <select name="ferie_sost_${o}" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;">
+                <option value="">— sostituto —</option>
+                {% for d in docenti %}<option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</option>{% endfor %}
+            </select>
+        </div>`;
+    });
+    cont.innerHTML = html;
+}
+
+// ── SCAMBIO: aggiungi slot ────────────────────────────────────
+function aggiungiSlotScambio() {
+    const cont = document.getElementById('scambio-slots');
+    const div  = document.createElement('div');
+    div.className = 'scambio-slot';
+    div.style.cssText = 'border:1px solid #e5eaf0;border-radius:8px;padding:10px 14px;margin-bottom:8px;';
+    div.innerHTML = cont.querySelector('.scambio-slot').innerHTML;
+    div.innerHTML += '<button type="button" onclick="this.closest(\'.scambio-slot\').remove()" style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:.8rem;margin-top:6px;">✕ Rimuovi</button>';
+    // Reset valori
+    div.querySelectorAll('input[type=date]').forEach(i => i.value = '');
+    div.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    div.querySelectorAll('input[type=text]').forEach(i => i.value = '');
+    cont.appendChild(div);
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+// Mappa date sospese passata da Flask
+const DATE_SOSPESE = {{ date_sospese | tojson }};
+
+function verificaSospensione(dataStr) {
+    const motivo = DATE_SOSPESE[dataStr];
+    let box = document.getElementById('alert-sosp-js');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-sosp-js';
+        box.style.cssText = 'background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none;';
+        const tipoBox = document.getElementById('info-tipo');
+        if (tipoBox) tipoBox.parentNode.insertBefore(box, tipoBox);
+    }
+    if (motivo) {
+        box.style.background = '#fff7ed';
+        box.style.border = '1px solid #fed7aa';
+        box.innerHTML = '<strong style="color:#92400e;">⚠ Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
+        box.style.display = 'block';
+        document.querySelector('#form-assenza button[type=submit]').disabled = false;
+        document.querySelector('#form-assenza button[type=submit]').style.opacity = '1';
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    aggiornaSezioneIst();
+    calcolaDurataIst();
+    // Controlla data corrente
+    verificaSospensione(getDataCorrente());
+    setTipo(tipoCorrente, document.querySelector(`.tipo-btn[data-tipo="${tipoCorrente}"]`));
+    aggiornaOrarioDocente();
+    // Listener date
+    ['inp-data','inp-range-ini','inp-per-ini'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', aggiornaOrarioDocente);
+            el.addEventListener('change', () => verificaSospensione(getDataCorrente()));
+        }
+    });
+});
+</script>
+{% endblock %}
