@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """sync_db.py - Sincronizza database.db con Google Drive (macOS/Windows/Linux)
 Uso: python3 sync_db.py [scarica|carica|stato|lock-off] [--forza]
+
+Ad ogni 'carica' viene salvata su Drive anche una copia storica
+timestampata in CaronteApp/storico_db/, mantenendo solo le ultime
+MAX_BACKUP versioni (le più vecchie vengono eliminate automaticamente).
 """
 import os, sys, shutil, json, platform
 from datetime import datetime
 from pathlib import Path
 
-DRIVE_SUBFOLDER = "CaronteApp"
-DRIVE_DB_NAME   = "database.db"
-DRIVE_LOCK_NAME = "caronte.lock"
+DRIVE_SUBFOLDER  = "CaronteApp"
+DRIVE_DB_NAME    = "database.db"
+DRIVE_LOCK_NAME  = "caronte.lock"
+STORICO_SUBDIR   = "storico_db"
+MAX_BACKUP       = 10
 
 def trova_drive():
     env = os.environ.get("CARONTE_DRIVE_PATH")
@@ -44,6 +50,11 @@ def cartella_drive():
     c.mkdir(parents=True, exist_ok=True)
     return c
 
+def cartella_storico(c):
+    s = c / STORICO_SUBDIR
+    s.mkdir(parents=True, exist_ok=True)
+    return s
+
 def _ts(p): return Path(p).stat().st_mtime if Path(p).exists() else 0.0
 def _fmt(ts): return datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M:%S") if ts else "non esiste"
 
@@ -61,6 +72,24 @@ def set_lock(c, attivo):
             "dal":datetime.now().isoformat()}, ensure_ascii=False), encoding="utf-8")
     elif lk.exists(): lk.unlink()
 
+def salva_storico(c, db):
+    """Copia il DB locale nello storico con nome timestampato e applica la rotazione a MAX_BACKUP file."""
+    s = cartella_storico(c)
+    ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    macchina = platform.node().replace(" ", "_")
+    nome_backup = f"database_{ts_str}_{macchina}.db"
+    dest = s / nome_backup
+    shutil.copy2(db, dest)
+
+    # Rotazione: mantieni solo le MAX_BACKUP versioni più recenti
+    backups = sorted(s.glob("database_*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    rimossi = 0
+    for vecchio in backups[MAX_BACKUP:]:
+        vecchio.unlink()
+        rimossi += 1
+
+    return nome_backup, len(backups) - rimossi if backups else 1
+
 def scarica(db, forzato=False):
     c = cartella_drive()
     if not c: print("  Google Drive non trovato."); return False
@@ -70,7 +99,7 @@ def scarica(db, forzato=False):
     print(f"  Locale: {_fmt(_ts(db))}")
     lk = lock_info(c)
     if lk and not forzato:
-        print(f"  ATTENZIONE: in uso da {lk.get(chr(109)+chr(97)+chr(99)+chr(99)+chr(104)+chr(105)+chr(110)+chr(97))} dal {str(lk.get(chr(100)+chr(97)+chr(108),""))[:19]}")
+        print(f"  ATTENZIONE: in uso da {lk.get('macchina')} dal {str(lk.get('dal',''))[:19]}")
         if input("  Procedere? (s/N): ").strip().lower() != "s":
             print("  Annullato."); return False
     if _ts(db_drive) > _ts(db) or forzato:
@@ -83,10 +112,32 @@ def carica(db):
     c = cartella_drive()
     if not c: print("  Google Drive non trovato."); return False
     if not Path(db).exists(): print("  DB locale non trovato."); return False
+
     shutil.copy2(db, c/DRIVE_DB_NAME)
+
+    nome_backup, n_storico = salva_storico(c, db)
     set_lock(c, False)
+
     print(f"  DB caricato ({Path(db).stat().st_size//1024} KB) - lock rimosso")
-    print(f"  Percorso: {c/DRIVE_DB_NAME}"); return True
+    print(f"  Percorso: {c/DRIVE_DB_NAME}")
+    print(f"  Storico  : {nome_backup}  ({n_storico}/{MAX_BACKUP} versioni conservate)")
+    return True
+
+def lista_storico():
+    c = cartella_drive()
+    if not c: print("  Google Drive non trovato."); return
+    s = c / STORICO_SUBDIR
+    if not s.exists():
+        print("  Nessuno storico presente."); return
+    backups = sorted(s.glob("database_*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not backups:
+        print("  Nessuna versione storica presente."); return
+    print("="*55)
+    print(f"  Storico database ({len(backups)}/{MAX_BACKUP} versioni)")
+    print("="*55)
+    for p in backups:
+        print(f"  {_fmt(p.stat().st_mtime)}  —  {p.name}  ({p.stat().st_size//1024} KB)")
+    print("="*55)
 
 def stato():
     base = Path(__file__).parent
@@ -101,7 +152,10 @@ def stato():
         dbd = c/DRIVE_DB_NAME
         print(f"  DB Drive : {_fmt(_ts(dbd))}" + (f"  ({dbd.stat().st_size//1024} KB)" if dbd.exists() else ""))
         lk = lock_info(c)
-        print(f"  Lock     : {chr(73)+chr(78)+chr(32)+chr(85)+chr(83)+chr(79)+chr(32)+chr(100)+chr(97)+chr(32)+lk.get(chr(109)+chr(97)+chr(99)+chr(99)+chr(104)+chr(105)+chr(110)+chr(97)) if lk else chr(108)+chr(105)+chr(98)+chr(101)+chr(114)+chr(111)}")
+        print(f"  Lock     : {'IN USO da ' + lk.get('macchina','?') if lk else 'libero'}")
+        s = c / STORICO_SUBDIR
+        n_backup = len(list(s.glob("database_*.db"))) if s.exists() else 0
+        print(f"  Storico  : {n_backup}/{MAX_BACKUP} versioni conservate")
     else:
         print("  Drive    : NON TROVATO")
         print("  Imposta CARONTE_DRIVE_PATH oppure installa Google Drive for Desktop")
@@ -116,7 +170,8 @@ if __name__ == "__main__":
     if cmd == "scarica": print("Scarico DB da Drive..."); scarica(db, forzato)
     elif cmd == "carica": print("Carico DB su Drive..."); carica(db)
     elif cmd == "stato": stato()
+    elif cmd == "storico": lista_storico()
     elif cmd == "lock-off":
         c = cartella_drive()
         if c: set_lock(c, False); print("Lock rimosso.")
-    else: print("Uso: python3 sync_db.py [scarica|carica|stato|lock-off]")
+    else: print("Uso: python3 sync_db.py [scarica|carica|stato|storico|lock-off]")
