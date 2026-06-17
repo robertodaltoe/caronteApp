@@ -67,8 +67,8 @@
         'recupero.vincoli',
         'Giorni e fasce orarie (facoltativo — default: lun–ven 08:00–13:00)') }}
     {{ step('4', '#0891b2', '🔗', 'Abbina gruppi e docenti',
-        'recupero.proposte',
-        'Il sistema propone i gruppi dai recuperi importati — tu scegli il docente') }}
+        'recupero.gruppi',
+        'Proposte automatiche dai recuperi + creazione e modifica manuale gruppi') }}
     {{ step('5', '#166534', '📅', 'Pianifica il calendario',
         'recupero.calendario',
         'Genera la bozza anti-sovrapposizioni o inserisci le lezioni manualmente') }}
@@ -77,6 +77,9 @@
         'Controlla che ogni alunno con recupero abbia almeno una lezione pianificata') }}
     {{ step('7', '#92400e', '📊', 'Esporta XLSX',
         'recupero.export_xlsx',
-        'Una scheda per materia — versione famiglie e versione docenti (uso interno)', last=true) }}
+        'Una scheda per materia — versione famiglie e versione docenti (uso interno)') }}
+    {{ step('8', '#7c3aed', '📦', 'Schede docenti (ZIP)',
+        'recupero.export_schede_docenti',
+        'Un file XLSX per ogni docente — calendario individuale + alunni e stato adesione', last=true) }}
 </div>
 {% endblock %}

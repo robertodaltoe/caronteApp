@@ -15,9 +15,9 @@ def trova_drive():
     if env and Path(env).exists(): return Path(env)
     sistema = platform.system()
     home = Path.home()
-    candidati = []
     if sistema == "Darwin":
         cs = home / "Library" / "CloudStorage"
+        candidati = []
         if cs.exists():
             for e in cs.iterdir():
                 if e.name.startswith("GoogleDrive-"):
@@ -30,8 +30,7 @@ def trova_drive():
                       Path("/Volumes/Google Drive")]
     elif sistema == "Windows":
         up = Path(os.environ.get("USERPROFILE", "C:/Users/Roberto"))
-        candidati = [up/"Google Drive"/"My Drive", up/"Google Drive",
-                     up/"My Drive", Path("G:/My Drive"), Path("H:/My Drive")]
+        candidati = [up/"Google Drive"/"My Drive", up/"Google Drive", up/"My Drive", Path("G:/My Drive")]
     else:
         candidati = [home/"Google Drive", home/"GoogleDrive"]
     for p in candidati:
@@ -59,23 +58,20 @@ def set_lock(c, attivo):
     if attivo:
         lk.write_text(json.dumps({"macchina":platform.node(),"sistema":platform.system(),
             "utente":os.environ.get("USER") or os.environ.get("USERNAME",""),
-            "dal":datetime.now().isoformat()},ensure_ascii=False),encoding="utf-8")
+            "dal":datetime.now().isoformat()}, ensure_ascii=False), encoding="utf-8")
     elif lk.exists(): lk.unlink()
 
 def scarica(db, forzato=False):
     c = cartella_drive()
-    if not c: print("  Google Drive non trovato - uso DB locale."); return False
+    if not c: print("  Google Drive non trovato."); return False
     db_drive = c/DRIVE_DB_NAME
     if not db_drive.exists(): print("  Nessun DB su Drive."); return False
     print(f"  Drive:  {_fmt(_ts(db_drive))}  ({db_drive.stat().st_size//1024} KB)")
     print(f"  Locale: {_fmt(_ts(db))}")
     lk = lock_info(c)
     if lk and not forzato:
-        print(f"\n  ATTENZIONE: il DB e' in uso da:")
-        print(f"    Macchina : {lk.get('macchina','?')}")
-        print(f"    Sistema  : {lk.get('sistema','?')}")
-        print(f"    Dal      : {str(lk.get('dal',''))[:19].replace('T',' ')}")
-        if input("\n  Procedere comunque? (s/N): ").strip().lower() != "s":
+        print(f"  ATTENZIONE: in uso da {lk.get(chr(109)+chr(97)+chr(99)+chr(99)+chr(104)+chr(105)+chr(110)+chr(97))} dal {str(lk.get(chr(100)+chr(97)+chr(108),""))[:19]}")
+        if input("  Procedere? (s/N): ").strip().lower() != "s":
             print("  Annullato."); return False
     if _ts(db_drive) > _ts(db) or forzato:
         if Path(db).exists(): shutil.copy2(db, str(db)+".bak")
@@ -105,10 +101,10 @@ def stato():
         dbd = c/DRIVE_DB_NAME
         print(f"  DB Drive : {_fmt(_ts(dbd))}" + (f"  ({dbd.stat().st_size//1024} KB)" if dbd.exists() else ""))
         lk = lock_info(c)
-        print(f"  Lock     : {'IN USO da '+lk.get('macchina','?') if lk else 'libero'}")
+        print(f"  Lock     : {chr(73)+chr(78)+chr(32)+chr(85)+chr(83)+chr(79)+chr(32)+chr(100)+chr(97)+chr(32)+lk.get(chr(109)+chr(97)+chr(99)+chr(99)+chr(104)+chr(105)+chr(110)+chr(97)) if lk else chr(108)+chr(105)+chr(98)+chr(101)+chr(114)+chr(111)}")
     else:
         print("  Drive    : NON TROVATO")
-        print("  Imposta CARONTE_DRIVE_PATH o installa Google Drive for Desktop")
+        print("  Imposta CARONTE_DRIVE_PATH oppure installa Google Drive for Desktop")
     print(f"  DB Locale: {_fmt(_ts(db))}" + (f"  ({db.stat().st_size//1024} KB)" if db.exists() else ""))
     print("="*55)
 
@@ -117,10 +113,10 @@ if __name__ == "__main__":
     base = Path(__file__).parent
     db = base/"database.db"
     forzato = "--forza" in sys.argv
-    if cmd == "scarica": print("\nScarico DB da Drive...\n"); scarica(db, forzato)
-    elif cmd == "carica": print("\nCarico DB su Drive...\n"); carica(db)
+    if cmd == "scarica": print("Scarico DB da Drive..."); scarica(db, forzato)
+    elif cmd == "carica": print("Carico DB su Drive..."); carica(db)
     elif cmd == "stato": stato()
     elif cmd == "lock-off":
         c = cartella_drive()
         if c: set_lock(c, False); print("Lock rimosso.")
-    else: print("Uso: python3 sync_db.py [scarica|carica|stato|lock-off] [--forza]")
+    else: print("Uso: python3 sync_db.py [scarica|carica|stato|lock-off]")

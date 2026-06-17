@@ -1,16 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Verifica copertura recuperi{% endblock %}
-{% block extra_style %}
-<style>
-.stato-ok      { background:#dcfce7; color:#166534; }
-.stato-warn    { background:#fef3c7; color:#92400e; }
-.stato-err     { background:#fee2e2; color:#dc2626; }
-</style>
-{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ back_url or url_for('recupero.alunni') }}" class="btn btn-primary btn-sm">← Indietro</a>
+    <a href="{{ back_url or url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Indietro</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">✅ {{ titolo or 'Verifica copertura recuperi' }}</h1>
+    <a href="{{ url_for('recupero.copertura', export='xlsx') }}"
+       class="btn btn-sm" style="margin-left:auto;background:#166534;color:white;white-space:nowrap;">
+        📥 Esporta XLSX (foglio firme)
+    </a>
 </div>
 
 {% if not righe %}
@@ -19,27 +16,50 @@
 </div>
 {% else %}
 
-<!-- Riepilogo -->
-<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
-    <div class="card stato-ok" style="text-align:center; padding:14px;">
-        <div style="font-size:1.8rem; font-weight:800;">{{ n_ok }}</div>
-        <div style="font-size:.78rem;">✓ Con lezioni pianificate</div>
+<!-- Riepilogo stati -->
+<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px;">
+    <div class="card" style="text-align:center; padding:14px; background:#dcfce7;">
+        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ n_ok }}</div>
+        <div style="font-size:.78rem; color:#166534;">✓ Ok — gruppo assegnato</div>
     </div>
-    <div class="card stato-warn" style="text-align:center; padding:14px;">
-        <div style="font-size:1.8rem; font-weight:800;">{{ n_no }}</div>
-        <div style="font-size:.78rem;">⚠ Gruppo creato ma senza lezioni</div>
+    <div class="card" style="text-align:center; padding:14px; background:#fee2e2;">
+        <div style="font-size:1.8rem; font-weight:800; color:#dc2626;">{{ n_no_gruppo }}</div>
+        <div style="font-size:.78rem; color:#dc2626;">✗ No gruppo</div>
     </div>
-    <div class="card stato-err" style="text-align:center; padding:14px;">
-        <div style="font-size:1.8rem; font-weight:800;">{{ n_no_gruppo }}</div>
-        <div style="font-size:.78rem;">✗ Nessun gruppo abbinato</div>
+    <div class="card" style="text-align:center; padding:14px; background:#fee2e2;">
+        <div style="font-size:1.8rem; font-weight:800; color:#dc2626;">{{ n_no_iscritto }}</div>
+        <div style="font-size:.78rem; color:#dc2626;">❓ Non iscritto (rosso)</div>
+    </div>
+    <div class="card" style="text-align:center; padding:14px; background:#fef9c3;">
+        <div style="font-size:1.8rem; font-weight:800; color:#92400e;">{{ n_no_corso }}</div>
+        <div style="font-size:.78rem; color:#92400e;">📚 No corso (studio ind.)</div>
+    </div>
+    <div class="card" style="text-align:center; padding:14px; background:#f3f4f6;">
+        <div style="font-size:1.8rem; font-weight:800; color:#6b7280;">{{ n_non_aderisce }}</div>
+        <div style="font-size:.78rem; color:#6b7280;">✗ Non aderisce</div>
     </div>
 </div>
 
-<!-- Filtro -->
-<div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
-    <button onclick="filtra('tutti')"    class="btn btn-sm btn-primary" id="btn-tutti">Tutti ({{ righe|length }})</button>
-    <button onclick="filtra('ok')"       class="btn btn-sm" style="background:#dcfce7;color:#166534;">✓ OK ({{ n_ok }})</button>
-    <button onclick="filtra('problema')" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;">⚠ Da sistemare ({{ n_no + n_no_gruppo }})</button>
+<!-- Filtri -->
+<div style="margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap;">
+    <button onclick="filtra('tutti')"       class="btn btn-sm btn-primary" id="btn-tutti">
+        Tutti ({{ righe|length }})
+    </button>
+    <button onclick="filtra('ok')"          class="btn btn-sm" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">
+        ✓ Ok ({{ n_ok }})
+    </button>
+    <button onclick="filtra('no_gruppo')"   class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">
+        ✗ No gruppo ({{ n_no_gruppo }})
+    </button>
+    <button onclick="filtra('non_iscritto')" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">
+        ❓ Non iscritto ({{ n_no_iscritto }})
+    </button>
+    <button onclick="filtra('no_corso')"    class="btn btn-sm" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a;">
+        📚 No corso ({{ n_no_corso }})
+    </button>
+    <button onclick="filtra('non_aderisce')" class="btn btn-sm" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">
+        ✗ Non aderisce ({{ n_non_aderisce }})
+    </button>
 </div>
 
 <div class="card" style="padding:0; overflow:hidden;">
@@ -47,56 +67,48 @@
         <thead>
             <tr>
                 <th style="width:80px;">Classe</th>
-                <th style="width:140px;">Cognome</th>
+                <th style="width:150px;">Cognome</th>
                 <th>Nome</th>
                 <th>Materia</th>
-                <th style="width:180px;">Docente assegnante</th>
-                <th style="width:160px;">Gruppo abbinato</th>
-                <th style="width:80px; text-align:center;">Lezioni</th>
+                <th style="width:180px;">Doc. assegnante</th>
+                <th style="width:180px;">Gruppo abbinato</th>
                 <th style="width:90px; text-align:center;">Stato</th>
             </tr>
         </thead>
         <tbody id="tbody-copertura">
         {% for r in righe %}
-        {% set cls = 'ok' if r.stato == 'ok' else 'problema' %}
-        <tr class="riga-{{ cls }}">
+        <tr class="riga-{{ r.stato }}">
             <td style="font-size:.84rem;">{{ r.imp.classe }}</td>
             <td style="font-size:.88rem;"><strong>{{ r.imp.cognome }}</strong></td>
             <td style="font-size:.88rem;">{{ r.imp.nome }}</td>
-            <td style="font-size:.84rem;">{{ r.imp.materia_raw[:45] }}</td>
-            <td style="font-size:.78rem; color:var(--grigio);">{{ r.imp.docente_raw[:35] }}</td>
+            <td style="font-size:.82rem;">{{ r.imp.materia_raw[:45] }}</td>
+            <td style="font-size:.76rem; color:var(--grigio);">{{ r.imp.docente_raw[:35] }}</td>
             <td style="font-size:.82rem;">
                 {% if r.gruppo %}
-                    {{ r.gruppo.materia[:30] }}
+                    {{ r.gruppo.materia[:28] }}
                     <span style="font-size:.7rem; color:var(--grigio);">
                         — {% if r.gruppo.docente %}{{ r.gruppo.docente.cognome }}{% endif %}
                     </span>
                 {% else %}
-                    <span style="color:#dc2626; font-size:.78rem;">Nessun gruppo</span>
-                {% endif %}
-            </td>
-            <td style="text-align:center; font-weight:700;">
-                {% if r.stato == 'no_gruppo' %}
-                    <span style="color:#dc2626;">—</span>
-                {% else %}
-                    <span style="color:{% if r.n_lezioni > 0 %}#166534{% else %}#d97706{% endif %};">
-                        {{ r.n_lezioni }}
-                    </span>
+                    <span style="color:#9ca3af; font-size:.76rem;">—</span>
                 {% endif %}
             </td>
             <td style="text-align:center;">
                 {% if r.stato == 'ok' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700;
-                             background:#dcfce7; color:#166534;">✓ OK</span>
+                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
+                             background:#dcfce7; color:#166534;">✓ ok</span>
                 {% elif r.stato == 'no_gruppo' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700;
-                             background:#fee2e2; color:#dc2626;">✗ No gruppo</span>
-                {% elif r.stato == 'no_iscritto' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700;
-                             background:#fef3c7; color:#92400e;">⚠ Non iscritto</span>
-                {% elif r.stato == 'no_lezioni' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700;
-                             background:#fef3c7; color:#92400e;">⚠ 0 lezioni</span>
+                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
+                             background:#fee2e2; color:#dc2626;">✗ no gruppo</span>
+                {% elif r.stato == 'non_iscritto' %}
+                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
+                             background:#fee2e2; color:#dc2626;">❓ non iscritto</span>
+                {% elif r.stato == 'no_corso' %}
+                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
+                             background:#fef9c3; color:#92400e;">📚 no corso</span>
+                {% elif r.stato == 'non_aderisce' %}
+                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
+                             background:#f3f4f6; color:#6b7280;">✗ non aderisce</span>
                 {% endif %}
             </td>
         </tr>

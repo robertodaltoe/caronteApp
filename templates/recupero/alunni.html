@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Alunni Recupero{% endblock %}
 {% block content %}
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">👨‍🎓 Alunni iscritti ai recuperi</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">👨‍🎓 Alunni con giudizio sospeso</h1>
     <a href="{{ url_for('recupero.copertura') }}" class="btn btn-sm"
        style="background:#166534; color:white; margin-left:auto;">✅ Verifica copertura</a>
-    <span style="font-size:.82rem; color:var(--grigio); margin-left:6px;">{{ tot }} alunni totali</span>
 </div>
 
 <!-- Import XLSX -->
@@ -22,8 +21,9 @@
         </div>
         <button type="submit" class="btn btn-success btn-sm">📥 Importa</button>
         <span style="font-size:.76rem; color:var(--grigio);">
-            Vengono importati solo gli alunni con recupero = "corso di recupero".
-            Dopo l'importazione vai in <strong>Proposte gruppi</strong> per abbinare i docenti e creare i gruppi.
+            Importa tutti gli alunni con giudizio sospeso.
+            I colori del file indicano lo stato di adesione (verde=aderisce, giallo=studio ind., rosso=non risposto, barrato=non aderisce).
+            Dopo l'importazione vai in <strong>Proposte gruppi</strong> per creare i gruppi di recupero.
         </span>
     </form>
     {% if tot > 0 %}
@@ -35,44 +35,90 @@
     {% endif %}
 </div>
 
-<!-- Lista per gruppo -->
-{% for g in gruppi %}
-{% if g.alunni %}
-<div class="card" style="margin-bottom:12px; padding:0; overflow:hidden;">
-    <div style="background:#f0f4ff; padding:8px 14px; display:flex; justify-content:space-between; align-items:center;">
+{% if tot == 0 %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessun alunno importato. Usa il form sopra per importare il file dal registro elettronico.
+</div>
+{% else %}
+
+<!-- Riepilogo stati -->
+<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:14px;">
+    <div class="card" style="text-align:center; padding:10px; background:#dcfce7;">
+        <div style="font-size:1.4rem; font-weight:800; color:#166534;">{{ conteggi.aderisce }}</div>
+        <div style="font-size:.72rem; color:#166534;">✓ aderisce</div>
+    </div>
+    <div class="card" style="text-align:center; padding:10px; background:#fef9c3;">
+        <div style="font-size:1.4rem; font-weight:800; color:#92400e;">{{ conteggi.studio_ind }}</div>
+        <div style="font-size:.72rem; color:#92400e;">📚 studio ind.</div>
+    </div>
+    <div class="card" style="text-align:center; padding:10px; background:#fee2e2;">
+        <div style="font-size:1.4rem; font-weight:800; color:#dc2626;">{{ conteggi.non_risposto }}</div>
+        <div style="font-size:.72rem; color:#dc2626;">❓ non risposto</div>
+    </div>
+    <div class="card" style="text-align:center; padding:10px; background:#f3f4f6;">
+        <div style="font-size:1.4rem; font-weight:800; color:#6b7280;">{{ conteggi.non_aderisce }}</div>
+        <div style="font-size:.72rem; color:#6b7280;">✗ non aderisce</div>
+    </div>
+    <div class="card" style="text-align:center; padding:10px;">
+        <div style="font-size:1.4rem; font-weight:800; color:var(--blu);">{{ tot }}</div>
+        <div style="font-size:.72rem; color:var(--grigio);">totale righe</div>
+    </div>
+</div>
+
+{% set STATO_BG    = {'aderisce':'#dcfce7','studio_ind':'#fef9c3','non_risposto':'#fee2e2','non_aderisce':'#f3f4f6','sconosciuto':'#f9fafb'} %}
+{% set STATO_COLOR = {'aderisce':'#166534','studio_ind':'#92400e','non_risposto':'#dc2626','non_aderisce':'#6b7280','sconosciuto':'#9ca3af'} %}
+{% set STATO_LABEL = {'aderisce':'✓','studio_ind':'📚','non_risposto':'❓','non_aderisce':'✗','sconosciuto':'—'} %}
+
+<!-- Lista per materia -->
+{% for (materia, cogn_doc), alunni in per_materia.items() | sort %}
+<div class="card" style="margin-bottom:10px; padding:0; overflow:hidden;">
+    <div style="background:#f0f4ff; padding:7px 14px; display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <strong style="color:var(--blu);">{{ g.materia }}</strong>
-            <span style="font-size:.8rem; color:var(--grigio); margin-left:8px;">
-                {% if g.docente %}Prof. {{ g.docente.cognome }}{% endif %}
-                — Classi: {{ g.classi }}
+            <strong style="color:var(--blu);">{{ materia[:60] }}</strong>
+            <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
+                Prof. {{ cogn_doc }}
             </span>
         </div>
         <span style="font-size:.8rem; background:#dbeafe; color:#1e40af;
                      padding:2px 8px; border-radius:8px; font-weight:700;">
-            {{ g.alunni|length }} alunni
+            {{ alunni|length }}
         </span>
     </div>
     <table>
         <thead>
             <tr>
-                <th style="width:90px;">Classe</th>
+                <th style="width:80px;">Classe</th>
                 <th>Cognome</th>
                 <th>Nome</th>
-                <th style="width:50px; text-align:center;">✖</th>
+                <th style="width:110px; text-align:center;">Stato</th>
             </tr>
         </thead>
         <tbody>
-        {% for a in g.alunni | sort(attribute='cognome') %}
+        {% for a in alunni %}
         <tr>
             <td style="font-size:.84rem;">{{ a.classe }}</td>
             <td style="font-size:.88rem;"><strong>{{ a.cognome }}</strong></td>
             <td style="font-size:.88rem;">{{ a.nome }}</td>
             <td style="text-align:center;">
-                <form method="post" style="margin:0;"
-                      onsubmit="return confirm('Eliminare?')">
-                    <input type="hidden" name="azione" value="elimina">
+                <form method="post" style="margin:0;">
+                    <input type="hidden" name="azione" value="modifica_stato">
                     <input type="hidden" name="id" value="{{ a.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    <select name="stato_adesione" onchange="this.form.submit()"
+                            style="font-size:.72rem; padding:2px 5px; border-radius:6px;
+                                   font-weight:600; cursor:pointer; border:1px solid #d1d5db;
+                                   background:{{ STATO_BG.get(a.stato_adesione,'#f9fafb') }};
+                                   color:{{ STATO_COLOR.get(a.stato_adesione,'#9ca3af') }};">
+                        <option value="aderisce"     {% if a.stato_adesione=='aderisce' %}selected{% endif %}
+                                style="background:#dcfce7;color:#166534;">✓ aderisce</option>
+                        <option value="studio_ind"   {% if a.stato_adesione=='studio_ind' %}selected{% endif %}
+                                style="background:#fef9c3;color:#92400e;">📚 studio ind.</option>
+                        <option value="non_risposto" {% if a.stato_adesione=='non_risposto' %}selected{% endif %}
+                                style="background:#fee2e2;color:#dc2626;">❓ non risposto</option>
+                        <option value="non_aderisce" {% if a.stato_adesione=='non_aderisce' %}selected{% endif %}
+                                style="background:#f3f4f6;color:#6b7280;">✗ non aderisce</option>
+                        <option value="sconosciuto"  {% if a.stato_adesione=='sconosciuto' %}selected{% endif %}
+                                style="background:#f9fafb;color:#9ca3af;">— sconosciuto</option>
+                    </select>
                 </form>
             </td>
         </tr>
@@ -80,12 +126,6 @@
         </tbody>
     </table>
 </div>
-{% endif %}
 {% endfor %}
-
-{% if tot == 0 %}
-<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
-    Nessun alunno importato. Usa il form sopra per importare il file dal registro elettronico.
-</div>
 {% endif %}
 {% endblock %}

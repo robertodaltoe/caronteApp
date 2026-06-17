@@ -1,186 +1,462 @@
 {% extends "base.html" %}
 {% block title %}Gruppi di Recupero{% endblock %}
 {% block content %}
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">👥 Gruppi di recupero</h1>
+    <span style="font-size:.82rem; color:var(--grigio); margin-left:4px;">
+        {{ gruppi|length }} gruppi creati
+    </span>
 </div>
 
-<!-- Form aggiungi -->
-<div class="card" style="padding:16px 20px; margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Nuovo gruppo</h3>
-    <form method="post">
-        <input type="hidden" name="azione" value="aggiungi">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="min-width:200px; flex:2;">
-                <label style="font-size:.75rem; color:var(--grigio);">Docente *</label><br>
-                <select name="id_rec_docente" required id="sel-docente"
-                        style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;"
-                        onchange="aggiornaMaterieDocente(this)">
-                    <option value="">— seleziona —</option>
-                    {% for rd in disponibili %}
-                    <option value="{{ rd.id }}"
-                            data-materia="{{ rd.docente.materia or '' }}"
-                            data-materie="{% for dm in rd.docente.materie_ist %}{{ dm.materia.nome }}|{% endfor %}"
-                            data-id-docente="{{ rd.docente.id }}">
-                        {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div style="min-width:180px; flex:2;">
-                <label style="font-size:.75rem; color:var(--grigio);">Materia *</label><br>
-                <input type="text" name="materia" id="inp-materia" required
-                       placeholder="Es. Matematica"
-                       style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-                <div id="materie-suggerite" style="margin-top:3px; display:flex; flex-wrap:wrap; gap:3px;"></div>
-            </div>
-            <div style="min-width:220px; flex:2;">
-                <label style="font-size:.75rem; color:var(--grigio);">Classi del docente (riferimento)</label>
-                <div id="classi-docente" style="min-height:28px; padding:4px 6px; background:#f8fafc;
-                     border:1px solid #e5eaf0; border-radius:6px; font-size:.78rem; color:var(--grigio);">
-                    Seleziona il docente per vedere le sue classi
-                </div>
-            </div>
-            <div style="min-width:60px;">
-                <label style="font-size:.75rem; color:var(--grigio);">Sigla</label><br>
-                <input type="text" name="sigla_materia" placeholder="MAT"
-                       style="width:70px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-            </div>
-            <div style="min-width:180px; flex:2;">
-                <label style="font-size:.75rem; color:var(--grigio);">Classi (es. 2A LSC, 3A LLI) *</label><br>
-                <input type="text" name="classi" required placeholder="2A LSC, 3A LLI"
-                       style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-            </div>
-            <div style="min-width:60px;">
-                <label style="font-size:.75rem; color:var(--grigio);">N. alunni</label><br>
-                <input type="number" name="n_alunni" min="1" max="30" placeholder="8"
-                       style="width:70px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-            </div>
-            <div style="min-width:60px;">
-                <label style="font-size:.75rem; color:var(--grigio);" title="Ore totali massime per questo gruppo">Max ore tot.</label><br>
-                <input type="number" name="max_ore" min="1" max="30" value="10"
-                       style="width:70px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-            </div>
-            <div style="min-width:60px;">
-                <label style="font-size:.75rem; color:var(--grigio);" title="Ore massime al giorno per questo gruppo">Max ore/g.</label><br>
-                <input type="number" name="max_ore_giorno" min="1" max="6" value="2"
-                       style="width:70px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-            </div>
-            <div style="min-width:150px; flex:1;">
-                <label style="font-size:.75rem; color:var(--grigio);">Note</label><br>
-                <input type="text" name="note"
-                       style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
-            </div>
-            <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
-        </div>
-    </form>
+{% macro pill_classi(name, classi_disponibili, selezionate_str, uid) %}
+{%- set sel = selezionate_str.split(',') | map('trim') | map('upper') | list if selezionate_str else [] -%}
+<div style="display:flex; flex-wrap:wrap; gap:3px;" id="cls-{{ uid }}">
+{% for cls in classi_disponibili %}
+{%- set attivo = cls.strip().upper() in sel -%}
+<label style="display:inline-flex;align-items:center;gap:2px;cursor:pointer;
+              padding:2px 7px;border-radius:5px;font-size:.74rem;font-weight:600;
+              border:1px solid {{ '#3b82f6' if attivo else '#d1d5db' }};
+              background:{{ '#dbeafe' if attivo else '#f9fafb' }};
+              color:{{ '#1e40af' if attivo else '#6b7280' }};">
+    <input type="checkbox" name="{{ name }}" value="{{ cls }}"
+           {{ 'checked' if attivo else '' }} style="display:none;"
+           onchange="var l=this.closest('label');
+             l.style.background=this.checked?'#dbeafe':'#f9fafb';
+             l.style.color=this.checked?'#1e40af':'#6b7280';
+             l.style.borderColor=this.checked?'#3b82f6':'#d1d5db';">
+    {{ cls }}
+</label>
+{% endfor %}
 </div>
+{% endmacro %}
 
-<!-- Elenco gruppi -->
-<div class="card" style="padding:0; overflow:hidden;">
-    {% if gruppi %}
+<!-- ══ SEZIONE 1: PROPOSTE AUTOMATICHE ══════════════════════════════ -->
+<!-- ══ RIEPILOGO GRUPPI CREATI ══════════════════════════════════════ -->
+{% if gruppi %}
+<div style="font-size:.78rem;font-weight:700;color:var(--grigio);
+            text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+    📋 Riepilogo gruppi creati ({{ gruppi|length }})
+</div>
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
     <table>
         <thead>
             <tr>
                 <th>Materia</th>
-                <th style="width:160px;">Docente</th>
+                <th style="width:140px;">Docente</th>
                 <th>Classi</th>
-                <th style="width:70px; text-align:center;">Alunni</th>
-                <th style="width:80px; text-align:center;">Ore pian.</th>
-                <th style="width:200px;">Note</th>
-                <th style="width:60px; text-align:center;">✖</th>
+                <th style="width:90px;text-align:center;">Tot / Ader.</th>
+                <th style="width:80px;text-align:center;">Ore</th>
             </tr>
         </thead>
         <tbody>
-        {% for g in gruppi %}
+        {% for g in gruppi | sort(attribute='materia') %}
+        {% set tot_g, ader_g = aderenti_per_gruppo.get(g.id, (0,0)) %}
         <tr>
-            <td>
-                <strong>{{ g.materia }}</strong>
-                {% if g.sigla_materia %}
-                <span style="font-size:.72rem; background:#e5eaf0; padding:1px 5px; border-radius:4px; margin-left:4px;">{{ g.sigla_materia }}</span>
+            <td style="font-size:.86rem;"><strong>{{ g.materia[:45] }}</strong></td>
+            <td style="font-size:.82rem;">
+                {% if g.docente %}{{ g.docente.cognome }} {{ g.docente.nome[0] if g.docente.nome else '' }}.{% endif %}
+            </td>
+            <td style="font-size:.78rem;">
+                {% for cls in g.classi.split(',') %}
+                <span style="background:#f0f4ff;color:var(--blu);padding:1px 5px;
+                             border-radius:4px;margin:1px;display:inline-block;font-size:.72rem;">
+                    {{ cls.strip() }}
+                </span>
+                {% endfor %}
+            </td>
+            <td style="text-align:center;font-size:.84rem;">
+                <span style="font-weight:700;color:var(--blu);">{{ tot_g }}</span>
+                <span style="color:#166534;font-weight:700;margin-left:4px;">/ ✓{{ ader_g }}</span>
+            </td>
+            <td style="text-align:center;font-size:.8rem;color:var(--grigio);">
+                {{ g.max_ore or 10 }}h · {{ g.max_ore_giorno or 2 }}h/g
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background:#f0f4ff;">
+                <td colspan="2" style="font-size:.8rem;font-weight:700;padding:6px 12px;">
+                    Totale — {{ gruppi|length }} gruppi
+                </td>
+                <td></td>
+                <td style="text-align:center;font-size:.8rem;font-weight:700;">
+                    <span style="color:var(--blu);">{{ tot_alunni_gruppi }}</span>
+                    / <span style="color:#166534;">✓{{ tot_aderenti_gruppi }}</span>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endif %}
+
+{% if proposte %}
+<div style="font-size:.78rem;font-weight:700;color:var(--grigio);
+            text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+    🤖 Proposte automatiche dai recuperi importati
+</div>
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+    <table>
+        <thead>
+            <tr>
+                <th>Materia</th>
+                <th style="width:160px;">Docente assegnante</th>
+                <th style="width:70px;text-align:center;">Alunni</th>
+                <th>Classi</th>
+                <th style="width:190px;">Docente recupero</th>
+                <th style="width:80px;text-align:center;">Ore</th>
+                <th style="width:90px;text-align:center;">Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in proposte %}
+        <tr style="{{ 'background:#f0fdf4;' if p.gia_creato else '' }}" id="prop-{{ loop.index }}">
+            <td><strong style="font-size:.88rem;">{{ p.materia[:45] }}</strong></td>
+            <td style="font-size:.76rem;color:var(--grigio);">
+                {{ p.docente_raw[:30] }}
+                {% if p.rd %}
+                <span style="display:block;font-size:.7rem;color:#166534;font-weight:700;">✓ {{ p.rd.docente.cognome }}</span>
+                {% else %}
+                <span style="display:block;font-size:.7rem;color:#dc2626;">✗ non disponibile</span>
                 {% endif %}
             </td>
-            <td style="font-size:.86rem;">
-                {% if g.docente %}{{ g.docente.cognome }}{% if g.docente.nome %} {{ g.docente.nome[0] }}.{% endif %}{% endif %}
-            </td>
-            <td style="font-size:.84rem;">{{ g.classi }}</td>
-            <td style="text-align:center; font-size:.88rem;">{{ g.n_alunni or '—' }}</td>
             <td style="text-align:center;">
-                <span style="font-weight:700; color:{% if g.ore_pianificate >= 10 %}#dc2626{% elif g.ore_pianificate >= 8 %}#d97706{% else %}#166534{% endif %};">
-                    {{ g.ore_pianificate }}h
+                <span style="font-size:1rem;font-weight:800;color:var(--blu);">{{ p.n_alunni }}</span>
+                {% if p.n_non_risposto %}<span style="display:block;font-size:.68rem;color:#dc2626;">❓{{ p.n_non_risposto }}</span>{% endif %}
+                {% if p.n_non_aderisce %}<span style="display:block;font-size:.68rem;color:#6b7280;">✗{{ p.n_non_aderisce }}</span>{% endif %}
+            </td>
+            <td style="font-size:.78rem;">
+                {% for cls in p.classi %}
+                {% set g_cop = p.copertura_classi.get(cls) %}
+                {% if g_cop %}
+                <span title="Assegnata a {{ g_cop.docente.cognome if g_cop.docente else '?' }}"
+                      style="background:#dcfce7;color:#166534;padding:1px 5px;border-radius:4px;
+                             margin:1px;display:inline-block;font-size:.74rem;font-weight:600;">
+                    ✓ {{ cls }}
+                    <span style="font-size:.68rem;opacity:.8;">{{ g_cop.docente.cognome[:6] if g_cop.docente else '' }}</span>
                 </span>
-                <span style="font-size:.7rem; color:var(--grigio);">/{{ g.max_ore or 10 }}h</span>
+                {% else %}
+                <span style="background:#fee2e2;color:#dc2626;padding:1px 5px;border-radius:4px;
+                             margin:1px;display:inline-block;font-size:.74rem;font-weight:600;">
+                    ○ {{ cls }}
+                </span>
+                {% endif %}
+                {% endfor %}
             </td>
-            <td style="font-size:.82rem; color:var(--grigio);">{{ g.note or '—' }}</td>
+            <td colspan="2">
+                {% if not p.gruppi_creati %}
+                {# ── FORM CREAZIONE ── #}
+                <form method="post" id="form-prop-{{ loop.index }}"
+                      style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">
+                    <input type="hidden" name="azione" value="crea_da_proposta">
+                    <input type="hidden" name="materia" value="{{ p.materia }}">
+                    <input type="hidden" name="cognome_doc" value="{{ p.cognome_doc }}">
+                    <div style="min-width:140px;">
+                        <label style="font-size:.68rem;color:var(--grigio);">Docente recupero</label><br>
+                        <select name="id_rec_docente" required
+                                style="width:100%;padding:3px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:.8rem;">
+                            <option value="">— seleziona —</option>
+                            {% for rd in disponibili %}
+                            <option value="{{ rd.id }}" {{ 'selected' if p.rd and p.rd.id == rd.id else '' }}>
+                                {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:4px;align-items:flex-end;">
+                        <div style="text-align:center;">
+                            <label style="font-size:.64rem;color:var(--grigio);display:block;">ore tot.</label>
+                            <input type="number" name="max_ore" value="10" min="1" max="20"
+                                   style="width:42px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:.78rem;text-align:center;">
+                        </div>
+                        <div style="text-align:center;">
+                            <label style="font-size:.64rem;color:var(--grigio);display:block;">h/g</label>
+                            <input type="number" name="max_ore_giorno" value="2" min="1" max="4"
+                                   style="width:36px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:.78rem;text-align:center;">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:.68rem;color:var(--grigio);">Classi non ancora assegnate:</label><br>
+                        {{ pill_classi('classi_cb', p.classi_libere, p.classi_libere|join(','), 'p'~loop.index) }}
+                    </div>
+                </form>
+                {% else %}
+                {# ── GRUPPI GIÀ CREATI ── #}
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                {% for g in p.gruppi_creati %}
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:5px 10px;
+                            display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:.8rem;font-weight:700;color:#166534;">✓</span>
+                    <span style="font-size:.82rem;">
+                        {% if g.docente %}{{ g.docente.cognome }} {{ g.docente.nome[0] if g.docente.nome else '' }}.{% endif %}
+                    </span>
+                    <span style="font-size:.76rem;color:var(--grigio);">
+                        {{ g.classi }} ·
+                    {% set tot_g, ader_g = aderenti_per_gruppo.get(g.id, (0,0)) %}
+                    <span style="color:var(--blu);font-weight:700;">{{ tot_g }}</span> tot
+                    <span style="color:#166534;font-weight:700;margin-left:4px;">✓{{ ader_g }}</span> aderiscono ·
+                    {{ g.max_ore or 10 }}h/{{ g.max_ore_giorno or 2 }}h/g
+                    </span>
+                    <div style="margin-left:auto;display:flex;gap:4px;">
+                        <button type="button" onclick="toggleEditGruppo({{ g.id }})"
+                                style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
+                                       border-radius:5px;padding:2px 7px;font-size:.76rem;cursor:pointer;">✏️</button>
+                        <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
+                            <input type="hidden" name="azione" value="elimina">
+                            <input type="hidden" name="id" value="{{ g.id }}">
+                            <button class="btn btn-danger btn-sm" type="submit"
+                                    style="font-size:.76rem;padding:2px 6px;">✖</button>
+                        </form>
+                    </div>
+                </div>
+                {# Form modifica — div nascosto sotto il box verde #}
+                <div id="edit-g-{{ g.id }}"
+                     style="display:none; margin-top:4px; padding:8px 10px;
+                            background:#fffbeb; border:1px solid #fcd34d; border-radius:6px;">
+                    <form method="post" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">
+                        <input type="hidden" name="azione" value="modifica">
+                        <input type="hidden" name="id" value="{{ g.id }}">
+                        <div style="min-width:140px;flex:2;">
+                            <label style="font-size:.7rem;color:var(--grigio);">Materia</label><br>
+                            <input type="text" name="materia" value="{{ g.materia }}"
+                                   style="width:100%;padding:3px 7px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                        </div>
+                        <div>
+                            <label style="font-size:.7rem;color:var(--grigio);">Docente</label><br>
+                            <select name="id_rec_docente"
+                                    style="padding:3px 7px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                                {% for rd in disponibili %}
+                                <option value="{{ rd.id }}" {{ 'selected' if rd.id == g.id_rec_docente else '' }}>
+                                    {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="min-width:180px;">
+                            <label style="font-size:.7rem;color:var(--grigio);">Classi</label><br>
+                            {{ pill_classi('classi_cb', classi_per_gruppo.get(g.id, all_classi), g.classi, 'eg'~g.id) }}
+                        </div>
+                        <div>
+                            <label style="font-size:.7rem;color:var(--grigio);">ore tot.</label><br>
+                            <input type="number" name="max_ore" value="{{ g.max_ore or 10 }}" min="1" max="30"
+                                   style="width:46px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                        </div>
+                        <div>
+                            <label style="font-size:.7rem;color:var(--grigio);">h/g</label><br>
+                            <input type="number" name="max_ore_giorno" value="{{ g.max_ore_giorno or 2 }}" min="1" max="6"
+                                   style="width:38px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm">💾</button>
+                        <button type="button" onclick="toggleEditGruppo({{ g.id }})"
+                                class="btn btn-sm" style="background:#fee2e2;color:#dc2626;">✕</button>
+                    </form>
+                </div>
+                {% endfor %}
+                </div>
+                {% endif %}
+            </td>
             <td style="text-align:center;">
-                <form method="post" onsubmit="return confirm('Eliminare il gruppo e tutte le sue lezioni?')" style="margin:0;">
-                    <input type="hidden" name="azione" value="elimina">
-                    <input type="hidden" name="id" value="{{ g.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                {% if p.classi_libere %}
+                <button type="submit" form="form-prop-{{ loop.index }}"
+                        class="btn btn-success btn-sm">✚ Crea</button>
+                {% endif %}
+                {% if p.gruppi_creati %}
+                <button type="button" onclick="toggleAggiungiTurno('turno-{{ loop.index }}')"
+                        class="btn btn-sm"
+                        style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
+                               font-size:.74rem;white-space:nowrap;margin-top:3px;">
+                    + Turno
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Form turno aggiuntivo -->
+        <tr id="turno-{{ loop.index }}" style="display:none;background:#f0f9ff;">
+            <td colspan="7" style="padding:8px 14px;">
+                <form method="post" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                    <input type="hidden" name="azione" value="crea_da_proposta">
+                    <input type="hidden" name="materia" value="{{ p.materia }}">
+                    <input type="hidden" name="cognome_doc" value="{{ p.cognome_doc }}">
+                    <strong style="font-size:.82rem;color:#0369a1;align-self:center;">+ Turno: {{ p.materia[:25] }}</strong>
+                    <div>
+                        <label style="font-size:.72rem;color:var(--grigio);">Classi</label><br>
+                        {{ pill_classi('classi_cb', p.classi, '', 'turno-cls-'~loop.index) }}
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem;color:var(--grigio);">Docente</label><br>
+                        <select name="id_rec_docente" style="padding:4px 6px;border:1px solid #7dd3fc;border-radius:5px;font-size:.82rem;">
+                            {% for rd in disponibili %}
+                            <option value="{{ rd.id }}" {{ 'selected' if p.rd and p.rd.id == rd.id else '' }}>
+                                {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm">✚ Crea turno</button>
+                    <button type="button" onclick="toggleAggiungiTurno('turno-{{ loop.index }}')"
+                            class="btn btn-sm" style="background:#fee2e2;color:#dc2626;">✕</button>
                 </form>
             </td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
-    {% else %}
-    <div style="text-align:center; padding:32px; color:var(--grigio);">Nessun gruppo ancora.</div>
-    {% endif %}
+</div>
+{% endif %}
+
+<!-- ══ GRUPPI SENZA PROPOSTA (creati manualmente) ══════════════════ -->
+{% set gruppi_senza_proposta = [] %}
+{% for g in gruppi %}
+    {% set trovato = namespace(val=false) %}
+    {% for p in proposte %}
+        {% for gc in p.gruppi_creati %}
+            {% if gc.id == g.id %}{% set trovato.val = true %}{% endif %}
+        {% endfor %}
+    {% endfor %}
+    {% if not trovato.val %}{% set _ = gruppi_senza_proposta.append(g) %}{% endif %}
+{% endfor %}
+
+{% if gruppi_senza_proposta %}
+<div style="font-size:.78rem;font-weight:700;color:var(--grigio);
+            text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+    📋 Gruppi aggiuntivi (creati manualmente)
+</div>
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+    {% for g in gruppi_senza_proposta %}
+    <div style="padding:8px 14px;border-bottom:1px solid #e5eaf0;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <strong style="font-size:.88rem;color:var(--blu);">{{ g.materia[:40] }}</strong>
+            <span style="font-size:.82rem;">
+                {% if g.docente %}{{ g.docente.cognome }} {{ g.docente.nome[0] if g.docente.nome else '' }}.{% endif %}
+            </span>
+            <span style="font-size:.78rem;color:var(--grigio);">
+                {{ g.classi }}
+            </span>
+            {% set tot_g, ader_g = aderenti_per_gruppo.get(g.id, (0,0)) %}
+            <span style="font-size:.78rem;color:var(--blu);font-weight:700;">{{ tot_g }} tot</span>
+            <span style="font-size:.78rem;color:#166534;font-weight:700;">✓{{ ader_g }} ader.</span>
+            <span style="font-size:.78rem;color:var(--grigio);">{{ g.max_ore or 10 }}h/{{ g.max_ore_giorno or 2 }}h/g</span>
+            <div style="margin-left:auto;display:flex;gap:4px;">
+                <button type="button" onclick="toggleEditGruppo({{ g.id }})"
+                        style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
+                               border-radius:5px;padding:2px 7px;font-size:.76rem;cursor:pointer;">✏️</button>
+                <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ g.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit" style="font-size:.76rem;padding:2px 6px;">✖</button>
+                </form>
+            </div>
+        </div>
+        <div id="edit-g-{{ g.id }}"
+             style="display:none;margin-top:6px;padding:8px 10px;
+                    background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;">
+            <form method="post" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">
+                <input type="hidden" name="azione" value="modifica">
+                <input type="hidden" name="id" value="{{ g.id }}">
+                <div style="min-width:140px;flex:2;">
+                    <label style="font-size:.7rem;color:var(--grigio);">Materia</label><br>
+                    <input type="text" name="materia" value="{{ g.materia }}"
+                           style="width:100%;padding:3px 7px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                </div>
+                <div>
+                    <label style="font-size:.7rem;color:var(--grigio);">Docente</label><br>
+                    <select name="id_rec_docente" style="padding:3px 7px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                        {% for rd in disponibili %}
+                        <option value="{{ rd.id }}" {{ 'selected' if rd.id == g.id_rec_docente else '' }}>
+                            {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="min-width:180px;">
+                    <label style="font-size:.7rem;color:var(--grigio);">Classi</label><br>
+                    {{ pill_classi('classi_cb', classi_per_gruppo.get(g.id, all_classi), g.classi, 'man'~g.id) }}
+                </div>
+                <div>
+                    <label style="font-size:.7rem;color:var(--grigio);">ore tot.</label><br>
+                    <input type="number" name="max_ore" value="{{ g.max_ore or 10 }}" min="1" max="30"
+                           style="width:46px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                </div>
+                <div>
+                    <label style="font-size:.7rem;color:var(--grigio);">h/g</label><br>
+                    <input type="number" name="max_ore_giorno" value="{{ g.max_ore_giorno or 2 }}" min="1" max="6"
+                           style="width:38px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.82rem;">
+                </div>
+                <button type="submit" class="btn btn-success btn-sm">💾</button>
+                <button type="button" onclick="toggleEditGruppo({{ g.id }})"
+                        class="btn btn-sm" style="background:#fee2e2;color:#dc2626;">✕</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ══ SEZIONE 3: AGGIUNGI GRUPPO MANUALE ═══════════════════════════ -->
+<div style="font-size:.78rem;font-weight:700;color:var(--grigio);
+            text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+    ✚ Aggiungi gruppo manualmente
+</div>
+<div class="card" style="padding:16px 20px;">
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="min-width:180px;flex:2;">
+                <label style="font-size:.75rem;color:var(--grigio);">Materia *</label><br>
+                <input type="text" name="materia" required list="materie-list"
+                       placeholder="Es. MATEMATICA"
+                       style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.88rem;">
+                <datalist id="materie-list">
+                    {% for m in materie_imp %}<option value="{{ m }}">{% endfor %}
+                </datalist>
+            </div>
+            <div style="min-width:160px;">
+                <label style="font-size:.75rem;color:var(--grigio);">Docente *</label><br>
+                <select name="id_rec_docente" required
+                        style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.88rem;">
+                    <option value="">— seleziona —</option>
+                    {% for rd in disponibili %}
+                    <option value="{{ rd.id }}">
+                        {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="min-width:220px;">
+                <label style="font-size:.75rem;color:var(--grigio);">Classi</label><br>
+                {{ pill_classi('classi_cb', all_classi, '', 'new') }}
+            </div>
+            <div>
+                <label style="font-size:.75rem;color:var(--grigio);">Max ore</label><br>
+                <input type="number" name="max_ore" value="10" min="1" max="30"
+                       style="width:55px;padding:6px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:.88rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem;color:var(--grigio);">h/g</label><br>
+                <input type="number" name="max_ore_giorno" value="2" min="1" max="6"
+                       style="width:45px;padding:6px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:.88rem;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">✚ Aggiungi</button>
+        </div>
+    </form>
 </div>
 
 <script>
-function aggiornaMaterieDocente(sel) {
-    const opt = sel.options[sel.selectedIndex];
-    const matPrinc = opt.dataset.materia || '';
-    const altreMat = (opt.dataset.materie || '').split('|').filter(Boolean);
-    const inp = document.getElementById('inp-materia');
-    const sug = document.getElementById('materie-suggerite');
-    const divClassi = document.getElementById('classi-docente');
-
-    if (matPrinc) inp.value = matPrinc;
-    sug.innerHTML = '';
-    const tutte = matPrinc ? [matPrinc, ...altreMat.filter(m => m !== matPrinc)] : altreMat;
-    tutte.forEach(m => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = m;
-        btn.style.cssText = 'padding:2px 8px;border-radius:8px;font-size:.72rem;border:1px solid #d1d5db;background:#f0f4f8;cursor:pointer;';
-        btn.onclick = () => { inp.value = m; };
-        sug.appendChild(btn);
-    });
-
-    // Carica classi del docente tramite API
-    if (!sel.value || !divClassi) return;
-    // Recupera id_docente dall'option value (è id_rec_docente)
-    const recDocId = sel.value;
-    // Cerca id_docente nel select (serve l'id del docente, non del rec_docente)
-    // Usiamo un attributo data-id-docente sull'option
-    const idDocente = opt.dataset.idDocente;
-    if (!idDocente) { divClassi.textContent = 'Classi non disponibili'; return; }
-    divClassi.textContent = 'Caricamento...';
-    fetch('/recupero/api/classi-docente/' + idDocente)
-        .then(r => r.json())
-        .then(classi => {
-            if (!classi.length) {
-                divClassi.textContent = 'Nessuna classe trovata';
-                return;
-            }
-            divClassi.innerHTML = classi.map(c =>
-                `<span style="display:inline-block;padding:2px 7px;margin:2px;background:#dbeafe;
-                 color:#1e40af;border-radius:8px;font-size:.78rem;cursor:pointer;"
-                 onclick="aggiungiClasse('${c}')">${c}</span>`
-            ).join('');
-        });
+function toggleEditGruppo(gid) {
+    const el = document.getElementById('edit-g-'+gid);
+    if (!el) return;
+    // Funziona sia per <div> (proposte) che per <tr> (sezione gruppi)
+    const isTable = el.tagName === 'TR';
+    const hidden = el.style.display === 'none' || el.style.display === '';
+    el.style.display = hidden ? (isTable ? 'table-row' : 'block') : 'none';
 }
-
-function aggiungiClasse(classe) {
-    const inp = document.querySelector('input[name="classi"]');
-    if (!inp) return;
-    const val = inp.value.trim();
-    if (!val) { inp.value = classe; return; }
-    if (val.split(',').map(s=>s.trim()).includes(classe)) return;
-    inp.value = val + ', ' + classe;
+function toggleAggiungiTurno(id) {
+    const row = document.getElementById(id);
+    if (row) row.style.display = row.style.display==='none' ? 'table-row' : 'none';
 }
 </script>
 {% endblock %}

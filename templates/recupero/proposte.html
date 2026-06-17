@@ -55,6 +55,12 @@
             </td>
             <td style="text-align:center;">
                 <span style="font-size:1.1rem; font-weight:800; color:var(--blu);">{{ p.n_alunni }}</span>
+                {% if p.n_non_risposto %}
+                <span style="display:block;font-size:.68rem;color:#dc2626;">❓{{ p.n_non_risposto }}</span>
+                {% endif %}
+                {% if p.n_non_aderisce %}
+                <span style="display:block;font-size:.68rem;color:#6b7280;">✗{{ p.n_non_aderisce }}</span>
+                {% endif %}
             </td>
             <td style="font-size:.84rem;">{{ p.classi }}</td>
             <td>
@@ -102,16 +108,78 @@
                     ✚ Crea
                 </button>
                 {% else %}
-                <span style="font-size:.8rem; background:#dcfce7; color:#166534;
-                             padding:2px 8px; border-radius:8px; font-weight:700;">
-                    ✓ Creato
-                </span>
+                <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+                    <span style="font-size:.78rem; background:#dcfce7; color:#166534;
+                                 padding:2px 8px; border-radius:8px; font-weight:700;">
+                        ✓ Creato
+                    </span>
+                    <button type="button"
+                            onclick="toggleTurno('turno-{{ loop.index }}')"
+                            class="btn btn-sm"
+                            style="font-size:.72rem; padding:1px 7px; background:#f0f4ff;
+                                   color:var(--blu); border:1px solid #c7d2fe;">
+                        + Turno
+                    </button>
+                </div>
                 {% endif %}
             </td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
+    <!-- Form turni aggiuntivi (inline, nascosti) -->
+    {% for p in proposte %}
+    {% if p.gruppo_esistente %}
+    <div id="turno-{{ loop.index }}"
+         style="display:none; padding:10px 14px; background:#f0f9ff;
+                border-top:1px solid #bae6fd;">
+        <form method="post" action="{{ url_for('recupero.crea_da_proposta') }}"
+              style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+            <input type="hidden" name="materia"     value="{{ p.materia }}">
+            <input type="hidden" name="cognome_doc" value="{{ p.cognome_doc }}">
+            <strong style="font-size:.82rem; color:#0369a1; align-self:center;">
+                + Turno: {{ p.materia[:30] }}
+            </strong>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Classi per questo turno</label><br>
+                <input type="text" name="classi"
+                       value="{{ p.classi }}"
+                       placeholder="Es. 1ACAT"
+                       style="width:220px; padding:5px 8px; border:1px solid #7dd3fc;
+                              border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Docente</label><br>
+                <select name="id_rec_docente"
+                        style="padding:5px 8px; border:1px solid #7dd3fc;
+                               border-radius:6px; font-size:.82rem;">
+                    {% for rd in disponibili %}
+                    <option value="{{ rd.id }}"
+                        {% if p.rd_suggerito and p.rd_suggerito.id == rd.id %}selected{% endif %}>
+                        {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Max ore</label><br>
+                <input type="number" name="max_ore" value="10" min="1" max="20"
+                       style="width:55px; padding:5px 6px; border:1px solid #7dd3fc;
+                              border-radius:6px; font-size:.82rem;">
+            </div>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">h/g</label><br>
+                <input type="number" name="max_ore_giorno" value="2" min="1" max="4"
+                       style="width:45px; padding:5px 6px; border:1px solid #7dd3fc;
+                              border-radius:6px; font-size:.82rem;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">✚ Crea turno</button>
+            <button type="button" onclick="toggleTurno('turno-{{ loop.index }}')"
+                    class="btn btn-sm" style="background:#fee2e2; color:#dc2626;">✕</button>
+        </form>
+    </div>
+    {% endif %}
+    {% endfor %}
 </div>
 
 <div style="margin-top:12px; font-size:.8rem; color:var(--grigio);">
@@ -126,4 +194,11 @@
     {% endif %}
 </div>
 {% endif %}
+
+<script>
+function toggleTurno(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
 {% endblock %}

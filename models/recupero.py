@@ -12,8 +12,9 @@ class RecuperoDocente(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     id_docente  = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False)
     anno_scol   = db.Column(db.String(9), nullable=False, default='2025-2026')
-    note        = db.Column(db.String(200), nullable=True)
-    creato_il   = db.Column(db.DateTime, default=datetime.utcnow)
+    note           = db.Column(db.String(200), nullable=True)
+    materie_extra  = db.Column(db.String(500), nullable=True)  # materie aggiuntive per recupero
+    creato_il      = db.Column(db.DateTime, default=datetime.utcnow)
 
     docente  = db.relationship('Docente')
     gruppi   = db.relationship('RecuperoGruppo', back_populates='docente_rec',
@@ -41,9 +42,11 @@ class RecuperoGruppo(db.Model):
     tipo_prova      = db.Column(db.String(20), nullable=True)     # 'scritto'|'orale'|'pratico'|'scritto_orale'
     durata_ore      = db.Column(db.Float, default=2.0)            # durata prova in ore
     id_commissario  = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
+    id_sorvegliante = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     periodo_codice  = db.Column(db.String(20), default='corsi_giugno')  # quale periodo
 
-    commissario = db.relationship('Docente', foreign_keys=[id_commissario])
+    commissario  = db.relationship('Docente', foreign_keys=[id_commissario])
+    sorvegliante = db.relationship('Docente', foreign_keys=[id_sorvegliante])
     note            = db.Column(db.String(200), nullable=True)
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -119,9 +122,13 @@ class RecuperoVincolo(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     id_rec_docente  = db.Column(db.Integer, db.ForeignKey('recupero_docenti.id'), nullable=False)
     anno_scol       = db.Column(db.String(9), nullable=False, default='2025-2026')
-    giorno          = db.Column(db.Integer, nullable=False)    # 0=lun…4=ven
+    giorno          = db.Column(db.Integer, nullable=True)     # 0=lun…4=ven (None=tutti i giorni della fascia date)
     ora_inizio      = db.Column(db.String(5), nullable=False)  # HH:MM
     ora_fine        = db.Column(db.String(5), nullable=False)  # HH:MM
+    data_inizio     = db.Column(db.Date, nullable=True)        # dal (None=tutto il periodo)
+    data_fine       = db.Column(db.Date, nullable=True)        # al
+    classi_vincolo  = db.Column(db.String(200), nullable=True)  # es. "1ACAT,2ACAT" o vuoto=tutte
+    materia_vincolo = db.Column(db.String(200), nullable=True)  # es. "Fisica" o vuoto=tutte le materie
     note            = db.Column(db.String(200), nullable=True)
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -133,11 +140,15 @@ class RecuperoVincolo(db.Model):
 
     @property
     def giorno_label(self):
+        if self.giorno is None: return 'Tutti i giorni'
         return self.NOMI_GIORNI[self.giorno] if 0 <= self.giorno < 5 else '?'
 
     @property
     def label(self):
-        return f'{self.giorno_label} {self.ora_inizio}–{self.ora_fine}'
+        base = f'{self.giorno_label} {self.ora_inizio}–{self.ora_fine}'
+        if self.data_inizio and self.data_fine:
+            base += f' ({self.data_inizio.strftime("%d/%m")}–{self.data_fine.strftime("%d/%m")})'
+        return base
 
 
 class RecuperoImport(db.Model):
@@ -157,7 +168,9 @@ class RecuperoImport(db.Model):
     materia_raw     = db.Column(db.String(200), nullable=False)  # da file
     materia_norm    = db.Column(db.String(200), nullable=False)  # normalizzata
     docente_raw     = db.Column(db.String(200), nullable=True)   # da file
-    cognome_docente = db.Column(db.String(80),  nullable=True)   # primo cognome
+    cognome_docente  = db.Column(db.String(80), nullable=True)   # primo cognome
+    nome_ini_docente = db.Column(db.String(5),  nullable=True)   # iniziale nome (es. 'S')
+    stato_adesione  = db.Column(db.String(20), default='sconosciuto')  # aderisce|studio_ind|non_risposto|non_aderisce
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
 
 

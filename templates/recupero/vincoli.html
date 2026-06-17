@@ -1,5 +1,31 @@
 {% extends "base.html" %}
 {% block title %}Disponibilità docenti — Recupero{% endblock %}
+{% macro selettore_classi(name_cb, valore_attuale, classi_disponibili, uid) %}
+{%- set selezionate = valore_attuale.split(',') | map('trim') | list if valore_attuale else [] -%}
+<div style="display:flex; flex-wrap:wrap; gap:3px;" id="cls-{{ uid }}">
+{% for cls in classi_disponibili %}
+{%- set sel = cls.strip().upper() in selezionate | map('upper') | list -%}
+<label style="display:inline-flex; align-items:center; gap:2px; cursor:pointer;
+              padding:2px 7px; border-radius:5px; font-size:.75rem; font-weight:600;
+              border:1px solid {% if sel %}#3b82f6{% else %}#d1d5db{% endif %};
+              background:{% if sel %}#dbeafe{% else %}#f9fafb{% endif %};
+              color:{% if sel %}#1e40af{% else %}#6b7280{% endif %};"
+      id="lbl-{{ uid }}-{{ loop.index }}">
+    <input type="checkbox" name="{{ name_cb }}" value="{{ cls }}"
+           {% if sel %}checked{% endif %}
+           style="display:none;"
+           onchange="
+             this.closest('label').style.background=this.checked?'#dbeafe':'#f9fafb';
+             this.closest('label').style.color=this.checked?'#1e40af':'#6b7280';
+             this.closest('label').style.borderColor=this.checked?'#3b82f6':'#d1d5db';
+           ">
+    {{ cls }}
+</label>
+{% endfor %}
+</div>
+{% endmacro %}
+
+
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
@@ -15,10 +41,12 @@
 {% set GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì'] %}
 
 {% for rd in disponibili %}
-<div class="card" style="margin-bottom:14px; padding:0; overflow:hidden;">
-    <!-- Header docente -->
+<div class="card" style="margin-bottom:8px; padding:0; overflow:hidden;"
+     id="docente-{{ rd.id }}">
+    <!-- Header docente — click per aprire/chiudere -->
     <div style="background:#f0f4ff; padding:8px 16px; display:flex;
-                justify-content:space-between; align-items:center;">
+                justify-content:space-between; align-items:center; cursor:pointer;"
+         onclick="toggleVincoli({{ rd.id }}, this)">
         <div>
             <strong style="color:var(--blu);">
                 {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
@@ -26,24 +54,34 @@
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
                 {{ rd.docente.materia or '' }}
             </span>
-            {% if not rd.vincoli %}
+            {% if rd.vincoli %}
+            <span style="font-size:.72rem; background:#dbeafe; color:#1e40af;
+                         padding:1px 7px; border-radius:8px; margin-left:8px;">
+                {{ rd.vincoli|length }} fasce
+            </span>
+            {% else %}
             <span style="font-size:.72rem; background:#fef3c7; color:#92400e;
                          padding:1px 7px; border-radius:8px; margin-left:8px;">
-                ⚠ Nessun vincolo — usa default (tutti i giorni 08:00–13:00)
+                ⚠ nessun vincolo
             </span>
             {% endif %}
         </div>
-        {% if rd.vincoli %}
-        <form method="post" style="margin:0;"
-              onsubmit="return confirm('Eliminare tutta la disponibilità di {{ rd.docente.cognome }}?')">
-            <input type="hidden" name="azione" value="elimina_tutti">
-            <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
-            <button type="submit" class="btn btn-sm"
-                    style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;
-                           font-size:.74rem;">🗑 Azzera</button>
-        </form>
-        {% endif %}
+        <div style="display:flex; gap:8px; align-items:center;">
+            {% if rd.vincoli %}
+            <form method="post" style="margin:0;" onclick="event.stopPropagation()"
+                  onsubmit="return confirm('Eliminare tutta la disponibilità di {{ rd.docente.cognome }}?')">
+                <input type="hidden" name="azione" value="elimina_tutti">
+                <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
+                <button type="submit" class="btn btn-sm"
+                        style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;
+                               font-size:.74rem;">🗑</button>
+            </form>
+            {% endif %}
+            <span class="toggle-arrow" style="font-size:.9rem; color:var(--grigio); user-select:none;">▶</span>
+        </div>
     </div>
+    <!-- Corpo collassabile — nascosto di default -->
+    <div class="vincoli-body" id="body-{{ rd.id }}" style="display:none;">
 
     <!-- Fasce esistenti -->
     {% if rd.vincoli %}
@@ -53,24 +91,86 @@
                 <th style="width:120px;">Giorno</th>
                 <th style="width:90px;">Dalle</th>
                 <th style="width:90px;">Alle</th>
+                <th style="width:140px;">Periodo date</th>
+                <th style="width:130px;">Classi</th>
+                <th style="width:130px;">Materia</th>
                 <th>Note</th>
                 <th style="width:44px; text-align:center;">✖</th>
             </tr>
         </thead>
         <tbody>
         {% for v in rd.vincoli %}
-        <tr>
+        <tr id="row-v-{{ v.id }}">
             <td style="font-weight:700; color:var(--blu); font-size:.88rem;">
-                {{ GIORNI[v.giorno] }}
+                {{ GIORNI[v.giorno] if v.giorno is not none else 'Tutti i giorni' }}
             </td>
             <td style="font-size:.88rem;">{{ v.ora_inizio }}</td>
             <td style="font-size:.88rem;">{{ v.ora_fine }}</td>
+            <td style="font-size:.8rem; color:var(--grigio);">
+                {% if v.data_inizio and v.data_fine %}
+                {{ v.data_inizio.strftime('%d/%m') }}–{{ v.data_fine.strftime('%d/%m') }}
+                {% else %}—{% endif %}
+            </td>
+            <td style="font-size:.8rem; color:var(--grigio);">{{ v.classi_vincolo or '—' }}</td>
+            <td style="font-size:.8rem; color:var(--grigio);">{{ v.materia_vincolo or '—' }}</td>
             <td style="font-size:.82rem; color:var(--grigio);">{{ v.note or '—' }}</td>
-            <td style="text-align:center;">
+            <td style="text-align:center; display:flex; gap:3px; justify-content:center;">
+                <button type="button" onclick="toggleModifica({{ v.id }})"
+                        style="background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;
+                               border-radius:5px; padding:2px 7px; font-size:.78rem; cursor:pointer;">✏️</button>
                 <form method="post" style="margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ v.id }}">
                     <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        <tr id="edit-v-{{ v.id }}" style="display:none; background:#f0f9ff;">
+            <td colspan="8" style="padding:6px 10px;">
+                <form method="post" style="display:flex; gap:6px; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ v.id }}">
+                    <div style="flex-shrink:0;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Dalle</label><br>
+                        <input type="time" name="ora_inizio" value="{{ v.ora_inizio }}"
+                               style="width:88px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.8rem;">
+                    </div>
+                    <div style="flex-shrink:0;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Alle</label><br>
+                        <input type="time" name="ora_fine" value="{{ v.ora_fine }}"
+                               style="width:88px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.8rem;">
+                    </div>
+                    <div style="flex-shrink:0;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Dal</label><br>
+                        <input type="date" name="data_inizio"
+                               value="{{ v.data_inizio.isoformat() if v.data_inizio else '' }}"
+                               style="width:120px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.8rem;">
+                    </div>
+                    <div style="flex-shrink:0;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Al</label><br>
+                        <input type="date" name="data_fine"
+                               value="{{ v.data_fine.isoformat() if v.data_fine else '' }}"
+                               style="width:120px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.8rem;">
+                    </div>
+                    <div style="flex-shrink:0; min-width:180px;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Classi (clicca)</label><br>
+                        {{ selettore_classi('classi_vincolo_cb', v.classi_vincolo or '', classi_per_docente.get(rd.id, []), 'mod-'~v.id) }}
+                    </div>
+                    <div style="flex-shrink:0; min-width:90px;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Materia</label><br>
+                        <input type="text" name="materia_vincolo"
+                               value="{{ v.materia_vincolo or '' }}"
+                               placeholder="Fisica"
+                               style="width:90px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.78rem;">
+                    </div>
+                    <div style="flex-shrink:0; width:120px;">
+                        <label style="font-size:.68rem; color:var(--grigio);">Note</label><br>
+                        <input type="text" name="note" value="{{ v.note or '' }}"
+                               style="width:120px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.78rem;">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0; white-space:nowrap;">💾</button>
+                    <button type="button" onclick="toggleModifica({{ v.id }})"
+                            class="btn btn-sm" style="flex-shrink:0; background:#fee2e2; color:#dc2626;">✕</button>
                 </form>
             </td>
         </tr>
@@ -81,41 +181,158 @@
 
     <!-- Form aggiungi fascia -->
     <form method="post" style="padding:10px 14px; background:#fafbfc;
-                                border-top:1px solid #e5eaf0;">
-        <input type="hidden" name="azione" value="aggiungi">
+                                border-top:1px solid #e5eaf0;"
+          id="form-add-{{ rd.id }}">
+        <input type="hidden" name="azione" value="aggiungi_multi">
         <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
+
+        <!-- Preset rapidi -->
+        <div style="margin-bottom:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+            <span style="font-size:.72rem; color:var(--grigio);">Preset:</span>
+            <button type="button" onclick="preset('{{ rd.id }}','lmm','08:00','13:00')"
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                Lun–Mer–Ven 8–13
+            </button>
+            <button type="button" onclick="preset('{{ rd.id }}','mgio','08:00','13:00')"
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                Mar–Gio 8–13
+            </button>
+            <button type="button" onclick="preset('{{ rd.id }}','tutti','08:00','13:00')"
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                Tutti i giorni 8–13
+            </button>
+            <button type="button" onclick="preset('{{ rd.id }}','tutti','08:00','16:00')"
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                Tutti i giorni 8–16
+            </button>
+        </div>
+
         <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+            <!-- Checkbox giorni multipli -->
             <div>
-                <label style="font-size:.72rem; color:var(--grigio);">Giorno</label><br>
-                <select name="giorno" required
-                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
-                    {% for i, g in enumerate(GIORNI) %}
-                    <option value="{{ i }}">{{ g }}</option>
-                    {% endfor %}
-                </select>
+                <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:4px;">
+                    Giorni (seleziona uno o più)
+                </label>
+                <div style="display:flex; gap:4px; flex-wrap:wrap;" id="giorni-{{ rd.id }}">
+                {% for i, g in enumerate(GIORNI) %}
+                <label style="display:flex; align-items:center; gap:3px; font-size:.8rem;
+                              cursor:pointer; padding:3px 8px; border:1px solid #d1d5db;
+                              border-radius:6px; background:#f9fafb; user-select:none;"
+                       id="lbl-{{ rd.id }}-{{ i }}">
+                    <input type="checkbox" name="giorni" value="{{ i }}"
+                           onchange="document.getElementById('lbl-{{ rd.id }}-{{ i }}').style.background=this.checked?'#dbeafe':'#f9fafb'">
+                    {{ g[:3] }}
+                </label>
+                {% endfor %}
+                </div>
             </div>
             <div>
                 <label style="font-size:.72rem; color:var(--grigio);">Dalle</label><br>
-                <input type="time" name="ora_inizio" value="08:00"
+                <input type="time" name="ora_inizio" value="08:00" id="ini-{{ rd.id }}"
                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
             </div>
             <div>
                 <label style="font-size:.72rem; color:var(--grigio);">Alle</label><br>
-                <input type="time" name="ora_fine" value="16:00"
+                <input type="time" name="ora_fine" value="13:00" id="fin-{{ rd.id }}"
                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
             </div>
-            <div style="flex:1; min-width:140px;">
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Dal (facoltativo)</label><br>
+                <input type="date" name="data_inizio"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <div>
+                <label style="font-size:.72rem; color:var(--grigio);">Al</label><br>
+                <input type="date" name="data_fine"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <div style="min-width:200px; max-width:340px;">
+                <label style="font-size:.72rem; color:var(--grigio);">Classi (vuoto=tutte) — clicca per selezionare</label><br>
+                {{ selettore_classi('classi_vincolo_cb', '', classi_per_docente.get(rd.id, []), 'add-'~rd.id) }}
+            </div>
+            <div style="min-width:120px;">
+                <label style="font-size:.72rem; color:var(--grigio);">Materia (vuoto=tutte)</label><br>
+                <input type="text" name="materia_vincolo"
+                       placeholder="Es. Fisica"
+                       style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            </div>
+            <div style="flex:1; min-width:120px;">
                 <label style="font-size:.72rem; color:var(--grigio);">Note (facoltativo)</label><br>
                 <input type="text" name="note" placeholder="Es. solo mattina"
                        style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
             </div>
-            <button type="submit" class="btn btn-success btn-sm">+ Aggiungi fascia</button>
+            <button type="submit" class="btn btn-success btn-sm"
+                    onclick="return validaGiorni('{{ rd.id }}')">
+                + Aggiungi
+            </button>
         </div>
     </form>
+    </div>{# /vincoli-body #}
 </div>
 {% endfor %}
 
 <script>
-// Passa enumerate a Jinja (già disponibile lato server)
+function toggleVincoli(rid, header) {
+    const body  = document.getElementById('body-'+rid);
+    const arrow = header.querySelector('.toggle-arrow');
+    const open  = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+function apriBox(rid) {
+    const body  = document.getElementById('body-'+rid);
+    const arrow = document.querySelector('#docente-'+rid+' .toggle-arrow');
+    if (body) body.style.display = 'block';
+    if (arrow) arrow.textContent = '▼';
+}
+
+// All'avvio: se c'è un anchor nell'URL apri quel box
+document.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#docente-')) {
+        const rid = hash.replace('#docente-','');
+        apriBox(rid);
+        setTimeout(() => {
+            const el = document.getElementById('docente-'+rid);
+            if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        }, 50);
+    }
+});
+
+function toggleModifica(vid) {
+    const row = document.getElementById('edit-v-'+vid);
+    if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+function preset(rid, tipo, ini, fin) {
+    // Imposta orari
+    document.getElementById('ini-'+rid).value = ini;
+    document.getElementById('fin-'+rid).value = fin;
+    // Deseleziona tutti
+    document.querySelectorAll('#giorni-'+rid+' input[type=checkbox]').forEach(cb => {
+        cb.checked = false;
+        document.getElementById('lbl-'+rid+'-'+cb.value).style.background = '#f9fafb';
+    });
+    // Seleziona giorni del preset
+    let giorni = tipo === 'tutti' ? [0,1,2,3,4] :
+                 tipo === 'lmm'  ? [0,2,4] :
+                 tipo === 'mgio' ? [1,3] : [];
+    giorni.forEach(i => {
+        const cb = document.querySelector('#giorni-'+rid+' input[value="'+i+'"]');
+        if (cb) {
+            cb.checked = true;
+            document.getElementById('lbl-'+rid+'-'+i).style.background = '#dbeafe';
+        }
+    });
+}
+
+function validaGiorni(rid) {
+    const checked = document.querySelectorAll('#giorni-'+rid+' input:checked');
+    if (checked.length === 0) {
+        alert('Seleziona almeno un giorno.');
+        return false;
+    }
+    return true;
+}
 </script>
 {% endblock %}

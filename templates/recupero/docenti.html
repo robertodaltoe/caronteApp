@@ -24,6 +24,10 @@
         </div>
         <div style="flex:2; min-width:160px;">
             <label style="font-size:.75rem; color:var(--grigio);">Note (facoltativo)</label><br>
+            <input type="text" name="materie_extra" placeholder="Es. Fisica, Scienze" style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
+        </div>
+        <div style="flex:2; min-width:160px;">
+            <label style="font-size:.75rem; color:var(--grigio);">Note (facoltativo)</label><br>
             <input type="text" name="note" placeholder="Es. disponibile solo mattina"
                    style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.88rem;">
         </div>
@@ -38,9 +42,11 @@
         <thead>
             <tr>
                 <th>Docente</th>
-                <th style="width:200px;">Materia principale</th>
+                <th style="width:150px;">Materia principale</th>
                 <th>Altre materie (roster)</th>
-                <th style="width:200px;">Note</th>
+                <th style="width:170px;">Materie extra recupero</th>
+                <th style="width:110px;">Note</th>
+                <th style="width:100px; text-align:center;">Disponibilità</th>
                 <th style="width:60px; text-align:center;">✖</th>
             </tr>
         </thead>
@@ -58,12 +64,46 @@
                     {% endfor %}
                 {% else %}—{% endif %}
             </td>
+            <td style="font-size:.82rem;">
+                {% if rd.materie_extra %}{% for m in rd.materie_extra.split(',') %}<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;margin:1px;font-size:.78rem;display:inline-block;">{{ m.strip() }}</span>{% endfor %}{% else %}<span style="color:#d1d5db;font-size:.78rem;">—</span>{% endif %}
+                <button type="button" onclick="toggleEditDocente({{ rd.id }})" style="background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--grigio);padding:1px 4px;">✏️</button>
+            </td>
             <td style="font-size:.82rem; color:var(--grigio);">{{ rd.note or '—' }}</td>
+            <td style="text-align:center;">
+                <a href="{{ url_for('recupero.vincoli') }}#docente-{{ rd.id }}"
+                   class="btn btn-sm"
+                   style="background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;
+                          font-size:.78rem; padding:3px 9px; text-decoration:none;">
+                    🗓 {% if rd.vincoli %}{{ rd.vincoli|length }}{% else %}+{% endif %}
+                </a>
+            </td>
             <td style="text-align:center;">
                 <form method="post" onsubmit="return confirm('Rimuovere?')" style="margin:0;">
                     <input type="hidden" name="azione" value="rimuovi">
                     <input type="hidden" name="id" value="{{ rd.id }}">
                     <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+        <tr id="edit-doc-{{ rd.id }}" style="display:none; background:#fffbeb;">
+            <td colspan="7" style="padding:8px 14px;">
+                <form method="post" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                    <input type="hidden" name="azione" value="modifica_docente">
+                    <input type="hidden" name="id" value="{{ rd.id }}">
+                    <div style="flex:2; min-width:200px;">
+                        <label style="font-size:.72rem;color:var(--grigio);">Materie extra recupero (separate da virgola)</label><br>
+                        <input type="text" name="materie_extra" value="{{ rd.materie_extra or '' }}"
+                               placeholder="Es. Fisica, Scienze"
+                               style="width:100%;padding:5px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:.84rem;">
+                    </div>
+                    <div style="flex:2; min-width:160px;">
+                        <label style="font-size:.72rem;color:var(--grigio);">Note</label><br>
+                        <input type="text" name="note" value="{{ rd.note or '' }}"
+                               style="width:100%;padding:5px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:.84rem;">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm">Salva</button>
+                    <button type="button" onclick="toggleEditDocente({{ rd.id }})"
+                            class="btn btn-sm" style="background:#fee2e2;color:#dc2626;">chiudi</button>
                 </form>
             </td>
         </tr>
@@ -76,4 +116,10 @@
     </div>
     {% endif %}
 </div>
+<script>
+function toggleEditDocente(did) {
+    const row = document.getElementById("edit-doc-"+did);
+    if (row) row.style.display = row.style.display === "none" ? "table-row" : "none";
+}
+</script>
 {% endblock %}
