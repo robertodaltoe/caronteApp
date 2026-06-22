@@ -844,6 +844,28 @@ def modifica(id):
                 chiave = f'{ass.id_docente}_{motivo_k}'
                 utilizzi_ccnl[chiave] = utilizzi_ccnl.get(chiave, 0) + 1
 
+    # Sospensioni: passa set di date sospese per avviso JS nel form
+    try:
+        from models.sospensione import SospensioneDidattica
+        sosp_list = SospensioneDidattica.query.all()
+        date_sospese = {}
+        for s in sosp_list:
+            cur = s.data_inizio
+            while cur <= s.data_fine:
+                date_sospese[cur.isoformat()] = s.descrizione
+                cur += timedelta(days=1)
+    except Exception:
+        date_sospese = {}
+
+    # Sospensione del giorno selezionato
+    sospensione_oggi = date_sospese.get(a.data.isoformat())
+
+    # Eventi istituzionali del giorno selezionato (per alert nel form)
+    try:
+        eventi_ist_giorno = AttivitaIst.query.filter_by(data=a.data).all()
+    except Exception:
+        eventi_ist_giorno = []
+
     return render_template("assenza_form.html",
         assenza=a,
         docenti=docenti,
@@ -853,4 +875,7 @@ def modifica(id):
         orari_docenti_json=orari_docenti,
         utilizzi_ccnl=utilizzi_ccnl,
         ruolo_utente=ruolo,
+        eventi_ist_giorno=eventi_ist_giorno,
+        date_sospese=date_sospese,
+        sospensione_oggi=sospensione_oggi,
         next=request.args.get("next", ""))

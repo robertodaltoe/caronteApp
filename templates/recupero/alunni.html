@@ -35,6 +35,62 @@
     {% endif %}
 </div>
 
+<!-- Aggiungi alunno manualmente -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">➕ Aggiungi alunno manualmente</h3>
+    <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="azione" value="aggiungi_alunno">
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Classe *</label><br>
+            <input type="text" name="classe" required placeholder="es. 3ALSP"
+                   style="width:90px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Cognome *</label><br>
+            <input type="text" name="cognome" required
+                   style="width:140px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Nome *</label><br>
+            <input type="text" name="nome" required
+                   style="width:130px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Materia con debito *</label><br>
+            <input type="text" name="materia" required placeholder="es. MATEMATICA"
+                   style="width:170px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Docente assegnante</label><br>
+            <input type="text" name="docente" placeholder="es. VALENA SARA"
+                   style="width:160px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Tipo prova</label><br>
+            <select name="tipo_prova"
+                    style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <option value="">—</option>
+                <option value="scritto">✏️ Scritto</option>
+                <option value="orale">🗣 Orale</option>
+                <option value="pratico">🔧 Pratico</option>
+                <option value="scritto_orale">✏️🗣 Scritto + Orale</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Stato adesione</label><br>
+            <select name="stato_adesione"
+                    style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <option value="sconosciuto">— sconosciuto</option>
+                <option value="aderisce">✓ aderisce</option>
+                <option value="studio_ind">📚 studio individuale</option>
+                <option value="non_risposto">❓ non risposto</option>
+                <option value="non_aderisce">✗ non aderisce</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+    </form>
+</div>
+
 {% if tot == 0 %}
 <div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
     Nessun alunno importato. Usa il form sopra per importare il file dal registro elettronico.
@@ -70,13 +126,13 @@
 {% set STATO_LABEL = {'aderisce':'✓','studio_ind':'📚','non_risposto':'❓','non_aderisce':'✗','sconosciuto':'—'} %}
 
 <!-- Lista per materia -->
-{% for (materia, cogn_doc), alunni in per_materia.items() | sort %}
+{% for (materia, cogn_doc, ini_doc), alunni in per_materia.items() | sort %}
 <div class="card" style="margin-bottom:10px; padding:0; overflow:hidden;">
     <div style="background:#f0f4ff; padding:7px 14px; display:flex; justify-content:space-between; align-items:center;">
         <div>
             <strong style="color:var(--blu);">{{ materia[:60] }}</strong>
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
-                Prof. {{ cogn_doc }}
+                Prof. {{ cogn_doc }}{% if ini_doc %} {{ ini_doc }}.{% endif %}
             </span>
         </div>
         <span style="font-size:.8rem; background:#dbeafe; color:#1e40af;
@@ -90,7 +146,9 @@
                 <th style="width:80px;">Classe</th>
                 <th>Cognome</th>
                 <th>Nome</th>
+                <th style="width:120px;">Tipo prova</th>
                 <th style="width:110px; text-align:center;">Stato</th>
+                <th style="width:40px; text-align:center;"></th>
             </tr>
         </thead>
         <tbody>
@@ -99,6 +157,22 @@
             <td style="font-size:.84rem;">{{ a.classe }}</td>
             <td style="font-size:.88rem;"><strong>{{ a.cognome }}</strong></td>
             <td style="font-size:.88rem;">{{ a.nome }}</td>
+            <td>
+                {% set tp_attuale = parse_tipo_prova(a.tipo_prova_raw) if a.tipo_prova_raw else 'scritto' %}
+                <form method="post" style="margin:0;">
+                    <input type="hidden" name="azione" value="modifica_tipo_prova">
+                    <input type="hidden" name="id" value="{{ a.id }}">
+                    <select name="tipo_prova" onchange="this.form.submit()"
+                            style="font-size:.72rem; padding:2px 5px; border-radius:6px;
+                                   font-weight:600; cursor:pointer; border:1px solid #d1d5db;
+                                   background:{{ '#f9fafb' if not a.tipo_prova_raw else '#f0f4ff' }};
+                                   color:{{ '#9ca3af' if not a.tipo_prova_raw else '#1e40af' }};">
+                        {% for k, v in TIPO_PROVA_LABEL.items() %}
+                        <option value="{{ k }}" {% if tp_attuale == k %}selected{% endif %}>{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </td>
             <td style="text-align:center;">
                 <form method="post" style="margin:0;">
                     <input type="hidden" name="azione" value="modifica_stato">
@@ -119,6 +193,18 @@
                         <option value="sconosciuto"  {% if a.stato_adesione=='sconosciuto' %}selected{% endif %}
                                 style="background:#f9fafb;color:#9ca3af;">— sconosciuto</option>
                     </select>
+                </form>
+            </td>
+            <td style="text-align:center;">
+                <form method="post" style="margin:0;"
+                      onsubmit="return confirm('Rimuovere {{ a.cognome }} {{ a.nome }} dall\'elenco?')">
+                    <input type="hidden" name="azione" value="elimina_alunno">
+                    <input type="hidden" name="id" value="{{ a.id }}">
+                    <button type="submit" title="Rimuovi alunno"
+                            style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                                   border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">
+                        🗑
+                    </button>
                 </form>
             </td>
         </tr>

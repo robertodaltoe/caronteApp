@@ -58,19 +58,19 @@
 
 <div style="display:flex; flex-direction:column; gap:8px;">
     {{ step('1','var(--blu)','👨‍🏫','Verifica docenti disponibili',
-        'recupero.docenti',
-        'Controlla chi ha contratto TI o TD annuale — saranno titolari e commissari') }}
+        'recupero.agosto_docenti_disponibili',
+        'Contratto TI/TD annuale/TD GS + nessuna assenza registrata nel periodo') }}
     {{ step('2','#0369a1','🔗','Crea gruppi prova',
-        'recupero.agosto_proposte',
-        'Tutti gli alunni sospesi (corso + studio individuale) — tipo prova e durata per materia') }}
+        'recupero.agosto_gruppi',
+        'Accorpa classi per materia+titolare (max 12 alunni) e scegli il sorvegliante') }}
     {{ step('3','#166534','📅','Pianifica il calendario prove',
         'recupero.agosto_calendario',
         'Bozza automatica: scritti 24–27/8, orali 28/8 · Commissario proposto automaticamente') }}
-    {{ step('4','#166534','✅','Verifica copertura prove',
-        'recupero.agosto_copertura',
-        'Controlla che ogni alunno abbia la sua prova pianificata per ogni materia sospesa') }}
-    {{ step('5','#92400e','📊','Esporta XLSX',
+    {{ step('4','#92400e','📊','Esporta XLSX',
         'recupero.agosto_export_xlsx',
-        'Una scheda per materia — versione famiglie e versione docenti con commissari', last=true) }}
+        'Foglio Famiglie (per giornata, senza nomi) + foglio Docenti (con tutti i nominativi)') }}
+    {{ step('5','#7c3aed','📦','Schede coppie (ZIP)',
+        'recupero.agosto_export_schede_coppie',
+        'Un file XLSX per ogni coppia somministratore+assistente — date, durata, candidati', last=true) }}
 </div>
 {% endblock %}

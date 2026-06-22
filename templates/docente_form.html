@@ -169,6 +169,69 @@
                     </div>
                 </label>
             </div>
+            <div id="blocco-titolare-rif" style="margin-top:10px; {{ '' if ruolo_val == 'itp' else 'display:none;' }}">
+                <label style="font-size:.78rem; font-weight:600; color:var(--grigio); display:block; margin-bottom:4px;">
+                    Titolari di riferimento (un abbinamento per ogni cattedra/materia affiancata)
+                </label>
+                <div id="lista-abbinamenti">
+                    {% for ab in abbinamenti_itp %}
+                    <div class="riga-abbinamento" style="display:flex; gap:8px; margin-bottom:6px; align-items:center;">
+                        <select name="abbinamento_id_titolare[]"
+                                style="flex:1; max-width:280px; padding:6px 10px; border:1px solid #d1d5db;
+                                       border-radius:8px; font-size:.84rem;">
+                            <option value="">— titolare —</option>
+                            {% for t in titolari_disponibili %}
+                            <option value="{{ t.id }}" {% if ab.id_titolare == t.id %}selected{% endif %}>
+                                {{ t.cognome }} {{ t.nome }}{% if t.materia %} — {{ t.materia }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="abbinamento_materia[]" value="{{ ab.materia or '' }}"
+                               placeholder="Materia (es. FISICA)"
+                               style="flex:1; max-width:200px; padding:6px 10px; border:1px solid #d1d5db;
+                                      border-radius:8px; font-size:.84rem;">
+                        <button type="button" onclick="this.closest('.riga-abbinamento').remove()"
+                                style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                                       border-radius:6px;padding:5px 10px;font-size:.8rem;cursor:pointer;">✕</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" onclick="aggiungiRigaAbbinamento()"
+                        style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
+                               border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer;margin-top:4px;">
+                    ＋ Aggiungi abbinamento
+                </button>
+                <div style="font-size:.74rem; color:var(--grigio); margin-top:6px;">
+                    I debiti che questo ITP assegna nei recuperi confluiscono automaticamente
+                    nel conteggio del titolare abbinato per quella materia.
+                </div>
+            </div>
+
+            <template id="template-riga-abbinamento">
+                <div class="riga-abbinamento" style="display:flex; gap:8px; margin-bottom:6px; align-items:center;">
+                    <select name="abbinamento_id_titolare[]"
+                            style="flex:1; max-width:280px; padding:6px 10px; border:1px solid #d1d5db;
+                                   border-radius:8px; font-size:.84rem;">
+                        <option value="">— titolare —</option>
+                        {% for t in titolari_disponibili %}
+                        <option value="{{ t.id }}">{{ t.cognome }} {{ t.nome }}{% if t.materia %} — {{ t.materia }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="abbinamento_materia[]" placeholder="Materia (es. FISICA)"
+                           style="flex:1; max-width:200px; padding:6px 10px; border:1px solid #d1d5db;
+                                  border-radius:8px; font-size:.84rem;">
+                    <button type="button" onclick="this.closest('.riga-abbinamento').remove()"
+                            style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                                   border-radius:6px;padding:5px 10px;font-size:.8rem;cursor:pointer;">✕</button>
+                </div>
+            </template>
+            <script>
+            function aggiungiRigaAbbinamento() {
+                const tpl = document.getElementById('template-riga-abbinamento');
+                const clone = tpl.content.cloneNode(true);
+                document.getElementById('lista-abbinamenti').appendChild(clone);
+            }
+            </script>
         </div>
 
         <!-- TIPO SERVIZIO / CONTRATTO -->
@@ -430,12 +493,15 @@ function aggiornaTipoServizio(tipo) {
 function aggiornaRuolo(radio) {
     const lTit = document.getElementById('lbl-titolare');
     const lItp = document.getElementById('lbl-itp');
+    const bloccoRif = document.getElementById('blocco-titolare-rif');
     if (radio.value === 'titolare') {
         lTit.style.borderColor = '#166534'; lTit.style.background = '#f0fdf4';
         lItp.style.borderColor = '#d1d5db'; lItp.style.background = 'white';
+        if (bloccoRif) bloccoRif.style.display = 'none';
     } else {
         lItp.style.borderColor = '#7c3aed'; lItp.style.background = '#f5f3ff';
         lTit.style.borderColor = '#d1d5db'; lTit.style.background = 'white';
+        if (bloccoRif) bloccoRif.style.display = 'block';
     }
 }
 

@@ -69,6 +69,8 @@ def create_app():
     app.register_blueprint(impostazioni_bp)
     from routes.recupero import recupero_bp
     app.register_blueprint(recupero_bp)
+    from routes.rientro import rientro_bp
+    app.register_blueprint(rientro_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json
@@ -405,4 +407,4 @@ def _seed_sospensioni():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5002)
+    app.run(debug=True, use_reloader=True, host='0.0.0.0', port=5002)

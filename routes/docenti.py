@@ -46,12 +46,17 @@ def nuovo():
             giorni_presenza= (','.join(request.form.getlist('giorni_presenza')) or None) if request.form.get('tipo_servizio') == 'multi_sede' else None,
             attivo         = True
         )
+        id_tit_rif = request.form.get('id_titolare_riferimento', '').strip()
+        d.id_titolare_riferimento = int(id_tit_rif) if (d.ruolo == 'itp' and id_tit_rif) else None
         d.nome_display = f"{d.cognome} {d.nome[0]}." if d.nome else d.cognome
         db.session.add(d)
         db.session.commit()
         flash(f"Docente {d.nome_completo} aggiunto.", 'success')
         return redirect(url_for('docenti.lista'))
-    return render_template('docente_form.html', docente=None, giorni=list(enumerate(GIORNI)), eccezioni=[])
+    titolari_disponibili = Docente.query.filter(
+        Docente.attivo == True, Docente.ruolo == 'titolare').order_by(Docente.cognome).all()
+    return render_template('docente_form.html', docente=None, giorni=list(enumerate(GIORNI)), eccezioni=[],
+        titolari_disponibili=titolari_disponibili)
 
 @docenti_bp.route('/docenti/<int:id>/modifica', methods=['GET', 'POST'])
 def modifica(id):
@@ -63,6 +68,32 @@ def modifica(id):
         d.email          = request.form.get('email', '').strip()
         d.tipo_contratto = request.form.get('tipo_contratto', '').strip()
         d.ruolo          = request.form.get('ruolo', 'titolare').strip()
+
+        # Abbinamenti titolare+materia (un ITP può affiancare più titolari
+        # su materie/laboratori diversi). Sostituisce sempre l'elenco
+        # completo con quello inviato dal form.
+        from models.docente import CoppiaDocenteItp
+        CoppiaDocenteItp.query.filter_by(id_itp=d.id).delete()
+        if d.ruolo == 'itp':
+            id_titolari = request.form.getlist('abbinamento_id_titolare[]')
+            materie_abb = request.form.getlist('abbinamento_materia[]')
+            primo_titolare = None
+            for i, id_tit_str in enumerate(id_titolari):
+                id_tit_str = id_tit_str.strip()
+                if not id_tit_str:
+                    continue
+                id_tit = int(id_tit_str)
+                materia_abb = materie_abb[i].strip() if i < len(materie_abb) else ''
+                db.session.add(CoppiaDocenteItp(
+                    id_titolare=id_tit, id_itp=d.id,
+                    materia=materia_abb or None, attiva=True))
+                if primo_titolare is None:
+                    primo_titolare = id_tit
+            # Campo singolo mantenuto in sync con il primo abbinamento,
+            # per eventuale codice legacy che lo legge ancora.
+            d.id_titolare_riferimento = primo_titolare
+        else:
+            d.id_titolare_riferimento = None
         tipo_serv = request.form.get('tipo_servizio', 'full')
         d.part_time      = (tipo_serv == 'part_time')
         d.altra_scuola   = (request.form.get('altra_scuola', '').strip() or None) if tipo_serv == 'multi_sede' else None
@@ -126,10 +157,20 @@ def modifica(id):
     materie = Materia.query.join(Dipartimento).order_by(Dipartimento.ordine, Materia.nome).all()
     mat_assegnate = {dm.id_materia for dm in DocenteMateria.query.filter_by(
         id_docente=id, anno_scol='2025-2026').all()}
+    titolari_disponibili = (Docente.query
+        .filter(Docente.attivo == True, Docente.ruolo == 'titolare', Docente.id != d.id)
+        .order_by(Docente.cognome).all())
+
+    from models.docente import CoppiaDocenteItp
+    abbinamenti_itp = (CoppiaDocenteItp.query
+        .filter_by(id_itp=d.id, attiva=True).all())
+
     return render_template('docente_form.html', docente=d,
                            materie=materie, mat_assegnate=mat_assegnate,
         giorni=list(enumerate(GIORNI)), eccezioni=eccezioni,
-        id_prev=id_prev, id_next=id_next)
+        id_prev=id_prev, id_next=id_next,
+        titolari_disponibili=titolari_disponibili,
+        abbinamenti_itp=abbinamenti_itp)
 
 @docenti_bp.route('/docenti/<int:id>/anonimizza', methods=['POST'])
 def anonimizza(id):

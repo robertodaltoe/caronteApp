@@ -2,7 +2,7 @@
 {% block title %}Calendario Recupero{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
+    <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">← Recupero</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">📅 Calendario lezioni di recupero</h1>
     <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('recupero.export_xlsx') }}" class="btn btn-sm"
@@ -14,49 +14,66 @@
 
 <!-- Genera bozza -->
 <div class="card" style="padding:14px 18px; margin-bottom:16px; border-left:4px solid #0369a1;">
+
+    <!-- Riga 1: Genera bozza (sovrascrive tutto) -->
     <form method="post" action="{{ url_for('recupero.genera_bozza') }}"
           onsubmit="return document.getElementById('chk-conferma').checked || (alert('Seleziona la casella di conferma') || false)">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-            <div>
+            <div style="flex:1; min-width:260px;">
                 <strong style="color:#0369a1; font-size:.9rem;">🤖 Genera bozza automatica</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Distribuisce le lezioni rispettando disponibilità docenti e senza sovrapposizioni per gli alunni.
-                    <strong style="color:#dc2626;">Sovrascrive le lezioni esistenti.</strong>
+                    <strong style="color:#dc2626;">Sovrascrive tutte le lezioni esistenti.</strong>
                 </div>
             </div>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                <input type="checkbox" id="chk-conferma" name="conferma_elimina" value="1">
-                Confermo — elimina le lezioni esistenti e genera la bozza
-            </label>
-            <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white;">
-                🤖 Genera bozza (sovrascrive)
+            <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0;">
+                <label style="font-size:.8rem; display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;">
+                    <input type="checkbox" id="chk-conferma" name="conferma_elimina" value="1">
+                    Confermo
+                </label>
+                <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white; white-space:nowrap;">
+                    🤖 Genera bozza
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
+
+    <!-- Riga 2: Completa bozza (solo gruppi vuoti, non tocca il resto) -->
+    <form method="post" action="{{ url_for('recupero.calendario') }}">
+        <input type="hidden" name="azione" value="completa_bozza">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <strong style="color:#166534; font-size:.9rem;">🧩 Completa bozza</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Aggiunge lezioni solo ai gruppi ancora senza data — non tocca quelle già
+                    pianificate, automaticamente o a mano.
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sm" style="background:#166534; color:white;
+                    white-space:nowrap; margin-left:auto; flex-shrink:0;">
+                🧩 Completa
             </button>
         </div>
     </form>
-    <form method="post" action="{{ url_for('recupero.calendario') }}" style="margin-top:8px;"
+
+    <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
+
+    <!-- Riga 3: Azzera tutto -->
+    <form method="post" action="{{ url_for('recupero.calendario') }}"
           onsubmit="return confirm('Eliminare TUTTO il calendario? Questa azione non si può annullare.')">
         <input type="hidden" name="azione" value="elimina_tutto">
-        <div style="display:flex; gap:8px; align-items:center;">
-            <div>
-                <strong style="color:#dc2626; font-size:.88rem;">🗑 Azzera tutto il calendario</strong>
-                <div style="font-size:.76rem; color:var(--grigio);">Elimina tutte le lezioni pianificate.</div>
-            </div>
-            <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white; white-space:nowrap;">
-                🗑 Azzera tutto
-            </button>
-        </div>
-    </form>
-    <form method="post" action="{{ url_for('recupero.calendario') }}" style="margin-top:8px;">
-        <input type="hidden" name="azione" value="completa_bozza">
-        <div style="display:flex; gap:8px; align-items:center;">
-            <div>
-                <strong style="color:#166534; font-size:.88rem;">🧩 Completa bozza</strong>
-                <div style="font-size:.76rem; color:var(--grigio);">
-                    Aggiunge lezioni solo ai gruppi ancora senza date — non tocca quelli già pianificati.
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <strong style="color:#dc2626; font-size:.9rem;">🗑 Azzera tutto il calendario</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Elimina tutte le lezioni pianificate (gruppi e docenti restano intatti).
                 </div>
             </div>
-            <button type="submit" class="btn btn-sm" style="background:#166534; color:white; white-space:nowrap;">
-                🧩 Completa
+            <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white;
+                    white-space:nowrap; margin-left:auto; flex-shrink:0;">
+                🗑 Azzera tutto
             </button>
         </div>
     </form>

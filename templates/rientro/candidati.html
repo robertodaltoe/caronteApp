@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Rientro — Candidati{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('rientro.index') }}" class="btn btn-primary btn-sm">← Rientro</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">👤 Candidati al colloquio di rientro</h1>
+</div>
+
+<div class="card" style="padding:14px 18px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">➕ Aggiungi candidato</h3>
+    <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Cognome *</label><br>
+            <input type="text" name="cognome" required
+                   style="width:140px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Nome *</label><br>
+            <input type="text" name="nome" required
+                   style="width:130px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Classe di provenienza *</label><br>
+            <input type="text" name="classe" required placeholder="es. 3ALSP" list="classi-list"
+                   style="width:120px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <datalist id="classi-list">
+                {% for cl in classi_con_materie %}<option value="{{ cl }}">{% endfor %}
+            </datalist>
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+            <input type="text" name="note"
+                   style="width:180px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+    </form>
+    {% if classi_con_materie %}
+    <div style="font-size:.74rem; color:var(--grigio); margin-top:8px;">
+        Classi con materie già impostate: {{ classi_con_materie | join(', ') }}
+    </div>
+    {% else %}
+    <div style="font-size:.74rem; color:#dc2626; margin-top:8px;">
+        ⚠ Nessuna classe ha ancora le materie impostate — vai prima in "Materie per classe".
+    </div>
+    {% endif %}
+</div>
+
+{% if not candidati %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+    Nessun candidato inserito ancora.
+</div>
+{% endif %}
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:90px;">Classe</th>
+                <th>Cognome</th>
+                <th>Nome</th>
+                <th>Note</th>
+                <th style="width:50px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in candidati %}
+        <tr>
+            <td style="font-size:.84rem;">{{ c.classe }}</td>
+            <td style="font-size:.88rem;"><strong>{{ c.cognome }}</strong></td>
+            <td style="font-size:.88rem;">{{ c.nome }}</td>
+            <td style="font-size:.78rem; color:var(--grigio);">{{ c.note or '—' }}</td>
+            <td style="text-align:center;">
+                <form method="post" onsubmit="return confirm('Rimuovere {{ c.cognome }} {{ c.nome }}?')">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ c.id }}">
+                    <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                            border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">🗑</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

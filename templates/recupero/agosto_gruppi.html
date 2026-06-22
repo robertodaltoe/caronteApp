@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}Gruppi prove agosto{% endblock %}
+{% block content %}
+{% macro pill_classi(name, classi_disponibili, selezionate_str, uid) %}
+{%- set sel = selezionate_str.split(',') | map('trim') | map('upper') | list if selezionate_str else [] -%}
+<div style="display:flex; flex-wrap:wrap; gap:3px;" id="cls-{{ uid }}">
+{% for cls in classi_disponibili %}
+{%- set attivo = cls.strip().upper() in sel -%}
+<label style="display:inline-flex;align-items:center;gap:2px;cursor:pointer;
+              padding:2px 7px;border-radius:5px;font-size:.74rem;font-weight:600;
+              border:1px solid {{ '#3b82f6' if attivo else '#d1d5db' }};
+              background:{{ '#dbeafe' if attivo else '#f9fafb' }};
+              color:{{ '#1e40af' if attivo else '#6b7280' }};">
+    <input type="checkbox" name="{{ name }}" value="{{ cls }}"
+           {{ 'checked' if attivo else '' }} style="display:none;"
+           onchange="var l=this.closest('label');
+             l.style.background=this.checked?'#dbeafe':'#f9fafb';
+             l.style.color=this.checked?'#1e40af':'#6b7280';
+             l.style.borderColor=this.checked?'#3b82f6':'#d1d5db';">
+    {{ cls }}
+</label>
+{% endfor %}
+</div>
+{% endmacro %}
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">← Agosto</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🔗 Gruppi prove di recupero — Agosto</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
+     color:var(--grigio); border-left:4px solid #0369a1;">
+    Per ogni docente assegnante, seleziona con le pillole le classi (tra quelle con alunni
+    in debito nella sua materia) da accorpare nello stesso gruppo prova. Il <strong>sorvegliante</strong>
+    si scegli liberamente tra tutti i docenti disponibili — l'etichetta mostra le classi in cui insegna,
+    a titolo informativo. Fino a 12 alunni per gruppo è gestibile in un'unica sessione.
+</div>
+
+<!-- ══ SEZIONE 2: GRUPPI CREATI ══════════════════════════════════ -->
+<h2 style="font-size:1rem; color:var(--blu); margin:22px 0 8px;">✅ Gruppi creati</h2>
+
+{% if not gruppi %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+    Nessun gruppo creato ancora.
+</div>
+{% endif %}
+
+{% for g in gruppi %}
+<div class="card" style="padding:12px 16px; margin-bottom:10px; background:#f0fdf4;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;
+                flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+        <div>
+            <strong style="font-size:.92rem; color:var(--blu);">{{ g.materia }}</strong>
+            <span style="font-size:.8rem; color:var(--grigio); margin-left:6px;">
+                Titolare: {{ g.docente.cognome if g.docente else '—' }}
+                {% if g.docente and g.docente.nome %} {{ g.docente.nome[0] }}.{% endif %}
+            </span>
+            <span style="font-size:.78rem; background:#dbeafe; color:#1e40af;
+                         padding:2px 8px; border-radius:8px; font-weight:700; margin-left:6px;">
+                {{ g.alunni|length }} alunni
+            </span>
+        </div>
+        <form method="post" style="display:inline; margin:0;"
+              onsubmit="return confirm('Eliminare il gruppo {{ g.materia[:20] }}?')">
+            <input type="hidden" name="azione" value="elimina">
+            <input type="hidden" name="id" value="{{ g.id }}">
+            <button type="submit"
+                    style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                           border-radius:5px;padding:2px 8px;font-size:.76rem;cursor:pointer;">
+                🗑 Elimina
+            </button>
+        </form>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="azione" value="modifica">
+        <input type="hidden" name="id" value="{{ g.id }}">
+
+        <div style="margin-bottom:8px;">
+            <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:3px;">Classi</label>
+            {{ pill_classi('classi_cb', classi_per_gruppo.get(g.id, g.classi.split(',')), g.classi, 'eg'~g.id) }}
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Tipo prova</label>
+                <select name="tipo_prova" style="padding:3px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;">
+                    {% for k,v in TIPO_PROVA_LABEL.items() %}
+                    <option value="{{ k }}" {% if k == g.tipo_prova %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Durata (h)</label>
+                <input type="number" name="durata_ore" value="{{ g.durata_ore }}" min="0.5" max="6" step="0.5"
+                       style="width:55px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;
+                              font-size:.82rem;text-align:center;">
+            </div>
+            <div style="min-width:200px;">
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Sorvegliante</label>
+                <select name="id_sorvegliante"
+                        style="width:100%;padding:3px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;">
+                    <option value="">— nessuno —</option>
+                    {% set ordinati = [] %}
+                    {% for rd in disponibili %}
+                        {% set _ = ordinati.append((n_impegni_docente.get(rd.docente.id, 0), rd)) %}
+                    {% endfor %}
+                    {% for n_imp, rd in ordinati | sort(attribute='0') %}
+                    <option value="{{ rd.docente.id }}"
+                        {% if g.sorvegliante and g.sorvegliante.id == rd.docente.id %}selected{% endif %}>
+                        {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                        — {{ n_imp }} impegn{{ 'o' if n_imp == 1 else 'i' }}
+                        {% if classi_per_docente.get(rd.docente.id) %}
+                        — {{ classi_per_docente[rd.docente.id] | sort | join(', ') }}
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+        </div>
+    </form>
+</div>
+{% endfor %}
+
+<!-- ══ SEZIONE 0: GRUPPO LIBERO (qualsiasi titolare, tutte le classi) ══ -->
+<h2 style="font-size:1rem; color:var(--7c3aed,#7c3aed); margin:6px 0 8px;">🆓 Crea gruppo libero</h2>
+<div class="card" style="padding:10px 14px; margin-bottom:10px; font-size:.8rem;
+     color:var(--grigio); border-left:4px solid #7c3aed;">
+    Scegli materia e titolare liberamente: qui compaiono <strong>tutte</strong> le classi con un
+    debito in quella materia, indipendentemente da chi ha assegnato il debito. Utile quando vuoi
+    affidare a un docente la somministrazione di più classi che non sono le sue.
+</div>
+
+<div class="card" style="padding:14px 16px; margin-bottom:18px; background:#faf5ff; border:1px solid #e9d5ff;">
+    <form method="post" id="form-gruppo-libero">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:10px;">
+            <div style="min-width:200px;">
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Materia</label>
+                <select id="libero-materia" name="materia" onchange="aggiornaClassiLibero()"
+                        style="width:100%;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.84rem;">
+                    <option value="">— seleziona —</option>
+                    {% for m in materie_disponibili %}
+                    <option value="{{ m }}">{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="min-width:220px;">
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Docente titolare</label>
+                <select id="libero-titolare" name="id_rec_docente" required disabled
+                        style="width:100%;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.84rem;">
+                    <option value="">— scegli prima la materia —</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Tipo prova</label>
+                <select name="tipo_prova" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.84rem;">
+                    {% for k,v in TIPO_PROVA_LABEL.items() %}
+                    <option value="{{ k }}">{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Durata (h)</label>
+                <input type="number" name="durata_ore" value="2" min="0.5" max="6" step="0.5"
+                       style="width:55px;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;
+                              font-size:.84rem;text-align:center;">
+            </div>
+            <div style="min-width:200px;">
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Sorvegliante</label>
+                <select name="id_sorvegliante"
+                        style="width:100%;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.84rem;">
+                    <option value="">— nessuno —</option>
+                    {% set ordinati_lib = [] %}
+                    {% for rd in disponibili %}
+                        {% set _ = ordinati_lib.append((n_impegni_docente.get(rd.docente.id, 0), rd)) %}
+                    {% endfor %}
+                    {% for n_imp, rd in ordinati_lib | sort(attribute='0') %}
+                    <option value="{{ rd.docente.id }}">
+                        {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                        — {{ n_imp }} impegn{{ 'o' if n_imp == 1 else 'i' }}
+                        {% if classi_per_docente.get(rd.docente.id) %}
+                        — {{ classi_per_docente[rd.docente.id] | sort | join(', ') }}
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div id="libero-classi-wrap" style="margin-bottom:10px; display:none;">
+            <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:3px;">
+                Classi con debito in questa materia (qualsiasi assegnante)
+            </label>
+            <div id="libero-classi" style="display:flex; flex-wrap:wrap; gap:3px;"></div>
+        </div>
+
+        <button type="submit" class="btn btn-success btn-sm">✚ Crea gruppo libero</button>
+    </form>
+</div>
+
+<script>
+const CLASSI_PER_MATERIA = {{ classi_per_materia_tutte | tojson }};
+const CLASSI_COPERTE_PER_MATERIA = {{ classi_coperte_per_materia | tojson }};
+const DOCENTI_PER_MATERIA = {{ docenti_per_materia | tojson }};
+
+function aggiornaTitolareLibero(materia) {
+    const sel = document.getElementById('libero-titolare');
+    sel.innerHTML = '';
+    const docenti = DOCENTI_PER_MATERIA[materia] || [];
+    if (!materia || docenti.length === 0) {
+        sel.disabled = true;
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = materia ? '— nessun docente disponibile per questa materia —' : '— scegli prima la materia —';
+        sel.appendChild(opt);
+        return;
+    }
+    sel.disabled = false;
+    const optVuota = document.createElement('option');
+    optVuota.value = '';
+    optVuota.textContent = '— seleziona —';
+    sel.appendChild(optVuota);
+    docenti.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id_rec_docente;
+        const etichettaClassi = d.n_classi === 1 ? '1 classe' : (d.n_classi + ' classi');
+        opt.textContent = d.label + ' — ' + d.n_alunni + ' alunni (' + etichettaClassi + ')';
+        sel.appendChild(opt);
+    });
+}
+
+function aggiornaClassiLibero() {
+    const materia = document.getElementById('libero-materia').value;
+    const wrap = document.getElementById('libero-classi-wrap');
+    const box = document.getElementById('libero-classi');
+    box.innerHTML = '';
+    aggiornaTitolareLibero(materia);
+    if (!materia) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const classi = (CLASSI_PER_MATERIA[materia] || []).slice().sort();
+    const coperte = new Set((CLASSI_COPERTE_PER_MATERIA[materia] || []).map(c => c.toUpperCase()));
+    classi.forEach(cls => {
+        const label = document.createElement('label');
+        const giaCoperta = coperte.has(cls.toUpperCase());
+        label.style.cssText = 'display:inline-flex;align-items:center;gap:2px;cursor:pointer;' +
+            'padding:2px 7px;border-radius:5px;font-size:.74rem;font-weight:600;' +
+            'border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;';
+        if (giaCoperta) {
+            label.title = 'Già presente in un altro gruppo per questa materia';
+            label.style.opacity = '0.55';
+        }
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.name = 'classi_cb';
+        input.value = cls;
+        input.style.display = 'none';
+        input.onchange = function() {
+            label.style.background = this.checked ? '#ede9fe' : '#f9fafb';
+            label.style.color = this.checked ? '#6d28d9' : '#6b7280';
+            label.style.borderColor = this.checked ? '#7c3aed' : '#d1d5db';
+        };
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(cls + (giaCoperta ? ' ✓' : '')));
+        box.appendChild(label);
+    });
+}
+</script>
+
+<!-- ══ SEZIONE 1: PROPOSTE PER DOCENTE ASSEGNANTE ══════════════════ -->
+<h2 style="font-size:1rem; color:var(--blu); margin:18px 0 8px;">📋 Proposte (per docente assegnante)</h2>
+
+{% for p in proposte %}
+{% if p.classi_libere %}
+<div class="card" style="padding:12px 16px; margin-bottom:10px;">
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <input type="hidden" name="materia" value="{{ p.materia }}">
+        <input type="hidden" name="cognome_doc" value="{{ p.cognome_doc }}">
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;
+                    flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+            <div>
+                <strong style="font-size:.92rem; color:var(--blu);">{{ p.materia }}</strong>
+                <span style="font-size:.78rem; background:#dbeafe; color:#1e40af;
+                             padding:1px 7px; border-radius:8px; font-weight:700; margin-left:6px;"
+                      title="Alunni coinvolti nelle classi ancora libere">
+                    👥 {{ p.n_alunni_libere }}{% if p.n_alunni_libere != p.n_alunni_totale %} / {{ p.n_alunni_totale }}{% endif %}
+                </span>
+                <span style="font-size:.8rem; color:var(--grigio); margin-left:6px;">
+                    {{ p.cognome_doc }} {{ p.nome_ini_doc }}.
+                    <span style="font-size:.7rem; color:#9ca3af;">({{ p.materia_raw[:30] }})</span>
+                </span>
+                {% if p.n_classi_coperte > 0 %}
+                <span style="font-size:.7rem; color:#166534; margin-left:6px;">
+                    ✓ {{ p.n_classi_coperte }} class{{ 'e' if p.n_classi_coperte != 1 else 'e' }} già in un gruppo
+                </span>
+                {% endif %}
+            </div>
+            {% if p.rd_suggerito %}
+            <span style="font-size:.72rem; color:#166534; font-weight:700;">
+                ✓ titolare: {{ p.rd_suggerito.docente.cognome }} {{ p.rd_suggerito.docente.nome[:1] }}.
+            </span>
+            {% else %}
+            <span style="font-size:.72rem; color:#dc2626;">⚠ docente non trovato tra i disponibili</span>
+            {% endif %}
+        </div>
+
+        <input type="hidden" name="id_rec_docente" value="{{ p.rd_suggerito.id if p.rd_suggerito else '' }}">
+
+        <div style="margin-bottom:8px;">
+            <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:3px;">
+                Classi da accorpare (libere)
+            </label>
+            {{ pill_classi('classi_cb', p.classi_libere, '', 'p'~loop.index) }}
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Tipo prova</label>
+                <select name="tipo_prova" style="padding:3px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;">
+                    {% for k,v in TIPO_PROVA_LABEL.items() %}
+                    <option value="{{ k }}">{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Durata (h)</label>
+                <input type="number" name="durata_ore" value="2" min="0.5" max="6" step="0.5"
+                       style="width:55px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;
+                              font-size:.82rem;text-align:center;">
+            </div>
+            <div style="min-width:200px;">
+                <label style="font-size:.72rem;color:var(--grigio);display:block;">Sorvegliante</label>
+                <select name="id_sorvegliante"
+                        style="width:100%;padding:3px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;">
+                    <option value="">— nessuno —</option>
+                    {% set ordinati_prop = [] %}
+                    {% for rd in disponibili %}
+                        {% set _ = ordinati_prop.append((n_impegni_docente.get(rd.docente.id, 0), rd)) %}
+                    {% endfor %}
+                    {% for n_imp, rd in ordinati_prop | sort(attribute='0') %}
+                    <option value="{{ rd.docente.id }}">
+                        {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
+                        — {{ n_imp }} impegn{{ 'o' if n_imp == 1 else 'i' }}
+                        {% if classi_per_docente.get(rd.docente.id) %}
+                        — {{ classi_per_docente[rd.docente.id] | sort | join(', ') }}
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm" {{ 'disabled' if not p.rd_suggerito else '' }}>
+                ✚ Crea gruppo
+            </button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if proposte | selectattr('classi_libere') | list | length == 0 %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio); margin-bottom:18px;">
+    Tutte le classi disponibili sono già state assegnate a un gruppo.
+</div>
+{% endif %}
+
+{% endblock %}

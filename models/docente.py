@@ -12,6 +12,10 @@ class Docente(db.Model):
     attivo        = db.Column(db.Boolean, default=True)
     # Ruolo didattico: 'titolare' (docente della materia) o 'itp' (ITP — compresenza laboratorio)
     ruolo         = db.Column(db.String(20), default='titolare')
+    # Per gli ITP: titolare della cattedra abbinata. I debiti che l'ITP
+    # assegna (es. nei recuperi) confluiscono nel conteggio del titolare.
+    id_titolare_riferimento = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
+    titolare_riferimento    = db.relationship('Docente', remote_side=[id], foreign_keys=[id_titolare_riferimento])
     # Docenti su più scuole
     altra_scuola    = db.Column(db.String(120), nullable=True)   # nome istituto secondario
     giorni_presenza = db.Column(db.String(20),  nullable=True)   # es. '0,2,4' = lun/mer/ven
@@ -78,3 +82,34 @@ class Docente(db.Model):
 
     def __repr__(self):
         return f"<Docente {self.cognome} {self.nome}>"
+
+
+class CoppiaDocenteItp(db.Model):
+    """
+    Abbinamento esplicito titolare↔ITP sulla stessa cattedra/materia.
+    Usato per il recupero estivo: i debiti assegnati dall'ITP vanno
+    conteggiati insieme a quelli del titolare quando lo si propone
+    come responsabile del gruppo prova.
+    Es. Informatica: Landi (titolare) + Luzzi (ITP)
+        Tedesco: Fumagalli (titolare) + May (ITP) — anche se May non è
+        più disponibile (contratto scaduto), l'abbinamento resta utile
+        per il conteggio storico dei debiti assegnati.
+    """
+    __tablename__ = 'coppie_docente_itp'
+
+    id            = db.Column(db.Integer, primary_key=True)
+    id_titolare   = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False)
+    id_itp        = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False)
+    materia       = db.Column(db.String(100), nullable=True)  # etichetta libera, informativa
+    note          = db.Column(db.String(200), nullable=True)
+    attiva        = db.Column(db.Boolean, default=True)  # disattivabile senza eliminare lo storico
+
+    titolare = db.relationship('Docente', foreign_keys=[id_titolare])
+    itp      = db.relationship('Docente', foreign_keys=[id_itp])
+
+    __table_args__ = (
+        db.UniqueConstraint('id_titolare', 'id_itp', name='uq_coppia_titolare_itp'),
+    )
+
+    def __repr__(self):
+        return f"<CoppiaDocenteItp {self.titolare.cognome if self.titolare else '?'} + {self.itp.cognome if self.itp else '?'}>"

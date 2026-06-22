@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Gestione periodi{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🗓️ Gestione periodi</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Periodi condivisi tra i moduli <strong>Recupero</strong> (corsi giugno + prove agosto) e <strong>Rientro</strong>
+    (colloqui dall'estero). Ogni anno scolastico può avere un solo periodo per codice.
+</div>
+
+<!-- FORM AGGIUNGI -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi periodo</h3>
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Anno scolastico *</label><br>
+                <input type="text" name="anno_scol" required value="2025-2026" placeholder="2025-2026"
+                       style="width:110px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Tipo periodo *</label><br>
+                <select id="sel-codice" name="codice" required onchange="autoLabel()"
+                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    <option value="">— seleziona —</option>
+                    {% for codice, (etichetta, modulo) in codici_noti.items() %}
+                    <option value="{{ codice }}" data-label="{{ etichetta }}">{{ etichetta }} ({{ modulo }})</option>
+                    {% endfor %}
+                    <option value="">— altro (codice libero sotto) —</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label style="font-size:.75rem; color:var(--grigio);">Etichetta *</label><br>
+                <input id="inp-label" type="text" name="label" required placeholder="Es. Prove di recupero (agosto)"
+                       style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Dal *</label><br>
+                <input type="date" name="data_inizio" required
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Al *</label><br>
+                <input type="date" name="data_fine" required
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Ora inizio</label><br>
+                <input type="time" name="ora_inizio" value="08:00"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Ora fine</label><br>
+                <input type="time" name="ora_fine" value="16:00"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-success btn-sm">Aggiungi</button>
+            </div>
+        </div>
+        <div style="margin-top:8px; font-size:.72rem; color:var(--grigio);">
+            Per usare un codice diverso da quelli noti, lascia il select su "— altro —" e scrivi
+            il codice tecnico a mano nel campo Etichetta non basta: serve modificare il codice manualmente
+            nel database, oppure dimmi il nuovo modulo e lo aggiungo all'elenco.
+        </div>
+    </form>
+</div>
+
+<!-- ELENCO -->
+<div class="card" style="padding:0; overflow:hidden;">
+    {% if periodi %}
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th style="width:90px;">Anno</th>
+                <th>Tipo / Etichetta</th>
+                <th style="width:110px;">Dal</th>
+                <th style="width:110px;">Al</th>
+                <th style="width:140px;">Orario</th>
+                <th style="width:90px; text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in periodi %}
+        {% set info = codici_noti.get(p.codice) %}
+        {% set passato = p.data_fine < oggi %}
+
+        <tr id="row-{{ p.id }}" {% if passato %}style="opacity:.5;"{% endif %}>
+            <td style="font-size:.86rem; white-space:nowrap;">{{ p.anno_scol }}</td>
+            <td style="font-size:.88rem;">
+                <span style="padding:2px 8px; border-radius:10px; font-size:.72rem; font-weight:700;
+                             background:#ede9fe; color:#5b21b6; margin-right:6px;">
+                    {{ info[1] if info else 'Da definire' }}
+                </span>
+                {{ p.label }}
+                <div style="font-size:.7rem; color:var(--grigio);">{{ p.codice }}</div>
+                {% if passato %}<span style="font-size:.7rem; color:var(--grigio);">passato</span>{% endif %}
+            </td>
+            <td style="font-size:.86rem; white-space:nowrap;"><strong>{{ p.data_inizio.strftime('%d/%m/%Y') }}</strong></td>
+            <td style="font-size:.86rem; white-space:nowrap;"><strong>{{ p.data_fine.strftime('%d/%m/%Y') }}</strong></td>
+            <td style="font-size:.84rem; white-space:nowrap;">{{ p.ora_inizio }} – {{ p.ora_fine }}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ p.id }})" title="Modifica">✏️</button>
+                <form method="post" onsubmit="return confirm('Eliminare questo periodo?')"
+                      style="display:inline; margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ p.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                </form>
+            </td>
+        </tr>
+
+        <tr id="edit-{{ p.id }}" style="display:none; background:#f0f4ff;">
+            <td colspan="6" style="padding:10px 14px;">
+                <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ p.id }}">
+                    <div style="flex:1; min-width:200px;">
+                        <label style="font-size:.72rem; color:var(--grigio);">Etichetta</label><br>
+                        <input type="text" name="label" required value="{{ p.label }}"
+                               style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Dal</label><br>
+                        <input type="date" name="data_inizio" value="{{ p.data_inizio.isoformat() }}"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Al</label><br>
+                        <input type="date" name="data_fine" value="{{ p.data_fine.isoformat() }}"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Ora inizio</label><br>
+                        <input type="time" name="ora_inizio" value="{{ p.ora_inizio }}"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Ora fine</label><br>
+                        <input type="time" name="ora_fine" value="{{ p.ora_fine }}"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+                        <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
+                                onclick="toggleEdit({{ p.id }})">Annulla</button>
+                    </div>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding:32px; color:var(--grigio);">
+        Nessun periodo configurato.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleEdit(id) {
+    const row  = document.getElementById('row-' + id);
+    const edit = document.getElementById('edit-' + id);
+    const vis  = edit.style.display === 'none';
+    edit.style.display = vis ? '' : 'none';
+    row.style.opacity  = vis ? '0.4' : '';
+}
+function autoLabel() {
+    const sel = document.getElementById('sel-codice');
+    const opt = sel.options[sel.selectedIndex];
+    const label = opt.getAttribute('data-label');
+    if (label) document.getElementById('inp-label').value = label;
+}
+</script>
+{% endblock %}

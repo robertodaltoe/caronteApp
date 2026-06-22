@@ -171,6 +171,7 @@ class RecuperoImport(db.Model):
     cognome_docente  = db.Column(db.String(80), nullable=True)   # primo cognome
     nome_ini_docente = db.Column(db.String(5),  nullable=True)   # iniziale nome (es. 'S')
     stato_adesione  = db.Column(db.String(20), default='sconosciuto')  # aderisce|studio_ind|non_risposto|non_aderisce
+    tipo_prova_raw  = db.Column(db.String(50),  nullable=True)   # testo grezzo colonna 'recupero' (scritto/orale/etc)
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
 
 

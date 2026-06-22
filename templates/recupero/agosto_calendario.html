@@ -1,11 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Calendario prove agosto<script>
-function toggleEditLezione(lid) {
-    const el = document.getElementById('edit-l-'+lid);
-    if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
-}
-</script>
-{% endblock %}
+{% block title %}Calendario prove agosto{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">← Agosto</a>
@@ -14,35 +8,67 @@ function toggleEditLezione(lid) {
 
 <!-- Genera bozza -->
 <div class="card" style="padding:14px 18px; margin-bottom:14px; border-left:4px solid #0369a1;">
+
+    <!-- Riga 1: Genera bozza (sovrascrive tutto) -->
     <form method="post">
         <input type="hidden" name="azione" value="genera_bozza">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-            <div>
+            <div style="flex:1; min-width:260px;">
                 <strong style="color:#0369a1; font-size:.9rem;">🤖 Genera bozza automatica</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Scritti distribuiti 24–27/8 · Orali il 28/8 · No sovrapposizioni alunni ·
-                    Commissario proposto automaticamente (TI/TD annuale).
-                    <strong style="color:#dc2626;">Sovrascrive le prove esistenti.</strong>
+                    Assistente proposto automaticamente (TI/TD annuale).
+                    <strong style="color:#dc2626;">Sovrascrive tutte le prove esistenti.</strong>
                 </div>
             </div>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                <input type="checkbox" name="conferma_elimina" value="1">
-                Confermo
-            </label>
-            <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white;">
-                🤖 Genera bozza
+            <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0;">
+                <label style="font-size:.8rem; display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;">
+                    <input type="checkbox" name="conferma_elimina" value="1">
+                    Confermo
+                </label>
+                <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white; white-space:nowrap;">
+                    🤖 Genera bozza
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
+
+    <!-- Riga 2: Completa bozza (solo gruppi vuoti, non tocca il resto) -->
+    <form method="post">
+        <input type="hidden" name="azione" value="completa_bozza">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <strong style="color:#166534; font-size:.9rem;">🧩 Completa bozza</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Aggiunge prove solo ai gruppi ancora senza data — non tocca quelle già
+                    pianificate, automaticamente o a mano.
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sm" style="background:#166534; color:white;
+                    white-space:nowrap; margin-left:auto; flex-shrink:0;">
+                🧩 Completa
             </button>
         </div>
     </form>
-    <form method="post" style="margin-top:8px;"
+
+    <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
+
+    <!-- Riga 3: Azzera tutto -->
+    <form method="post"
           onsubmit="return confirm('Eliminare TUTTO il calendario agosto?')">
         <input type="hidden" name="azione" value="elimina_tutto">
-        <div style="display:flex; gap:8px; align-items:center;">
-            <div>
-                <strong style="color:#dc2626; font-size:.88rem;">🗑 Azzera tutto il calendario</strong>
-                <div style="font-size:.76rem; color:var(--grigio);">Elimina tutte le prove pianificate.</div>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <strong style="color:#dc2626; font-size:.9rem;">🗑 Azzera tutto il calendario</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Elimina tutte le prove pianificate (titolare, assistente e classi dei gruppi
+                    restano intatti).
+                </div>
             </div>
-            <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white;">
+            <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white;
+                    white-space:nowrap; margin-left:auto; flex-shrink:0;">
                 🗑 Azzera tutto
             </button>
         </div>
@@ -74,13 +100,14 @@ function toggleEditLezione(lid) {
     <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi prova manualmente</h3>
     <form method="post">
         <input type="hidden" name="azione" value="aggiungi">
+        {% set gruppi_da_calendarizzare = gruppi | rejectattr('lezioni') | list %}
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:2; min-width:200px;">
+            <div style="flex:1 1 260px; max-width:340px;">
                 <label style="font-size:.74rem; color:var(--grigio);">Gruppo *</label><br>
                 <select name="id_gruppo" required
                         style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
                     <option value="">— seleziona —</option>
-                    {% for g in gruppi %}
+                    {% for g in gruppi_da_calendarizzare %}
                     <option value="{{ g.id }}">
                         {{ g.materia[:35] }} — {% if g.docente %}{{ g.docente.cognome }}{% endif %}
                         ({{ TIPO_PROVA_LABEL.get(g.tipo_prova,'?') }} {{ g.durata_ore }}h)
@@ -110,19 +137,6 @@ function toggleEditLezione(lid) {
                 <input type="time" name="ora_fine" value="10:00"
                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
             </div>
-            <div style="min-width:180px; flex:1;">
-                <label style="font-size:.74rem; color:var(--grigio);">Commissario</label><br>
-                <select name="id_commissario"
-                        style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
-                    <option value="">— da assegnare —</option>
-                    {% for d in commissari_validi %}
-                    <option value="{{ d.id }}">
-                        {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-                        <span style="color:var(--grigio);">({{ d.tipo_contratto }})</span>
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
             <div>
                 <label style="font-size:.74rem; color:var(--grigio);">Aula</label><br>
                 <input type="text" name="aula" placeholder="Es. 5"
@@ -130,6 +144,11 @@ function toggleEditLezione(lid) {
             </div>
             <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
         </div>
+        {% if gruppi_da_calendarizzare | length == 0 %}
+        <div style="font-size:.74rem; color:var(--grigio); margin-top:8px;">
+            Tutti i gruppi sono già calendarizzati.
+        </div>
+        {% endif %}
     </form>
 </div>
 
@@ -153,13 +172,12 @@ function toggleEditLezione(lid) {
                 <th style="width:100px;">Orario</th>
                 <th>Materia</th>
                 <th style="width:100px;">Tipo</th>
-                <th style="width:140px;">Titolare</th>
-                <th style="width:160px;">Commissario esame</th>
-                <th style="width:160px;">Sorvegliante</th>
+                <th style="width:150px;">Docente somministratore</th>
+                <th style="width:190px;">Docente assistente</th>
                 <th>Classi</th>
                 <th style="width:60px; text-align:center;">Alunni</th>
                 <th style="width:50px;">Aula</th>
-                <th style="width:44px; text-align:center;">✖</th>
+                <th style="width:70px; min-width:70px; text-align:center; white-space:nowrap;">Azioni</th>
             </tr>
         </thead>
         <tbody>
@@ -176,55 +194,45 @@ function toggleEditLezione(lid) {
                 {% if g.docente %}{{ g.docente.cognome }}{% if g.docente.nome %} {{ g.docente.nome[0] }}.{% endif %}{% endif %}
             </td>
             <td>
-                <form method="post" action="{{ url_for('recupero.agosto_set_commissario') }}"
-                      style="margin:0;">
-                    <input type="hidden" name="id_gruppo" value="{{ g.id }}">
-                    <select name="id_commissario" onchange="this.form.submit()"
-                            style="width:100%;padding:2px 5px;border:1px solid #d1d5db;
-                                   border-radius:5px;font-size:.76rem;">
-                        <option value="">— nessuno —</option>
-                        {% for d in commissari_validi %}
-                        <option value="{{ d.id }}"
-                            {% if g.commissario and g.commissario.id == d.id %}selected{% endif %}>
-                            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </form>
-            </td>
-            <td>
-                <form method="post" action="{{ url_for('recupero.agosto_set_commissario') }}"
+                <form method="post" action="{{ url_for('recupero.agosto_set_assistente') }}"
                       style="margin:0;">
                     <input type="hidden" name="id_gruppo" value="{{ g.id }}">
                     <select name="id_sorvegliante" onchange="this.form.submit()"
                             style="width:100%;padding:2px 5px;border:1px solid #d1d5db;
                                    border-radius:5px;font-size:.76rem;">
                         <option value="">— nessuno —</option>
-                        {% for d in commissari_validi %}
+                        {% set ordinati_cal = [] %}
+                        {% for d in docenti_validi %}
+                            {% set _ = ordinati_cal.append((n_impegni_docente.get(d.id, 0), d)) %}
+                        {% endfor %}
+                        {% for n_imp, d in ordinati_cal | sort(attribute='0') %}
                         <option value="{{ d.id }}"
                             {% if g.sorvegliante and g.sorvegliante.id == d.id %}selected{% endif %}>
-                            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %} — {{ n_imp }} impegn{{ 'o' if n_imp == 1 else 'i' }}
                         </option>
                         {% endfor %}
                     </select>
                 </form>
             </td>
-            <td style="font-size:.82rem;">{{ g.classi }}</td>
-            <td style="text-align:center; font-size:.84rem;">{{ g.alunni|length }}</td>
-            <td style="font-size:.82rem;">{{ l.aula or '—' }}</td>
-            <td style="text-align:center; display:flex; gap:3px; justify-content:center;">
-                <button type="button" onclick="toggleEditLezione({{ l.id }})"
-                        style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
-                               border-radius:5px;padding:2px 6px;font-size:.76rem;cursor:pointer;">✏️</button>
-                <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
-                    <input type="hidden" name="azione" value="elimina">
-                    <input type="hidden" name="id" value="{{ l.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
-                </form>
+            <td style="font-size:.82rem; max-width:220px; white-space:normal; word-break:break-word;">{{ g.classi }}</td>
+            <td style="text-align:center; font-size:.84rem; white-space:nowrap;">{{ g.alunni|length }}</td>
+            <td style="font-size:.82rem; white-space:nowrap;">{{ l.aula or '—' }}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <div style="display:inline-flex; gap:3px; flex-wrap:nowrap;">
+                    <button type="button" onclick="toggleEditLezione({{ l.id }})"
+                            style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
+                                   border-radius:5px;padding:2px 6px;font-size:.76rem;cursor:pointer;
+                                   white-space:nowrap; flex-shrink:0;">✏️</button>
+                    <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0; flex-shrink:0;">
+                        <input type="hidden" name="azione" value="elimina">
+                        <input type="hidden" name="id" value="{{ l.id }}">
+                        <button class="btn btn-danger btn-sm" type="submit" style="white-space:nowrap;">✖</button>
+                    </form>
+                </div>
             </td>
         </tr>
         <tr id="edit-l-{{ l.id }}" style="display:none; background:#fffbeb;">
-            <td colspan="10" style="padding:6px 12px;">
+            <td colspan="9" style="padding:6px 12px;">
                 <form method="post" style="display:flex; gap:6px; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto;">
                     <input type="hidden" name="azione" value="modifica">
                     <input type="hidden" name="id" value="{{ l.id }}">
@@ -264,4 +272,10 @@ function toggleEditLezione(lid) {
     Nessuna prova pianificata. Genera la bozza automatica o aggiungi manualmente.
 </div>
 {% endif %}
+<script>
+function toggleEditLezione(lid) {
+    const el = document.getElementById('edit-l-'+lid);
+    if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>
 {% endblock %}

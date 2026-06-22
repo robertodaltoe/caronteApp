@@ -74,6 +74,88 @@ def sospensioni():
         sospensioni=sospensioni, tipi=TIPI_SOSPENSIONE, oggi=date.today())
 
 
+@impostazioni_bp.route('/impostazioni/periodi', methods=['GET', 'POST'])
+def periodi():
+    """
+    Gestione centralizzata dei periodi usati da più moduli (corsi di
+    recupero, prove di agosto, colloqui di rientro, e in futuro esami
+    integrativi/passaggi e trasferimenti). Tutti condividono lo stesso
+    modello RecuperoPeriodo, distinto per 'codice'.
+    """
+    from models.recupero import RecuperoPeriodo
+    from flask import request, flash, redirect, url_for
+
+    # Codici noti con etichetta leggibile e modulo di riferimento — quando
+    # si aggiunge un nuovo modulo che usa un periodo, basta aggiungere una
+    # riga qui, senza toccare il modello.
+    CODICI_NOTI = {
+        'corsi_giugno':      ('📚 Corsi di recupero (giugno-luglio)', 'Recupero'),
+        'prove_agosto':      ('📝 Prove di recupero (agosto)', 'Recupero'),
+        'colloqui_rientro':  ('🌍 Colloqui di rientro dall\'estero', 'Rientro'),
+        'esami_integrativi': ('🎓 Esami integrativi (passaggi e trasferimenti)', 'Da definire'),
+    }
+
+    if request.method == 'POST':
+        azione = request.form.get('azione')
+        from models import db
+
+        if azione == 'aggiungi':
+            anno_scol = request.form.get('anno_scol', '').strip()
+            codice    = request.form.get('codice', '').strip()
+            label     = request.form.get('label', '').strip()
+            ini       = request.form.get('data_inizio', '').strip()
+            fin       = request.form.get('data_fine', '').strip()
+            ora_ini   = request.form.get('ora_inizio', '08:00').strip()
+            ora_fin   = request.form.get('ora_fine', '16:00').strip()
+
+            if not (anno_scol and codice and label and ini and fin):
+                flash('Anno, codice, etichetta e date sono obbligatori.', 'warning')
+                return redirect(url_for('impostazioni.periodi'))
+
+            esiste = RecuperoPeriodo.query.filter_by(
+                anno_scol=anno_scol, codice=codice).first()
+            if esiste:
+                flash(f'Esiste già un periodo con codice "{codice}" per l\'anno {anno_scol}: '
+                      'modifica quello invece di crearne un altro.', 'warning')
+                return redirect(url_for('impostazioni.periodi'))
+
+            db.session.add(RecuperoPeriodo(
+                anno_scol=anno_scol, codice=codice, label=label,
+                data_inizio=date.fromisoformat(ini), data_fine=date.fromisoformat(fin),
+                ora_inizio=ora_ini, ora_fine=ora_fin,
+            ))
+            db.session.commit()
+            flash('Periodo creato.', 'success')
+
+        elif azione == 'modifica':
+            pid = int(request.form.get('id', 0))
+            p = RecuperoPeriodo.query.get_or_404(pid)
+            p.label       = request.form.get('label', p.label).strip()
+            ini = request.form.get('data_inizio', '').strip()
+            fin = request.form.get('data_fine', '').strip()
+            if ini: p.data_inizio = date.fromisoformat(ini)
+            if fin: p.data_fine   = date.fromisoformat(fin)
+            p.ora_inizio = request.form.get('ora_inizio', p.ora_inizio).strip()
+            p.ora_fine   = request.form.get('ora_fine', p.ora_fine).strip()
+            db.session.commit()
+            flash('Periodo aggiornato.', 'success')
+
+        elif azione == 'elimina':
+            pid = int(request.form.get('id', 0))
+            p = RecuperoPeriodo.query.get_or_404(pid)
+            db.session.delete(p)
+            db.session.commit()
+            flash('Periodo eliminato.', 'warning')
+
+        return redirect(url_for('impostazioni.periodi'))
+
+    righe = RecuperoPeriodo.query.order_by(
+        RecuperoPeriodo.anno_scol.desc(), RecuperoPeriodo.data_inizio).all()
+
+    return render_template('impostazioni/periodi.html',
+        periodi=righe, codici_noti=CODICI_NOTI, oggi=date.today())
+
+
 @impostazioni_bp.route('/impostazioni/anno-scolastico')
 def anno_scolastico():
     return render_template('impostazioni/stub.html',

@@ -16,7 +16,16 @@
 </div>
 {% else %}
 
-<!-- Riepilogo stati -->
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.8rem;
+     color:var(--grigio); border-left:4px solid #0369a1;">
+    <strong>Giugno</strong>: lo stato dipende dall'adesione al corso (chi non aderisce non viene seguito).
+    <strong>Agosto</strong>: sempre rilevante — anche chi non ha aderito al corso o ha scelto studio
+    individuale deve sostenere la prova, quindi si verifica comunque se è calendarizzata.
+</div>
+
+<!-- Riepilogo stati GIUGNO -->
+<div style="font-size:.76rem; font-weight:700; color:var(--grigio); text-transform:uppercase;
+            letter-spacing:.05em; margin-bottom:6px;">📚 Stato corso di giugno</div>
 <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px;">
     <div class="card" style="text-align:center; padding:14px; background:#dcfce7;">
         <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ n_ok }}</div>
@@ -41,24 +50,30 @@
 </div>
 
 <!-- Filtri -->
-<div style="margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap;">
+<div style="margin-bottom:14px; display:flex; gap:6px; flex-wrap:wrap;">
     <button onclick="filtra('tutti')"       class="btn btn-sm btn-primary" id="btn-tutti">
         Tutti ({{ righe|length }})
     </button>
-    <button onclick="filtra('ok')"          class="btn btn-sm" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">
-        ✓ Ok ({{ n_ok }})
+    <button onclick="filtra('giu-ok')"          class="btn btn-sm" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">
+        Giu ✓ Ok ({{ n_ok }})
     </button>
-    <button onclick="filtra('no_gruppo')"   class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">
-        ✗ No gruppo ({{ n_no_gruppo }})
+    <button onclick="filtra('giu-no_gruppo')"   class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">
+        Giu ✗ No gruppo ({{ n_no_gruppo }})
     </button>
-    <button onclick="filtra('non_iscritto')" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">
-        ❓ Non iscritto ({{ n_no_iscritto }})
+    <button onclick="filtra('giu-non_iscritto')" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">
+        Giu ❓ Non iscritto ({{ n_no_iscritto }})
     </button>
-    <button onclick="filtra('no_corso')"    class="btn btn-sm" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a;">
-        📚 No corso ({{ n_no_corso }})
+    <button onclick="filtra('giu-no_corso')"    class="btn btn-sm" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a;">
+        Giu 📚 No corso ({{ n_no_corso }})
     </button>
-    <button onclick="filtra('non_aderisce')" class="btn btn-sm" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">
-        ✗ Non aderisce ({{ n_non_aderisce }})
+    <button onclick="filtra('giu-non_aderisce')" class="btn btn-sm" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">
+        Giu ✗ Non aderisce ({{ n_non_aderisce }})
+    </button>
+    <button onclick="filtra('ago-ok')" class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;">
+        Ago ✓ Calendarizzata
+    </button>
+    <button onclick="filtra('ago-no_gruppo')" class="btn btn-sm" style="background:#fde68a;color:#92400e;border:1px solid #fcd34d;">
+        Ago ✗ Da calendarizzare
     </button>
 </div>
 
@@ -70,45 +85,46 @@
                 <th style="width:150px;">Cognome</th>
                 <th>Nome</th>
                 <th>Materia</th>
-                <th style="width:180px;">Doc. assegnante</th>
-                <th style="width:180px;">Gruppo abbinato</th>
-                <th style="width:90px; text-align:center;">Stato</th>
+                <th style="width:160px;">Doc. assegnante</th>
+                <th style="width:90px; text-align:center;">Giugno</th>
+                <th style="width:90px; text-align:center;">Agosto</th>
             </tr>
         </thead>
         <tbody id="tbody-copertura">
         {% for r in righe %}
-        <tr class="riga-{{ r.stato }}">
+        <tr class="riga-giu-{{ r.stato_giugno }} riga-ago-{{ r.stato_agosto }}">
             <td style="font-size:.84rem;">{{ r.imp.classe }}</td>
             <td style="font-size:.88rem;"><strong>{{ r.imp.cognome }}</strong></td>
             <td style="font-size:.88rem;">{{ r.imp.nome }}</td>
-            <td style="font-size:.82rem;">{{ r.imp.materia_raw[:45] }}</td>
-            <td style="font-size:.76rem; color:var(--grigio);">{{ r.imp.docente_raw[:35] }}</td>
-            <td style="font-size:.82rem;">
-                {% if r.gruppo %}
-                    {{ r.gruppo.materia[:28] }}
-                    <span style="font-size:.7rem; color:var(--grigio);">
-                        — {% if r.gruppo.docente %}{{ r.gruppo.docente.cognome }}{% endif %}
-                    </span>
-                {% else %}
-                    <span style="color:#9ca3af; font-size:.76rem;">—</span>
+            <td style="font-size:.82rem;">{{ r.imp.materia_raw[:40] }}</td>
+            <td style="font-size:.76rem; color:var(--grigio);">{{ r.imp.docente_raw[:30] }}</td>
+            <td style="text-align:center;">
+                {% if r.stato_giugno == 'ok' %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#dcfce7; color:#166534;" title="{{ r.gruppo_giugno.materia if r.gruppo_giugno else '' }}">✓ ok</span>
+                {% elif r.stato_giugno == 'no_gruppo' %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#fee2e2; color:#dc2626;">✗ no gruppo</span>
+                {% elif r.stato_giugno == 'non_iscritto' %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#fee2e2; color:#dc2626;">❓ non risp.</span>
+                {% elif r.stato_giugno == 'no_corso' %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#fef9c3; color:#92400e;">📚 studio ind.</span>
+                {% elif r.stato_giugno == 'non_aderisce' %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#f3f4f6; color:#6b7280;">✗ non aderisce</span>
                 {% endif %}
             </td>
             <td style="text-align:center;">
-                {% if r.stato == 'ok' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#dcfce7; color:#166534;">✓ ok</span>
-                {% elif r.stato == 'no_gruppo' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fee2e2; color:#dc2626;">✗ no gruppo</span>
-                {% elif r.stato == 'non_iscritto' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fee2e2; color:#dc2626;">❓ non iscritto</span>
-                {% elif r.stato == 'no_corso' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fef9c3; color:#92400e;">📚 no corso</span>
-                {% elif r.stato == 'non_aderisce' %}
-                <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#f3f4f6; color:#6b7280;">✗ non aderisce</span>
+                {% if r.stato_agosto == 'ok' %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#dbeafe; color:#1e40af;" title="{{ r.gruppo_agosto.materia if r.gruppo_agosto else '' }} — {{ r.n_lezioni_agosto }} lezioni">
+                    ✓ {{ r.n_lezioni_agosto }} lez.
+                </span>
+                {% else %}
+                <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+                             background:#fde68a; color:#92400e;">✗ da fare</span>
                 {% endif %}
             </td>
         </tr>
