@@ -171,15 +171,7 @@
     <a href="{{ url_for('impostazioni.index') }}">⚙ Impostazioni</a>
     <a href="{{ url_for('sync.orario_globale') }}">📅 Vista orario</a>
     <a href="{{ url_for('report.index') }}">📊 Report</a>
-    <div class="nav-dropdown" id="nav-recupero">
-        <a href="#" onclick="toggleNavDrop('nav-recupero'); return false;">📚 Att. Differite ▾</a>
-        <div class="nav-drop-menu">
-            <a href="{{ url_for('recupero.index') }}">👨‍🎓 Alunni e Recuperi</a>
-            <a href="{{ url_for('recupero.giugno_index') }}">📚 Organizza Corsi</a>
-            <a href="{{ url_for('recupero.agosto_index') }}">📝 Organizza Sessione di Recupero</a>
-            <a href="{{ url_for('rientro.index') }}">🌍 Colloqui di Rientro</a>
-        </div>
-    </div>
+    <a href="{{ url_for('att_differite.index') }}">📚 Att. Differite</a>
     <a href="{{ url_for('display.display') }}" target="_blank">📺 Display</a>
     {% if g.utente is defined and g.utente.ruolo == 'ds' %}
 {# Utenti → spostato in Impostazioni #}

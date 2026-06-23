@@ -71,6 +71,8 @@ def create_app():
     app.register_blueprint(recupero_bp)
     from routes.rientro import rientro_bp
     app.register_blueprint(rientro_bp)
+    from routes.att_differite import att_differite_bp
+    app.register_blueprint(att_differite_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json

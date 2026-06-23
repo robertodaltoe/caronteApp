@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Attività Differite{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">📚 Attività Differite</h1>
+    <p style="font-size:.84rem; color:var(--grigio);">
+        Attività scolastiche organizzate fuori dal calendario ordinario delle lezioni.
+        Scegli l'ambito da gestire.
+    </p>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+
+    <a href="{{ url_for('recupero.index') }}" class="card"
+       style="padding:24px; text-decoration:none; border-left:6px solid #0369a1;
+              display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:2.2rem;">📚</div>
+        <div style="font-weight:800; font-size:1.05rem; color:#0369a1;">
+            Recuperi
+        </div>
+        <div style="font-size:.8rem; color:var(--grigio);">
+            Alunni con giudizio sospeso, verifica copertura, corsi di recupero di giugno
+            ed esami di recupero di agosto.
+        </div>
+        <div style="margin-top:8px; color:#0369a1; font-weight:700; font-size:.84rem;">
+            Vai ai recuperi →
+        </div>
+    </a>
+
+    <a href="{{ url_for('rientro.index') }}" class="card"
+       style="padding:24px; text-decoration:none; border-left:6px solid #166534;
+              display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:2.2rem;">🌍</div>
+        <div style="font-weight:800; font-size:1.05rem; color:#166534;">
+            Rientro dall'estero
+        </div>
+        <div style="font-size:.8rem; color:var(--grigio);">
+            Materie e candidati per i colloqui di rientro, commissioni con verifica
+            disponibilità, calendario senza sovrapposizioni con le prove di agosto.
+        </div>
+        <div style="margin-top:8px; color:#166534; font-weight:700; font-size:.84rem;">
+            Vai al rientro →
+        </div>
+    </a>
+
+    <div class="card"
+       style="padding:24px; border-left:6px solid #9ca3af; opacity:.6;
+              display:flex; flex-direction:column; gap:8px; cursor:not-allowed;">
+        <div style="font-size:2.2rem;">🎓</div>
+        <div style="font-weight:800; font-size:1.05rem; color:#6b7280;">
+            Esami integrativi
+        </div>
+        <div style="font-size:.8rem; color:var(--grigio);">
+            Passaggi e trasferimenti di settembre. Sezione non ancora disponibile.
+        </div>
+        <div style="margin-top:8px; color:#9ca3af; font-weight:700; font-size:.84rem;">
+            In arrivo
+        </div>
+    </div>
+
+</div>
+{% endblock %}
