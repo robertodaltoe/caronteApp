@@ -3,7 +3,7 @@ Modulo Colloqui di Rientro dall'estero.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
-from models.rientro import RientroMateriaClasse, RientroCandidato, RientroColloquio
+from models.rientro import RientroMateriaClasse, RientroCandidato, RientroColloquio, RuoloIstituzionale
 from models.docente import Docente
 from models.orario_docente import OrarioDocente
 from models.recupero import RecuperoPeriodo, RecuperoGruppo, RecuperoDocente as RecGruppoDocente
@@ -201,7 +201,10 @@ def calendario():
             campo = request.form.get('campo')  # docente_1..4 | membro_ds
             id_doc = request.form.get('id_docente') or None
             coll = RientroColloquio.query.get_or_404(id_coll)
-            if campo in ('docente_1', 'docente_2', 'docente_3', 'docente_4', 'membro_ds'):
+            if campo == 'membro_ds':
+                coll.id_ruolo_istituzionale = int(id_doc) if id_doc else None
+                db.session.commit()
+            elif campo in ('docente_1', 'docente_2', 'docente_3', 'docente_4'):
                 setattr(coll, f'id_{campo}', int(id_doc) if id_doc else None)
                 db.session.commit()
             return redirect(url_for('rientro.calendario'))
@@ -220,6 +223,11 @@ def calendario():
         elif azione == 'genera_bozza':
             _genera_bozza_rientro()
             flash('Bozza colloqui generata.', 'success')
+            return redirect(url_for('rientro.calendario'))
+
+        elif azione == 'completa_bozza':
+            _genera_bozza_rientro(solo_vuoti=True)
+            flash('Bozza completata: i colloqui già calendarizzati non sono stati modificati.', 'success')
             return redirect(url_for('rientro.calendario'))
 
         elif azione == 'azzera_tutto':
@@ -269,10 +277,11 @@ def calendario():
             'membri_materia': membri_materia,
         })
 
-    # Docenti idonei a fare da membro DS/vicario: per semplicità, tutti i
-    # docenti attivi con ruolo 'titolare' — Roberto scelgo lui per ciascun
-    # candidato, non c'è un default automatico.
-    membri_ds_possibili = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    # Persone idonee a fare da membro DS/vicario: lette dall'anagrafica
+    # ruoli istituzionali (DS, Vicario 1, Vicario 2, ...) — Roberto scelgo
+    # lui per ciascun candidato, non c'è un default automatico.
+    membri_ds_possibili = RuoloIstituzionale.query.filter_by(attivo=True).order_by(
+        RuoloIstituzionale.ruolo).all()
 
     # Conflitti: stesso membro impegnato in due colloqui rientro nello
     # stesso slot, o impegnato in un gruppo prova di agosto nello stesso
@@ -366,12 +375,17 @@ def _calcola_conflitti_rientro(righe):
     return conflitti
 
 
-def _genera_bozza_rientro():
+def _genera_bozza_rientro(solo_vuoti=False):
     """
     Sequenza i candidati per classe di provenienza, blocchi da 45 minuti,
     nel periodo configurato. Verifica che nessuno dei membri già assegnati
     sia impegnato in un altro colloquio rientro o in un gruppo prova
     agosto nello stesso slot.
+
+    Se solo_vuoti=True (modalità "completa bozza"): salta i candidati che
+    hanno già data/ora impostate (manualmente o da una bozza precedente) —
+    non li tocca — e pre-carica la loro occupazione, cosi' i nuovi
+    colloqui generati non si sovrappongono a quelli già fissati.
     """
     from routes.recupero import ANNO_AGO, PERIODO_AGO
 
@@ -417,6 +431,26 @@ def _genera_bozza_rientro():
             if l.data in occupazione:
                 occupazione[l.data].append((_t(l.ora_inizio), _t(l.ora_fine), membri_g))
 
+    candidati_da_piazzare = []
+    for cand in candidati_list:
+        coll = cand.colloquio
+        if coll is None:
+            coll = RientroColloquio(id_candidato=cand.id)
+            db.session.add(coll)
+            db.session.commit()
+
+        ha_orario = coll.data and coll.ora_inizio and coll.ora_fine
+        if solo_vuoti and ha_orario:
+            # Già calendarizzato (a mano o da una bozza precedente): non
+            # si tocca, ma il suo slot va comunque registrato come occupato.
+            if coll.data in occupazione:
+                membri_esistenti = {d.id for d in coll.membri_commissione}
+                occupazione[coll.data].append(
+                    (_t(coll.ora_inizio), _t(coll.ora_fine), membri_esistenti))
+            continue
+
+        candidati_da_piazzare.append(cand)
+
     def _slot_libero(giorno, ini, fin, membri):
         for oi, of, occ in occupazione[giorno]:
             if oi is not None and oi < fin and ini < of and (membri & occ):
@@ -426,12 +460,8 @@ def _genera_bozza_rientro():
     idx_giorno = 0
     minuto_corrente = ora_ini_giorno
 
-    for cand in candidati_list:
+    for cand in candidati_da_piazzare:
         coll = cand.colloquio
-        if coll is None:
-            coll = RientroColloquio(id_candidato=cand.id)
-            db.session.add(coll)
-            db.session.commit()
 
         membri = {d.id for d in coll.membri_commissione}
         if not membri:
@@ -444,6 +474,7 @@ def _genera_bozza_rientro():
                 idx_giorno += 1
                 minuto_corrente = ora_ini_giorno
                 if idx_giorno >= len(giorni):
+                    db.session.commit()
                     return  # periodo esaurito
             giorno = giorni[idx_giorno]
             fin = minuto_corrente + DURATA_MIN

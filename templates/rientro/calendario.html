@@ -30,6 +30,21 @@
         </div>
     </form>
     <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
+    <form method="post">
+        <input type="hidden" name="azione" value="completa_bozza">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <strong style="color:#166534; font-size:.9rem;">➕ Completa bozza</strong>
+                <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                    Calendarizza solo i colloqui ancora senza data/ora — non tocca quelli già
+                    inseriti manualmente o da una bozza precedente.
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sm" style="background:#166534; color:white;
+                    white-space:nowrap; margin-left:auto; flex-shrink:0;">➕ Completa bozza</button>
+        </div>
+    </form>
+    <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
     <form method="post" onsubmit="return confirm('Azzerare tutte le date/orari dei colloqui?')">
         <input type="hidden" name="azione" value="azzera_tutto">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -140,8 +155,8 @@
                         style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
                     <option value="">— nessuno —</option>
                     {% for d in membri_ds_possibili %}
-                    <option value="{{ d.id }}" {% if r.colloquio.membro_ds and r.colloquio.membro_ds.id == d.id %}selected{% endif %}>
-                        {{ d.cognome }} {{ d.nome }}
+                    <option value="{{ d.id }}" {% if r.colloquio.ruolo_istituzionale and r.colloquio.ruolo_istituzionale.id == d.id %}selected{% endif %}>
+                        {{ d.ruolo }} — {{ d.cognome }} {{ d.nome }}
                     </option>
                     {% endfor %}
                 </select>

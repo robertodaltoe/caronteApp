@@ -13,6 +13,29 @@ from models import db
 from datetime import datetime
 
 
+class RuoloIstituzionale(db.Model):
+    """
+    Persona che ricopre un ruolo istituzionale (Dirigente Scolastico,
+    Vicario, e in futuro coordinatori/funzioni strumentali). Non è
+    necessariamente un Docente: il DS, ad esempio, potrebbe non esserlo.
+    Questa è una soluzione minima in attesa di un'anagrafica istituto
+    più completa e generale.
+    """
+    __tablename__ = 'ruoli_istituzionali'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    ruolo     = db.Column(db.String(50), nullable=False)   # es. 'DS', 'Vicario 1', 'Vicario 2'
+    cognome   = db.Column(db.String(80), nullable=False)
+    nome      = db.Column(db.String(80), nullable=False)
+    attivo    = db.Column(db.Boolean, default=True)
+    creato_il = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def nome_completo(self):
+        return f'{self.cognome} {self.nome}'
+
+
+
 class RientroMateriaClasse(db.Model):
     """
     Una riga per ciascuna delle 4 materie scelte dal consiglio di classe
@@ -67,7 +90,10 @@ class RientroColloquio(db.Model):
     id_docente_2    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     id_docente_3    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     id_docente_4    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
-    id_membro_ds    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
+    id_membro_ds    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)  # legacy, non più usato
+
+    # Membro DS/vicario scelto da RuoloIstituzionale (sostituisce id_membro_ds)
+    id_ruolo_istituzionale = db.Column(db.Integer, db.ForeignKey('ruoli_istituzionali.id'), nullable=True)
 
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -76,10 +102,13 @@ class RientroColloquio(db.Model):
     docente_2    = db.relationship('Docente', foreign_keys=[id_docente_2])
     docente_3    = db.relationship('Docente', foreign_keys=[id_docente_3])
     docente_4    = db.relationship('Docente', foreign_keys=[id_docente_4])
-    membro_ds    = db.relationship('Docente', foreign_keys=[id_membro_ds])
+    membro_ds    = db.relationship('Docente', foreign_keys=[id_membro_ds])  # legacy
+    ruolo_istituzionale = db.relationship('RuoloIstituzionale', foreign_keys=[id_ruolo_istituzionale])
 
     @property
     def membri_commissione(self):
-        """Tutti i membri (4 docenti + DS/vicario) con un id valido."""
+        """Tutti i membri docenti (4 docenti di materia) con un id valido —
+        usato per i controlli di sovrapposizione, che riguardano solo i
+        docenti (il DS/vicario non ha un orario di cattedra da incrociare)."""
         return [d for d in (self.docente_1, self.docente_2, self.docente_3,
-                            self.docente_4, self.membro_ds) if d is not None]
+                            self.docente_4) if d is not None]
