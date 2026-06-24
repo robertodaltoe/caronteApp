@@ -97,6 +97,9 @@ def create_app():
         'agenda':        'supplenze_r',
         'sync':          'dsga_only',   # solo DSGA
         'import_banca':  'banca_ore',
+        'recupero':      'recupero_r',      # corsi/prove di recupero (lettura per DS, scrittura per collaboratore/segreteria/dsga)
+        'rientro':       'recupero_r',      # colloqui di rientro dall'estero
+        'att_differite': 'recupero_r',      # hub di selezione, nessuna azione propria
         'auth':          None,          # gestito internamente
     }
 

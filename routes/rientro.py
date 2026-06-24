@@ -490,3 +490,136 @@ def _genera_bozza_rientro(solo_vuoti=False):
             tentativi += 1
 
     db.session.commit()
+
+
+@rientro_bp.route('/rientro/export-xlsx')
+def export_xlsx():
+    """
+    Export del calendario colloqui di rientro: un foglio unico ordinato
+    per giornata, poi per classe di provenienza e orario. Per ogni
+    colloquio elenca candidato, le 4 materie con il relativo docente, e
+    il membro DS/vicario — stesso impianto grafico degli export del
+    modulo recupero (giugno/agosto).
+    """
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from flask import send_file
+
+    candidati_list = RientroCandidato.query.filter_by(anno_scol=ANNO).order_by(
+        RientroCandidato.classe, RientroCandidato.cognome).all()
+
+    GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
+
+    BLU    = PatternFill('solid', start_color='1e3a5f')
+    AZZUR  = PatternFill('solid', start_color='dbeafe')
+    GRAY   = PatternFill('solid', start_color='f3f4f6')
+    BOLD   = Font(bold=True)
+    BOLD_W = Font(bold=True, color='FFFFFF')
+    THIN   = Border(left=Side(style='thin', color='d1d5db'),
+                     right=Side(style='thin', color='d1d5db'),
+                     top=Side(style='thin', color='d1d5db'),
+                     bottom=Side(style='thin', color='d1d5db'))
+    CENTER = Alignment(horizontal='center', vertical='center')
+    WRAP   = Alignment(wrap_text=True, vertical='center')
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Calendario'
+
+    ws['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    ws['A1'].font = Font(bold=True, size=13)
+    ws['A2'] = f'COLLOQUI DI RIENTRO DALL\'ESTERO — A.S. {ANNO}'
+    ws['A2'].font = Font(bold=True, size=11)
+    ws.append([])
+    ws.append([])
+
+    # Raggruppa per giornata i colloqui già calendarizzati; quelli senza
+    # data finiscono in una sezione "Da calendarizzare" in fondo.
+    colloqui_per_giorno = {}
+    colloqui_senza_data = []
+    for cand in candidati_list:
+        coll = cand.colloquio
+        if not coll:
+            continue
+        if coll.data and coll.ora_inizio and coll.ora_fine:
+            colloqui_per_giorno.setdefault(coll.data, []).append((coll, cand))
+        else:
+            colloqui_senza_data.append((coll, cand))
+
+    HEADER_COLS = ['Orario', 'Classe', 'Candidato', 'Materia 1', 'Docente 1',
+                   'Materia 2', 'Docente 2', 'Materia 3', 'Docente 3',
+                   'Materia 4', 'Docente 4', 'DS / Vicario']
+    N_COLS = len(HEADER_COLS)
+
+    def _nome_doc(d):
+        return f'{d.cognome} {d.nome or ""}'.strip() if d else '—'
+
+    def _scrivi_header_giorno(titolo):
+        row = ws.max_row + 1
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=N_COLS)
+        cell = ws.cell(row=row, column=1, value=titolo)
+        cell.font = BOLD_W
+        cell.fill = BLU
+        cell.alignment = CENTER
+        row += 1
+        for col, h in enumerate(HEADER_COLS, 1):
+            c = ws.cell(row=row, column=col, value=h)
+            c.font = BOLD
+            c.fill = AZZUR
+            c.alignment = CENTER
+            c.border = THIN
+        return row + 1
+
+    def _scrivi_riga_colloquio(row, coll, cand, mostra_orario=True):
+        materie_classe = [m.materia for m in RientroMateriaClasse.query.filter_by(
+            anno_scol=ANNO, classe=cand.classe).order_by(RientroMateriaClasse.materia).all()]
+        docenti = [coll.docente_1, coll.docente_2, coll.docente_3, coll.docente_4]
+
+        orario_str = f'{coll.ora_inizio}–{coll.ora_fine}' if mostra_orario and coll.ora_inizio else '—'
+        vals = [orario_str, cand.classe, f'{cand.cognome} {cand.nome}']
+        for i in range(4):
+            mat = materie_classe[i] if i < len(materie_classe) else ''
+            doc = _nome_doc(docenti[i]) if docenti[i] else ('—' if mat else '')
+            vals.append(mat)
+            vals.append(doc)
+        membro_ds = coll.ruolo_istituzionale
+        vals.append(f'{membro_ds.ruolo} — {membro_ds.nome_completo}' if membro_ds else '—')
+
+        for col, v in enumerate(vals, 1):
+            c = ws.cell(row=row, column=col, value=v)
+            c.border = THIN
+            c.alignment = CENTER if col in (1, 2) else WRAP
+        return row + 1
+
+    for data in sorted(colloqui_per_giorno.keys()):
+        coppie = sorted(colloqui_per_giorno[data], key=lambda cc: (cc[1].classe, cc[0].ora_inizio))
+        titolo = f'{GIORNI[data.weekday()]} {data.strftime("%d/%m/%Y")}'
+        row = _scrivi_header_giorno(titolo)
+        for coll, cand in coppie:
+            row = _scrivi_riga_colloquio(row, coll, cand)
+        ws.append([])
+
+    if colloqui_senza_data:
+        row = _scrivi_header_giorno('⚠ Da calendarizzare')
+        for coll, cand in sorted(colloqui_senza_data, key=lambda cc: (cc[1].classe, cc[1].cognome)):
+            row = _scrivi_riga_colloquio(row, coll, cand, mostra_orario=False)
+        ws.append([])
+
+    if not colloqui_per_giorno and not colloqui_senza_data:
+        ws.append(['Nessun candidato inserito.'])
+
+    # Larghezze colonne
+    larghezze = [13, 10, 22, 16, 18, 16, 18, 16, 18, 16, 18, 22]
+    for i, w in enumerate(larghezze, 1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'calendario_rientro_estero_{ANNO}.xlsx',
+    )

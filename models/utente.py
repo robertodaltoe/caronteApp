@@ -20,6 +20,7 @@ PERMESSI = {
         'supplenze_r',          # legge le supplenze, non le modifica
         'banca_ore_r',          # legge la banca ore
         'docenti_r',            # legge i docenti
+        'recupero_r',           # legge corsi/prove di recupero, rientro dall'estero
         'display',
     },
     'dsga': {
@@ -32,6 +33,7 @@ PERMESSI = {
         'assenze',              # inserisce assenze (se necessario)
         'attivita',             # vede/gestisce progetti e uscite
         'indisponibilita',      # gestisce indisponibilità
+        'recupero',             # corsi/prove di recupero, rientro dall'estero
         'banca_ore_r',          # vede banca ore in sola lettura
         'report_r',             # vede report in sola lettura
         'docenti_r',            # vede anagrafica docenti
@@ -43,6 +45,7 @@ PERMESSI = {
         'supplenze_r',          # vede le supplenze (non assegna)
         'assenze',              # inserisce assenze docenti
         'attivita',             # inserisce progetti, uscite, viaggi
+        'recupero',             # corsi/prove di recupero, rientro dall'estero
         'banca_ore',            # gestisce banca ore e pagamenti
         'report',               # accede ai report
         'docenti_r',            # vede anagrafica

@@ -118,6 +118,7 @@ def importa():
     try:
         stats = applica_importazione(file_path, db.session)
     except Exception as e:
+        db.session.rollback()
         flash(f'Errore durante l\'importazione: {e}', 'error')
         return redirect(url_for('sync.index'))
 
