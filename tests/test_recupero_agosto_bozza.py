@@ -40,7 +40,7 @@ def _crea_gruppo(rec_docente, materia, classi, tipo_prova='scritto', durata_ore=
 
 
 def test_nessun_periodo_non_genera_nulla(app, db_session):
-    from routes.recupero import _genera_bozza_agosto
+    from routes.recupero_agosto import _genera_bozza_agosto
 
     doc = crea_docente('ROSSI')
     rd = _crea_rec_docente(doc)
@@ -55,7 +55,7 @@ def test_nessun_periodo_non_genera_nulla(app, db_session):
 def test_piazza_gruppo_semplice(app, db_session):
     """Un gruppo scritto con titolare e assistente impostati deve
     ricevere una lezione dentro il periodo configurato."""
-    from routes.recupero import _genera_bozza_agosto
+    from routes.recupero_agosto import _genera_bozza_agosto
 
     crea_periodo(PERIODO_AGO, anno_scol=ANNO_AGO, data_inizio=date(2026, 8, 24),
                  data_fine=date(2026, 8, 28))
@@ -75,7 +75,7 @@ def test_piazza_gruppo_semplice(app, db_session):
 def test_due_gruppi_stesso_titolare_non_si_sovrappongono(app, db_session):
     """Se due gruppi condividono il titolare, le loro lezioni non
     devono avere lo stesso giorno+orario."""
-    from routes.recupero import _genera_bozza_agosto
+    from routes.recupero_agosto import _genera_bozza_agosto
 
     crea_periodo(PERIODO_AGO, anno_scol=ANNO_AGO, data_inizio=date(2026, 8, 24),
                  data_fine=date(2026, 8, 28))
@@ -105,7 +105,7 @@ def test_due_gruppi_stesso_titolare_non_si_sovrappongono(app, db_session):
 def test_due_gruppi_stessi_alunni_non_si_sovrappongono(app, db_session):
     """Se due gruppi condividono almeno un alunno (stessa classe+nome+
     cognome), non devono avere lo stesso slot, anche con docenti diversi."""
-    from routes.recupero import _genera_bozza_agosto
+    from routes.recupero_agosto import _genera_bozza_agosto
 
     crea_periodo(PERIODO_AGO, anno_scol=ANNO_AGO, data_inizio=date(2026, 8, 24),
                  data_fine=date(2026, 8, 24), ora_inizio='08:00', ora_fine='10:00')
@@ -144,7 +144,7 @@ def test_due_gruppi_stessi_alunni_non_si_sovrappongono(app, db_session):
 def test_completa_bozza_non_tocca_gruppo_gia_pianificato(app, db_session):
     """solo_incompleti=True non deve modificare un gruppo che ha già una
     lezione pianificata, ma deve comunque piazzare gli altri."""
-    from routes.recupero import _genera_bozza_agosto
+    from routes.recupero_agosto import _genera_bozza_agosto
 
     crea_periodo(PERIODO_AGO, anno_scol=ANNO_AGO, data_inizio=date(2026, 8, 24),
                  data_fine=date(2026, 8, 28))
@@ -181,7 +181,7 @@ def test_max_quattro_prove_parallele(app, db_session):
     stesso giorno+orario, anche con molti gruppi indipendenti (docenti e
     alunni tutti diversi tra loro, quindi nessun vincolo li separerebbe
     a parte il limite di parallelismo)."""
-    from routes.recupero import _genera_bozza_agosto
+    from routes.recupero_agosto import _genera_bozza_agosto
     from collections import Counter
 
     crea_periodo(PERIODO_AGO, anno_scol=ANNO_AGO, data_inizio=date(2026, 8, 24),
