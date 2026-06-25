@@ -61,16 +61,6 @@ def salva():
     return redirect(url_for('aule.lista'))
 
 
-@aule_bp.route('/aule/<int:id>/elimina', methods=['POST'])
-def elimina(id):
-    a = Aula.query.get_or_404(id)
-    classe = a.classe
-    db.session.delete(a)
-    db.session.commit()
-    flash(f'Aula rimossa per {classe}.', 'warning')
-    return redirect(url_for('aule.lista'))
-
-
 @aule_bp.route('/aule/override/<int:id_supplenza>', methods=['GET', 'POST'])
 def override(id_supplenza):
     """Override temporaneo aula per una supplenza specifica."""

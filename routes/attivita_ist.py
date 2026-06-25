@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
 from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,
-                                  AttivitaIstPresenza, TIPI_ATTIVITA, LIMITE_BUCKET)
+                                  AttivitaIstPresenza, TIPI_ATTIVITA)
 from models.materia import Dipartimento, Materia, DocenteMateria
 from models.docente import Docente
 from models.assenza import Assenza
@@ -16,22 +16,6 @@ def _anno_scolastico(d=None):
     d = d or date.today()
     return f'{d.year}-{d.year+1}' if d.month >= 9 else f'{d.year-1}-{d.year}'
 
-
-def _ore_bucket_docente(id_docente, bucket, anno=None):
-    """Somma ore effettive (presenze=presente) per bucket e docente nell'a.s."""
-    anno = anno or _anno_scolastico()
-    anno_ini = date(int(anno[:4]), 9, 1)
-    anno_fin = date(int(anno[:4]) + 1, 8, 31)
-    eventi = (AttivitaIst.query
-              .join(AttivitaIstPresenza,
-                    AttivitaIstPresenza.id_attivita == AttivitaIst.id)
-              .filter(AttivitaIstPresenza.id_docente == id_docente,
-                      AttivitaIstPresenza.stato == 'presente',
-                      AttivitaIst.data >= anno_ini,
-                      AttivitaIst.data <= anno_fin)
-              .all())
-    return round(sum(e.durata_ore for e in eventi
-                     if TIPI_ATTIVITA.get(e.tipo, {}).get('bucket') == bucket), 2)
 
 
 def _preset_partecipanti(attivita):
@@ -260,18 +244,6 @@ def aggiungi_partecipante(id):
     db.session.commit()
     flash('Docente aggiunto.', 'success')
     return redirect(url_for('attivita_ist.presenze', id=id))
-
-
-# ── CONTEGGIO ORE CCNL (API JSON) ────────────────────────────────────────────
-
-@attivita_ist_bp.route('/api/ore-ccnl/<int:id_docente>')
-def ore_ccnl(id_docente):
-    anno = request.args.get('anno', _anno_scolastico())
-    return jsonify({
-        'bucket_A': _ore_bucket_docente(id_docente, 'A', anno),
-        'bucket_B': _ore_bucket_docente(id_docente, 'B', anno),
-        'limite':   LIMITE_BUCKET,
-    })
 
 
 # ── IMPORT PIANO ANNUALE ─────────────────────────────────────────────────────

@@ -145,16 +145,6 @@ def lista_ricorrenti():
         ore_list=range(1, 10))
 
 
-@indisp_bp.route('/indisponibilita/<int:id>/elimina', methods=['POST'])
-def elimina(id):
-    i = Indisponibilita.query.get_or_404(id)
-    data_str = i.data.isoformat()
-    db.session.delete(i)
-    db.session.commit()
-    flash('Indisponibilità rimossa.', 'warning')
-    return redirect(url_for('dashboard.index', data=data_str))
-
-
 @indisp_bp.route('/indisponibilita/ricorrente/<int:id>/disattiva', methods=['POST'])
 def disattiva_ricorrente(id):
     ir = IndisponibilitaRicorrente.query.get_or_404(id)

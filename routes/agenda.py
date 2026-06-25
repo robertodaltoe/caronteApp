@@ -119,17 +119,6 @@ def index():
     )
 
 
-@agenda_bp.route('/agenda/indisp/<int:id>/elimina', methods=['POST'])
-def elimina_indisp(id):
-    """Elimina una singola indisponibilità."""
-    i = Indisponibilita.query.get_or_404(id)
-    data_str = i.data.isoformat()
-    db.session.delete(i)
-    db.session.commit()
-    flash('Indisponibilità eliminata.', 'warning')
-    return redirect(url_for('agenda.index'))
-
-
 @agenda_bp.route('/agenda/indisp/gruppo/elimina', methods=['POST'])
 def elimina_gruppo_indisp():
     """Elimina un gruppo di indisponibilità e, se AUTO, anche assenze e supplenze collegate."""
