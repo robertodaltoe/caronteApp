@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Classi di concorso{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🏷️ Classi di concorso</h1>
+</div>
+
+<div class="card" style="padding:14px 18px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi classe di concorso</h3>
+    <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Codice *</label><br>
+            <input type="text" name="codice" required placeholder="es. A026"
+                   style="width:110px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div style="flex:1; min-width:220px;">
+            <label style="font-size:.72rem; color:var(--grigio);">Nome *</label><br>
+            <input type="text" name="nome" required placeholder="es. Matematica"
+                   style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Tipo posto</label><br>
+            <select name="tipo_posto" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <option value="cattedra">Cattedra</option>
+                <option value="itp">ITP</option>
+                <option value="sostegno">Sostegno</option>
+            </select>
+        </div>
+        <div style="flex:1; min-width:160px;">
+            <label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+            <input type="text" name="note"
+                   style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+    </form>
+</div>
+
+{% if not classi %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+    Nessuna classe di concorso inserita ancora.
+</div>
+{% endif %}
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:90px;">Codice</th>
+                <th>Nome</th>
+                <th style="width:100px;">Tipo</th>
+                <th>Note</th>
+                <th style="width:70px; text-align:center;">Stato</th>
+                <th style="width:60px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for cc in classi %}
+        <tr id="row-{{ cc.id }}" {% if not cc.attiva %}style="opacity:.5;"{% endif %}>
+            <td style="font-weight:700; color:var(--blu); font-size:.86rem;">{{ cc.codice }}</td>
+            <td style="font-size:.88rem;">{{ cc.nome }}</td>
+            <td style="font-size:.8rem; color:var(--grigio);">{{ cc.tipo_posto }}</td>
+            <td style="font-size:.78rem; color:var(--grigio);">{{ cc.note or '—' }}</td>
+            <td style="text-align:center;">
+                {% if cc.attiva %}
+                <span style="font-size:.7rem; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:8px;">attiva</span>
+                {% else %}
+                <span style="font-size:.7rem; background:#f3f4f6; color:#9ca3af; padding:2px 8px; border-radius:8px;">disattiva</span>
+                {% endif %}
+            </td>
+            <td style="text-align:center;">
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ cc.id }})" title="Modifica">✏️</button>
+            </td>
+        </tr>
+        <tr id="edit-{{ cc.id }}" style="display:none; background:#f0f4ff;">
+            <td colspan="6" style="padding:10px 14px;">
+                <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ cc.id }}">
+                    <div style="flex:1; min-width:200px;">
+                        <label style="font-size:.72rem; color:var(--grigio);">Nome</label><br>
+                        <input type="text" name="nome" value="{{ cc.nome }}"
+                               style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Tipo posto</label><br>
+                        <select name="tipo_posto" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                            <option value="cattedra" {% if cc.tipo_posto=='cattedra' %}selected{% endif %}>Cattedra</option>
+                            <option value="itp" {% if cc.tipo_posto=='itp' %}selected{% endif %}>ITP</option>
+                            <option value="sostegno" {% if cc.tipo_posto=='sostegno' %}selected{% endif %}>Sostegno</option>
+                        </select>
+                    </div>
+                    <div style="flex:1; min-width:160px;">
+                        <label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+                        <input type="text" name="note" value="{{ cc.note or '' }}"
+                               style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+                    <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
+                            onclick="toggleEdit({{ cc.id }})">Annulla</button>
+                </form>
+                <form method="post" style="margin-top:8px;">
+                    <input type="hidden" name="id" value="{{ cc.id }}">
+                    {% if cc.attiva %}
+                    <input type="hidden" name="azione" value="disattiva">
+                    <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">🗑 Disattiva</button>
+                    {% else %}
+                    <input type="hidden" name="azione" value="riattiva">
+                    <button type="submit" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">↩ Riattiva</button>
+                    {% endif %}
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleEdit(id) {
+    const row  = document.getElementById('row-' + id);
+    const edit = document.getElementById('edit-' + id);
+    const vis  = edit.style.display === 'none';
+    edit.style.display = vis ? '' : 'none';
+}
+</script>
+{% endblock %}

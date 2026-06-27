@@ -21,6 +21,7 @@ PERMESSI = {
         'banca_ore_r',          # legge la banca ore
         'docenti_r',            # legge i docenti
         'recupero_r',           # legge corsi/prove di recupero, rientro dall'estero
+        'organico_r',           # legge classi di concorso e organico diritto/fatto
         'display',
     },
     'dsga': {
@@ -39,6 +40,7 @@ PERMESSI = {
         'docenti_r',            # vede anagrafica docenti
         'orario_r',             # vede orario
         'aule_r',               # vede aule
+        'organico_r',           # vede classi di concorso e organico diritto/fatto
         'display',
     },
     'segreteria': {

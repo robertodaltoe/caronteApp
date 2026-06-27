@@ -67,6 +67,8 @@ def create_app():
     app.register_blueprint(attivita_ist_bp)
     from routes.impostazioni import impostazioni_bp
     app.register_blueprint(impostazioni_bp)
+    from routes.impostazione_anno import impostazione_anno_bp
+    app.register_blueprint(impostazione_anno_bp)
     from routes.recupero import recupero_bp
     app.register_blueprint(recupero_bp)
     from routes.rientro import rientro_bp
@@ -100,6 +102,7 @@ def create_app():
         'recupero':      'recupero_r',      # corsi/prove di recupero (lettura per DS, scrittura per collaboratore/segreteria/dsga)
         'rientro':       'recupero_r',      # colloqui di rientro dall'estero
         'att_differite': 'recupero_r',      # hub di selezione, nessuna azione propria
+        'impostazione_anno': 'organico_r',  # classi di concorso, organico diritto/fatto
         'auth':          None,          # gestito internamente
     }
 
@@ -157,6 +160,7 @@ def create_app():
         from models.aula_override import AulaOverride  # noqa
         from models.utente import Utente  # noqa
         from models.log_accesso import LogAccesso  # noqa
+        from models.classe_concorso import ClasseConcorso, CattedraOrganico  # noqa
         from models.materia import Dipartimento, Materia, DocenteMateria  # noqa
         from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante, AttivitaIstPresenza  # noqa
         from models.sostituzione_scrutinio import SostituzioneScrutinio  # noqa
@@ -216,6 +220,8 @@ def _auto_migrate():
         ('colloqui_eccezioni',  'data_fine',             'DATE',       None),
         ('utenti',    'nome',                'VARCHAR(80)', "''"),
         ('log_accessi', 'nome_completo',        'VARCHAR(160)', None),
+        ('docenti',   'id_classe_concorso',  'INTEGER',     None),
+        ('materie',   'id_classe_concorso',  'INTEGER',     None),
     ]
 
     with db.engine.connect() as conn:

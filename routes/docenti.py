@@ -51,8 +51,8 @@ def nuovo():
         d.nome_display = f"{d.cognome} {d.nome[0]}." if d.nome else d.cognome
         db.session.add(d)
         db.session.commit()
-        flash(f"Docente {d.nome_completo} aggiunto.", 'success')
-        return redirect(url_for('docenti.lista'))
+        flash(f"Docente {d.nome_completo} aggiunto. Ora assegna la sua classe di concorso e le materie.", 'success')
+        return redirect(url_for('docenti.modifica', id=d.id))
     titolari_disponibili = Docente.query.filter(
         Docente.attivo == True, Docente.ruolo == 'titolare').order_by(Docente.cognome).all()
     return render_template('docente_form.html', docente=None, giorni=list(enumerate(GIORNI)), eccezioni=[],

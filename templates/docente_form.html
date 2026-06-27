@@ -41,6 +41,27 @@
     {% endif %}
 </div>
 
+{% if docente %}
+<div class="card" style="padding:10px 14px; margin-bottom:14px; display:flex; align-items:center;
+            gap:10px; flex-wrap:wrap; border-left:4px solid #6366f1;">
+    <div style="flex:1; min-width:240px; font-size:.82rem; color:var(--grigio);">
+        {% if docente.id_classe_concorso %}
+        Classe di concorso: <strong style="color:var(--blu);">{{ docente.classe_concorso.codice }}</strong>
+        {% else %}
+        ⚠ Nessuna classe di concorso assegnata.
+        {% endif %}
+    </div>
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="btn btn-sm"
+       style="background:#6366f1; color:white; text-decoration:none; white-space:nowrap;">
+        🏷️ Classe di concorso
+    </a>
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="btn btn-sm"
+       style="background:#be185d; color:white; text-decoration:none; white-space:nowrap;">
+        📖 Materie
+    </a>
+</div>
+{% endif %}
+
 <div class="card" style="max-width:580px;">
     <form method="post">
         <div style="display:flex; gap:16px;">

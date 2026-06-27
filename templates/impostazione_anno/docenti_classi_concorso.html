@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Docenti e classi di concorso{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🏷️ Docenti ↔ Classi di concorso</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Per ogni docente, aggiungi una o più classi di concorso (abilitazioni) dal select — un
+    docente può essere abilitato su più classi e ricevere ore da entrambe. È un dato stabile,
+    non legato all'anno scolastico. La prima aggiunta diventa la classe "principale" ⭐.
+    Modificando le abilitazioni di un docente, le sue materie già assegnate vengono azzerate,
+    perché potrebbero non essere più ammesse.
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px;">
+    <input type="text" id="filtro-docenti" placeholder="🔎 Filtra per cognome..."
+           style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:.86rem;"
+           oninput="filtraDocenti(this.value)">
+</div>
+
+<form method="post" id="form-cc">
+{% for d in docenti %}
+<div class="riga-docente card" style="padding:10px 16px; margin-bottom:6px; display:flex;
+            align-items:center; gap:12px; flex-wrap:wrap;" data-cognome="{{ d.cognome|lower }}">
+    <div style="min-width:170px; font-weight:700; color:var(--blu); font-size:.86rem;">
+        {{ d.cognome }} {{ d.nome }}
+    </div>
+
+    <div id="badges-{{ d.id }}" style="display:flex; gap:5px; flex-wrap:wrap; flex:1; min-width:160px;">
+        {% for ab in d.abilitazioni %}
+        <span class="badge-cc" data-cc-id="{{ ab.id_classe_concorso }}"
+              style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px;
+                     border-radius:7px; font-size:.78rem; font-weight:700;
+                     background:{{ '#dbeafe' if ab.principale else '#f3f4f6' }};
+                     color:{{ '#1e40af' if ab.principale else '#374151' }};
+                     border:1px solid {{ '#93c5fd' if ab.principale else '#d1d5db' }};">
+            <input type="hidden" name="cc_docente_{{ d.id }}" value="{{ ab.id_classe_concorso }}">
+            {% if ab.principale %}⭐{% endif %} {{ ab.classe_concorso.codice }}
+            <span onclick="rimuoviBadge(this)" style="cursor:pointer; color:#9ca3af; font-weight:900;" title="Rimuovi">✕</span>
+        </span>
+        {% endfor %}
+    </div>
+
+    <select onchange="aggiungiBadge({{ d.id }}, this)"
+            style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.8rem; max-width:230px;">
+        <option value="">+ aggiungi classe...</option>
+        {% for cc in classi %}
+        <option value="{{ cc.id }}" data-codice="{{ cc.codice }}">{{ cc.codice }} — {{ cc.nome }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endfor %}
+
+<button type="submit" class="btn btn-success btn-sm" style="margin-top:10px;">💾 Salva tutte le abilitazioni</button>
+</form>
+
+<script>
+function filtraDocenti(testo) {
+    const t = testo.trim().toLowerCase();
+    document.querySelectorAll('.riga-docente').forEach(riga => {
+        riga.style.display = riga.dataset.cognome.includes(t) ? '' : 'none';
+    });
+}
+
+function aggiungiBadge(idDocente, select) {
+    const ccId = select.value;
+    if (!ccId) return;
+    const codice = select.options[select.selectedIndex].dataset.codice;
+    const box = document.getElementById('badges-' + idDocente);
+
+    // Evita duplicati
+    if (box.querySelector('[data-cc-id="' + ccId + '"]')) {
+        select.value = '';
+        return;
+    }
+    const principale = box.children.length === 0;
+    const span = document.createElement('span');
+    span.className = 'badge-cc';
+    span.dataset.ccId = ccId;
+    span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:3px 8px;' +
+        'border-radius:7px;font-size:.78rem;font-weight:700;' +
+        (principale ? 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;'
+                    : 'background:#f3f4f6;color:#374151;border:1px solid #d1d5db;');
+    span.innerHTML = (principale ? '⭐ ' : '') + codice +
+        ' <span onclick="rimuoviBadge(this)" style="cursor:pointer;color:#9ca3af;font-weight:900;" title="Rimuovi">✕</span>' +
+        '<input type="hidden" name="cc_docente_' + idDocente + '" value="' + ccId + '">';
+    box.appendChild(span);
+    select.value = '';
+}
+
+function rimuoviBadge(xEl) {
+    const span = xEl.closest('.badge-cc');
+    const box = span.parentElement;
+    span.remove();
+    // Se rimuovo la principale, la successiva diventa principale
+    const rimaste = box.querySelectorAll('.badge-cc');
+    if (rimaste.length && !box.querySelector('[style*="dbeafe"]')) {
+        const prima = rimaste[0];
+        prima.style.background = '#dbeafe';
+        prima.style.color = '#1e40af';
+        prima.style.borderColor = '#93c5fd';
+        if (!prima.textContent.includes('⭐')) {
+            prima.innerHTML = '⭐ ' + prima.innerHTML;
+        }
+    }
+}
+</script>
+{% endblock %}

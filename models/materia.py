@@ -32,10 +32,13 @@ class Materia(db.Model):
     # Codice materia nel DB orario (per matching automatico con OrarioDocente.materia)
     codice_orario   = db.Column(db.String(40), nullable=True)
     attiva          = db.Column(db.Boolean, default=True)
+    # Classe di concorso che insegna questa materia (es. A026 - Matematica)
+    id_classe_concorso = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)
 
-    dipartimento = db.relationship('Dipartimento', back_populates='materie')
-    docenti_mat  = db.relationship('DocenteMateria', back_populates='materia',
+    dipartimento    = db.relationship('Dipartimento', back_populates='materie')
+    docenti_mat     = db.relationship('DocenteMateria', back_populates='materia',
                                     cascade='all, delete-orphan')
+    classe_concorso = db.relationship('ClasseConcorso', back_populates='materie')
 
     @property
     def indirizzi(self):

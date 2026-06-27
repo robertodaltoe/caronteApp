@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Impostazione Anno Scolastico{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🗓️ Impostazione Anno Scolastico</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Area che raccoglierà progressivamente tutto ciò che serve per impostare un nuovo anno
+    scolastico: classi di concorso e organico oggi, in futuro anche docenti, orario, periodi
+    e dati istituto.
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;">
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:var(--blu);">{{ n_classi }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Classi di concorso attive</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ n_materie_collegate }}/{{ n_materie_tot }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Materie collegate a una classe</div>
+    </div>
+</div>
+
+<div style="display:flex; flex-direction:column; gap:8px;">
+    <a href="{{ url_for('impostazione_anno.classi_concorso') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #0369a1;">
+        <div style="font-size:1.6rem;">🏷️</div>
+        <div>
+            <div style="font-weight:700; color:#0369a1;">1. Classi di concorso</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Anagrafica delle classi di concorso (A026, AS2B, ecc.) — stabile negli anni
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+    <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
+        <div style="font-size:1.6rem;">🔗</div>
+        <div>
+            <div style="font-weight:700; color:#7c3aed;">2. Materie ↔ Classi di concorso</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Collega le materie già impostate alla classe di concorso che le insegna
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+    <a href="{{ url_for('impostazione_anno.organico', anno=anno_corrente, tipo='diritto') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #166534;">
+        <div style="font-size:1.6rem;">📋</div>
+        <div>
+            <div style="font-weight:700; color:#166534;">3. Organico di diritto / di fatto</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Dotazione organica per anno scolastico: DOC, COI, COE, ore residue, potenziamento
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #b45309;">
+        <div style="font-size:1.6rem;">👤</div>
+        <div>
+            <div style="font-weight:700; color:#b45309;">4. Docenti ↔ Classe di concorso</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Assegna a ciascun docente la sua abilitazione
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #be185d;">
+        <div style="font-size:1.6rem;">📖</div>
+        <div>
+            <div style="font-weight:700; color:#be185d;">5. Docenti ↔ Materie</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Materie insegnate da ciascun docente, filtrate per la sua classe di concorso
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+</div>
+{% endblock %}

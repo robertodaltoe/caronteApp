@@ -28,6 +28,7 @@ def app():
     with app.app_context():
         # Import di tutti i modelli necessari ai test, cosi' create_all()
         # crea le tabelle corrispondenti nel DB in-memory.
+        from models.classe_concorso import ClasseConcorso, CattedraOrganico  # noqa
         from models.docente import Docente, CoppiaDocenteItp  # noqa
         from models.assenza import Assenza  # noqa
         from models.orario_docente import OrarioDocente  # noqa

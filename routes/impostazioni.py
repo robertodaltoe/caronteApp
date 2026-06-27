@@ -158,9 +158,8 @@ def periodi():
 
 @impostazioni_bp.route('/impostazioni/anno-scolastico')
 def anno_scolastico():
-    return render_template('impostazioni/stub.html',
-        titolo='Anno scolastico', emoji='🗓',
-        desc='Configurazione dell\'anno scolastico corrente — prossimamente.')
+    from flask import redirect, url_for
+    return redirect(url_for('impostazione_anno.index'))
 
 
 @impostazioni_bp.route('/impostazioni/dati-istituto')

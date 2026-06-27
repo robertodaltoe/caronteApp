@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Docenti e materie{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">📖 Docenti ↔ Materie ({{ anno }})</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Per ogni docente compaiono solo le materie ammesse dalla sua classe di concorso — non è
+    possibile scegliere materie fuori dall'abilitazione, né testo libero. I docenti senza
+    classe di concorso assegnata non compaiono qui:
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}">assegnala prima</a>.
+</div>
+
+<form method="post">
+    <input type="hidden" name="anno_scol" value="{{ anno }}">
+
+    {% set righe_valide = righe | selectattr('docente.id_classe_concorso') | list %}
+    {% if not righe_valide %}
+    <div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+        Nessun docente ha ancora una classe di concorso assegnata.
+    </div>
+    {% endif %}
+
+    {% for r in righe_valide %}
+    <div class="card" style="padding:14px 18px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+            <strong style="color:var(--blu); font-size:.92rem;">{{ r.docente.cognome }} {{ r.docente.nome }}</strong>
+            {% for ab in r.docente.abilitazioni %}
+            <span style="font-size:.74rem; background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:8px; font-weight:700;">
+                {{ ab.classe_concorso.codice }}{% if ab.principale %} ★{% endif %}
+            </span>
+            {% endfor %}
+        </div>
+
+        {% if not r.materie_ammesse %}
+        <div style="font-size:.78rem; color:#dc2626;">
+            ⚠ Nessuna materia collegata a questa classe di concorso —
+            <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}">verifica i collegamenti</a>.
+        </div>
+        {% else %}
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {% for m in r.materie_ammesse %}
+            <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;
+                          padding:4px 10px; border-radius:7px; font-size:.82rem; border:1px solid
+                          {{ '#93c5fd' if m.id in r.assegnate_ids else '#d1d5db' }};
+                          background:{{ '#dbeafe' if m.id in r.assegnate_ids else '#f9fafb' }};">
+                <input type="checkbox" name="materie_docente_{{ r.docente.id }}" value="{{ m.id }}"
+                       {% if m.id in r.assegnate_ids %}checked{% endif %}>
+                {{ m.nome }}
+            </label>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if righe_valide %}
+    <button type="submit" class="btn btn-success btn-sm" style="margin-top:8px;">💾 Salva tutte le assegnazioni</button>
+    {% endif %}
+</form>
+{% endblock %}

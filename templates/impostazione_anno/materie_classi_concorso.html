@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Materie e classi di concorso{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🔗 Materie ↔ Classi di concorso</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Una materia può essere insegnata da più classi di concorso (es. Filosofia da A018 e A019,
+    secondo l'indirizzo) — aggiungi tutte quelle previste dalla normativa. I badge
+    <span style="background:#dbeafe; color:#1e40af; padding:1px 6px; border-radius:5px; font-weight:700;">blu</span>
+    sono collegamenti normativi (validi ovunque), quelli
+    <span style="background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:5px; font-weight:700;">gialli</span>
+    sono eccezioni specifiche di questo istituto, documentate con una nota — non si rimuovono
+    dal select, ma con il pulsante dedicato qui sotto.
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px;">
+    <input type="text" id="filtro-materie" placeholder="🔎 Filtra per nome materia..."
+           style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:.86rem;"
+           oninput="filtraMaterie(this.value)">
+</div>
+
+<form method="post" id="form-mcc">
+{% for m in materie %}
+<div class="riga-materia card" style="padding:10px 16px; margin-bottom:6px; display:flex;
+            align-items:center; gap:12px; flex-wrap:wrap;" data-nome="{{ m.nome|lower }}">
+    <div style="min-width:200px; font-weight:700; color:var(--blu); font-size:.86rem;">
+        {{ m.nome }}
+        <span style="font-size:.74rem; color:var(--grigio); font-weight:400;">({{ m.sigla }})</span>
+    </div>
+
+    <div id="badges-{{ m.id }}" style="display:flex; gap:5px; flex-wrap:wrap; flex:1; min-width:200px;">
+        {% for r in m.classi_concorso_ammesse %}
+        <span class="badge-mcc" data-cc-id="{{ r.id_classe_concorso }}" data-fonte="{{ r.fonte }}"
+              {% if r.note %}title="{{ r.note }}"{% endif %}
+              style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px;
+                     border-radius:7px; font-size:.78rem; font-weight:700;
+                     background:{{ '#fef3c7' if r.fonte == 'eccezione_istituto' else '#dbeafe' }};
+                     color:{{ '#92400e' if r.fonte == 'eccezione_istituto' else '#1e40af' }};
+                     border:1px solid {{ '#fde68a' if r.fonte == 'eccezione_istituto' else '#93c5fd' }};">
+            {% if r.fonte == 'normativa' %}
+            <input type="hidden" name="cc_materia_{{ m.id }}" value="{{ r.id_classe_concorso }}">
+            {% endif %}
+            {% if r.fonte == 'eccezione_istituto' %}⚠{% endif %} {{ r.classe_concorso.codice }}
+            {% if r.fonte == 'normativa' %}
+            <span onclick="rimuoviBadge(this)" style="cursor:pointer; color:#9ca3af; font-weight:900;" title="Rimuovi">✕</span>
+            {% endif %}
+        </span>
+        {% endfor %}
+    </div>
+
+    <select onchange="aggiungiBadge({{ m.id }}, this)"
+            style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.8rem; max-width:230px;">
+        <option value="">+ aggiungi classe...</option>
+        {% for cc in classi %}
+        <option value="{{ cc.id }}" data-codice="{{ cc.codice }}">{{ cc.codice }} — {{ cc.nome }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endfor %}
+
+<button type="submit" class="btn btn-success btn-sm" style="margin-top:10px;">💾 Salva tutti i collegamenti normativi</button>
+</form>
+
+<script>
+function filtraMaterie(testo) {
+    const t = testo.trim().toLowerCase();
+    document.querySelectorAll('.riga-materia').forEach(riga => {
+        riga.style.display = riga.dataset.nome.includes(t) ? '' : 'none';
+    });
+}
+
+function aggiungiBadge(idMateria, select) {
+    const ccId = select.value;
+    if (!ccId) return;
+    const codice = select.options[select.selectedIndex].dataset.codice;
+    const box = document.getElementById('badges-' + idMateria);
+    if (box.querySelector('[data-cc-id="' + ccId + '"]')) {
+        select.value = '';
+        return;
+    }
+    const span = document.createElement('span');
+    span.className = 'badge-mcc';
+    span.dataset.ccId = ccId;
+    span.dataset.fonte = 'normativa';
+    span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:3px 8px;' +
+        'border-radius:7px;font-size:.78rem;font-weight:700;' +
+        'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;';
+    span.innerHTML = '<input type="hidden" name="cc_materia_' + idMateria + '" value="' + ccId + '">' +
+        codice +
+        ' <span onclick="rimuoviBadge(this)" style="cursor:pointer;color:#9ca3af;font-weight:900;" title="Rimuovi">✕</span>';
+    box.appendChild(span);
+    select.value = '';
+}
+
+function rimuoviBadge(xEl) {
+    xEl.closest('.badge-mcc').remove();
+}
+</script>
+{% endblock %}

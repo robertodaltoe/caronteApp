@@ -7,7 +7,10 @@ class Docente(db.Model):
     cognome       = db.Column(db.String(80),  nullable=False)
     nome          = db.Column(db.String(80),  nullable=False)
     nome_display  = db.Column(db.String(80))   # es. "FERRARI M."
-    materia       = db.Column(db.String(120))
+    materia       = db.Column(db.String(120))   # campo legacy testuale, vedi id_classe_concorso
+    # Classe di concorso ufficiale del docente (es. A026 - Matematica).
+    # Sostituisce gradualmente il campo libero 'materia' qui sopra.
+    id_classe_concorso = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)
     ore_contratto = db.Column(db.Integer, default=18)
     attivo        = db.Column(db.Boolean, default=True)
     # Ruolo didattico: 'titolare' (docente della materia) o 'itp' (ITP — compresenza laboratorio)
@@ -70,6 +73,16 @@ class Docente(db.Model):
     indisponibilita   = db.relationship('Indisponibilita',  backref='docente',  lazy=True)
     materie_ist       = db.relationship('DocenteMateria', back_populates='docente',
                                          cascade='all, delete-orphan', lazy='select')
+    classe_concorso   = db.relationship('ClasseConcorso', back_populates='docenti',
+                                         foreign_keys=[id_classe_concorso])
+    abilitazioni      = db.relationship('DocenteClasseConcorso', back_populates='docente',
+                                         cascade='all, delete-orphan', lazy='select')
+
+    @property
+    def classi_concorso_abilitate(self):
+        """Tutte le classi di concorso su cui il docente è abilitato
+        (sostituisce id_classe_concorso quando servono più abilitazioni)."""
+        return [a.classe_concorso for a in self.abilitazioni]
 
     @property
     def nome_completo(self):

@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Organico{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">📋 Organico {{ anno }} — {{ 'di Diritto' if tipo=='diritto' else 'di Fatto' }}</h1>
+</div>
+
+<!-- Selettore anno/tipo -->
+<div class="card" style="padding:12px 16px; margin-bottom:14px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:.72rem; color:var(--grigio); display:block;">Anno scolastico</label>
+        <select onchange="cambiaFiltri()" id="sel-anno"
+                style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            {% for a in anni_esistenti %}
+            <option value="{{ a }}" {% if a == anno %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div style="display:flex; gap:4px;">
+        <a href="{{ url_for('impostazione_anno.organico', anno=anno, tipo='diritto') }}"
+           class="btn btn-sm" style="background:{{ '#0369a1' if tipo=='diritto' else '#e5eaf0' }};
+                  color:{{ 'white' if tipo=='diritto' else 'var(--blu)' }};">📐 Diritto</a>
+        <a href="{{ url_for('impostazione_anno.organico', anno=anno, tipo='fatto') }}"
+           class="btn btn-sm" style="background:{{ '#166534' if tipo=='fatto' else '#e5eaf0' }};
+                  color:{{ 'white' if tipo=='fatto' else 'var(--blu)' }};">✅ Fatto</a>
+    </div>
+    {% if tipo == 'fatto' %}
+    <form method="post" style="margin-left:auto;">
+        <input type="hidden" name="azione" value="copia_da_diritto">
+        <button type="submit" class="btn btn-sm" style="background:#7c3aed; color:white;"
+                onclick="return confirm('Copiare tutte le righe dell\'organico di diritto in quello di fatto (solo quelle non già presenti)?')">
+            📋 Inizializza da organico di diritto
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px;">
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#dc2626;">{{ tot_residue }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Ore residue totali (supplenze brevi)</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#7c3aed;">{{ tot_potenziamento }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Posti di potenziamento</div>
+    </div>
+</div>
+
+<!-- Aggiungi riga -->
+<div class="card" style="padding:14px 18px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi riga organico</h3>
+    <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+        <input type="hidden" name="tipo" value="{{ tipo }}">
+        <div style="min-width:220px;">
+            <label style="font-size:.72rem; color:var(--grigio);">Classe di concorso *</label><br>
+            <select name="id_classe_concorso" required
+                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <option value="">— seleziona —</option>
+                {% for cc in classi_disponibili %}
+                <option value="{{ cc.id }}">{{ cc.codice }} — {{ cc.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">DOC</label><br>
+            <input type="number" name="n_docenti" value="0" min="0" style="width:55px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">COI</label><br>
+            <input type="number" name="n_coi" value="0" min="0" style="width:55px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">COE</label><br>
+            <input type="number" name="n_coe" value="0" min="0" style="width:55px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Direzione COE</label><br>
+            <select name="coe_direzione" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <option value="">—</option>
+                <option value="completa_con">Completa con</option>
+                <option value="cede_a">Cede a</option>
+            </select>
+        </div>
+        <div style="min-width:160px;"><label style="font-size:.72rem; color:var(--grigio);">Scuola COE</label><br>
+            <input type="text" name="coe_scuola" style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">Ore COE</label><br>
+            <input type="number" name="coe_ore" min="0" style="width:60px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">Ore residue</label><br>
+            <input type="number" name="ore_residue" value="0" min="0" style="width:65px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">Potenz.</label><br>
+            <input type="number" name="n_potenziamento" value="0" min="0" style="width:60px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+    </form>
+</div>
+
+{% if not righe %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+    Nessuna riga organico per {{ anno }} — {{ tipo }}.
+</div>
+{% endif %}
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table style="font-size:.84rem;">
+        <thead>
+            <tr>
+                <th style="width:90px;">Codice</th>
+                <th>Nome</th>
+                <th style="width:50px; text-align:center;">DOC</th>
+                <th style="width:50px; text-align:center;">COI</th>
+                <th style="width:50px; text-align:center;">COE</th>
+                <th>Composizione cattedre</th>
+                <th style="width:70px; text-align:center;">Ore res.</th>
+                <th style="width:70px; text-align:center;">Potenz.</th>
+                <th style="width:60px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in righe %}
+        <tr id="row-{{ r.id }}">
+            <td style="font-weight:700; color:var(--blu);">{{ r.classe_concorso.codice }}</td>
+            <td>{{ r.classe_concorso.nome }}</td>
+            <td style="text-align:center;">{{ r.n_docenti }}</td>
+            <td style="text-align:center;">{{ r.n_coi }}</td>
+            <td style="text-align:center;">{{ r.n_coe }}</td>
+            <td style="font-size:.78rem; color:var(--grigio);">
+                {% if r.coe_direzione == 'completa_con' %}
+                    completa con <strong>{{ r.coe_scuola }}</strong>{% if r.coe_ore %} ({{ r.coe_ore }}h){% endif %}
+                {% elif r.coe_direzione == 'cede_a' %}
+                    cede a <strong>{{ r.coe_scuola }}</strong>{% if r.coe_ore %} ({{ r.coe_ore }}h){% endif %}
+                {% else %}—{% endif %}
+            </td>
+            <td style="text-align:center; {% if r.ore_residue %}color:#dc2626; font-weight:700;{% endif %}">
+                {{ r.ore_residue or '—' }}
+            </td>
+            <td style="text-align:center; {% if r.n_potenziamento %}color:#7c3aed; font-weight:700;{% endif %}">
+                {{ r.n_potenziamento or '—' }}
+            </td>
+            <td style="text-align:center;">
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ r.id }})" title="Modifica">✏️</button>
+            </td>
+        </tr>
+        <tr id="edit-{{ r.id }}" style="display:none; background:#f0f4ff;">
+            <td colspan="9" style="padding:10px 14px;">
+                <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ r.id }}">
+                    <div><label style="font-size:.72rem; color:var(--grigio);">DOC</label><br>
+                        <input type="number" name="n_docenti" value="{{ r.n_docenti }}" min="0" style="width:55px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div><label style="font-size:.72rem; color:var(--grigio);">COI</label><br>
+                        <input type="number" name="n_coi" value="{{ r.n_coi }}" min="0" style="width:55px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div><label style="font-size:.72rem; color:var(--grigio);">COE</label><br>
+                        <input type="number" name="n_coe" value="{{ r.n_coe }}" min="0" style="width:55px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Direzione</label><br>
+                        <select name="coe_direzione" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                            <option value="" {% if not r.coe_direzione %}selected{% endif %}>—</option>
+                            <option value="completa_con" {% if r.coe_direzione=='completa_con' %}selected{% endif %}>Completa con</option>
+                            <option value="cede_a" {% if r.coe_direzione=='cede_a' %}selected{% endif %}>Cede a</option>
+                        </select>
+                    </div>
+                    <div style="min-width:160px;"><label style="font-size:.72rem; color:var(--grigio);">Scuola</label><br>
+                        <input type="text" name="coe_scuola" value="{{ r.coe_scuola or '' }}" style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div><label style="font-size:.72rem; color:var(--grigio);">Ore COE</label><br>
+                        <input type="number" name="coe_ore" value="{{ r.coe_ore or '' }}" min="0" style="width:60px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div><label style="font-size:.72rem; color:var(--grigio);">Ore res.</label><br>
+                        <input type="number" name="ore_residue" value="{{ r.ore_residue }}" min="0" style="width:65px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div><label style="font-size:.72rem; color:var(--grigio);">Potenz.</label><br>
+                        <input type="number" name="n_potenziamento" value="{{ r.n_potenziamento }}" min="0" style="width:60px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div style="flex:1; min-width:160px;"><label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+                        <input type="text" name="note" value="{{ r.note or '' }}" style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+                    <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
+                            onclick="toggleEdit({{ r.id }})">Annulla</button>
+                </form>
+                <form method="post" style="margin-top:8px;" onsubmit="return confirm('Eliminare questa riga organico?')">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ r.id }}">
+                    <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">🗑 Elimina riga</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleEdit(id) {
+    const edit = document.getElementById('edit-' + id);
+    edit.style.display = edit.style.display === 'none' ? '' : 'none';
+}
+function cambiaFiltri() {
+    const anno = document.getElementById('sel-anno').value;
+    window.location.href = '{{ url_for("impostazione_anno.organico") }}?anno=' + encodeURIComponent(anno) + '&tipo={{ tipo }}';
+}
+</script>
+{% endblock %}
