@@ -449,9 +449,53 @@ def agosto_gruppi():
             'label': f"{rd.docente.cognome} {(rd.docente.nome or '')[:1]}.",
             'n_alunni': len(dati['alunni']),
             'n_classi': n_classi,
+            'con_debito': True,
         })
+
+    # Aggiunge anche i docenti DISPONIBILI (contratto ok, non assenti) che
+    # insegnano la materia secondo l'orario reale (OrarioDocente), ma a cui
+    # nello staging non risulta nessun debito assegnato — es. un docente
+    # abilitato sia su Matematica sia su Fisica i cui alunni quest'anno
+    # non hanno avuto insufficienze in una delle due. Senza questa aggiunta
+    # tali docenti non comparirebbero mai nel select del titolare, pur
+    # essendo perfettamente idonei a tenere la prova.
+    from models.orario_docente import OrarioDocente as _OrarioDocenteEarly
+
+    id_gia_presenti_per_materia = {
+        mat_can: {d['id_rec_docente'] for d in lista}
+        for mat_can, lista in docenti_per_materia.items()
+    }
+    materie_con_proposte = set(docenti_per_materia.keys()) | set(materie_disponibili)
+    rd_per_id_docente = {rd.docente.id: rd for rd in disponibili}
+    for o in _OrarioDocenteEarly.query.filter(
+            _OrarioDocenteEarly.id_docente.in_(rd_per_id_docente.keys())).all():
+        if not o.materia:
+            continue
+        mat_can = _materia_canonica(o.materia)
+        if mat_can not in materie_con_proposte:
+            continue  # materia senza nessun debito/proposta: non interessa qui
+        rd = rd_per_id_docente.get(o.id_docente)
+        if not rd:
+            continue
+        gia_presenti = id_gia_presenti_per_materia.setdefault(mat_can, set())
+        if rd.id in gia_presenti:
+            continue  # già proposto come "con debito": non duplicare
+        gia_presenti.add(rd.id)
+        docenti_per_materia[mat_can].append({
+            'id_rec_docente': rd.id,
+            'label': f"{rd.docente.cognome} {(rd.docente.nome or '')[:1]}.",
+            'n_alunni': 0,
+            'n_classi': 0,
+            'con_debito': False,
+        })
+
     for mat_can in docenti_per_materia:
-        docenti_per_materia[mat_can].sort(key=lambda d: -d['n_alunni'])
+        # Con debito prima (più alunni prima), poi i disponibili senza
+        # debito in ordine alfabetico — cosi' chi ha già un'insufficienza
+        # da coprire resta in cima, ma chi e' idoneo per materia/classe di
+        # concorso compare comunque, subito sotto.
+        docenti_per_materia[mat_can].sort(
+            key=lambda d: (not d['con_debito'], -d['n_alunni'], d['label']))
     docenti_per_materia_json = dict(docenti_per_materia)
 
     # Gruppi esistenti: classi disponibili per la materia di quel gruppo,

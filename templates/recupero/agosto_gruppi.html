@@ -222,13 +222,40 @@ function aggiornaTitolareLibero(materia) {
     optVuota.value = '';
     optVuota.textContent = '— seleziona —';
     sel.appendChild(optVuota);
-    docenti.forEach(d => {
+
+    // Due gruppi distinti: chi ha già debiti assegnati in questa materia
+    // (priorità naturale, dato che il sistema lo ha già abbinato), e chi
+    // è semplicemente disponibile e insegna la materia secondo l'orario,
+    // ma senza nessun alunno con insufficienza da questo lato — utile per
+    // forzare un titolare diverso quando serve (es. supplente nuovo,
+    // docente abilitato su più materie i cui alunni non hanno debiti).
+    const conDebito = docenti.filter(d => d.con_debito);
+    const senzaDebito = docenti.filter(d => !d.con_debito);
+
+    function aggiungiOpzione(d, gruppo) {
         const opt = document.createElement('option');
         opt.value = d.id_rec_docente;
-        const etichettaClassi = d.n_classi === 1 ? '1 classe' : (d.n_classi + ' classi');
-        opt.textContent = d.label + ' — ' + d.n_alunni + ' alunni (' + etichettaClassi + ')';
-        sel.appendChild(opt);
-    });
+        if (d.con_debito) {
+            const etichettaClassi = d.n_classi === 1 ? '1 classe' : (d.n_classi + ' classi');
+            opt.textContent = d.label + ' — ' + d.n_alunni + ' alunni (' + etichettaClassi + ')';
+        } else {
+            opt.textContent = d.label + ' — disponibile, nessun debito assegnato';
+        }
+        gruppo.appendChild(opt);
+    }
+
+    if (conDebito.length) {
+        const grp1 = document.createElement('optgroup');
+        grp1.label = 'Con debiti assegnati in questa materia';
+        conDebito.forEach(d => aggiungiOpzione(d, grp1));
+        sel.appendChild(grp1);
+    }
+    if (senzaDebito.length) {
+        const grp2 = document.createElement('optgroup');
+        grp2.label = 'Disponibili, nessun debito assegnato';
+        senzaDebito.forEach(d => aggiungiOpzione(d, grp2));
+        sel.appendChild(grp2);
+    }
 }
 
 function aggiornaClassiLibero() {
