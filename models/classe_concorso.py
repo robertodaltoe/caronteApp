@@ -140,7 +140,7 @@ class MateriaClasseConcorso(db.Model):
     note                = db.Column(db.String(300), nullable=True)
     creato_il           = db.Column(db.DateTime, default=datetime.utcnow)
 
-    materia         = db.relationship('Materia', backref='classi_concorso_ammesse')
+    materia         = db.relationship('Materia', backref=db.backref('classi_concorso_ammesse', cascade='all, delete-orphan'))
     classe_concorso = db.relationship('ClasseConcorso', backref='materie_ammesse')
 
     __table_args__ = (
