@@ -47,13 +47,25 @@
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→</div>
     </a>
-    <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}" class="card" style="padding:14px 18px;
+    <a href="{{ url_for('impostazione_anno.piano_studi', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
+        <div style="font-size:1.6rem;">📚</div>
+        <div>
+            <div style="font-weight:700; color:#7c3aed;">2. Piano di studi</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Centro di controllo materie: definisce quali materie esistono per indirizzo/anno,
+                i loro nomi ufficiali e il collegamento alle classi di concorso
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
+    <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #6366f1;">
         <div style="font-size:1.6rem;">🔗</div>
         <div>
-            <div style="font-weight:700; color:#7c3aed;">2. Materie ↔ Classi di concorso</div>
+            <div style="font-weight:700; color:#6366f1;">3. Materie ↔ Classi di concorso</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
-                Collega le materie già impostate alla classe di concorso che le insegna
+                Abbina le materie del piano di studi alle classi di concorso abilitate a insegnarle
             </div>
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→</div>
@@ -62,20 +74,9 @@
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #0891b2;">
         <div style="font-size:1.6rem;">🏫</div>
         <div>
-            <div style="font-weight:700; color:#0891b2;">3. Classi attive</div>
+            <div style="font-weight:700; color:#0891b2;">4. Classi attive</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Sezioni attivate per anno scolastico — il dato variabile da confermare ogni anno
-            </div>
-        </div>
-        <div style="margin-left:auto; color:var(--grigio);">→</div>
-    </a>
-    <a href="{{ url_for('impostazione_anno.piano_studi', anno=anno_piano) }}" class="card" style="padding:14px 18px;
-       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
-        <div style="font-size:1.6rem;">📚</div>
-        <div>
-            <div style="font-weight:700; color:#7c3aed;">4. Piano di studi</div>
-            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
-                Ore settimanali per CC/materia/indirizzo/anno — stabile, da confermare ogni anno
             </div>
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→</div>

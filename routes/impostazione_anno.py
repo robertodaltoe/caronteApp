@@ -530,17 +530,45 @@ def piano_studi():
     if request.method == 'POST':
         anno_f      = request.form.get('anno_scol', anno)
         indirizzo_f = request.form.get('indirizzo', indirizzo_sel)
-        # Aggiorna le righe esistenti
+        # Aggiorna le righe esistenti — ore e nome materia
+        # Prima costruisce un dizionario id→nuovo_nome dalle chiavi nome_<id>
+        nuovi_nomi = {}
+        for key, val in request.form.items():
+            if key.startswith('nome_') and val.strip():
+                try:
+                    nuovi_nomi[int(key.replace('nome_', ''))] = val.strip()
+                except ValueError:
+                    pass
+
         for key, val in request.form.items():
             if not key.startswith('ore_'):
                 continue
-            ps_id = int(key.replace('ore_', ''))
-            ps = PianoStudi.query.get(ps_id)
-            if ps:
-                try:
-                    ps.ore_settimanali = int(val) if val else 0
-                except ValueError:
-                    pass
+            try:
+                ps_id = int(key.replace('ore_', ''))
+            except ValueError:
+                continue
+            ps = db.session.get(PianoStudi, ps_id)
+            if not ps:
+                continue
+            try:
+                ps.ore_settimanali = int(val) if val else 0
+            except ValueError:
+                pass
+            # Se il nome per questo id è presente, aggiorna tutte le righe
+            # con lo stesso vecchio nome nella stessa CC/indirizzo/anno (mantenendo
+            # la coerenza: tutte le sezioni di quella materia cambiano nome insieme)
+            if ps_id in nuovi_nomi:
+                nuovo_nome = nuovi_nomi[ps_id]
+                vecchio_nome = ps.nome_materia_locale
+                if nuovo_nome != vecchio_nome:
+                    # Aggiorna tutte le righe con lo stesso vecchio nome nella stessa CC
+                    righe_stessa_materia = PianoStudi.query.filter_by(
+                        anno_scol=anno_f, indirizzo=indirizzo_f,
+                        id_classe_concorso=ps.id_classe_concorso,
+                        nome_materia_locale=vecchio_nome).all()
+                    for r in righe_stessa_materia:
+                        r.nome_materia_locale = nuovo_nome
+
         db.session.commit()
         _ricalcola_organico(anno_f)
         flash('Piano di studi aggiornato e organico ricalcolato.', 'success')

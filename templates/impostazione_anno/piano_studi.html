@@ -58,8 +58,15 @@
                 {# raggruppa righe dello stesso gruppo CC per materia / anno_corso #}
                 {% set materie_cc = gruppo.righe | groupby('nome_materia_locale') %}
                 {% for nome_mat, righe_mat in materie_cc %}
+                {% set prima_riga = righe_mat | first %}
                 <tr>
-                    <td style="padding:5px 8px; border:1px solid #e5e7eb;">{{ nome_mat }}</td>
+                    <td style="padding:4px 6px; border:1px solid #e5e7eb;">
+                        <input type="text" name="nome_{{ prima_riga.id }}"
+                               value="{{ nome_mat }}"
+                               title="Nome materia locale (modifica per correggere o allineare al nome ufficiale)"
+                               style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
+                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                    </td>
                     {% for ac in anni_corso %}
                     {% set riga = righe_mat | selectattr('anno_corso', 'equalto', ac) | first | default(none) %}
                     {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
