@@ -9,59 +9,95 @@
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #0891b2;">
     Attiva/disattiva le sezioni previste per questo anno scolastico. Ogni modifica
     ricalcola automaticamente il totale ore per la richiesta di organico.
-    Le sezioni disattivate restano in archivio ma non contribuiscono al calcolo.
+    Per preparare un nuovo anno, usa il pulsante <strong>"Prepara anno"</strong> —
+    vengono create tutte le sezioni possibili (tutte inattive), e tu spunti solo quelle reali.
 </div>
 
 <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-    <span style="font-size:.82rem; color:var(--grigio);">Anno scolastico:</span>
+    <span style="font-size:.82rem; color:var(--grigio);">Anno:</span>
     {% for a in anni_disponibili %}
     <a href="{{ url_for('impostazione_anno.classi_attive', anno=a) }}"
        style="padding:4px 10px; border-radius:6px; font-size:.82rem; text-decoration:none;
-              background:{{ '#0369a1' if a == anno else '#f3f4f6' }};
+              background:{{ '#0891b2' if a == anno else '#f3f4f6' }};
               color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
     {% endfor %}
+
+    <form method="post" style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+        <input type="hidden" name="azione" value="prepara_anno">
+        <input type="text" name="anno_scol" placeholder="es. 2027-2028"
+               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.8rem; width:110px;">
+        <button type="submit" class="btn btn-sm"
+                style="background:#6366f1; color:white; white-space:nowrap;"
+                onclick="return confirm('Crea tutte le sezioni per l\'anno indicato (tutte inattive)?')">
+            📅 Prepara anno
+        </button>
+    </form>
 </div>
 
 <form method="post">
+    <input type="hidden" name="azione" value="salva">
     <input type="hidden" name="anno_scol" value="{{ anno }}">
+
     {% for indirizzo in indirizzi_ordine %}
-    {% if indirizzo in struttura %}
+    {% set sezioni_ind = sezioni_template[indirizzo] %}
+    {% set anni_ind = sezioni_ind | map(attribute=0) | unique | list %}
+    {% set sez_labels = sezioni_ind | map(attribute=1) | unique | list %}
+
     <div class="card" style="padding:14px 18px; margin-bottom:10px;">
         <div style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
             {{ indirizzo }}
+            {% set n_attive = struttura.get(indirizzo, {}).values() | sum(start=[]) | selectattr('attiva') | list | length %}
+            {% if n_attive %}
+            <span style="font-size:.74rem; background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:8px; font-weight:700; margin-left:6px;">
+                {{ n_attive }} attive
+            </span>
+            {% endif %}
         </div>
-        <div style="display:grid; grid-template-columns:auto repeat(5,1fr); gap:6px; align-items:center;">
-            <div style="font-size:.74rem; color:var(--grigio);">Anno</div>
-            {% for ac in range(1, 6) %}
-            <div style="font-size:.74rem; color:var(--grigio); text-align:center;">{{ ac }}°</div>
+        <div style="display:grid; grid-template-columns:auto {% for _ in anni_ind %}1fr {% endfor %}; gap:6px; align-items:center;">
+            <div></div>
+            {% for ac in anni_ind %}
+            <div style="font-size:.74rem; color:var(--grigio); text-align:center;">{{ ac }}° anno</div>
             {% endfor %}
-            {% for sez_label in ['A','B'] %}
-            <div style="font-size:.8rem; font-weight:700;">Sez. {{ sez_label }}</div>
-            {% for ac in range(1, 6) %}
+
+            {% for sez in sez_labels %}
+            <div style="font-size:.8rem; font-weight:600; color:#374151;">Sez. {{ sez }}</div>
+            {% for ac in anni_ind %}
             {% set cs_list = struttura.get(indirizzo, {}).get(ac, []) %}
-            {% set cs = cs_list | selectattr('sezione', 'equalto', sez_label) | first | default(none) %}
+            {% set cs = cs_list | selectattr('sezione', 'equalto', sez) | first | default(none) %}
             <div style="text-align:center;">
                 {% if cs %}
-                <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;
-                              padding:4px 8px; border-radius:6px; font-size:.78rem;
+                <label style="display:inline-flex; align-items:center; justify-content:center;
+                              width:48px; height:32px; border-radius:6px; cursor:pointer; font-size:.78rem;
+                              font-weight:700; transition:all .15s;
                               background:{{ '#dbeafe' if cs.attiva else '#f9fafb' }};
-                              border:1px solid {{ '#93c5fd' if cs.attiva else '#e5e7eb' }};">
+                              border:1px solid {{ '#93c5fd' if cs.attiva else '#e5e7eb' }};
+                              color:{{ '#1e40af' if cs.attiva else '#9ca3af' }};"
+                      id="label_{{ cs.id }}">
                     <input type="checkbox" name="cs_{{ cs.id }}" value="1"
                            {% if cs.attiva %}checked{% endif %}
-                           onchange="this.closest('label').style.background = this.checked ? '#dbeafe' : '#f9fafb';
-                                     this.closest('label').style.borderColor = this.checked ? '#93c5fd' : '#e5e7eb';">
-                    {{ ac }}{{ sez_label }}
+                           style="display:none;"
+                           onchange="
+                             var lbl = document.getElementById('label_{{ cs.id }}');
+                             lbl.style.background = this.checked ? '#dbeafe' : '#f9fafb';
+                             lbl.style.borderColor = this.checked ? '#93c5fd' : '#e5e7eb';
+                             lbl.style.color = this.checked ? '#1e40af' : '#9ca3af';
+                           ">
+                    {{ ac }}{{ sez }}
                 </label>
                 {% else %}
-                <span style="font-size:.74rem; color:#d1d5db;">—</span>
+                <span style="display:inline-flex; align-items:center; justify-content:center;
+                             width:48px; height:32px; border-radius:6px; font-size:.74rem;
+                             background:#f3f4f6; border:1px dashed #e5e7eb; color:#d1d5db;">
+                    —
+                </span>
                 {% endif %}
             </div>
             {% endfor %}
             {% endfor %}
         </div>
     </div>
-    {% endif %}
     {% endfor %}
+
     <button type="submit" class="btn btn-success btn-sm" style="margin-top:6px;">
         💾 Salva e ricalcola organico
     </button>

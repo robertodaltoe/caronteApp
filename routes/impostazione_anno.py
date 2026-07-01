@@ -389,20 +389,51 @@ def classi_attive():
     """
     anno = request.args.get('anno', _anno_scolastico_corrente())
 
+    # Template completo di tutte le sezioni possibili per ogni indirizzo.
+    # AFM-RIM: le sezioni A e B per ogni anno (1-2 AFM, 3-5 RIM).
+    # LSP: una sola sezione per anno (solo A).
+    # Tutti gli altri: A e B per tutti gli anni 1-5.
+    SEZIONI_TEMPLATE = {
+        'AFM': [(1,'A'),(1,'B'),(2,'A'),(2,'B')],
+        'RIM': [(3,'A'),(3,'B'),(4,'A'),(4,'B'),(5,'A'),(5,'B')],
+        'CAT': [(1,'A'),(1,'B'),(2,'A'),(2,'B'),(3,'A'),(3,'B'),(4,'A'),(4,'B'),(5,'A'),(5,'B')],
+        'LSU': [(1,'A'),(1,'B'),(2,'A'),(2,'B'),(3,'A'),(3,'B'),(4,'A'),(4,'B'),(5,'A'),(5,'B')],
+        'LSC': [(1,'A'),(1,'B'),(2,'A'),(2,'B'),(3,'A'),(3,'B'),(4,'A'),(4,'B'),(5,'A'),(5,'B')],
+        'LLI': [(1,'A'),(1,'B'),(2,'A'),(2,'B'),(3,'A'),(3,'B'),(4,'A'),(4,'B'),(5,'A'),(5,'B')],
+        'LSP': [(1,'A'),(2,'A'),(3,'A'),(4,'A'),(5,'A')],
+    }
+    INDIRIZZI_ORDINE = ['AFM', 'RIM', 'CAT', 'LSU', 'LSC', 'LLI', 'LSP']
+
     if request.method == 'POST':
+        azione = request.form.get('azione', 'salva')
         anno_f = request.form.get('anno_scol', anno)
+
+        if azione == 'prepara_anno':
+            # Crea tutte le sezioni del template per il nuovo anno, tutte inattive.
+            # Quelle già esistenti vengono ignorate (idempotente).
+            n_create = 0
+            for ind, sezioni in SEZIONI_TEMPLATE.items():
+                for ac, sez in sezioni:
+                    esiste = ClasseSezione.query.filter_by(
+                        anno_scol=anno_f, indirizzo=ind,
+                        anno_corso=ac, sezione=sez).first()
+                    if not esiste:
+                        db.session.add(ClasseSezione(
+                            anno_scol=anno_f, indirizzo=ind,
+                            anno_corso=ac, sezione=sez, attiva=False))
+                        n_create += 1
+            db.session.commit()
+            flash(f'Anno {anno_f} preparato: {n_create} sezioni create (tutte inattive — spunta quelle che attiverai).', 'success')
+            return redirect(url_for('impostazione_anno.classi_attive', anno=anno_f))
+
+        # Salva checkbox per ogni sezione esistente
         for cs in ClasseSezione.query.filter_by(anno_scol=anno_f).all():
-            era_attiva = cs.attiva
-            nuova = request.form.get(f'cs_{cs.id}') == '1'
-            cs.attiva = nuova
+            cs.attiva = request.form.get(f'cs_{cs.id}') == '1'
         db.session.commit()
-        # Ricalcola tutto CalcoloOrganico per questo anno
         _ricalcola_organico(anno_f)
         flash('Classi attive aggiornate e organico ricalcolato.', 'success')
         return redirect(url_for('impostazione_anno.classi_attive', anno=anno_f))
 
-    # Struttura: indirizzo → anno_corso → lista sezioni
-    INDIRIZZI_ORDINE = ['AFM', 'RIM', 'CAT', 'LSU', 'LSC', 'LLI', 'LSP']
     classi = ClasseSezione.query.filter_by(anno_scol=anno).order_by(
         ClasseSezione.anno_corso, ClasseSezione.sezione).all()
 
@@ -417,6 +448,7 @@ def classi_attive():
     return render_template('impostazione_anno/classi_attive.html',
         struttura=struttura, anno=anno,
         indirizzi_ordine=INDIRIZZI_ORDINE,
+        sezioni_template=SEZIONI_TEMPLATE,
         anni_disponibili=anni_disponibili)
 
 
