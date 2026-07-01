@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Calcolo organico{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🧮 Calcolo organico — {{ anno }}</h1>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px;">
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--blu);">{{ totale_ore }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Ore totali richieste</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#166534;">{{ n_confermati }}/{{ righe|length }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">CC confermate</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#b45309;">{{ n_eccezioni }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Eccezioni manuali</div>
+    </div>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #0891b2;">
+    Il calcolo automatico applica la regola generale: ≥ 18 ore → <strong>COI</strong>,
+    8-17 ore → <strong>COE</strong>, 1-7 ore → <strong>residue</strong>.
+    Puoi sovrascrivere il tipo per i casi eccezionali e confermare riga per riga.
+    Al primo bollettino USR userai questa tabella come base per verificare la risposta.
+</div>
+
+<div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+    {% for a in anni_disponibili %}
+    <a href="{{ url_for('impostazione_anno.calcolo_organico', anno=a) }}"
+       style="padding:4px 10px; border-radius:6px; font-size:.82rem; text-decoration:none;
+              background:{{ '#0891b2' if a == anno else '#f3f4f6' }};
+              color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+    {% endfor %}
+    <form method="post" style="margin-left:auto; display:flex; gap:6px;">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+        <button name="azione" value="ricalcola" class="btn btn-sm" style="background:#e5e7eb; color:#374151;">
+            🔄 Ricalcola
+        </button>
+        <button name="azione" value="conferma_tutto" class="btn btn-success btn-sm">
+            ✅ Conferma tutto
+        </button>
+    </form>
+</div>
+
+<form method="post">
+    <input type="hidden" name="anno_scol" value="{{ anno }}">
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Classe di concorso</th>
+                    <th style="text-align:right;">Ore tot.</th>
+                    <th style="text-align:center;">COI</th>
+                    <th style="text-align:center;">Resto</th>
+                    <th style="text-align:center;">Tipo calcolato</th>
+                    <th style="text-align:center;">Tipo confermato</th>
+                    <th>Note eccezione</th>
+                    <th style="text-align:center;">✅</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in righe %}
+            {% if r.ore_totali_calcolate > 0 %}
+            {% set tipo_eff = r.tipo_confermato or r.tipo_calcolato %}
+            <tr style="{{ 'background:#f0fdf4;' if r.confermato else '' }}">
+                <td style="font-size:.82rem;">
+                    <strong>{{ r.classe_concorso.codice }}</strong>
+                    <span style="color:var(--grigio); font-weight:400; font-size:.76rem;">
+                        — {{ r.classe_concorso.nome[:35] }}</span>
+                </td>
+                <td style="text-align:right; font-weight:700;">{{ r.ore_totali_calcolate }}</td>
+                <td style="text-align:center;">{{ r.n_coi_calcolato if r.n_coi_calcolato else '—' }}</td>
+                <td style="text-align:center;">{{ r.ore_resto_calcolato if r.ore_resto_calcolato else '—' }}</td>
+                <td style="text-align:center;">
+                    <span style="padding:2px 8px; border-radius:6px; font-size:.76rem; font-weight:700;
+                                 background:{{ '#dbeafe' if r.tipo_calcolato=='COI' else ('#dcfce7' if r.tipo_calcolato=='COE' else '#fef9c3') }};
+                                 color:{{ '#1e40af' if r.tipo_calcolato=='COI' else ('#166534' if r.tipo_calcolato=='COE' else '#713f12') }};">
+                        {{ r.tipo_calcolato or '—' }}
+                    </span>
+                </td>
+                <td style="text-align:center;">
+                    <select name="tipo_{{ r.id }}" style="padding:3px 6px; border:1px solid #d1d5db;
+                            border-radius:5px; font-size:.78rem;">
+                        <option value="">— auto —</option>
+                        <option value="COI" {% if r.tipo_confermato=='COI' %}selected{% endif %}>COI</option>
+                        <option value="COE" {% if r.tipo_confermato=='COE' %}selected{% endif %}>COE</option>
+                        <option value="residue" {% if r.tipo_confermato=='residue' %}selected{% endif %}>Residue</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="note_{{ r.id }}" value="{{ r.note_eccezione or '' }}"
+                           placeholder="Motivo sovrascrittura..."
+                           style="width:100%; border:1px solid #e5e7eb; border-radius:4px; padding:3px 6px; font-size:.76rem;">
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" name="conf_{{ r.id }}" value="1" {% if r.confermato %}checked{% endif %}>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <button type="submit" class="btn btn-success btn-sm">💾 Salva sovrascritture</button>
+</form>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Classi attive{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🏫 Classi attive — {{ anno }}</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #0891b2;">
+    Attiva/disattiva le sezioni previste per questo anno scolastico. Ogni modifica
+    ricalcola automaticamente il totale ore per la richiesta di organico.
+    Le sezioni disattivate restano in archivio ma non contribuiscono al calcolo.
+</div>
+
+<div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+    <span style="font-size:.82rem; color:var(--grigio);">Anno scolastico:</span>
+    {% for a in anni_disponibili %}
+    <a href="{{ url_for('impostazione_anno.classi_attive', anno=a) }}"
+       style="padding:4px 10px; border-radius:6px; font-size:.82rem; text-decoration:none;
+              background:{{ '#0369a1' if a == anno else '#f3f4f6' }};
+              color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+    {% endfor %}
+</div>
+
+<form method="post">
+    <input type="hidden" name="anno_scol" value="{{ anno }}">
+    {% for indirizzo in indirizzi_ordine %}
+    {% if indirizzo in struttura %}
+    <div class="card" style="padding:14px 18px; margin-bottom:10px;">
+        <div style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
+            {{ indirizzo }}
+        </div>
+        <div style="display:grid; grid-template-columns:auto repeat(5,1fr); gap:6px; align-items:center;">
+            <div style="font-size:.74rem; color:var(--grigio);">Anno</div>
+            {% for ac in range(1, 6) %}
+            <div style="font-size:.74rem; color:var(--grigio); text-align:center;">{{ ac }}°</div>
+            {% endfor %}
+            {% for sez_label in ['A','B'] %}
+            <div style="font-size:.8rem; font-weight:700;">Sez. {{ sez_label }}</div>
+            {% for ac in range(1, 6) %}
+            {% set cs_list = struttura.get(indirizzo, {}).get(ac, []) %}
+            {% set cs = cs_list | selectattr('sezione', 'equalto', sez_label) | first | default(none) %}
+            <div style="text-align:center;">
+                {% if cs %}
+                <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;
+                              padding:4px 8px; border-radius:6px; font-size:.78rem;
+                              background:{{ '#dbeafe' if cs.attiva else '#f9fafb' }};
+                              border:1px solid {{ '#93c5fd' if cs.attiva else '#e5e7eb' }};">
+                    <input type="checkbox" name="cs_{{ cs.id }}" value="1"
+                           {% if cs.attiva %}checked{% endif %}
+                           onchange="this.closest('label').style.background = this.checked ? '#dbeafe' : '#f9fafb';
+                                     this.closest('label').style.borderColor = this.checked ? '#93c5fd' : '#e5e7eb';">
+                    {{ ac }}{{ sez_label }}
+                </label>
+                {% else %}
+                <span style="font-size:.74rem; color:#d1d5db;">—</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    <button type="submit" class="btn btn-success btn-sm" style="margin-top:6px;">
+        💾 Salva e ricalcola organico
+    </button>
+</form>
+{% endblock %}

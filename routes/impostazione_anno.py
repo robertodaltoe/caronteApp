@@ -11,6 +11,7 @@ from models import db
 from models.classe_concorso import ClasseConcorso, CattedraOrganico
 from models.materia import Materia, Dipartimento, DocenteMateria
 from models.docente import Docente
+from models.piano_studi import ClasseSezione, PianoStudi, CalcoloOrganico
 from datetime import date
 
 impostazione_anno_bp = Blueprint('impostazione_anno', __name__)
@@ -25,14 +26,23 @@ def _anno_scolastico_corrente():
 
 @impostazione_anno_bp.route('/impostazione-anno')
 def index():
+    anno_corrente = _anno_scolastico_corrente()
     n_classi = ClasseConcorso.query.filter_by(attiva=True).count()
     n_materie_collegate = Materia.query.filter(Materia.id_classe_concorso.isnot(None)).count()
     n_materie_tot = Materia.query.count()
     anni_organico = sorted({r.anno_scol for r in CattedraOrganico.query.all()}, reverse=True)
+    # KPI piano studi
+    n_sezioni_attive = ClasseSezione.query.filter_by(anno_scol=anno_corrente, attiva=True).count()
+    n_piano_righe   = PianoStudi.query.filter_by(anno_scol=anno_corrente).count()
+    n_calcolo_ok    = CalcoloOrganico.query.filter_by(anno_scol=anno_corrente, confermato=True).count()
+    n_calcolo_tot   = CalcoloOrganico.query.filter_by(anno_scol=anno_corrente).filter(
+        CalcoloOrganico.ore_totali_calcolate > 0).count()
     return render_template('impostazione_anno/index.html',
         n_classi=n_classi, n_materie_collegate=n_materie_collegate,
         n_materie_tot=n_materie_tot, anni_organico=anni_organico,
-        anno_corrente=_anno_scolastico_corrente())
+        anno_corrente=anno_corrente,
+        n_sezioni_attive=n_sezioni_attive, n_piano_righe=n_piano_righe,
+        n_calcolo_ok=n_calcolo_ok, n_calcolo_tot=n_calcolo_tot)
 
 
 # ── CLASSI DI CONCORSO ──────────────────────────────────────────────
@@ -367,3 +377,210 @@ def docenti_materie():
 
     return render_template('impostazione_anno/docenti_materie.html',
         righe=righe, anno=anno)
+
+
+# ── CLASSI ATTIVE ─────────────────────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/classi-attive', methods=['GET', 'POST'])
+def classi_attive():
+    """
+    Gestisce quali sezioni sono attive per anno scolastico — il dato
+    variabile da confermare ogni anno prima di tutto il resto.
+    Modifica del flag 'attiva' ricalcola automaticamente CalcoloOrganico.
+    """
+    anno = request.args.get('anno', _anno_scolastico_corrente())
+
+    if request.method == 'POST':
+        anno_f = request.form.get('anno_scol', anno)
+        for cs in ClasseSezione.query.filter_by(anno_scol=anno_f).all():
+            era_attiva = cs.attiva
+            nuova = request.form.get(f'cs_{cs.id}') == '1'
+            cs.attiva = nuova
+        db.session.commit()
+        # Ricalcola tutto CalcoloOrganico per questo anno
+        _ricalcola_organico(anno_f)
+        flash('Classi attive aggiornate e organico ricalcolato.', 'success')
+        return redirect(url_for('impostazione_anno.classi_attive', anno=anno_f))
+
+    # Struttura: indirizzo → anno_corso → lista sezioni
+    INDIRIZZI_ORDINE = ['AFM', 'RIM', 'CAT', 'LSU', 'LSC', 'LLI', 'LSP']
+    classi = ClasseSezione.query.filter_by(anno_scol=anno).order_by(
+        ClasseSezione.anno_corso, ClasseSezione.sezione).all()
+
+    struttura = {}
+    for cs in classi:
+        struttura.setdefault(cs.indirizzo, {}).setdefault(cs.anno_corso, []).append(cs)
+
+    anni_disponibili = sorted({cs.anno_scol for cs in ClasseSezione.query.all()}, reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    return render_template('impostazione_anno/classi_attive.html',
+        struttura=struttura, anno=anno,
+        indirizzi_ordine=INDIRIZZI_ORDINE,
+        anni_disponibili=anni_disponibili)
+
+
+def _ricalcola_organico(anno):
+    """
+    Ricalcola CalcoloOrganico per tutte le CC in un anno scolastico.
+    Chiamata automaticamente ogni volta che cambiano ClasseSezione o PianoStudi.
+    """
+    cc_ids = [r.id for r in ClasseConcorso.query.all()]
+    for cc_id in cc_ids:
+        righe_piano = PianoStudi.query.filter_by(anno_scol=anno, id_classe_concorso=cc_id).all()
+        totale = 0
+        for p in righe_piano:
+            n_sez = ClasseSezione.query.filter_by(
+                anno_scol=anno, indirizzo=p.indirizzo,
+                anno_corso=p.anno_corso, attiva=True).count()
+            totale += p.ore_settimanali * n_sez
+
+        n_coi = totale // 18 if totale else 0
+        resto  = totale % 18 if totale else 0
+        if totale == 0:
+            tipo = None
+        elif resto == 0:
+            tipo = 'COI'
+        elif resto >= 8:
+            tipo = 'COE'
+        else:
+            tipo = 'residue'
+
+        riga = CalcoloOrganico.query.filter_by(anno_scol=anno, id_classe_concorso=cc_id).first()
+        if riga:
+            # Non tocca tipo_confermato né note_eccezione (sovrascritture manuali)
+            riga.ore_totali_calcolate = totale
+            riga.n_coi_calcolato = n_coi
+            riga.ore_resto_calcolato = resto
+            riga.tipo_calcolato = tipo
+        else:
+            if totale > 0:
+                db.session.add(CalcoloOrganico(
+                    anno_scol=anno, id_classe_concorso=cc_id,
+                    ore_totali_calcolate=totale, n_coi_calcolato=n_coi,
+                    ore_resto_calcolato=resto, tipo_calcolato=tipo))
+    db.session.commit()
+
+
+# ── PIANO DI STUDI ────────────────────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/piano-studi', methods=['GET', 'POST'])
+def piano_studi():
+    """
+    Visualizza e modifica il piano di studi per anno scolastico.
+    Stabile ma confermabile anno per anno. Consente inserimento delle
+    ore mancanti (es. classi prime AFM e CAT 2026/27).
+    """
+    anno = request.args.get('anno', _anno_scolastico_corrente())
+    indirizzo_sel = request.args.get('indirizzo', 'AFM')
+    INDIRIZZI = ['AFM', 'RIM', 'CAT', 'LSU', 'LSC', 'LLI', 'LSP']
+
+    if request.method == 'POST':
+        anno_f      = request.form.get('anno_scol', anno)
+        indirizzo_f = request.form.get('indirizzo', indirizzo_sel)
+        # Aggiorna le righe esistenti
+        for key, val in request.form.items():
+            if not key.startswith('ore_'):
+                continue
+            ps_id = int(key.replace('ore_', ''))
+            ps = PianoStudi.query.get(ps_id)
+            if ps:
+                try:
+                    ps.ore_settimanali = int(val) if val else 0
+                except ValueError:
+                    pass
+        db.session.commit()
+        _ricalcola_organico(anno_f)
+        flash('Piano di studi aggiornato e organico ricalcolato.', 'success')
+        return redirect(url_for('impostazione_anno.piano_studi', anno=anno_f, indirizzo=indirizzo_f))
+
+    # Carica le righe per l'indirizzo selezionato, raggruppate per CC e anno_corso
+    righe = (PianoStudi.query
+             .filter_by(anno_scol=anno, indirizzo=indirizzo_sel)
+             .join(ClasseConcorso, PianoStudi.id_classe_concorso == ClasseConcorso.id)
+             .order_by(ClasseConcorso.codice, PianoStudi.anno_corso, PianoStudi.nome_materia_locale)
+             .all())
+
+    # Raggruppa per CC
+    da_cc = {}
+    for r in righe:
+        cc_cod = r.classe_concorso.codice
+        da_cc.setdefault(cc_cod, {'cc': r.classe_concorso, 'righe': []})['righe'].append(r)
+
+    # Anni di corso presenti per questo indirizzo
+    anni_corso = sorted({r.anno_corso for r in righe}) if righe else list(range(1, 6))
+
+    # Classi sezioni per evidenziare quelle attive/mancanti
+    sezioni_attive = {
+        (cs.anno_corso, cs.sezione)
+        for cs in ClasseSezione.query.filter_by(anno_scol=anno, indirizzo=indirizzo_sel, attiva=True).all()
+    }
+
+    anni_disponibili = sorted({p.anno_scol for p in PianoStudi.query.all()}, reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    return render_template('impostazione_anno/piano_studi.html',
+        anno=anno, indirizzo=indirizzo_sel, indirizzi=INDIRIZZI,
+        da_cc=da_cc, anni_corso=anni_corso,
+        sezioni_attive=sezioni_attive,
+        anni_disponibili=anni_disponibili)
+
+
+# ── CALCOLO ORGANICO ──────────────────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/calcolo-organico', methods=['GET', 'POST'])
+def calcolo_organico():
+    """
+    Mostra il calcolo COI/COE/residue per ogni CC. Permette di
+    sovrascrivere manualmente il tipo per i casi eccezionali (es. 10
+    ore classificate come residue invece di COE) e di confermare il
+    calcolo prima di inviare la richiesta all'USR.
+    Export XLSX con la struttura pivot originale (Monteore OD).
+    """
+    anno = request.args.get('anno', _anno_scolastico_corrente())
+
+    if request.method == 'POST':
+        azione = request.form.get('azione', '')
+        anno_f = request.form.get('anno_scol', anno)
+
+        if azione == 'ricalcola':
+            _ricalcola_organico(anno_f)
+            flash('Organico ricalcolato.', 'success')
+            return redirect(url_for('impostazione_anno.calcolo_organico', anno=anno_f))
+
+        if azione == 'conferma_tutto':
+            CalcoloOrganico.query.filter_by(anno_scol=anno_f).update({'confermato': True})
+            db.session.commit()
+            flash('Calcolo confermato per tutte le classi di concorso.', 'success')
+            return redirect(url_for('impostazione_anno.calcolo_organico', anno=anno_f))
+
+        # Salva sovrascritture manuali
+        for key, val in request.form.items():
+            if not key.startswith('tipo_'):
+                continue
+            co_id = int(key.replace('tipo_', ''))
+            co = CalcoloOrganico.query.get(co_id)
+            if co:
+                co.tipo_confermato = val if val else None
+                co.note_eccezione  = request.form.get(f'note_{co_id}', '')
+                co.confermato      = bool(request.form.get(f'conf_{co_id}'))
+        db.session.commit()
+        flash('Sovrascritture salvate.', 'success')
+        return redirect(url_for('impostazione_anno.calcolo_organico', anno=anno_f))
+
+    righe = (CalcoloOrganico.query
+             .join(ClasseConcorso)
+             .filter(CalcoloOrganico.anno_scol == anno)
+             .order_by(ClasseConcorso.codice).all())
+
+    # Dividi per tipo effettivo per i contatori in cima
+    totale_ore = sum(r.ore_totali_calcolate for r in righe)
+    n_confermati = sum(1 for r in righe if r.confermato)
+    n_eccezioni  = sum(1 for r in righe if r.tipo_confermato)
+
+    anni_disponibili = sorted({r.anno_scol for r in CalcoloOrganico.query.all()}, reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    return render_template('impostazione_anno/calcolo_organico.html',
+        righe=righe, anno=anno, anni_disponibili=anni_disponibili,
+        totale_ore=totale_ore, n_confermati=n_confermati, n_eccezioni=n_eccezioni)
