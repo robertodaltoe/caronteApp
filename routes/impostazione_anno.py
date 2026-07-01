@@ -56,10 +56,12 @@ def index():
     n_calcolo_ok    = CalcoloOrganico.query.filter_by(anno_scol=anno_corrente, confermato=True).count()
     n_calcolo_tot   = CalcoloOrganico.query.filter_by(anno_scol=anno_corrente).filter(
         CalcoloOrganico.ore_totali_calcolate > 0).count()
+    anno_piano = _anno_default_piano()  # anno con dati reali nel piano studi
     return render_template('impostazione_anno/index.html',
         n_classi=n_classi, n_materie_collegate=n_materie_collegate,
         n_materie_tot=n_materie_tot, anni_organico=anni_organico,
         anno_corrente=anno_corrente,
+        anno_piano=anno_piano,
         n_sezioni_attive=n_sezioni_attive, n_piano_righe=n_piano_righe,
         n_calcolo_ok=n_calcolo_ok, n_calcolo_tot=n_calcolo_tot)
 
