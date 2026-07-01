@@ -18,10 +18,29 @@ impostazione_anno_bp = Blueprint('impostazione_anno', __name__)
 
 
 def _anno_scolastico_corrente():
+    """Restituisce l'anno scolastico corrente nel senso del calendario."""
     oggi = date.today()
     if oggi.month >= 9:
         return f'{oggi.year}-{oggi.year + 1}'
     return f'{oggi.year - 1}-{oggi.year}'
+
+
+def _anno_default_piano():
+    """
+    Anno da usare come default nelle pagine del piano studi / calcolo
+    organico: l'anno piu' recente con righe effettive nel piano studi
+    o nel calcolo organico. Le sezioni 'tutte inattive' (anno preparato
+    ma non ancora configurato) non contano — si guarda solo agli anni
+    con almeno una riga di piano studi o un calcolo con ore > 0.
+    Fallback: anno scolastico corrente se nessun dato esiste ancora.
+    """
+    anni_piano = {p.anno_scol for p in PianoStudi.query.all()}
+    anni_calc  = {c.anno_scol for c in CalcoloOrganico.query
+                  .filter(CalcoloOrganico.ore_totali_calcolate > 0).all()}
+    tutti = anni_piano | anni_calc
+    if tutti:
+        return max(tutti)
+    return _anno_scolastico_corrente()
 
 
 @impostazione_anno_bp.route('/impostazione-anno')
@@ -387,7 +406,7 @@ def classi_attive():
     variabile da confermare ogni anno prima di tutto il resto.
     Modifica del flag 'attiva' ricalcola automaticamente CalcoloOrganico.
     """
-    anno = request.args.get('anno', _anno_scolastico_corrente())
+    anno = request.args.get('anno', _anno_default_piano())
 
     # Template completo di tutte le sezioni possibili per ogni indirizzo.
     # AFM-RIM: le sezioni A e B per ogni anno (1-2 AFM, 3-5 RIM).
@@ -502,7 +521,7 @@ def piano_studi():
     Stabile ma confermabile anno per anno. Consente inserimento delle
     ore mancanti (es. classi prime AFM e CAT 2026/27).
     """
-    anno = request.args.get('anno', _anno_scolastico_corrente())
+    anno = request.args.get('anno', _anno_default_piano())
     indirizzo_sel = request.args.get('indirizzo', 'AFM')
     INDIRIZZI = ['AFM', 'RIM', 'CAT', 'LSU', 'LSC', 'LLI', 'LSP']
 
@@ -568,7 +587,7 @@ def calcolo_organico():
     calcolo prima di inviare la richiesta all'USR.
     Export XLSX con la struttura pivot originale (Monteore OD).
     """
-    anno = request.args.get('anno', _anno_scolastico_corrente())
+    anno = request.args.get('anno', _anno_default_piano())
 
     if request.method == 'POST':
         azione = request.form.get('azione', '')
