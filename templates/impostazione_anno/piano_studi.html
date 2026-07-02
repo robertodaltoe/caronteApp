@@ -8,13 +8,13 @@
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #7c3aed;">
     Ore settimanali per classe di concorso, materia e anno di corso.
-    Per le materie con più classi di concorso possibili, ogni cella ha un select indipendente:
-    scegli la CC per ogni anno di corso. Il badge
-    <span style="background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:5px; font-size:.78rem; font-weight:700;">⚠ atipica</span>
-    appare solo se la scelta diverge dal default normativo del piano studi.
-    Le celle arancioni indicano anni attivi <strong>senza ore definite</strong>.
+    Ogni cella ha il select CC indipendente per le materie con più classi concorrenti.
+    Il badge <span style="background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:5px; font-size:.78rem; font-weight:700;">⚠️ atipica</span>
+    appare solo se la scelta diverge dal default normativo.
+    Puoi aggiungere o eliminare materie con i controlli in fondo a ogni blocco.
 </div>
 
+{# Navigazione indirizzo + anno #}
 <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
     <span style="font-size:.82rem; color:var(--grigio);">Indirizzo:</span>
     {% for ind in indirizzi %}
@@ -33,15 +33,17 @@
     </div>
 </div>
 
-<form method="post">
+{# Form principale: salva ore, nomi e CC #}
+<form method="post" id="form-piano">
     <input type="hidden" name="anno_scol" value="{{ anno }}">
     <input type="hidden" name="indirizzo" value="{{ indirizzo }}">
 
     {% if not da_cc %}
     <div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
-        Nessun piano di studi definito per <strong>{{ indirizzo }}</strong> {{ anno }}.
+        Nessun piano di studi per <strong>{{ indirizzo }}</strong> {{ anno }}.
     </div>
     {% else %}
+
     {% for cc_cod, gruppo in da_cc.items() %}
     <div class="card" style="padding:14px 18px; margin-bottom:10px; overflow-x:auto;">
         <div style="font-weight:700; color:var(--blu); margin-bottom:8px; font-size:.86rem;">
@@ -62,74 +64,148 @@
                         {% endif %}
                     </th>
                     {% endfor %}
+                    <th style="padding:5px 8px; border:1px solid #e5e7eb; width:30px;"></th>
                 </tr>
             </thead>
             <tbody>
-                {% set materie_cc = gruppo.righe | groupby('nome_materia_locale') %}
-                {% for nome_mat, righe_mat in materie_cc %}
-                {% set prima_riga = righe_mat | first %}
-                {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
-                <tr>
-                    {# Nome materia: unico per riga, editabile #}
-                    <td style="padding:4px 6px; border:1px solid #e5e7eb; vertical-align:middle;">
-                        <input type="text" name="nome_{{ prima_riga.id }}"
-                               value="{{ nome_mat }}"
-                               title="Nome materia locale"
-                               style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
-                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
-                    </td>
-                    {# Celle per anno di corso: ore + select CC (se multi-cc) #}
-                    {% for ac in anni_corso %}
-                    {% set riga = righe_mat | selectattr('anno_corso', 'equalto', ac) | first | default(none) %}
-                    {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
-                    <td style="padding:4px 6px; border:1px solid #e5e7eb; text-align:center;
-                               background:{{ '#fff7ed' if (attivo and not riga) else 'transparent' }};
-                               vertical-align:middle;">
-                        {% if riga %}
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
-                            <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
-                                   min="0" max="20"
-                                   style="width:44px; text-align:center; border:1px solid #d1d5db;
-                                          border-radius:4px; padding:3px 4px; font-size:.8rem;">
-                            {% if opzioni_cc and opzioni_cc|length > 1 %}
-                            {# Select CC per-anno: indipendente da altri anni della stessa materia #}
-                            <div style="display:flex; align-items:center; gap:2px;">
-                                <select name="cc_{{ riga.id }}"
-                                        style="padding:2px 4px; font-size:.7rem;
-                                               border:1px solid {{ '#f59e0b' if riga.atipica else '#e5e7eb' }};
-                                               border-radius:4px;
-                                               background:{{ '#fef3c7' if riga.atipica else 'white' }};
-                                               color:#374151;">
-                                    {% for op in opzioni_cc %}
-                                    <option value="{{ op.id }}"
-                                        {% if op.id == riga.id_classe_concorso %}selected{% endif %}>
-                                        {{ op.codice }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                {% if riga.atipica %}
-                                <span title="Atipicità: CC diversa dal default normativo"
-                                      style="font-size:.7rem;">⚠️</span>
-                                {% endif %}
-                            </div>
+            {% for mat in gruppo.materie %}
+            {% set nome_mat = mat.nome %}
+            {% set righe_mat = mat.righe %}
+            {% set prima_riga = mat.prima_riga %}
+            {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
+            <tr>
+                {# Nome materia editabile #}
+                <td style="padding:4px 6px; border:1px solid #e5e7eb;">
+                    <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}"
+                           style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
+                                  padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                </td>
+                {# Celle per anno di corso — accesso diretto per chiave, no selectattr #}
+                {% for ac in anni_corso %}
+                {% set riga = mat.righe_per_anno.get(ac) %}
+                {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
+                <td style="padding:4px 6px; border:1px solid #e5e7eb; text-align:center;
+                           background:{{ '#fff7ed' if (attivo and not riga) else 'transparent' }};
+                           vertical-align:middle;">
+                    {% if riga %}
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
+                               min="0" max="20"
+                               style="width:44px; text-align:center; border:1px solid #d1d5db;
+                                      border-radius:4px; padding:3px 4px; font-size:.8rem;">
+                        {% if opzioni_cc and opzioni_cc|length > 1 %}
+                        <div style="display:flex; align-items:center; gap:2px;">
+                            <select name="cc_{{ riga.id }}"
+                                    style="padding:2px 4px; font-size:.7rem;
+                                           border:1px solid {{ '#f59e0b' if riga.atipica else '#e5e7eb' }};
+                                           border-radius:4px;
+                                           background:{{ '#fef3c7' if riga.atipica else 'white' }};">
+                                {% for op in opzioni_cc %}
+                                <option value="{{ op.id }}"
+                                    {% if op.id == riga.id_classe_concorso %}selected{% endif %}>
+                                    {{ op.codice }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if riga.atipica %}
+                            <span title="Atipicità: CC diversa dal default normativo" style="font-size:.7rem;">⚠️</span>
                             {% endif %}
                         </div>
-                        {% elif attivo %}
-                        <span style="font-size:.72rem; color:#dc2626;">—</span>
-                        {% else %}
-                        <span style="color:#e5e7eb;">—</span>
                         {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
+                    </div>
+                    {% elif attivo %}
+                    <span style="font-size:.72rem; color:#dc2626;">—</span>
+                    {% else %}
+                    <span style="color:#e5e7eb;">—</span>
+                    {% endif %}
+                </td>
                 {% endfor %}
+                {# Pulsante elimina riga: elimina TUTTE le righe di questa materia per questa CC #}
+                <td style="padding:4px 6px; border:1px solid #e5e7eb; text-align:center;">
+                    <button type="button"
+                            onclick="eliminaRighe({{ righe_mat | map(attribute='id') | list }})"
+                            title="Elimina questa materia dal piano studi"
+                            style="background:none; border:none; cursor:pointer; font-size:.9rem; color:#dc2626;">
+                        🗑
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}{# fine loop materie #}
             </tbody>
         </table>
+
+        {# Pannello aggiungi materia per questa CC #}
+        <details style="margin-top:10px;">
+            <summary style="font-size:.78rem; color:#6366f1; cursor:pointer; user-select:none;">
+                ＋ Aggiungi materia a {{ cc_cod }}
+            </summary>
+            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
+                        padding:10px; background:#f8fafc; border-radius:6px; border:1px solid #e5e7eb;">
+                <form method="post" action="{{ url_for('impostazione_anno.piano_studi_aggiungi') }}"
+                      style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; width:100%;">
+                    <input type="hidden" name="anno_scol" value="{{ anno }}">
+                    <input type="hidden" name="indirizzo" value="{{ indirizzo }}">
+                    <input type="hidden" name="id_cc" value="{{ gruppo.cc.id }}">
+                    <div>
+                        <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Anno di corso</div>
+                        <select name="anno_corso" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
+                            {% for ac in anni_corso %}
+                            <option value="{{ ac }}">{{ ac }}°</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex:1; min-width:140px;">
+                        <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome materia *</div>
+                        <input type="text" name="nome_materia_locale" required placeholder="es. Diritto privato"
+                               style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
+                    </div>
+                    <div style="width:60px;">
+                        <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Ore/sett.</div>
+                        <input type="number" name="ore_settimanali" min="0" max="20" value="0"
+                               style="width:100%; padding:4px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem; text-align:center;">
+                    </div>
+                    <div style="flex:2; min-width:160px;">
+                        <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Materia (opzionale)</div>
+                        <select name="id_materia" style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
+                            <option value="">— seleziona —</option>
+                            {% for m in tutte_materie %}
+                            <option value="{{ m.id }}">{{ m.sigla }} — {{ m.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-sm"
+                            style="background:#6366f1; color:white; white-space:nowrap; padding:5px 12px;">
+                        ＋ Aggiungi
+                    </button>
+                </form>
+            </div>
+        </details>
     </div>
     {% endfor %}
+
     <button type="submit" class="btn btn-success btn-sm" style="margin-top:6px;">
         💾 Salva piano e ricalcola organico
     </button>
     {% endif %}
 </form>
+
+{# Form nascosti per eliminazione righe (POST per sicurezza) #}
+<div id="delete-forms"></div>
+
+<script>
+function eliminaRighe(ids) {
+    if (!confirm('Eliminare questa materia dal piano studi? Tutte le righe di questo anno/CC verranno rimosse.')) return;
+    // Elimina una riga alla volta: la prima, le altre vengono trascinate
+    // Per semplicità eliminiamo solo la prima riga del gruppo e la route
+    // gestisce la singola riga; l'utente può eliminare le altre anno per anno.
+    // Qui inviamo tutte le righe in sequenza.
+    ids.forEach(function(id) {
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/impostazione-anno/piano-studi/elimina/' + id;
+        document.getElementById('delete-forms').appendChild(form);
+        form.submit();
+    });
+}
+</script>
 {% endblock %}

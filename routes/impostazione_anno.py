@@ -594,14 +594,36 @@ def piano_studi():
     righe = (PianoStudi.query
              .filter_by(anno_scol=anno, indirizzo=indirizzo_sel)
              .join(ClasseConcorso, PianoStudi.id_classe_concorso == ClasseConcorso.id)
-             .order_by(ClasseConcorso.codice, PianoStudi.anno_corso, PianoStudi.nome_materia_locale)
+             .order_by(ClasseConcorso.codice, PianoStudi.nome_materia_locale, PianoStudi.anno_corso)
              .all())
 
-    # Raggruppa per CC
-    da_cc = {}
+    # Raggruppa per CC, poi per materia — pre-elaborato in Python
+    # per evitare problemi con il groupby Jinja2 su sequenze non contigue.
+    # Struttura: da_cc[cc_cod] = {'cc': ClasseConcorso, 'materie': {nome: [righe per anno]}}
+    da_cc_raw = {}
     for r in righe:
         cc_cod = r.classe_concorso.codice
-        da_cc.setdefault(cc_cod, {'cc': r.classe_concorso, 'righe': []})['righe'].append(r)
+        if cc_cod not in da_cc_raw:
+            da_cc_raw[cc_cod] = {'cc': r.classe_concorso, 'materie': {}}
+        nome = r.nome_materia_locale
+        if nome not in da_cc_raw[cc_cod]['materie']:
+            da_cc_raw[cc_cod]['materie'][nome] = []
+        da_cc_raw[cc_cod]['materie'][nome].append(r)
+    # Converte in lista ordinata per il template.
+    # Per ogni materia costruisce anche 'righe_per_anno': dict anno_corso→riga
+    # cosi' il template accede direttamente per chiave senza selectattr.
+    da_cc = {}
+    for cc_cod, val in da_cc_raw.items():
+        materie_list = []
+        for nome, rr in val['materie'].items():
+            rr_ord = sorted(rr, key=lambda r: r.anno_corso)
+            materie_list.append({
+                'nome': nome,
+                'righe': rr_ord,
+                'prima_riga': rr_ord[0],
+                'righe_per_anno': {r.anno_corso: r for r in rr_ord},
+            })
+        da_cc[cc_cod] = {'cc': val['cc'], 'materie': materie_list}
 
     # Anni di corso presenti per questo indirizzo
     anni_corso = sorted({r.anno_corso for r in righe}) if righe else list(range(1, 6))
@@ -634,12 +656,67 @@ def piano_studi():
                 for o in opzioni
             ]
 
+    tutte_materie = Materia.query.filter_by(attiva=True).order_by(Materia.sigla).all()
+
     return render_template('impostazione_anno/piano_studi.html',
         anno=anno, indirizzo=indirizzo_sel, indirizzi=INDIRIZZI,
         da_cc=da_cc, anni_corso=anni_corso,
         sezioni_attive=sezioni_attive,
         anni_disponibili=anni_disponibili,
-        materie_multi_cc=materie_multi_cc)
+        materie_multi_cc=materie_multi_cc,
+        tutte_materie=tutte_materie)
+
+
+# ── PIANO STUDI: aggiungi / elimina riga ──────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/piano-studi/aggiungi', methods=['POST'])
+def piano_studi_aggiungi():
+    anno       = request.form.get('anno_scol')
+    indirizzo  = request.form.get('indirizzo')
+    anno_corso = int(request.form.get('anno_corso', 1))
+    id_cc      = int(request.form.get('id_cc')) if request.form.get('id_cc') else None
+    id_mat     = int(request.form.get('id_materia')) if request.form.get('id_materia') else None
+    nome_loc   = request.form.get('nome_materia_locale', '').strip()
+    ore        = int(request.form.get('ore_settimanali') or 0)
+
+    if not (anno and indirizzo and id_cc and nome_loc):
+        flash('Compilare tutti i campi obbligatori.', 'danger')
+        return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
+
+    esiste = PianoStudi.query.filter_by(
+        anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
+        id_classe_concorso=id_cc, nome_materia_locale=nome_loc).first()
+    if esiste:
+        flash('Riga già presente.', 'warning')
+    else:
+        cc = db.session.get(ClasseConcorso, id_cc)
+        db.session.add(PianoStudi(
+            anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
+            id_classe_concorso=id_cc, id_cc_default=id_cc,
+            id_materia=id_mat, nome_materia_locale=nome_loc,
+            ore_settimanali=ore, atipica=False))
+        db.session.commit()
+        _ricalcola_organico(anno)
+        flash(f'Aggiunta: {nome_loc} ({cc.codice if cc else "?"}) {indirizzo} {anno_corso}°.', 'success')
+
+    return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
+
+
+@impostazione_anno_bp.route('/impostazione-anno/piano-studi/elimina/<int:ps_id>', methods=['POST'])
+def piano_studi_elimina(ps_id):
+    ps = db.session.get(PianoStudi, ps_id)
+    if not ps:
+        flash('Riga non trovata.', 'danger')
+        return redirect(url_for('impostazione_anno.piano_studi'))
+
+    anno      = ps.anno_scol
+    indirizzo = ps.indirizzo
+    nome      = ps.nome_materia_locale
+    ac        = ps.anno_corso
+    db.session.delete(ps)
+    db.session.commit()
+    _ricalcola_organico(anno)
+    flash(f'Eliminata: {nome} {indirizzo} {ac}° anno.', 'success')
+    return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
 
 
 # ── CALCOLO ORGANICO ──────────────────────────────────────────────────
