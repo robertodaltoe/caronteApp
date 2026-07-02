@@ -59,13 +59,39 @@
                 {% set materie_cc = gruppo.righe | groupby('nome_materia_locale') %}
                 {% for nome_mat, righe_mat in materie_cc %}
                 {% set prima_riga = righe_mat | first %}
+                {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
                 <tr>
                     <td style="padding:4px 6px; border:1px solid #e5e7eb;">
-                        <input type="text" name="nome_{{ prima_riga.id }}"
-                               value="{{ nome_mat }}"
-                               title="Nome materia locale (modifica per correggere o allineare al nome ufficiale)"
-                               style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
-                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <input type="text" name="nome_{{ prima_riga.id }}"
+                                   value="{{ nome_mat }}"
+                                   title="Nome materia locale"
+                                   style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
+                                          padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                            {% if opzioni_cc %}
+                            {# Select CC: visibile solo se la materia ha più CC possibili.
+                               Il valore attuale è la CC della prima riga del gruppo — siccome
+                               il cambio CC viene applicato a tutte le righe di quella materia
+                               per questo indirizzo, basta un select unico per gruppo. #}
+                            <select name="cc_{{ prima_riga.id }}"
+                                    title="Classe di concorso assegnata a questa materia per questo indirizzo (atipicità)"
+                                    style="padding:3px 6px; border:1px solid
+                                           {{ '#f59e0b' if prima_riga.id_classe_concorso != prima_riga.materia.id_classe_concorso else '#e5e7eb' }};
+                                           border-radius:4px; font-size:.74rem; color:#374151;
+                                           background:{{ '#fef3c7' if prima_riga.id_classe_concorso != prima_riga.materia.id_classe_concorso else 'white' }};">
+                                {% for op in opzioni_cc %}
+                                <option value="{{ op.id }}"
+                                    {% if op.id == prima_riga.id_classe_concorso %}selected{% endif %}>
+                                    {{ op.codice }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if prima_riga.id_classe_concorso != prima_riga.materia.id_classe_concorso %}
+                            <span title="Atipicità: CC diversa dalla normativa di default"
+                                  style="font-size:.8rem;">⚠️</span>
+                            {% endif %}
+                            {% endif %}
+                        </div>
                     </td>
                     {% for ac in anni_corso %}
                     {% set riga = righe_mat | selectattr('anno_corso', 'equalto', ac) | first | default(none) %}

@@ -569,6 +569,29 @@ def piano_studi():
                     for r in righe_stessa_materia:
                         r.nome_materia_locale = nuovo_nome
 
+        # Gestisce cambio CC (atipicità): campo cc_<id> → nuova classe di concorso
+        for key, val in request.form.items():
+            if not key.startswith('cc_') or not val.isdigit():
+                continue
+            try:
+                ps_id = int(key.replace('cc_', ''))
+            except ValueError:
+                continue
+            ps = db.session.get(PianoStudi, ps_id)
+            if ps:
+                nuova_cc_id = int(val)
+                if ps.id_classe_concorso != nuova_cc_id:
+                    vecchia_cc_id = ps.id_classe_concorso
+                    # Aggiorna tutte le righe con stessa materia/indirizzo/CC
+                    # (es. cambiare Matematica LSP 1° anno da A-27 a A-26
+                    # deve aggiornare tutte le righe Matematica LSP di quella CC)
+                    righe_stessa_cc_mat = PianoStudi.query.filter_by(
+                        anno_scol=anno_f, indirizzo=indirizzo_f,
+                        id_classe_concorso=vecchia_cc_id,
+                        id_materia=ps.id_materia).all()
+                    for r in righe_stessa_cc_mat:
+                        r.id_classe_concorso = nuova_cc_id
+
         db.session.commit()
         _ricalcola_organico(anno_f)
         flash('Piano di studi aggiornato e organico ricalcolato.', 'success')
@@ -600,11 +623,30 @@ def piano_studi():
     if anno not in anni_disponibili:
         anni_disponibili.insert(0, anno)
 
+    # Per ogni materia con più CC possibili, costruisce la mappa
+    # id_materia → lista di (id_cc, codice_cc) — usata dal template per
+    # mostrare il select di scelta CC solo dove ha senso.
+    from models.classe_concorso import MateriaClasseConcorso
+    materie_multi_cc = {}
+    for r in righe:
+        if not r.id_materia or r.id_materia in materie_multi_cc:
+            continue
+        opzioni = (MateriaClasseConcorso.query
+                   .filter_by(id_materia=r.id_materia)
+                   .join(ClasseConcorso, MateriaClasseConcorso.id_classe_concorso == ClasseConcorso.id)
+                   .all())
+        if len(opzioni) > 1:
+            materie_multi_cc[r.id_materia] = [
+                {'id': o.id_classe_concorso, 'codice': o.classe_concorso.codice}
+                for o in opzioni
+            ]
+
     return render_template('impostazione_anno/piano_studi.html',
         anno=anno, indirizzo=indirizzo_sel, indirizzi=INDIRIZZI,
         da_cc=da_cc, anni_corso=anni_corso,
         sezioni_attive=sezioni_attive,
-        anni_disponibili=anni_disponibili)
+        anni_disponibili=anni_disponibili,
+        materie_multi_cc=materie_multi_cc)
 
 
 # ── CALCOLO ORGANICO ──────────────────────────────────────────────────
