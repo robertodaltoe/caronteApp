@@ -7,9 +7,12 @@
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #7c3aed;">
-    Ore settimanali per classe di concorso, materia e anno di corso. Stabile negli anni —
-    modifica solo se cambia il piano ministeriale o una scelta d'istituto.
-    Le celle rosse indicano un anno di corso attivo ma <strong>senza ore definite</strong> (da inserire).
+    Ore settimanali per classe di concorso, materia e anno di corso.
+    Per le materie con più classi di concorso possibili, ogni cella ha un select indipendente:
+    scegli la CC per ogni anno di corso. Il badge
+    <span style="background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:5px; font-size:.78rem; font-weight:700;">⚠ atipica</span>
+    appare solo se la scelta diverge dal default normativo del piano studi.
+    Le celle arancioni indicano anni attivi <strong>senza ore definite</strong>.
 </div>
 
 <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
@@ -20,6 +23,14 @@
               background:{{ '#7c3aed' if ind == indirizzo else '#f3f4f6' }};
               color:{{ 'white' if ind == indirizzo else '#374151' }};">{{ ind }}</a>
     {% endfor %}
+    <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('impostazione_anno.piano_studi', anno=a, indirizzo=indirizzo) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
+                  background:{{ '#7c3aed' if a == anno else '#f3f4f6' }};
+                  color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+        {% endfor %}
+    </div>
 </div>
 
 <form method="post">
@@ -29,7 +40,6 @@
     {% if not da_cc %}
     <div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
         Nessun piano di studi definito per <strong>{{ indirizzo }}</strong> {{ anno }}.
-        Le classi prime di AFM e CAT sono da inserire per il 2026/27.
     </div>
     {% else %}
     {% for cc_cod, gruppo in da_cc.items() %}
@@ -43,9 +53,9 @@
         <table style="width:100%; border-collapse:collapse; font-size:.8rem;">
             <thead>
                 <tr style="background:#f8fafc;">
-                    <th style="padding:5px 8px; text-align:left; border:1px solid #e5e7eb;">Materia</th>
+                    <th style="padding:5px 8px; text-align:left; border:1px solid #e5e7eb; min-width:160px;">Materia</th>
                     {% for ac in anni_corso %}
-                    <th style="padding:5px 8px; text-align:center; border:1px solid #e5e7eb; min-width:55px;">
+                    <th style="padding:5px 8px; text-align:center; border:1px solid #e5e7eb; min-width:80px;">
                         {{ ac }}° anno
                         {% if (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
                         <span style="display:block; font-size:.65rem; color:#16a34a; font-weight:400;">attivo</span>
@@ -55,56 +65,57 @@
                 </tr>
             </thead>
             <tbody>
-                {# raggruppa righe dello stesso gruppo CC per materia / anno_corso #}
                 {% set materie_cc = gruppo.righe | groupby('nome_materia_locale') %}
                 {% for nome_mat, righe_mat in materie_cc %}
                 {% set prima_riga = righe_mat | first %}
                 {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
                 <tr>
-                    <td style="padding:4px 6px; border:1px solid #e5e7eb;">
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            <input type="text" name="nome_{{ prima_riga.id }}"
-                                   value="{{ nome_mat }}"
-                                   title="Nome materia locale"
-                                   style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
-                                          padding:3px 6px; font-size:.8rem; background:#fafafa;">
-                            {% if opzioni_cc %}
-                            {# Select CC: visibile solo se la materia ha più CC possibili.
-                               Il valore attuale è la CC della prima riga del gruppo — siccome
-                               il cambio CC viene applicato a tutte le righe di quella materia
-                               per questo indirizzo, basta un select unico per gruppo. #}
-                            <select name="cc_{{ prima_riga.id }}"
-                                    title="Classe di concorso assegnata a questa materia per questo indirizzo (atipicità)"
-                                    style="padding:3px 6px; border:1px solid
-                                           {{ '#f59e0b' if prima_riga.id_classe_concorso != prima_riga.materia.id_classe_concorso else '#e5e7eb' }};
-                                           border-radius:4px; font-size:.74rem; color:#374151;
-                                           background:{{ '#fef3c7' if prima_riga.id_classe_concorso != prima_riga.materia.id_classe_concorso else 'white' }};">
-                                {% for op in opzioni_cc %}
-                                <option value="{{ op.id }}"
-                                    {% if op.id == prima_riga.id_classe_concorso %}selected{% endif %}>
-                                    {{ op.codice }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            {% if prima_riga.id_classe_concorso != prima_riga.materia.id_classe_concorso %}
-                            <span title="Atipicità: CC diversa dalla normativa di default"
-                                  style="font-size:.8rem;">⚠️</span>
-                            {% endif %}
-                            {% endif %}
-                        </div>
+                    {# Nome materia: unico per riga, editabile #}
+                    <td style="padding:4px 6px; border:1px solid #e5e7eb; vertical-align:middle;">
+                        <input type="text" name="nome_{{ prima_riga.id }}"
+                               value="{{ nome_mat }}"
+                               title="Nome materia locale"
+                               style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
+                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
                     </td>
+                    {# Celle per anno di corso: ore + select CC (se multi-cc) #}
                     {% for ac in anni_corso %}
                     {% set riga = righe_mat | selectattr('anno_corso', 'equalto', ac) | first | default(none) %}
                     {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
                     <td style="padding:4px 6px; border:1px solid #e5e7eb; text-align:center;
-                               background:{{ '#fff7ed' if (attivo and not riga) else 'transparent' }};">
+                               background:{{ '#fff7ed' if (attivo and not riga) else 'transparent' }};
+                               vertical-align:middle;">
                         {% if riga %}
-                        <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
-                               min="0" max="20" style="width:44px; text-align:center; border:1px solid #d1d5db;
-                                                        border-radius:4px; padding:3px 4px; font-size:.8rem;">
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+                            <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
+                                   min="0" max="20"
+                                   style="width:44px; text-align:center; border:1px solid #d1d5db;
+                                          border-radius:4px; padding:3px 4px; font-size:.8rem;">
+                            {% if opzioni_cc and opzioni_cc|length > 1 %}
+                            {# Select CC per-anno: indipendente da altri anni della stessa materia #}
+                            <div style="display:flex; align-items:center; gap:2px;">
+                                <select name="cc_{{ riga.id }}"
+                                        style="padding:2px 4px; font-size:.7rem;
+                                               border:1px solid {{ '#f59e0b' if riga.atipica else '#e5e7eb' }};
+                                               border-radius:4px;
+                                               background:{{ '#fef3c7' if riga.atipica else 'white' }};
+                                               color:#374151;">
+                                    {% for op in opzioni_cc %}
+                                    <option value="{{ op.id }}"
+                                        {% if op.id == riga.id_classe_concorso %}selected{% endif %}>
+                                        {{ op.codice }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if riga.atipica %}
+                                <span title="Atipicità: CC diversa dal default normativo"
+                                      style="font-size:.7rem;">⚠️</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
                         {% elif attivo %}
-                        <span style="font-size:.72rem; color:#dc2626;" title="Anno attivo ma ore non definite">
-                            —</span>
+                        <span style="font-size:.72rem; color:#dc2626;">—</span>
                         {% else %}
                         <span style="color:#e5e7eb;">—</span>
                         {% endif %}

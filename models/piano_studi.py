@@ -65,9 +65,12 @@ class PianoStudi(db.Model):
     nome_materia_locale = db.Column(db.String(100), nullable=True)  # etichetta nell'export (es. "lingua e cult.latina")
     ore_settimanali     = db.Column(db.Integer, nullable=False)
     id_cc_madre         = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)  # solo per laboratori ITP
+    id_cc_default       = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)  # CC normativa originale del seed
+    atipica             = db.Column(db.Boolean, default=False)  # True se la CC è stata cambiata rispetto al default
 
     classe_concorso = db.relationship('ClasseConcorso', foreign_keys=[id_classe_concorso])
     cc_madre        = db.relationship('ClasseConcorso', foreign_keys=[id_cc_madre])
+    cc_default      = db.relationship('ClasseConcorso', foreign_keys=[id_cc_default])
     materia         = db.relationship('Materia')
 
     __table_args__ = (

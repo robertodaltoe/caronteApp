@@ -569,7 +569,8 @@ def piano_studi():
                     for r in righe_stessa_materia:
                         r.nome_materia_locale = nuovo_nome
 
-        # Gestisce cambio CC (atipicità): campo cc_<id> → nuova classe di concorso
+        # Gestisce cambio CC (atipicità): campo cc_<id> → nuova CC per quella
+        # riga specifica (singolo anno di corso). Non propaga ad altri anni.
         for key, val in request.form.items():
             if not key.startswith('cc_') or not val.isdigit():
                 continue
@@ -580,17 +581,9 @@ def piano_studi():
             ps = db.session.get(PianoStudi, ps_id)
             if ps:
                 nuova_cc_id = int(val)
-                if ps.id_classe_concorso != nuova_cc_id:
-                    vecchia_cc_id = ps.id_classe_concorso
-                    # Aggiorna tutte le righe con stessa materia/indirizzo/CC
-                    # (es. cambiare Matematica LSP 1° anno da A-27 a A-26
-                    # deve aggiornare tutte le righe Matematica LSP di quella CC)
-                    righe_stessa_cc_mat = PianoStudi.query.filter_by(
-                        anno_scol=anno_f, indirizzo=indirizzo_f,
-                        id_classe_concorso=vecchia_cc_id,
-                        id_materia=ps.id_materia).all()
-                    for r in righe_stessa_cc_mat:
-                        r.id_classe_concorso = nuova_cc_id
+                ps.id_classe_concorso = nuova_cc_id
+                # Atipica = True se la CC scelta diverge dal default normativo
+                ps.atipica = (nuova_cc_id != ps.id_cc_default)
 
         db.session.commit()
         _ricalcola_organico(anno_f)
