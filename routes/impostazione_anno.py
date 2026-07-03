@@ -6,7 +6,7 @@ Pensata come area di ingresso unica per tutto cio' che riguarda
 l'avvio del nuovo anno — in futuro qui confluiranno anche docenti,
 orario, periodi, dati istituto.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db
 from models.classe_concorso import ClasseConcorso, CattedraOrganico
 from models.materia import Materia, Dipartimento, DocenteMateria
@@ -777,3 +777,113 @@ def calcolo_organico():
     return render_template('impostazione_anno/calcolo_organico.html',
         righe=righe, anno=anno, anni_disponibili=anni_disponibili,
         totale_ore=totale_ore, n_confermati=n_confermati, n_eccezioni=n_eccezioni)
+
+
+# ── AUTOSAVE API ──────────────────────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/api/save', methods=['POST'])
+def api_save():
+    """
+    Endpoint atomico per autosave: riceve {campo, id, valore, extra}
+    e aggiorna il singolo record corrispondente. Risponde con JSON.
+    """
+    data   = request.get_json(force=True) or {}
+    campo  = data.get('campo', '')
+    rec_id = data.get('id')
+    valore = data.get('valore')
+    extra  = data.get('extra', {})  # parametri aggiuntivi (anno_scol, ecc.)
+
+    try:
+        # ── Piano studi: ore settimanali ──────────────────────────────
+        if campo == 'ore_piano':
+            ps = db.session.get(PianoStudi, int(rec_id))
+            if not ps:
+                return jsonify(ok=False, msg='Riga non trovata')
+            ps.ore_settimanali = int(valore) if valore != '' else 0
+            db.session.commit()
+            _ricalcola_organico(ps.anno_scol)
+            return jsonify(ok=True, msg='Ore aggiornate')
+
+        # ── Piano studi: nome materia locale ─────────────────────────
+        elif campo == 'nome_piano':
+            ps = db.session.get(PianoStudi, int(rec_id))
+            if not ps:
+                return jsonify(ok=False, msg='Riga non trovata')
+            vecchio_nome = ps.nome_materia_locale
+            nuovo_nome   = str(valore).strip()
+            if nuovo_nome and nuovo_nome != vecchio_nome:
+                # Aggiorna tutte le righe con lo stesso vecchio nome
+                # nella stessa CC/indirizzo/anno_scol
+                for r in PianoStudi.query.filter_by(
+                        anno_scol=ps.anno_scol, indirizzo=ps.indirizzo,
+                        id_classe_concorso=ps.id_classe_concorso,
+                        nome_materia_locale=vecchio_nome).all():
+                    r.nome_materia_locale = nuovo_nome
+                db.session.commit()
+            return jsonify(ok=True, msg='Nome aggiornato')
+
+        # ── Piano studi: classe di concorso (atipicità) ──────────────
+        elif campo == 'cc_piano':
+            ps = db.session.get(PianoStudi, int(rec_id))
+            if not ps:
+                return jsonify(ok=False, msg='Riga non trovata')
+            nuova_cc_id = int(valore)
+            ps.id_classe_concorso = nuova_cc_id
+            ps.atipica = (nuova_cc_id != ps.id_cc_default)
+            db.session.commit()
+            _ricalcola_organico(ps.anno_scol)
+            return jsonify(ok=True, msg='CC aggiornata',
+                           atipica=ps.atipica)
+
+        # ── Classi attive: checkbox ───────────────────────────────────
+        elif campo == 'cs_attiva':
+            cs = db.session.get(ClasseSezione, int(rec_id))
+            if not cs:
+                return jsonify(ok=False, msg='Sezione non trovata')
+            cs.attiva = bool(valore)
+            db.session.commit()
+            _ricalcola_organico(cs.anno_scol)
+            return jsonify(ok=True, msg='Sezione aggiornata')
+
+        # ── Calcolo organico: tipo confermato ────────────────────────
+        elif campo == 'tipo_organico':
+            co = db.session.get(CalcoloOrganico, int(rec_id))
+            if not co:
+                return jsonify(ok=False, msg='Riga non trovata')
+            co.tipo_confermato = str(valore) if valore else None
+            db.session.commit()
+            return jsonify(ok=True, msg='Tipo aggiornato')
+
+        # ── Calcolo organico: note eccezione ─────────────────────────
+        elif campo == 'note_organico':
+            co = db.session.get(CalcoloOrganico, int(rec_id))
+            if not co:
+                return jsonify(ok=False, msg='Riga non trovata')
+            co.note_eccezione = str(valore) if valore else None
+            db.session.commit()
+            return jsonify(ok=True, msg='Note aggiornate')
+
+        # ── Calcolo organico: confermato ──────────────────────────────
+        elif campo == 'conf_organico':
+            co = db.session.get(CalcoloOrganico, int(rec_id))
+            if not co:
+                return jsonify(ok=False, msg='Riga non trovata')
+            co.confermato = bool(valore)
+            db.session.commit()
+            return jsonify(ok=True, msg='Conferma aggiornata')
+
+        # ── Organico USR: ore residue ─────────────────────────────────
+        elif campo == 'ore_residue_organico':
+            from models.classe_concorso import CattedraOrganico
+            co = db.session.get(CattedraOrganico, int(rec_id))
+            if not co:
+                return jsonify(ok=False, msg='Riga non trovata')
+            co.ore_residue = int(valore) if valore != '' else 0
+            db.session.commit()
+            return jsonify(ok=True, msg='Ore residue aggiornate')
+
+        else:
+            return jsonify(ok=False, msg=f'Campo sconosciuto: {campo}')
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(ok=False, msg=str(e))

@@ -83,7 +83,7 @@
                     </span>
                 </td>
                 <td style="text-align:center;">
-                    <select name="tipo_{{ r.id }}" style="padding:3px 6px; border:1px solid #d1d5db;
+                    <select name="tipo_{{ r.id }}" data-autosave="tipo_organico:{{ r.id }}" style="padding:3px 6px; border:1px solid #d1d5db;
                             border-radius:5px; font-size:.78rem;">
                         <option value="">— auto —</option>
                         <option value="COI" {% if r.tipo_confermato=='COI' %}selected{% endif %}>COI</option>
@@ -92,12 +92,12 @@
                     </select>
                 </td>
                 <td>
-                    <input type="text" name="note_{{ r.id }}" value="{{ r.note_eccezione or '' }}"
+                    <input type="text" name="note_{{ r.id }}" data-autosave="note_organico:{{ r.id }}" value="{{ r.note_eccezione or '' }}"
                            placeholder="Motivo sovrascrittura..."
                            style="width:100%; border:1px solid #e5e7eb; border-radius:4px; padding:3px 6px; font-size:.76rem;">
                 </td>
                 <td style="text-align:center;">
-                    <input type="checkbox" name="conf_{{ r.id }}" value="1" {% if r.confermato %}checked{% endif %}>
+                    <input type="checkbox" name="conf_{{ r.id }}" value="1" data-autosave="conf_organico:{{ r.id }}" {% if r.confermato %}checked{% endif %}>
                 </td>
             </tr>
             {% endif %}
@@ -105,6 +105,9 @@
             </tbody>
         </table>
     </div>
-    <button type="submit" class="btn btn-success btn-sm">💾 Salva sovrascritture</button>
+    <button type="submit" class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.78rem;">↩ Salva tutto manualmente (fallback)</button>
 </form>
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/impostazione_autosave.js') }}"></script>
+{% endblock %}
 {% endblock %}

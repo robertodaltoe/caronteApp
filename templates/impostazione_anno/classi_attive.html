@@ -73,7 +73,7 @@
                               border:1px solid {{ '#93c5fd' if cs.attiva else '#e5e7eb' }};
                               color:{{ '#1e40af' if cs.attiva else '#9ca3af' }};"
                       id="label_{{ cs.id }}">
-                    <input type="checkbox" name="cs_{{ cs.id }}" value="1"
+                    <input type="checkbox" name="cs_{{ cs.id }}" value="1" data-autosave="cs_attiva:{{ cs.id }}"
                            {% if cs.attiva %}checked{% endif %}
                            style="display:none;"
                            onchange="
@@ -98,8 +98,9 @@
     </div>
     {% endfor %}
 
-    <button type="submit" class="btn btn-success btn-sm" style="margin-top:6px;">
-        💾 Salva e ricalcola organico
-    </button>
+    <button type="submit" class="btn btn-sm" style="margin-top:6px; background:#e5e7eb; color:#6b7280; font-size:.78rem;">↩ Salva tutto manualmente (fallback)</button>
 </form>
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/impostazione_autosave.js') }}"></script>
+{% endblock %}
 {% endblock %}

@@ -76,7 +76,7 @@
             <tr>
                 {# Nome materia editabile #}
                 <td style="padding:4px 6px; border:1px solid #e5e7eb;">
-                    <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}"
+                    <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}" data-autosave="nome_piano:{{ prima_riga.id }}"
                            style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
                                   padding:3px 6px; font-size:.8rem; background:#fafafa;">
                 </td>
@@ -89,13 +89,13 @@
                            vertical-align:middle;">
                     {% if riga %}
                     <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                        <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
+                        <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}" data-autosave="ore_piano:{{ riga.id }}"
                                min="0" max="20"
                                style="width:44px; text-align:center; border:1px solid #d1d5db;
                                       border-radius:4px; padding:3px 4px; font-size:.8rem;">
                         {% if opzioni_cc and opzioni_cc|length > 1 %}
                         <div style="display:flex; align-items:center; gap:2px;">
-                            <select name="cc_{{ riga.id }}"
+                            <select name="cc_{{ riga.id }}" data-autosave="cc_piano:{{ riga.id }}"
                                     style="padding:2px 4px; font-size:.7rem;
                                            border:1px solid {{ '#f59e0b' if riga.atipica else '#e5e7eb' }};
                                            border-radius:4px;
@@ -183,9 +183,7 @@
     </div>
     {% endfor %}
 
-    <button type="submit" class="btn btn-success btn-sm" style="margin-top:6px;">
-        💾 Salva piano e ricalcola organico
-    </button>
+    <button type="submit" class="btn btn-sm" style="margin-top:6px; background:#e5e7eb; color:#6b7280; font-size:.78rem;">↩ Salva tutto manualmente (fallback)</button>
     {% endif %}
 </form>
 
@@ -208,4 +206,7 @@ function eliminaRighe(ids) {
     });
 }
 </script>
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/impostazione_autosave.js') }}"></script>
+{% endblock %}
 {% endblock %}
