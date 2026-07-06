@@ -476,17 +476,38 @@ def classi_attive():
 def _ricalcola_organico(anno):
     """
     Ricalcola CalcoloOrganico per tutte le CC in un anno scolastico.
-    Chiamata automaticamente ogni volta che cambiano ClasseSezione o PianoStudi.
+    Tiene conto degli override per-sezione (PianoStudiOverride):
+    se una sezione ha un override con CC diversa, le sue ore vanno
+    alla CC dell'override, non a quella del piano generale.
     """
+    from models.piano_studi import PianoStudiOverride
+
+    # Pre-carica tutti gli override dell'anno: {id_piano_studi: {sezione: id_cc}}
+    tutti_override = {}
+    for ov in (PianoStudiOverride.query
+               .join(PianoStudi, PianoStudiOverride.id_piano_studi == PianoStudi.id)
+               .filter(PianoStudi.anno_scol == anno).all()):
+        tutti_override.setdefault(ov.id_piano_studi, {})[ov.sezione] = ov.id_cc_override
+
+    # Accumula ore per CC: {id_cc: ore_totali}
+    ore_per_cc = {}
+
+    for p in PianoStudi.query.filter_by(anno_scol=anno).all():
+        sezioni_attive = ClasseSezione.query.filter_by(
+            anno_scol=anno, indirizzo=p.indirizzo,
+            anno_corso=p.anno_corso, attiva=True).all()
+
+        override_sez = tutti_override.get(p.id, {})
+
+        for cs in sezioni_attive:
+            # Usa la CC dell'override se esiste per questa sezione,
+            # altrimenti usa la CC del piano generale
+            cc_id = override_sez.get(cs.sezione, p.id_classe_concorso)
+            ore_per_cc[cc_id] = ore_per_cc.get(cc_id, 0) + p.ore_settimanali
+
     cc_ids = [r.id for r in ClasseConcorso.query.all()]
     for cc_id in cc_ids:
-        righe_piano = PianoStudi.query.filter_by(anno_scol=anno, id_classe_concorso=cc_id).all()
-        totale = 0
-        for p in righe_piano:
-            n_sez = ClasseSezione.query.filter_by(
-                anno_scol=anno, indirizzo=p.indirizzo,
-                anno_corso=p.anno_corso, attiva=True).count()
-            totale += p.ore_settimanali * n_sez
+        totale = ore_per_cc.get(cc_id, 0)
 
         n_coi = totale // 18 if totale else 0
         resto  = totale % 18 if totale else 0
@@ -658,13 +679,23 @@ def piano_studi():
 
     tutte_materie = Materia.query.filter_by(attiva=True).order_by(Materia.sigla).all()
 
+    # Override per-sezione: {id_piano_studi: [{ov}, ...]}
+    from models.piano_studi import PianoStudiOverride
+    ids_piano = [r.id for r in righe]
+    override_map = {}
+    if ids_piano:
+        for ov in PianoStudiOverride.query.filter(
+                PianoStudiOverride.id_piano_studi.in_(ids_piano)).all():
+            override_map.setdefault(ov.id_piano_studi, []).append(ov)
+
     return render_template('impostazione_anno/piano_studi.html',
         anno=anno, indirizzo=indirizzo_sel, indirizzi=INDIRIZZI,
         da_cc=da_cc, anni_corso=anni_corso,
         sezioni_attive=sezioni_attive,
         anni_disponibili=anni_disponibili,
         materie_multi_cc=materie_multi_cc,
-        tutte_materie=tutte_materie)
+        tutte_materie=tutte_materie,
+        override_map=override_map)
 
 
 # ── PIANO STUDI: aggiungi / elimina riga ──────────────────────────────
@@ -887,3 +918,78 @@ def api_save():
     except Exception as e:
         db.session.rollback()
         return jsonify(ok=False, msg=str(e))
+
+
+# ── API cerca CC per codice ──────────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/api/cerca-cc')
+def api_cerca_cc():
+    codice = request.args.get('codice', '').strip().upper()
+    cc = ClasseConcorso.query.filter_by(codice=codice).first()
+    if cc:
+        return jsonify(id=cc.id, codice=cc.codice, nome=cc.nome)
+    return jsonify(id=None)
+
+
+# ── OVERRIDE PER-SEZIONE ──────────────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/piano-studi/override', methods=['POST'])
+def piano_studi_override_salva():
+    """
+    Crea o aggiorna un override per-sezione.
+    Riceve: id_piano_studi, sezione, id_cc_override, note.
+    Se esiste già per (id_piano_studi, sezione), lo aggiorna.
+    """
+    from models.piano_studi import PianoStudiOverride
+    id_ps    = request.form.get('id_piano_studi', type=int)
+    sezione  = request.form.get('sezione', '').strip().upper()
+    id_cc    = request.form.get('id_cc_override', type=int)
+    note     = request.form.get('note', '').strip()
+
+    if not (id_ps and sezione and id_cc):
+        flash('Compilare tutti i campi.', 'danger')
+        return redirect(request.referrer or url_for('impostazione_anno.piano_studi'))
+
+    ps = db.session.get(PianoStudi, id_ps)
+    if not ps:
+        flash('Riga piano studi non trovata.', 'danger')
+        return redirect(request.referrer or url_for('impostazione_anno.piano_studi'))
+
+    ov = PianoStudiOverride.query.filter_by(
+        id_piano_studi=id_ps, sezione=sezione).first()
+    if ov:
+        ov.id_cc_override = id_cc
+        ov.atipica = (id_cc != ps.id_cc_default)
+        ov.note = note
+    else:
+        ov = PianoStudiOverride(
+            id_piano_studi=id_ps, sezione=sezione,
+            id_cc_override=id_cc,
+            atipica=(id_cc != ps.id_cc_default),
+            note=note)
+        db.session.add(ov)
+
+    db.session.commit()
+    _ricalcola_organico(ps.anno_scol)
+    flash(f'Override sezione {sezione} salvato.', 'success')
+    return redirect(url_for('impostazione_anno.piano_studi',
+                            anno=ps.anno_scol, indirizzo=ps.indirizzo))
+
+
+@impostazione_anno_bp.route('/impostazione-anno/piano-studi/override/<int:ov_id>/elimina',
+                             methods=['POST'])
+def piano_studi_override_elimina(ov_id):
+    """Elimina un override per-sezione e ricalcola l'organico."""
+    from models.piano_studi import PianoStudiOverride
+    ov = db.session.get(PianoStudiOverride, ov_id)
+    if not ov:
+        flash('Override non trovato.', 'danger')
+        return redirect(url_for('impostazione_anno.piano_studi'))
+
+    ps     = db.session.get(PianoStudi, ov.id_piano_studi)
+    anno   = ps.anno_scol
+    ind    = ps.indirizzo
+    sezione = ov.sezione
+    db.session.delete(ov)
+    db.session.commit()
+    _ricalcola_organico(anno)
+    flash(f'Override sezione {sezione} eliminato.', 'success')
+    return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=ind))

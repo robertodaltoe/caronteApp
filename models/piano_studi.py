@@ -148,3 +148,48 @@ class CalcoloOrganico(db.Model):
     def __repr__(self):
         cc = self.classe_concorso.codice if self.classe_concorso else '?'
         return f'<CalcoloOrganico {cc} {self.anno_scol} {self.ore_totali_calcolate}h → {self.tipo_effettivo}>'
+
+
+class PianoStudiOverride(db.Model):
+    """
+    Sovrascrittura per-sezione del piano studi generale.
+
+    Quando per una singola sezione (es. 1A LSC) serve una CC diversa
+    da quella del piano studi generale (es. A-26 invece di A-27 solo
+    per 1A LSC ma non per 1B LSC), si aggiunge un record qui.
+
+    La logica di calcolo organico usa questo record al posto della
+    riga PianoStudi corrispondente, solo per la sezione indicata.
+    La riga PianoStudi resta invariata — vale per tutte le altre sezioni.
+
+    id_piano_studi: riga generale che viene sovrascritta (FK a piano_studi)
+    sezione:        la sezione specifica (es. 'A', 'B')
+    id_cc_override: la CC che sostituisce quella della riga generale
+    atipica:        True se id_cc_override != id_cc_default della riga generale
+    note:           motivazione (obbligatoria — serve tracciabilità)
+    """
+    __tablename__ = 'piano_studi_override'
+
+    id              = db.Column(db.Integer, primary_key=True)
+    id_piano_studi  = db.Column(db.Integer, db.ForeignKey('piano_studi.id',
+                                    ondelete='CASCADE'), nullable=False)
+    sezione         = db.Column(db.String(2), nullable=False)
+    id_cc_override  = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'),
+                                nullable=False)
+    atipica         = db.Column(db.Boolean, default=True)
+    note            = db.Column(db.String(300), nullable=False, default='')
+    creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
+
+    piano_studi     = db.relationship('PianoStudi',
+                                       backref=db.backref('override_sezioni',
+                                                          cascade='all, delete-orphan'))
+    cc_override     = db.relationship('ClasseConcorso')
+
+    __table_args__ = (
+        db.UniqueConstraint('id_piano_studi', 'sezione',
+                            name='uq_piano_studi_override'),
+    )
+
+    def __repr__(self):
+        return (f'<PianoStudiOverride ps={self.id_piano_studi} '
+                f'sez={self.sezione} cc={self.id_cc_override}>')
