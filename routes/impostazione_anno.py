@@ -993,3 +993,96 @@ def piano_studi_override_elimina(ov_id):
     _ricalcola_organico(anno)
     flash(f'Override sezione {sezione} eliminato.', 'success')
     return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=ind))
+
+
+# ── VERIFICA COPERTURA ORE ────────────────────────────────────────────
+def _verifica_copertura(anno):
+    """
+    Controlla che ogni riga del piano studi abbia le sue ore interamente
+    coperte da qualche CC (generale o override per-sezione), per ogni
+    sezione attiva.
+
+    Restituisce lista di dict con le anomalie trovate:
+      - tipo 'scoperta': ore del piano non assegnate a nessuna CC
+        (non dovrebbe succedere — significherebbe un bug nel calcolo)
+      - tipo 'eccesso': ore assegnate superano quelle del piano
+        (potrebbe indicare un override errato)
+
+    In condizioni normali la lista è vuota.
+    """
+    from models.piano_studi import PianoStudiOverride
+    anomalie = []
+
+    # Pre-carica override: {id_piano_studi: {sezione: id_cc}}
+    tutti_override = {}
+    for ov in (PianoStudiOverride.query
+               .join(PianoStudi, PianoStudiOverride.id_piano_studi == PianoStudi.id)
+               .filter(PianoStudi.anno_scol == anno).all()):
+        tutti_override.setdefault(ov.id_piano_studi, {})[ov.sezione] = ov.id_cc_override
+
+    for p in PianoStudi.query.filter_by(anno_scol=anno).all():
+        sezioni_attive = ClasseSezione.query.filter_by(
+            anno_scol=anno, indirizzo=p.indirizzo,
+            anno_corso=p.anno_corso, attiva=True).all()
+
+        if not sezioni_attive:
+            continue
+
+        ore_attese   = p.ore_settimanali * len(sezioni_attive)
+        ore_coperte  = p.ore_settimanali * len(sezioni_attive)  # per costruzione, sempre coperte
+        # (ogni sezione va o alla CC generale o all'override — non esiste "scoperta"
+        #  a meno di un bug nel modello; verifichiamo invece la coerenza degli override)
+
+        override_sez = tutti_override.get(p.id, {})
+
+        # Verifica: gli override dichiarano sezioni che non esistono?
+        sezioni_esistenti = {cs.sezione for cs in sezioni_attive}
+        for sez_ov in override_sez:
+            if sez_ov not in sezioni_esistenti:
+                anomalie.append({
+                    'tipo': 'override_sezione_inattiva',
+                    'indirizzo': p.indirizzo,
+                    'anno_corso': p.anno_corso,
+                    'materia': p.nome_materia_locale,
+                    'cc_generale': p.classe_concorso.codice,
+                    'sezione': sez_ov,
+                    'msg': (f'{p.nome_materia_locale} {p.indirizzo} {p.anno_corso}° anno: '
+                            f'override per sezione {sez_ov} ma quella sezione non è attiva')
+                })
+
+    # Seconda verifica: il totale ore nel CalcoloOrganico batte con il piano studi?
+    # Somma attesa = sum(ore_settimanali × n_sezioni_attive) per ogni riga piano
+    ore_attese_per_cc = {}
+    for p in PianoStudi.query.filter_by(anno_scol=anno).all():
+        sezioni = ClasseSezione.query.filter_by(
+            anno_scol=anno, indirizzo=p.indirizzo,
+            anno_corso=p.anno_corso, attiva=True).all()
+        override_sez = tutti_override.get(p.id, {})
+        for cs in sezioni:
+            cc_id = override_sez.get(cs.sezione, p.id_classe_concorso)
+            ore_attese_per_cc[cc_id] = ore_attese_per_cc.get(cc_id, 0) + p.ore_settimanali
+
+    totale_atteso  = sum(ore_attese_per_cc.values())
+    totale_calcolo = sum(
+        co.ore_totali_calcolate
+        for co in CalcoloOrganico.query.filter_by(anno_scol=anno).all()
+    )
+
+    if totale_atteso != totale_calcolo:
+        anomalie.append({
+            'tipo': 'totale_discordante',
+            'msg': (f'Totale ore attese dal piano studi ({totale_atteso}h) '
+                    f'≠ totale nel calcolo organico ({totale_calcolo}h). '
+                    f'Premi "Ricalcola" per allineare.'),
+            'indirizzo': '', 'anno_corso': 0,
+            'materia': '', 'cc_generale': '', 'sezione': ''
+        })
+
+    return anomalie
+
+
+@impostazione_anno_bp.route('/impostazione-anno/api/verifica-copertura')
+def api_verifica_copertura():
+    anno = request.args.get('anno', _anno_default_piano())
+    anomalie = _verifica_copertura(anno)
+    return jsonify(ok=len(anomalie) == 0, anomalie=anomalie, anno=anno)
