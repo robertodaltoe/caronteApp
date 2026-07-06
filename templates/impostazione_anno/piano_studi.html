@@ -132,13 +132,63 @@
                             {% endfor %}
                         </div>
                         {% endif %}
-                        {# Link per aggiungere un override (apre un mini-form) #}
+                        {# Bottone + form inline per override per-sezione #}
                         <button type="button"
-                                onclick="apriOverride({{ riga.id }}, '{{ riga.classe_concorso.codice }}')"
+                                onclick="toggleOverride('ov-{{ riga.id }}')"
                                 style="background:none; border:none; cursor:pointer; font-size:.65rem;
-                                       color:#6366f1; margin-top:2px;" title="Override per sezione specifica">
+                                       color:#6366f1; margin-top:2px;" title="Override CC per sezione specifica">
                             ＋ sez
                         </button>
+                        <div id="ov-{{ riga.id }}"
+                             style="display:none; position:absolute; z-index:100; margin-top:2px;
+                                    background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px;
+                                    padding:8px 10px; font-size:.74rem; min-width:220px; text-align:left;
+                                    box-shadow:0 4px 12px rgba(0,0,0,.1);">
+                            <form method="post"
+                                  action="{{ url_for('impostazione_anno.piano_studi_override_salva') }}">
+                                <input type="hidden" name="id_piano_studi" value="{{ riga.id }}">
+                                <div style="font-weight:700; color:#0369a1; margin-bottom:6px; font-size:.76rem;">
+                                    ⚙️ Override sezione — {{ riga.classe_concorso.codice }}
+                                </div>
+                                <div style="display:flex; gap:4px; margin-bottom:4px;">
+                                    <div>
+                                        <div style="font-size:.68rem; color:#64748b; margin-bottom:2px;">Sez.</div>
+                                        <input type="text" name="sezione" placeholder="A" maxlength="2" required
+                                               style="width:40px; padding:3px 5px; border:1px solid #bae6fd;
+                                                      border-radius:4px; font-size:.78rem; text-align:center;
+                                                      text-transform:uppercase;">
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="font-size:.68rem; color:#64748b; margin-bottom:2px;">Nuova CC</div>
+                                        <input type="text" id="cc-text-{{ riga.id }}"
+                                               placeholder="es. A-26" required
+                                               style="width:100%; padding:3px 5px; border:1px solid #bae6fd;
+                                                      border-radius:4px; font-size:.78rem; text-transform:uppercase;"
+                                               oninput="cercaCC({{ riga.id }}, this.value)">
+                                        <input type="hidden" id="cc-id-{{ riga.id }}">
+                                    </div>
+                                </div>
+                                <div id="cc-label-{{ riga.id }}"
+                                     style="font-size:.68rem; margin-bottom:4px; min-height:14px;"></div>
+                                <div style="margin-bottom:4px;">
+                                    <div style="font-size:.68rem; color:#64748b; margin-bottom:2px;">Nota *</div>
+                                    <input type="text" name="note" required
+                                           placeholder="es. A-26 solo per 1A LSC per carenza A-27"
+                                           style="width:100%; padding:3px 5px; border:1px solid #bae6fd;
+                                                  border-radius:4px; font-size:.74rem;">
+                                </div>
+                                <div style="display:flex; gap:4px;">
+                                    <button type="submit" class="btn btn-sm"
+                                            style="background:#0369a1; color:white; padding:3px 10px;
+                                                   font-size:.72rem;">Salva</button>
+                                    <button type="button"
+                                            onclick="toggleOverride('ov-{{ riga.id }}')"
+                                            style="background:none; border:1px solid #bae6fd; border-radius:4px;
+                                                   cursor:pointer; padding:3px 8px; font-size:.72rem; color:#64748b;">
+                                        Annulla</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                     {% elif attivo %}
                     <span style="font-size:.72rem; color:#dc2626;">—</span>
@@ -236,35 +286,41 @@ function eliminaRighe(ids) {
 {% block extra_script %}
 <script src="{{ url_for('static', filename='js/impostazione_autosave.js') }}"></script>
 <script>
-function apriOverride(psId, ccCodiceDefault) {
-    var sez = prompt('Sezione (es. A oppure B):');
-    if (!sez) return;
-    sez = sez.trim().toUpperCase();
-    var ccNuova = prompt('Classe di concorso da assegnare a questa sezione
-(es. A-26, A-11 — diversa da ' + ccCodiceDefault + '):');
-    if (!ccNuova) return;
-    ccNuova = ccNuova.trim().toUpperCase();
-    var nota = prompt('Nota obbligatoria (es. "A-26 richiesta per 1A LSC per carenza A-27"):');
-    if (!nota) { alert('La nota è obbligatoria.'); return; }
+function toggleOverride(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+}
 
-    // Cerca id CC dal codice digitato — serve un fetch
-    fetch('/impostazione-anno/api/cerca-cc?codice=' + encodeURIComponent(ccNuova))
-        .then(r => r.json())
-        .then(data => {
-            if (!data.id) { alert('Classe di concorso "' + ccNuova + '" non trovata.'); return; }
-            var form = document.createElement('form');
-            form.method = 'post';
-            form.action = '/impostazione-anno/piano-studi/override';
-            var campi = {id_piano_studi: psId, sezione: sez,
-                         id_cc_override: data.id, note: nota};
-            Object.entries(campi).forEach(([k, v]) => {
-                var inp = document.createElement('input');
-                inp.type = 'hidden'; inp.name = k; inp.value = v;
-                form.appendChild(inp);
+var _ccTimer = {};
+function cercaCC(psId, valore) {
+    clearTimeout(_ccTimer[psId]);
+    var label = document.getElementById('cc-label-' + psId);
+    var hiddenId = document.getElementById('cc-id-' + psId);
+    var textEl = document.getElementById('cc-text-' + psId);
+    if (!valore || valore.length < 3) {
+        label.textContent = '';
+        hiddenId.value = '';
+        return;
+    }
+    _ccTimer[psId] = setTimeout(function() {
+        fetch('/impostazione-anno/api/cerca-cc?codice=' + encodeURIComponent(valore.toUpperCase()))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.id) {
+                    label.textContent = '\u2713 ' + data.nome;
+                    label.style.color = '#16a34a';
+                    hiddenId.value = data.id;
+                    textEl.name = '_cc_text_ignore';
+                    hiddenId.name = 'id_cc_override';
+                } else {
+                    label.textContent = '\u2717 CC non trovata';
+                    label.style.color = '#dc2626';
+                    hiddenId.value = '';
+                    textEl.name = 'id_cc_override';
+                    hiddenId.name = '_cc_id_ignore';
+                }
             });
-            document.body.appendChild(form);
-            form.submit();
-        });
+    }, 400);
 }
 </script>
 {% endblock %}
