@@ -50,6 +50,10 @@ class Docente(db.Model):
     email         = db.Column(db.String(120))
     note           = db.Column(db.Text)
     tipo_contratto       = db.Column(db.String(30))
+    # Gestione pluriennale: quando è arrivato e se/quando esce
+    anno_scol_inizio  = db.Column(db.String(9), nullable=True)   # es. '2025-2026'; NULL = TI storico
+    anno_scol_uscita  = db.Column(db.String(9), nullable=True)   # NULL = ancora in servizio
+    motivo_uscita     = db.Column(db.String(20), nullable=True)  # 'trasferimento'|'pensionamento'|'fine_td'
     colloqui_giorno      = db.Column(db.Integer)   # 0=lun…5=sab, None=nessuno
     colloqui_ora_inizio  = db.Column(db.Integer)   # ora inizio (1-9)
     colloqui_ora_fine    = db.Column(db.Integer)   # ora fine (1-9)

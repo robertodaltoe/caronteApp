@@ -17,6 +17,57 @@ from datetime import date
 impostazione_anno_bp = Blueprint('impostazione_anno', __name__)
 
 
+def _docenti_per_anno(anno_scol):
+    """
+    Restituisce i docenti attivi per un dato anno scolastico.
+
+    Regola:
+      - attivo = True (nel registro operativo)
+      - anno_scol_inizio <= anno_scol  oppure  anno_scol_inizio IS NULL
+      - anno_scol_uscita >= anno_scol  oppure  anno_scol_uscita IS NULL
+
+    I TI senza anno_scol_inizio sono considerati presenti da sempre.
+    I TD/supplenti senza anno_scol_inizio NON compaiono nell'anno futuro
+    perché vengono inseriti solo quando arriva la nomina (con anno_scol_inizio).
+
+    Eccezione: se anno_scol == anno scolastico corrente del DB (quello con
+    dati operativi), mostra tutti i docenti attivi indipendentemente —
+    per non rompere le funzionalità operative (supplenze, assenze, ecc.).
+    """
+    from sqlalchemy import or_
+
+    # Tutti i docenti attivi senza vincoli temporali = anno operativo corrente
+    base = Docente.query.filter_by(attivo=True)
+
+    # Per anni futuri (pianificazione), filtra per contratto e date
+    anni_operativi = {p.anno_scol for p in __import__('models.piano_studi',
+        fromlist=['PianoStudi']).PianoStudi.query.all()} or {anno_scol}
+    anno_operativo = min(anni_operativi) if anni_operativi else anno_scol
+
+    if anno_scol <= anno_operativo:
+        # Anno corrente o passato: tutti i docenti attivi
+        return base.order_by(Docente.cognome).all()
+
+    # Anno futuro: solo chi sarà presente
+    return base.filter(
+        # O è TI (nessuna data inizio = storico) o ha iniziato entro quell'anno
+        or_(
+            Docente.anno_scol_inizio == None,
+            Docente.anno_scol_inizio <= anno_scol,
+        ),
+        # E non ha ancora una data di uscita, o uscirà dopo quell'anno
+        or_(
+            Docente.anno_scol_uscita == None,
+            Docente.anno_scol_uscita > anno_scol,  # esce DA quell'anno, non IN quell'anno
+        ),
+        # Escludi supplenti/TD senza data inizio (non confermati per l'anno futuro)
+        or_(
+            Docente.tipo_contratto == 'TI',
+            Docente.anno_scol_inizio != None,
+        ),
+    ).order_by(Docente.cognome).all()
+
+
 def _anno_scolastico_corrente():
     """Restituisce l'anno scolastico corrente nel senso del calendario."""
     oggi = date.today()
@@ -324,10 +375,11 @@ def docenti_classi_concorso():
         flash('Abilitazioni docente → classi di concorso aggiornate.', 'success')
         return redirect(url_for('impostazione_anno.docenti_classi_concorso'))
 
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    anno = request.args.get('anno', _anno_default_piano())
+    docenti = _docenti_per_anno(anno)
     classi = ClasseConcorso.query.filter_by(attiva=True).order_by(ClasseConcorso.codice).all()
     return render_template('impostazione_anno/docenti_classi_concorso.html',
-        docenti=docenti, classi=classi)
+        docenti=docenti, classi=classi, anno=anno)
 
 
 # ── DOCENTI ↔ MATERIE (filtrate per TUTTE le classi di concorso) ─────
@@ -380,7 +432,7 @@ def docenti_materie():
         flash('Materie dei docenti aggiornate.', 'success')
         return redirect(url_for('impostazione_anno.docenti_materie', anno=anno_f))
 
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    docenti = _docenti_per_anno(anno)
 
     # Per ogni docente: l'unione delle materie ammesse da tutte le sue
     # classi di concorso, e quelle già assegnate per l'anno scelto.
@@ -1086,3 +1138,86 @@ def api_verifica_copertura():
     anno = request.args.get('anno', _anno_default_piano())
     anomalie = _verifica_copertura(anno)
     return jsonify(ok=len(anomalie) == 0, anomalie=anomalie, anno=anno)
+
+
+# ── PREPARAZIONE ANNO — DOCENTI ──────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/docenti-anno', methods=['GET', 'POST'])
+def docenti_anno():
+    """
+    Gestione pluriennale dei docenti: segnala uscite TI (trasferimento/
+    pensionamento) e inserisce i nuovi TD/supplenti quando arriva la nomina.
+    Centrale per il "cambio anno scolastico".
+    """
+    anno = request.args.get('anno', _anno_default_piano())
+
+    if request.method == 'POST':
+        azione = request.form.get('azione', '')
+        anno_f = request.form.get('anno_scol', anno)
+
+        if azione == 'segna_uscita':
+            # Segna uscita per un docente TI
+            doc_id = int(request.form.get('id_docente'))
+            motivo = request.form.get('motivo', 'trasferimento')
+            d = db.session.get(Docente, doc_id)
+            if d:
+                d.anno_scol_uscita = anno_f
+                d.motivo_uscita    = motivo
+                db.session.commit()
+                flash(f'{d.cognome} {d.nome}: segnato come {motivo} da {anno_f}.', 'success')
+
+        elif azione == 'annulla_uscita':
+            doc_id = int(request.form.get('id_docente'))
+            d = db.session.get(Docente, doc_id)
+            if d:
+                d.anno_scol_uscita = None
+                d.motivo_uscita    = None
+                db.session.commit()
+                flash(f'{d.cognome} {d.nome}: uscita annullata.', 'success')
+
+        elif azione == 'aggiungi_docente':
+            # Aggiunge un nuovo docente TD/supplente con anno_scol_inizio
+            cognome = request.form.get('cognome', '').strip().upper()
+            nome    = request.form.get('nome', '').strip()
+            tipo_c  = request.form.get('tipo_contratto', 'TD_annuale')
+            ruolo   = request.form.get('ruolo', 'titolare')
+            if cognome and nome:
+                d = Docente(
+                    cognome=cognome, nome=nome,
+                    tipo_contratto=tipo_c, ruolo=ruolo,
+                    anno_scol_inizio=anno_f,
+                    attivo=True)
+                db.session.add(d)
+                db.session.commit()
+                flash(f'Docente {cognome} {nome} aggiunto per {anno_f}.', 'success')
+            else:
+                flash('Inserisci cognome e nome.', 'danger')
+
+        return redirect(url_for('impostazione_anno.docenti_anno', anno=anno_f))
+
+    # Docenti TI attivi — mostro chi potrebbe uscire
+    ti_attivi = (Docente.query
+                 .filter_by(attivo=True, tipo_contratto='TI')
+                 .order_by(Docente.cognome).all())
+
+    # Docenti già segnati come uscenti nell'anno selezionato
+    uscenti = (Docente.query
+               .filter_by(attivo=True, anno_scol_uscita=anno)
+               .order_by(Docente.cognome).all())
+
+    # TD/supplenti già inseriti per l'anno selezionato
+    td_anno = (Docente.query
+               .filter(Docente.attivo == True,
+                       Docente.anno_scol_inizio == anno,
+                       Docente.tipo_contratto != 'TI')
+               .order_by(Docente.cognome).all())
+
+    anni_disponibili = sorted(
+        {p.anno_scol for p in __import__('models.piano_studi',
+            fromlist=['PianoStudi']).PianoStudi.query.all()},
+        reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    return render_template('impostazione_anno/docenti_anno.html',
+        anno=anno, anni_disponibili=anni_disponibili,
+        ti_attivi=ti_attivi, uscenti=uscenti, td_anno=td_anno)

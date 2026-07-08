@@ -103,11 +103,22 @@
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→</div>
     </a>
+    <a href="{{ url_for('impostazione_anno.docenti_anno', anno=anno_piano) }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #dc2626;">
+        <div style="font-size:1.6rem;">👥</div>
+        <div>
+            <div style="font-weight:700; color:#dc2626;">7. Docenti per anno scolastico</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Segnala uscite TI (trasferimento/pensionamento) e aggiungi nuovi TD quando arriva la nomina
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #b45309;">
         <div style="font-size:1.6rem;">👤</div>
         <div>
-            <div style="font-weight:700; color:#b45309;">7. Docenti ↔ Classe di concorso</div>
+            <div style="font-weight:700; color:#b45309;">8. Docenti ↔ Classe di concorso</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Assegna a ciascun docente la sua abilitazione
             </div>
@@ -118,7 +129,7 @@
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #be185d;">
         <div style="font-size:1.6rem;">📖</div>
         <div>
-            <div style="font-weight:700; color:#be185d;">8. Docenti ↔ Materie</div>
+            <div style="font-weight:700; color:#be185d;">9. Docenti ↔ Materie</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Materie insegnate da ciascun docente, filtrate per la sua classe di concorso
             </div>

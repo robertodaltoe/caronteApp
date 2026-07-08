@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Docenti — {{ anno }}{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">👥 Docenti — {{ anno }}</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Qui gestisci la composizione del corpo docente per anno scolastico.<br>
+    <strong>TI:</strong> presenti ogni anno — segnala uscite (trasferimento/pensionamento) prima di assegnare le CC per l'anno nuovo.<br>
+    <strong>TD / Supplenti:</strong> non presenti di default — aggiungili quando arriva la nomina (fine agosto/ottobre).
+</div>
+
+<div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+    <span style="font-size:.82rem; color:var(--grigio);">Anno:</span>
+    {% for a in anni_disponibili %}
+    <a href="{{ url_for('impostazione_anno.docenti_anno', anno=a) }}"
+       style="padding:4px 10px; border-radius:6px; font-size:.82rem; text-decoration:none;
+              background:{{ '#6366f1' if a == anno else '#f3f4f6' }};
+              color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+    {% endfor %}
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+
+    {# ── SEZIONE 1: Uscenti ───────────────────────────────────────── #}
+    <div class="card" style="padding:14px 18px;">
+        <div style="font-weight:700; color:#dc2626; margin-bottom:10px; font-size:.9rem;">
+            🚪 Uscite segnalate per {{ anno }}
+            <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">
+                ({{ uscenti|length }} docenti)</span>
+        </div>
+        {% if not uscenti %}
+        <div style="font-size:.8rem; color:var(--grigio);">Nessuna uscita segnalata.</div>
+        {% else %}
+        {% for d in uscenti %}
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;
+                    padding:6px 10px; background:#fef2f2; border-radius:6px;
+                    border:1px solid #fecaca; font-size:.82rem;">
+            <span style="flex:1;">{{ d.cognome }} {{ d.nome }}</span>
+            <span style="font-size:.72rem; background:#fee2e2; color:#dc2626;
+                          padding:2px 7px; border-radius:6px; font-weight:700;">
+                {{ d.motivo_uscita or 'uscita' }}</span>
+            <form method="post" style="margin:0;">
+                <input type="hidden" name="azione" value="annulla_uscita">
+                <input type="hidden" name="id_docente" value="{{ d.id }}">
+                <input type="hidden" name="anno_scol" value="{{ anno }}">
+                <button type="submit" style="background:none; border:none; cursor:pointer;
+                        font-size:.8rem; color:#6b7280;" title="Annulla uscita">↩</button>
+            </form>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    {# ── SEZIONE 2: Aggiungi TD ───────────────────────────────────── #}
+    <div class="card" style="padding:14px 18px;">
+        <div style="font-weight:700; color:#16a34a; margin-bottom:10px; font-size:.9rem;">
+            ＋ Aggiungi TD / Supplente per {{ anno }}
+        </div>
+        <form method="post" style="display:flex; flex-direction:column; gap:8px;">
+            <input type="hidden" name="azione" value="aggiungi_docente">
+            <input type="hidden" name="anno_scol" value="{{ anno }}">
+            <div style="display:flex; gap:6px;">
+                <div style="flex:1;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Cognome *</div>
+                    <input type="text" name="cognome" required
+                           style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                                  border-radius:5px; font-size:.82rem; text-transform:uppercase;">
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome *</div>
+                    <input type="text" name="nome" required
+                           style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                                  border-radius:5px; font-size:.82rem;">
+                </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <div style="flex:1;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Tipo contratto</div>
+                    <select name="tipo_contratto"
+                            style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                                   border-radius:5px; font-size:.82rem;">
+                        <option value="TD_annuale">TD annuale</option>
+                        <option value="TD_GS">TD graduatoria</option>
+                        <option value="supplente">Supplente breve</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Ruolo</div>
+                    <select name="ruolo"
+                            style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                                   border-radius:5px; font-size:.82rem;">
+                        <option value="titolare">Titolare</option>
+                        <option value="itp">ITP</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm" style="align-self:flex-start;">
+                ＋ Aggiungi
+            </button>
+        </form>
+
+        {% if td_anno %}
+        <div style="margin-top:12px; border-top:1px solid #e5e7eb; padding-top:10px;">
+            <div style="font-size:.76rem; font-weight:700; color:var(--grigio); margin-bottom:6px;">
+                Già inseriti per {{ anno }}:
+            </div>
+            {% for d in td_anno %}
+            <div style="font-size:.8rem; padding:3px 0; color:#374151;">
+                {{ d.cognome }} {{ d.nome }}
+                <span style="font-size:.72rem; color:var(--grigio);">({{ d.tipo_contratto }})</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ── SEZIONE 3: TI attivi — segnala uscite ────────────────────────── #}
+<div class="card" style="padding:14px 18px;">
+    <div style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
+        📋 Docenti TI attivi ({{ ti_attivi|length }}) — segnala uscite per {{ anno }}
+    </div>
+    <div style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
+        Clicca su un docente per segnalare che non sarà presente a partire da <strong>{{ anno }}</strong>.
+        Non sparisce dall'app — viene solo escluso dalla pianificazione di quell'anno in poi.
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:6px;">
+        {% for d in ti_attivi %}
+        {% set ha_uscita = d.anno_scol_uscita == anno %}
+        {% if not ha_uscita %}
+        <div style="display:flex; align-items:center; gap:8px; padding:6px 10px;
+                    background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px;
+                    font-size:.82rem;">
+            <span style="flex:1;">{{ d.cognome }} {{ d.nome }}</span>
+            <form method="post" style="margin:0; display:flex; gap:4px;">
+                <input type="hidden" name="azione" value="segna_uscita">
+                <input type="hidden" name="id_docente" value="{{ d.id }}">
+                <input type="hidden" name="anno_scol" value="{{ anno }}">
+                <select name="motivo" style="padding:2px 4px; border:1px solid #d1d5db;
+                        border-radius:4px; font-size:.72rem; color:#6b7280;">
+                    <option value="trasferimento">trasf.</option>
+                    <option value="pensionamento">pens.</option>
+                </select>
+                <button type="submit" style="background:none; border:1px solid #fca5a5;
+                        border-radius:4px; cursor:pointer; padding:2px 6px;
+                        font-size:.7rem; color:#dc2626;" title="Segna uscita">✕ Segna</button>
+            </form>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
