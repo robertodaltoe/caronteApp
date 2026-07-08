@@ -54,6 +54,13 @@ class Docente(db.Model):
     anno_scol_inizio  = db.Column(db.String(9), nullable=True)   # es. '2025-2026'; NULL = TI storico
     anno_scol_uscita  = db.Column(db.String(9), nullable=True)   # NULL = ancora in servizio
     motivo_uscita     = db.Column(db.String(20), nullable=True)  # 'trasferimento'|'pensionamento'|'fine_td'
+    # Presenza fisica nell'anno scolastico corrente
+    # 'presente'    = insegna fisicamente qui (default)
+    # 'ap_entrante' = assegnazione provvisoria in entrata (titolare altrove, insegna qui)
+    # 'ap_uscente'  = assegnazione provvisoria in uscita (titolare qui, insegna altrove)
+    # 'aspettativa' = titolare qui ma in aspettativa
+    status_presenza   = db.Column(db.String(20), nullable=True, default='presente')
+    scuola_ap         = db.Column(db.String(150), nullable=True)  # scuola di provenienza/destinazione AP
     colloqui_giorno      = db.Column(db.Integer)   # 0=lun…5=sab, None=nessuno
     colloqui_ora_inizio  = db.Column(db.Integer)   # ora inizio (1-9)
     colloqui_ora_fine    = db.Column(db.Integer)   # ora fine (1-9)

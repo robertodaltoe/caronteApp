@@ -39,7 +39,7 @@ def _docenti_per_anno(anno_scol):
 
     # Anno futuro: filtra
     return base.filter(
-        # TI storico (nessuna data inizio) o TD già inserito per quell'anno
+        # TI storico (nessuna data inizio) o TD/AP già inserito per quell'anno
         or_(
             Docente.anno_scol_inizio == None,
             Docente.anno_scol_inizio <= anno_scol,
@@ -49,9 +49,10 @@ def _docenti_per_anno(anno_scol):
             Docente.anno_scol_uscita == None,
             Docente.anno_scol_uscita > anno_scol,
         ),
-        # TD/supplenti senza data inizio non compaiono (non ancora nominati)
+        # TD/supplenti/IRC senza data inizio non compaiono (non ancora nominati)
+        # Le AP uscenti compaiono comunque (sono TI titolari della scuola)
         or_(
-            Docente.tipo_contratto == 'TI',
+            Docente.tipo_contratto.in_(['TI', 'IRC']),
             Docente.anno_scol_inizio != None,
         ),
     ).order_by(Docente.cognome).all()
@@ -1144,67 +1145,105 @@ def api_verifica_copertura():
 @impostazione_anno_bp.route('/impostazione-anno/docenti-anno', methods=['GET', 'POST'])
 def docenti_anno():
     """
-    Gestione pluriennale dei docenti: segnala uscite TI (trasferimento/
-    pensionamento) e inserisce i nuovi TD/supplenti quando arriva la nomina.
-    Centrale per il "cambio anno scolastico".
+    Gestione pluriennale dei docenti per anno scolastico.
+    Gestisce: uscite TI, AP entranti/uscenti, aspettative,
+    nuovi TI, IRC, TD/supplenti.
     """
+    from config_anno import get_anno_corrente
     anno = request.args.get('anno', _anno_default_piano())
 
     if request.method == 'POST':
         azione = request.form.get('azione', '')
         anno_f = request.form.get('anno_scol', anno)
+        doc_id = request.form.get('id_docente')
+        d = db.session.get(Docente, int(doc_id)) if doc_id else None
 
-        if azione == 'segna_uscita':
-            # Segna uscita per un docente TI
-            doc_id = int(request.form.get('id_docente'))
-            motivo = request.form.get('motivo', 'trasferimento')
-            d = db.session.get(Docente, doc_id)
-            if d:
-                d.anno_scol_uscita = anno_f
-                d.motivo_uscita    = motivo
-                db.session.commit()
-                flash(f'{d.cognome} {d.nome}: segnato come {motivo} da {anno_f}.', 'success')
+        if azione == 'segna_uscita' and d:
+            d.anno_scol_uscita = anno_f
+            d.motivo_uscita    = request.form.get('motivo', 'trasferimento')
+            d.status_presenza  = 'presente'
+            db.session.commit()
+            flash(f'{d.cognome} {d.nome}: segnato come {d.motivo_uscita} da {anno_f}.', 'success')
 
-        elif azione == 'annulla_uscita':
-            doc_id = int(request.form.get('id_docente'))
-            d = db.session.get(Docente, doc_id)
-            if d:
-                d.anno_scol_uscita = None
-                d.motivo_uscita    = None
-                db.session.commit()
-                flash(f'{d.cognome} {d.nome}: uscita annullata.', 'success')
+        elif azione == 'segna_ap_uscente' and d:
+            d.status_presenza = 'ap_uscente'
+            d.scuola_ap       = request.form.get('scuola_ap', '').strip() or None
+            db.session.commit()
+            flash(f'{d.cognome} {d.nome}: segnato come AP uscente.', 'success')
+
+        elif azione == 'segna_aspettativa' and d:
+            d.status_presenza = 'aspettativa'
+            db.session.commit()
+            flash(f'{d.cognome} {d.nome}: segnato in aspettativa.', 'success')
+
+        elif azione == 'annulla_status' and d:
+            d.status_presenza = 'presente'
+            d.scuola_ap       = None
+            db.session.commit()
+            flash(f'{d.cognome} {d.nome}: status ripristinato a presente.', 'success')
+
+        elif azione == 'annulla_uscita' and d:
+            d.anno_scol_uscita = None
+            d.motivo_uscita    = None
+            db.session.commit()
+            flash(f'{d.cognome} {d.nome}: uscita annullata.', 'success')
 
         elif azione == 'aggiungi_docente':
-            # Aggiunge un nuovo docente TD/supplente con anno_scol_inizio
-            cognome = request.form.get('cognome', '').strip().upper()
-            nome    = request.form.get('nome', '').strip()
-            tipo_c  = request.form.get('tipo_contratto', 'TD_annuale')
-            ruolo   = request.form.get('ruolo', 'titolare')
-            if cognome and nome:
-                d = Docente(
-                    cognome=cognome, nome=nome,
-                    tipo_contratto=tipo_c, ruolo=ruolo,
-                    anno_scol_inizio=anno_f,
-                    attivo=True)
-                db.session.add(d)
-                db.session.commit()
-                flash(f'Docente {cognome} {nome} aggiunto per {anno_f}.', 'success')
-            else:
+            cognome   = request.form.get('cognome', '').strip().upper()
+            nome      = request.form.get('nome', '').strip()
+            tipo_c    = request.form.get('tipo_contratto', 'TD_annuale')
+            ruolo     = request.form.get('ruolo', 'titolare')
+            scuola_ap = request.form.get('scuola_ap', '').strip() or None
+            if not (cognome and nome):
                 flash('Inserisci cognome e nome.', 'danger')
+            else:
+                # I TI nuovi e gli IRC non hanno anno_scol_inizio futuro —
+                # sono immessi in ruolo con decorrenza specifica, trattati
+                # come TI storici ma con anno_scol_inizio impostato.
+                # Le AP entranti vengono inserite come TI con status ap_entrante
+                # e anno_scol_inizio = anno corrente.
+                tipo_reale = 'TI' if tipo_c in ('TI', 'IRC', 'ap_entrante') else tipo_c
+                status = 'ap_entrante' if tipo_c == 'ap_entrante' else 'presente'
+                tipo_contratto_finale = 'IRC' if tipo_c == 'IRC' else tipo_reale
+                new_d = Docente(
+                    cognome=cognome, nome=nome,
+                    tipo_contratto=tipo_contratto_finale,
+                    ruolo=ruolo,
+                    anno_scol_inizio=anno_f,
+                    status_presenza=status,
+                    scuola_ap=scuola_ap,
+                    attivo=True)
+                db.session.add(new_d)
+                db.session.commit()
+                flash(f'{cognome} {nome} ({tipo_c}) aggiunto per {anno_f}.', 'success')
 
         return redirect(url_for('impostazione_anno.docenti_anno', anno=anno_f))
 
-    # Docenti TI attivi — mostro chi potrebbe uscire
+    # ── Dati per il template ─────────────────────────────────────────
+    # TI presenti (senza uscita segnalata per questo anno)
     ti_attivi = (Docente.query
-                 .filter_by(attivo=True, tipo_contratto='TI')
+                 .filter(Docente.attivo == True,
+                         Docente.tipo_contratto == 'TI',
+                         db.or_(Docente.anno_scol_uscita == None,
+                                Docente.anno_scol_uscita != anno))
                  .order_by(Docente.cognome).all())
 
-    # Docenti già segnati come uscenti nell'anno selezionato
+    # TI con uscita segnalata per questo anno
     uscenti = (Docente.query
                .filter_by(attivo=True, anno_scol_uscita=anno)
                .order_by(Docente.cognome).all())
 
-    # TD/supplenti già inseriti per l'anno selezionato
+    # AP uscenti (titolari qui che insegnano altrove quest'anno)
+    ap_uscenti = (Docente.query
+                  .filter_by(attivo=True, status_presenza='ap_uscente')
+                  .order_by(Docente.cognome).all())
+
+    # AP entranti (titolari altrove che insegnano qui)
+    ap_entranti = (Docente.query
+                   .filter_by(attivo=True, status_presenza='ap_entrante')
+                   .order_by(Docente.cognome).all())
+
+    # TD/supplenti/IRC inseriti per questo anno specifico
     td_anno = (Docente.query
                .filter(Docente.attivo == True,
                        Docente.anno_scol_inizio == anno,
@@ -1212,12 +1251,14 @@ def docenti_anno():
                .order_by(Docente.cognome).all())
 
     anni_disponibili = sorted(
-        {p.anno_scol for p in __import__('models.piano_studi',
-            fromlist=['PianoStudi']).PianoStudi.query.all()},
+        {p.anno_scol for p in PianoStudi.query.all()} |
+        {cs.anno_scol for cs in ClasseSezione.query.all()},
         reverse=True)
     if anno not in anni_disponibili:
         anni_disponibili.insert(0, anno)
 
     return render_template('impostazione_anno/docenti_anno.html',
         anno=anno, anni_disponibili=anni_disponibili,
-        ti_attivi=ti_attivi, uscenti=uscenti, td_anno=td_anno)
+        ti_attivi=ti_attivi, uscenti=uscenti,
+        ap_uscenti=ap_uscenti, ap_entranti=ap_entranti,
+        td_anno=td_anno)
