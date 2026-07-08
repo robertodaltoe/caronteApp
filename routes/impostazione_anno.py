@@ -839,11 +839,14 @@ def piano_studi_aggiungi():
         if esiste:
             n_esistenti += 1
         else:
+            # compresenza automatica: True se la CC è di tipo B (ITP)
+            is_compresenza = cc.codice.startswith('B-') if cc else False
             db.session.add(PianoStudi(
                 anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
                 id_classe_concorso=id_cc, id_cc_default=id_cc,
                 id_materia=id_mat, nome_materia_locale=nome_loc,
-                ore_settimanali=ore, atipica=False))
+                ore_settimanali=ore, atipica=False,
+                compresenza=is_compresenza))
             n_aggiunte += 1
 
     if n_aggiunte:
@@ -1039,16 +1042,6 @@ def api_save():
             co.ore_residue = int(valore) if valore != '' else 0
             db.session.commit()
             return jsonify(ok=True, msg='Ore residue aggiornate')
-
-        # ── Piano studi: compresenza ─────────────────────────────────
-        elif campo == 'compresenza_piano':
-            ps = db.session.get(PianoStudi, int(rec_id))
-            if not ps:
-                return jsonify(ok=False, msg='Riga non trovata')
-            ps.compresenza = bool(valore)
-            db.session.commit()
-            _ricalcola_organico(ps.anno_scol)
-            return jsonify(ok=True, msg='Compresenza aggiornata')
 
         # ── Materia: nome breve ──────────────────────────────────────
         elif campo == 'nome_breve_mat':

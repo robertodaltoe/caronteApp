@@ -208,15 +208,12 @@
                                data-autosave="nome_piano:{{ prima_riga.id }}"
                                style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
                                       padding:3px 6px; font-size:.8rem; background:#fafafa;">
-                        <label title="Ore in compresenza — escluse dal monte ore curricolare"
-                               style="display:flex; align-items:center; gap:2px; cursor:pointer;
-                                      font-size:.65rem; color:#92400e; white-space:nowrap; flex-shrink:0;">
-                            <input type="checkbox"
-                                   data-autosave="compresenza_piano:{{ prima_riga.id }}"
-                                   {% if prima_riga.compresenza %}checked{% endif %}
-                                   style="accent-color:#f59e0b; width:12px; height:12px;">
-                            comp.
-                        </label>
+                        {% if prima_riga.compresenza %}
+                        <span title="ITP in compresenza — ore escluse dal monte ore curricolare"
+                              style="font-size:.62rem; background:#fef3c7; color:#92400e;
+                                     padding:1px 5px; border-radius:4px; white-space:nowrap;
+                                     font-weight:700; flex-shrink:0;">ITP</span>
+                        {% endif %}
                     </div>
                 </td>
                 {# Celle per anno di corso — accesso diretto per chiave, no selectattr #}
