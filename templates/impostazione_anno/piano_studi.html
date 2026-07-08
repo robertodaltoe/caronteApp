@@ -201,10 +201,23 @@
             {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
             <tr>
                 {# Nome materia editabile #}
-                <td style="padding:4px 6px; border:1px solid #e5e7eb;">
-                    <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}" data-autosave="nome_piano:{{ prima_riga.id }}"
-                           style="width:100%; border:1px solid #e5e7eb; border-radius:4px;
-                                  padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                <td style="padding:4px 6px; border:1px solid #e5e7eb;
+                           background:{{ '#fffbeb' if prima_riga.compresenza else 'transparent' }};">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}"
+                               data-autosave="nome_piano:{{ prima_riga.id }}"
+                               style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
+                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                        <label title="Ore in compresenza — escluse dal monte ore curricolare"
+                               style="display:flex; align-items:center; gap:2px; cursor:pointer;
+                                      font-size:.65rem; color:#92400e; white-space:nowrap; flex-shrink:0;">
+                            <input type="checkbox"
+                                   data-autosave="compresenza_piano:{{ prima_riga.id }}"
+                                   {% if prima_riga.compresenza %}checked{% endif %}
+                                   style="accent-color:#f59e0b; width:12px; height:12px;">
+                            comp.
+                        </label>
+                    </div>
                 </td>
                 {# Celle per anno di corso — accesso diretto per chiave, no selectattr #}
                 {% for ac in anni_corso %}

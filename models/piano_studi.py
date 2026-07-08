@@ -67,6 +67,7 @@ class PianoStudi(db.Model):
     id_cc_madre         = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)  # solo per laboratori ITP
     id_cc_default       = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)  # CC normativa originale del seed
     atipica             = db.Column(db.Boolean, default=False)  # True se la CC è stata cambiata rispetto al default
+    compresenza         = db.Column(db.Boolean, default=False)  # True = ore in compresenza, non conteggiate nel monte ore curricolare
 
     classe_concorso = db.relationship('ClasseConcorso', foreign_keys=[id_classe_concorso])
     cc_madre        = db.relationship('ClasseConcorso', foreign_keys=[id_cc_madre])

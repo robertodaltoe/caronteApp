@@ -578,6 +578,9 @@ def _ricalcola_organico(anno):
     ore_per_cc = {}
 
     for p in PianoStudi.query.filter_by(anno_scol=anno).all():
+        # Le ore in compresenza non generano cattedre autonome —
+        # sono già incluse nelle ore della materia principale.
+        # Vengono però conteggiate nell'organico dell'ITP (B-xx).
         sezioni_attive = ClasseSezione.query.filter_by(
             anno_scol=anno, indirizzo=p.indirizzo,
             anno_corso=p.anno_corso, attiva=True).all()
@@ -585,8 +588,6 @@ def _ricalcola_organico(anno):
         override_sez = tutti_override.get(p.id, {})
 
         for cs in sezioni_attive:
-            # Usa la CC dell'override se esiste per questa sezione,
-            # altrimenti usa la CC del piano generale
             cc_id = override_sez.get(cs.sezione, p.id_classe_concorso)
             ore_per_cc[cc_id] = ore_per_cc.get(cc_id, 0) + p.ore_settimanali
 
@@ -764,13 +765,16 @@ def piano_studi():
 
     tutte_materie = Materia.query.filter_by(attiva=True).order_by(Materia.sigla).all()
 
-    # Totale ore settimanali per anno di corso (somma di tutte le CC)
+    # Totale ore settimanali curricolari per anno (esclude righe in compresenza)
     ore_per_anno = {}
     for ac in anni_corso:
         tot = db.session.query(
             db.func.sum(PianoStudi.ore_settimanali)
-        ).filter_by(
-            anno_scol=anno, indirizzo=indirizzo_sel, anno_corso=ac
+        ).filter(
+            PianoStudi.anno_scol == anno,
+            PianoStudi.indirizzo == indirizzo_sel,
+            PianoStudi.anno_corso == ac,
+            PianoStudi.compresenza == False
         ).scalar() or 0
         ore_per_anno[ac] = tot
 
@@ -1035,6 +1039,16 @@ def api_save():
             co.ore_residue = int(valore) if valore != '' else 0
             db.session.commit()
             return jsonify(ok=True, msg='Ore residue aggiornate')
+
+        # ── Piano studi: compresenza ─────────────────────────────────
+        elif campo == 'compresenza_piano':
+            ps = db.session.get(PianoStudi, int(rec_id))
+            if not ps:
+                return jsonify(ok=False, msg='Riga non trovata')
+            ps.compresenza = bool(valore)
+            db.session.commit()
+            _ricalcola_organico(ps.anno_scol)
+            return jsonify(ok=True, msg='Compresenza aggiornata')
 
         # ── Materia: nome breve ──────────────────────────────────────
         elif campo == 'nome_breve_mat':
