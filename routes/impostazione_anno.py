@@ -806,33 +806,52 @@ def piano_studi():
 # ── PIANO STUDI: aggiungi / elimina riga ──────────────────────────────
 @impostazione_anno_bp.route('/impostazione-anno/piano-studi/aggiungi', methods=['POST'])
 def piano_studi_aggiungi():
-    anno       = request.form.get('anno_scol')
-    indirizzo  = request.form.get('indirizzo')
-    anno_corso = int(request.form.get('anno_corso', 1))
-    id_cc      = int(request.form.get('id_cc')) if request.form.get('id_cc') else None
-    id_mat     = int(request.form.get('id_materia')) if request.form.get('id_materia') else None
-    nome_loc   = request.form.get('nome_materia_locale', '').strip()
-    ore        = int(request.form.get('ore_settimanali') or 0)
+    anno      = request.form.get('anno_scol')
+    indirizzo = request.form.get('indirizzo')
+    # Supporta sia singolo anno (select) che più anni (checkbox: anni_corso[])
+    anni_raw  = request.form.getlist('anno_corso')
+    if not anni_raw:
+        anni_raw = request.form.getlist('anni_corso[]')
+    anni_selezionati = sorted(set(int(a) for a in anni_raw if str(a).isdigit()))
+    if not anni_selezionati:
+        anni_selezionati = [1]  # fallback
+
+    id_cc    = int(request.form.get('id_cc')) if request.form.get('id_cc') else None
+    id_mat   = int(request.form.get('id_materia')) if request.form.get('id_materia') else None
+    nome_loc = request.form.get('nome_materia_locale', '').strip()
+    ore      = int(request.form.get('ore_settimanali') or 0)
 
     if not (anno and indirizzo and id_cc and nome_loc):
         flash('Compilare tutti i campi obbligatori.', 'danger')
         return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
 
-    esiste = PianoStudi.query.filter_by(
-        anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
-        id_classe_concorso=id_cc, nome_materia_locale=nome_loc).first()
-    if esiste:
-        flash('Riga già presente.', 'warning')
-    else:
-        cc = db.session.get(ClasseConcorso, id_cc)
-        db.session.add(PianoStudi(
+    cc = db.session.get(ClasseConcorso, id_cc)
+    n_aggiunte = 0
+    n_esistenti = 0
+    for anno_corso in anni_selezionati:
+        esiste = PianoStudi.query.filter_by(
             anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
-            id_classe_concorso=id_cc, id_cc_default=id_cc,
-            id_materia=id_mat, nome_materia_locale=nome_loc,
-            ore_settimanali=ore, atipica=False))
+            id_classe_concorso=id_cc, nome_materia_locale=nome_loc).first()
+        if esiste:
+            n_esistenti += 1
+        else:
+            db.session.add(PianoStudi(
+                anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
+                id_classe_concorso=id_cc, id_cc_default=id_cc,
+                id_materia=id_mat, nome_materia_locale=nome_loc,
+                ore_settimanali=ore, atipica=False))
+            n_aggiunte += 1
+
+    if n_aggiunte:
         db.session.commit()
         _ricalcola_organico(anno)
-        flash(f'Aggiunta: {nome_loc} ({cc.codice if cc else "?"}) {indirizzo} {anno_corso}°.', 'success')
+        anni_str = ', '.join(f'{a}°' for a in sorted(anni_selezionati))
+        msg = f'Aggiunta: {nome_loc} ({cc.codice if cc else "?"}) {indirizzo} anni {anni_str}'
+        if n_esistenti:
+            msg += f' ({n_esistenti} già presenti, saltati)'
+        flash(msg, 'success')
+    else:
+        flash('Tutte le righe selezionate erano già presenti.', 'warning')
 
     return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
 

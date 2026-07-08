@@ -63,13 +63,25 @@
                     </select>
                 </div>
                 <div>
-                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Anno di corso *</div>
-                    <select name="anno_corso" required
-                            style="padding:5px 8px; border:1px solid #c7d2fe; border-radius:5px; font-size:.82rem;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:4px;">Anni di corso *</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
                         {% for ac in anni_corso %}
-                        <option value="{{ ac }}">{{ ac }}°</option>
+                        <label style="display:flex; align-items:center; gap:3px; cursor:pointer;
+                                      font-size:.82rem; padding:4px 8px; border:1px solid #c7d2fe;
+                                      border-radius:5px; background:white; user-select:none;">
+                            <input type="checkbox" name="anni_corso[]" value="{{ ac }}"
+                                   style="accent-color:#6366f1;">
+                            {{ ac }}°
+                        </label>
                         {% endfor %}
-                    </select>
+                        <label style="display:flex; align-items:center; gap:3px; cursor:pointer;
+                                      font-size:.78rem; padding:4px 8px; border:1px dashed #c7d2fe;
+                                      border-radius:5px; background:#f0f0ff; user-select:none;
+                                      color:#6366f1; font-weight:600;"
+                               onclick="selezionaTutti(this)">
+                            ✓ tutti
+                        </label>
+                    </div>
                 </div>
                 <div style="min-width:160px;">
                     <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome materia *</div>
@@ -338,12 +350,25 @@
                     <input type="hidden" name="indirizzo" value="{{ indirizzo }}">
                     <input type="hidden" name="id_cc" value="{{ gruppo.cc.id }}">
                     <div>
-                        <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Anno di corso</div>
-                        <select name="anno_corso" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
+                        <div style="font-size:.72rem; color:var(--grigio); margin-bottom:4px;">Anni di corso</div>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
                             {% for ac in anni_corso %}
-                            <option value="{{ ac }}">{{ ac }}°</option>
+                            <label style="display:flex; align-items:center; gap:3px; cursor:pointer;
+                                          font-size:.8rem; padding:3px 7px; border:1px solid #d1d5db;
+                                          border-radius:5px; background:white; user-select:none;">
+                                <input type="checkbox" name="anni_corso[]" value="{{ ac }}"
+                                       style="accent-color:#6366f1;">
+                                {{ ac }}°
+                            </label>
                             {% endfor %}
-                        </select>
+                            <label style="display:flex; align-items:center; gap:3px; cursor:pointer;
+                                          font-size:.75rem; padding:3px 7px; border:1px dashed #d1d5db;
+                                          border-radius:5px; background:#f8f7ff; user-select:none;
+                                          color:#6366f1; font-weight:600;"
+                                   onclick="selezionaTutti(this)">
+                                ✓ tutti
+                            </label>
+                        </div>
                     </div>
                     <div style="flex:1; min-width:140px;">
                         <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome materia *</div>
@@ -398,6 +423,16 @@ function eliminaRighe(ids) {
 {% block extra_script %}
 <script src="{{ url_for('static', filename='js/impostazione_autosave.js') }}"></script>
 <script>
+function selezionaTutti(labelEl) {
+    // Seleziona/deseleziona tutti i checkbox anni nel form padre
+    const form = labelEl.closest('form') || labelEl.closest('div[style]');
+    const checks = (form || document).querySelectorAll('input[type="checkbox"][name="anni_corso[]"]');
+    const tuttiChecked = Array.from(checks).every(c => c.checked);
+    checks.forEach(c => c.checked = !tuttiChecked);
+    labelEl.textContent = tuttiChecked ? '✓ tutti' : '✗ nessuno';
+    setTimeout(() => labelEl.textContent = '✓ tutti', 1500);
+}
+
 function toggleOverride(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
