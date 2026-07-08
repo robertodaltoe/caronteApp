@@ -3,7 +3,15 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">🏷️ Docenti ↔ Classi di concorso</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🏷️ Docenti ↔ Classi di concorso — {{ anno }}</h1>
+    <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('impostazione_anno.docenti_classi_concorso', anno=a) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
+                  background:{{ '#6366f1' if a == anno else '#f3f4f6' }};
+                  color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+        {% endfor %}
+    </div>
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
@@ -21,6 +29,7 @@
 </div>
 
 <form method="post" id="form-cc">
+<input type="hidden" name="anno_scol" value="{{ anno }}">
 {% for d in docenti %}
 <div class="riga-docente card" style="padding:10px 16px; margin-bottom:6px; display:flex;
             align-items:center; gap:12px; flex-wrap:wrap;" data-cognome="{{ d.cognome|lower }}">

@@ -8,12 +8,27 @@ impostazioni_bp = Blueprint('impostazioni', __name__)
 
 @impostazioni_bp.route('/impostazioni')
 def index():
-    # Statistiche rapide per ogni sezione
+    from models.piano_studi import ClasseSezione, CalcoloOrganico
+    from models.classe_concorso import ClasseConcorso
     n_dip     = Dipartimento.query.count()
     n_materie = Materia.query.count()
     n_docenti = Docente.query.filter_by(attivo=True).count()
+    n_ti      = Docente.query.filter_by(attivo=True, tipo_contratto='TI').count()
+    # Anno con dati reali nel piano studi
+    anni_piano = sorted({r.anno_scol for r in __import__('models.piano_studi',
+        fromlist=['PianoStudi']).PianoStudi.query.all()}, reverse=True)
+    anno_piano = anni_piano[0] if anni_piano else None
+    n_sezioni_attive = ClasseSezione.query.filter_by(
+        anno_scol=anno_piano, attiva=True).count() if anno_piano else 0
+    n_cc_confermate = CalcoloOrganico.query.filter_by(
+        anno_scol=anno_piano, confermato=True).count() if anno_piano else 0
+    n_cc_tot = CalcoloOrganico.query.filter_by(
+        anno_scol=anno_piano).filter(
+        CalcoloOrganico.ore_totali_calcolate > 0).count() if anno_piano else 0
     return render_template('impostazioni/index.html',
-        n_dip=n_dip, n_materie=n_materie, n_docenti=n_docenti,
+        n_dip=n_dip, n_materie=n_materie, n_docenti=n_docenti, n_ti=n_ti,
+        anno_piano=anno_piano, n_sezioni_attive=n_sezioni_attive,
+        n_cc_confermate=n_cc_confermate, n_cc_tot=n_cc_tot,
         oggi=date.today(),
     )
 

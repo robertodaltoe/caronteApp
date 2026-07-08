@@ -348,8 +348,11 @@ def docenti_classi_concorso():
     """
     from models.classe_concorso import DocenteClasseConcorso
 
+    anno = request.args.get('anno', request.form.get('anno_scol', _anno_default_piano()))
+
     if request.method == 'POST':
-        for docente in Docente.query.filter_by(attivo=True).all():
+        anno_f = request.form.get('anno_scol', anno)
+        for docente in _docenti_per_anno(anno_f):
             key = f'cc_docente_{docente.id}'
             ids_selezionati = request.form.getlist(key)
             ids_validi = [int(i) for i in ids_selezionati if i.isdigit()]
@@ -358,9 +361,6 @@ def docenti_classi_concorso():
             nuove = set(ids_validi)
 
             if vecchie != nuove:
-                # Cambiando le abilitazioni, le materie assegnate in
-                # precedenza potrebbero non essere più ammesse: le
-                # rimuove, cosi' non restano incoerenze silenziose.
                 DocenteMateria.query.filter_by(id_docente=docente.id).delete()
 
             DocenteClasseConcorso.query.filter_by(id_docente=docente.id).delete()
@@ -368,18 +368,22 @@ def docenti_classi_concorso():
                 db.session.add(DocenteClasseConcorso(
                     id_docente=docente.id, id_classe_concorso=cc_id,
                     principale=(i == 0)))
-            # Campo legacy in sync con la principale (prima selezionata)
             docente.id_classe_concorso = ids_validi[0] if ids_validi else None
 
         db.session.commit()
         flash('Abilitazioni docente → classi di concorso aggiornate.', 'success')
-        return redirect(url_for('impostazione_anno.docenti_classi_concorso'))
+        return redirect(url_for('impostazione_anno.docenti_classi_concorso', anno=anno_f))
 
-    anno = request.args.get('anno', _anno_default_piano())
     docenti = _docenti_per_anno(anno)
     classi = ClasseConcorso.query.filter_by(attiva=True).order_by(ClasseConcorso.codice).all()
+    anni_disponibili = sorted(
+        {p.anno_scol for p in PianoStudi.query.all()} |
+        {cs.anno_scol for cs in ClasseSezione.query.all()},
+        reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
     return render_template('impostazione_anno/docenti_classi_concorso.html',
-        docenti=docenti, classi=classi, anno=anno)
+        docenti=docenti, classi=classi, anno=anno, anni_disponibili=anni_disponibili)
 
 
 # ── DOCENTI ↔ MATERIE (filtrate per TUTTE le classi di concorso) ─────
@@ -394,7 +398,7 @@ def docenti_materie():
     """
     from models.classe_concorso import MateriaClasseConcorso
 
-    anno = request.args.get('anno', '2025-2026')
+    anno = request.args.get('anno', _anno_default_piano())
 
     def _materie_ammesse_per_classi(cc_ids):
         """Unione delle materie collegate (normativa O eccezione_istituto)
@@ -411,10 +415,10 @@ def docenti_materie():
 
     if request.method == 'POST':
         anno_f = request.form.get('anno_scol', anno)
-        for docente in Docente.query.filter_by(attivo=True).all():
+        for docente in _docenti_per_anno(anno_f):
             cc_ids = [a.id_classe_concorso for a in docente.abilitazioni]
             if not cc_ids:
-                continue  # senza classe di concorso non c'e' nulla da assegnare qui
+                continue
             key = f'materie_docente_{docente.id}'
             ids_selezionati = request.form.getlist(key)
             # Vincolo di sicurezza: anche se il form venisse manomesso,
@@ -448,8 +452,15 @@ def docenti_materie():
             'assegnate_ids': assegnate_ids,
         })
 
+    anni_disponibili = sorted(
+        {p.anno_scol for p in PianoStudi.query.all()} |
+        {cs.anno_scol for cs in ClasseSezione.query.all()},
+        reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
     return render_template('impostazione_anno/docenti_materie.html',
-        righe=righe, anno=anno)
+        righe=righe, anno=anno, anni_disponibili=anni_disponibili)
 
 
 # ── CLASSI ATTIVE ─────────────────────────────────────────────────────

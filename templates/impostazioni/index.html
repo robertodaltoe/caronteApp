@@ -16,6 +16,10 @@
     border-radius:10px; padding:1px 8px; font-weight:700; }
 .imp-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 @media(max-width:700px){ .imp-grid { grid-template-columns:1fr; } }
+.kpi-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.kpi { background:#f0f4ff; border-radius:8px; padding:8px 14px; text-align:center; flex:1; min-width:80px; }
+.kpi-n { font-size:1.4rem; font-weight:800; color:var(--blu); }
+.kpi-l { font-size:.68rem; color:var(--grigio); margin-top:1px; }
 </style>
 {% endblock %}
 
@@ -27,81 +31,117 @@
 
 <div class="imp-grid">
 
-<!-- ── CALENDARIO SCOLASTICO ───────────────────────── -->
+{# ── CAMBIO ANNO SCOLASTICO ─────────────────────────────────────── #}
+<div class="sez-card" style="grid-column:1/-1; border-left:4px solid #6366f1;">
+    <div class="sez-title">🔄 Anno scolastico{% if anno_piano %} — {{ anno_piano }}{% endif %}</div>
+    <div class="sez-desc">
+        Tutto il ciclo di preparazione del nuovo anno: piano di studi, organico richiesto,
+        docenti, classi attive, bollettini USR.
+    </div>
+    {% if anno_piano %}
+    <div class="kpi-row">
+        <div class="kpi"><div class="kpi-n">{{ n_sezioni_attive }}</div><div class="kpi-l">Sezioni attive</div></div>
+        <div class="kpi"><div class="kpi-n">{{ n_cc_confermate }}/{{ n_cc_tot }}</div><div class="kpi-l">CC confermate</div></div>
+        <div class="kpi"><div class="kpi-n">{{ n_ti }}</div><div class="kpi-l">Docenti TI</div></div>
+        <div class="kpi"><div class="kpi-n">{{ n_docenti }}</div><div class="kpi-l">Docenti attivi</div></div>
+    </div>
+    {% endif %}
+    <a href="{{ url_for('impostazione_anno.index') }}" class="imp-link"
+       style="border-color:#6366f1; background:#f0f0ff;">
+        📋 Hub impostazione anno (9 passi)
+        <span style="color:#6366f1; font-weight:700;">→</span>
+    </a>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">
+        <a href="{{ url_for('impostazione_anno.docenti_anno') }}" class="imp-link">
+            👥 Docenti per anno (TI/TD/uscite)
+            <span class="badge-count">{{ n_docenti }} att.</span>
+        </a>
+        <a href="{{ url_for('impostazione_anno.classi_attive') }}" class="imp-link">
+            🏫 Classi attive
+            <span class="badge-count">{{ n_sezioni_attive }} sez.</span>
+        </a>
+        <a href="{{ url_for('impostazione_anno.piano_studi') }}" class="imp-link">
+            📚 Piano di studi
+            <span>→</span>
+        </a>
+        <a href="{{ url_for('impostazione_anno.calcolo_organico') }}" class="imp-link">
+            🧮 Calcolo organico
+            <span class="badge-count">{{ n_cc_confermate }}/{{ n_cc_tot }}</span>
+        </a>
+    </div>
+</div>
+
+{# ── DOCENTI ────────────────────────────────────────────────────── #}
 <div class="sez-card">
-    <div class="sez-title">📅 Calendario scolastico</div>
-    <div class="sez-desc">Sospensioni didattiche, festività e periodo dell'anno scolastico.</div>
-    <a href="{{ url_for('impostazioni.sospensioni') }}" class="imp-link">
-        📅 Sospensioni didattiche
+    <div class="sez-title">👤 Docenti</div>
+    <div class="sez-desc">Anagrafica, classi di concorso e materie assegnate.</div>
+    <a href="{{ url_for('docenti.lista') }}" class="imp-link">
+        👤 Anagrafica docenti
+        <span class="badge-count">{{ n_docenti }} docenti</span>
+    </a>
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="imp-link">
+        🏷️ Docenti ↔ Classi di concorso
         <span>→</span>
     </a>
-    <a href="{{ url_for('impostazioni.anno_scolastico') }}" class="imp-link">
-        🗓 Anno scolastico
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="imp-link">
+        📖 Docenti ↔ Materie
         <span>→</span>
     </a>
-    <a href="{{ url_for('impostazioni.periodi') }}" class="imp-link">
-        🗓️ Periodi (recupero, rientro, ...)
+    <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="imp-link">
+        📚 Dipartimenti e materie
+        <span class="badge-count">{{ n_dip }} dip · {{ n_materie }} mat</span>
+    </a>
+    <a href="{{ url_for('attivita_ist.assegnazioni') }}" class="imp-link">
+        📋 Roster docenti-materie
         <span>→</span>
     </a>
 </div>
 
-<!-- ── ORARIO ──────────────────────────────────────── -->
+{# ── CALENDARIO ──────────────────────────────────────────────────── #}
+<div class="sez-card">
+    <div class="sez-title">📅 Calendario scolastico</div>
+    <div class="sez-desc">Sospensioni didattiche, festività e periodi.</div>
+    <a href="{{ url_for('impostazioni.sospensioni') }}" class="imp-link">
+        📅 Sospensioni didattiche <span>→</span>
+    </a>
+    <a href="{{ url_for('impostazioni.periodi') }}" class="imp-link">
+        🗓️ Periodi (recupero, rientro, ...) <span>→</span>
+    </a>
+</div>
+
+{# ── ORARIO ──────────────────────────────────────────────────────── #}
 <div class="sez-card">
     <div class="sez-title">🕐 Orario</div>
     <div class="sez-desc">Importazione e gestione dell'orario docenti.</div>
     <a href="{{ url_for('sync.index') }}" class="imp-link">
-        📥 Importa / modifica orario
-        <span>→</span>
+        📥 Importa / modifica orario <span>→</span>
     </a>
 </div>
 
-<!-- ── ISTITUTO ────────────────────────────────────── -->
+{# ── ISTITUTO ────────────────────────────────────────────────────── #}
 <div class="sez-card">
     <div class="sez-title">🏫 Istituto</div>
     <div class="sez-desc">Dati dell'istituto e parametri economici.</div>
     <a href="{{ url_for('impostazioni.dati_istituto') }}" class="imp-link">
-        🏫 Dati istituto
-        <span>→</span>
+        🏫 Dati istituto <span>→</span>
     </a>
     <a href="{{ url_for('impostazioni.dati_istituto') }}" class="imp-link">
-        💶 Costo ora supplenza
-        <span>→</span>
+        💶 Costo ora supplenza <span>→</span>
     </a>
 </div>
 
-<!-- ── DOCENTI E MATERIE ───────────────────────────── -->
-<div class="sez-card">
-    <div class="sez-title">📚 Docenti e materie</div>
-    <div class="sez-desc">Dipartimenti, materie e assegnazioni per anno scolastico.</div>
-    <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="imp-link">
-        📚 Dipartimenti e materie
-        <span class="badge-count">{{ n_dip }} dip. · {{ n_materie }} mat.</span>
-    </a>
-    <a href="{{ url_for('attivita_ist.assegnazioni') }}" class="imp-link">
-        👤 Roster docenti-materie
-        <span class="badge-count">{{ n_docenti }} docenti</span>
-    </a>
-    <a href="{{ url_for('impostazioni.cambio_anno') }}" class="imp-link">
-        🔄 Cambio anno scolastico
-        <span>→</span>
-    </a>
-</div>
-
-<!-- ── SISTEMA ─────────────────────────────────────── -->
+{# ── SISTEMA ─────────────────────────────────────────────────────── #}
 <div class="sez-card">
     <div class="sez-title">🔧 Sistema</div>
     <div class="sez-desc">Utenti, accessi e backup del database.</div>
     <a href="{{ url_for('auth.lista_utenti') }}" class="imp-link">
-        👥 Gestione utenti e PIN
-        <span>→</span>
+        👥 Gestione utenti e PIN <span>→</span>
     </a>
     <a href="{{ url_for('auth.cambia_pin') }}" class="imp-link">
-        🔒 Cambia PIN
-        <span>→</span>
+        🔒 Cambia PIN <span>→</span>
     </a>
     <a href="{{ url_for('impostazioni.backup') }}" class="imp-link">
-        💾 Backup database
-        <span>→</span>
+        💾 Backup database <span>→</span>
     </a>
 </div>
 
