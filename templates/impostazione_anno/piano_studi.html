@@ -117,7 +117,7 @@
     {% else %}
 
     {# ── Riepilogo monte ore per anno di corso ─────────────────────── #}
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;
+    <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;
                 justify-content:center; align-items:stretch;">
         {% for ac in anni_corso %}
         {% set tot_sett = ore_per_anno.get(ac, 0) %}
@@ -127,7 +127,7 @@
         {% set colore = '#16a34a' if tot_sett >= 27 else '#f59e0b' if tot_sett >= 20 else '#dc2626' %}
         {% set bg = '#f0fdf4' if tot_sett >= 27 else '#fffbeb' if tot_sett >= 20 else '#fef2f2' %}
         <div style="background:{{ bg }}; border:1px solid {{ colore }}; border-radius:10px;
-                    padding:14px 20px; text-align:center; flex:1; min-width:120px; max-width:160px;
+                    padding:18px 28px; text-align:center; flex:1; min-width:160px; max-width:200px;
                     border-top:4px solid {{ colore }};">
             <div style="font-size:.76rem; color:#6b7280; font-weight:700;
                         text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">
