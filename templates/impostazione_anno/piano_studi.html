@@ -117,31 +117,40 @@
     {% else %}
 
     {# ── Riepilogo monte ore per anno di corso ─────────────────────── #}
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:stretch;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;
+                justify-content:center; align-items:stretch;">
         {% for ac in anni_corso %}
         {% set tot_sett = ore_per_anno.get(ac, 0) %}
         {% set tot_ann = tot_sett * 33 %}
         {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
         {% if attivo or tot_sett > 0 %}
         {% set colore = '#16a34a' if tot_sett >= 27 else '#f59e0b' if tot_sett >= 20 else '#dc2626' %}
-        <div style="background:white; border:1px solid #e5e7eb; border-radius:8px;
-                    padding:8px 14px; text-align:center; min-width:90px;
-                    border-top:3px solid {{ colore }};">
-            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px; font-weight:600;">
+        {% set bg = '#f0fdf4' if tot_sett >= 27 else '#fffbeb' if tot_sett >= 20 else '#fef2f2' %}
+        <div style="background:{{ bg }}; border:1px solid {{ colore }}; border-radius:10px;
+                    padding:14px 20px; text-align:center; flex:1; min-width:120px; max-width:160px;
+                    border-top:4px solid {{ colore }};">
+            <div style="font-size:.76rem; color:#6b7280; font-weight:700;
+                        text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">
                 {{ ac }}° anno
+                {% if attivo %}
+                <span style="display:inline-block; width:7px; height:7px; border-radius:50%;
+                              background:#16a34a; margin-left:4px; vertical-align:middle;"
+                      title="anno attivo"></span>
+                {% endif %}
             </div>
-            <div style="font-size:1.25rem; font-weight:800; color:{{ colore }};"
-                 title="{{ tot_sett }} ore settimanali">
-                {{ tot_sett }}h/sett
+            <div style="font-size:1.6rem; font-weight:900; color:{{ colore }}; line-height:1;">
+                {{ tot_sett }}
             </div>
-            <div style="font-size:.78rem; font-weight:700; color:{{ colore }}; margin-top:1px;"
-                 title="{{ tot_ann }} ore annuali ({{ tot_sett }} × 33 settimane)">
-                {{ tot_ann }}h/anno
+            <div style="font-size:.72rem; color:{{ colore }}; font-weight:600; margin-bottom:8px;">
+                ore / settimana
             </div>
-            <div style="font-size:.62rem; margin-top:3px;
-                        color:{{ '#16a34a' if attivo else '#9ca3af' }};
-                        font-weight:{{ '600' if attivo else '400' }};">
-                {{ 'attivo' if attivo else 'inattivo' }}
+            <div style="border-top:1px solid {{ colore }}; padding-top:8px; margin-top:2px;">
+                <div style="font-size:1.1rem; font-weight:800; color:{{ colore }}; line-height:1;">
+                    {{ tot_ann }}
+                </div>
+                <div style="font-size:.68rem; color:#6b7280; font-weight:500;">
+                    ore / anno <span style="opacity:.7;">(× 33 sett.)</span>
+                </div>
             </div>
         </div>
         {% endif %}
