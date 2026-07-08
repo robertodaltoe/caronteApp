@@ -839,6 +839,14 @@ def piano_studi_aggiungi():
         if esiste:
             n_esistenti += 1
         else:
+            # Controlla anche il vincolo UNIQUE su id_materia (se fornita)
+            if id_mat:
+                esiste_mat = PianoStudi.query.filter_by(
+                    anno_scol=anno, indirizzo=indirizzo, anno_corso=anno_corso,
+                    id_classe_concorso=id_cc, id_materia=id_mat).first()
+                if esiste_mat:
+                    n_esistenti += 1
+                    continue
             # compresenza automatica: True se la CC è di tipo B (ITP)
             is_compresenza = cc.codice.startswith('B-') if cc else False
             db.session.add(PianoStudi(
@@ -849,16 +857,20 @@ def piano_studi_aggiungi():
                 compresenza=is_compresenza))
             n_aggiunte += 1
 
-    if n_aggiunte:
-        db.session.commit()
-        _ricalcola_organico(anno)
-        anni_str = ', '.join(f'{a}°' for a in sorted(anni_selezionati))
-        msg = f'Aggiunta: {nome_loc} ({cc.codice if cc else "?"}) {indirizzo} anni {anni_str}'
-        if n_esistenti:
-            msg += f' ({n_esistenti} già presenti, saltati)'
-        flash(msg, 'success')
-    else:
-        flash('Tutte le righe selezionate erano già presenti.', 'warning')
+    try:
+        if n_aggiunte:
+            db.session.commit()
+            _ricalcola_organico(anno)
+            anni_str = ', '.join(f'{a}°' for a in sorted(anni_selezionati))
+            msg = f'Aggiunta: {nome_loc} ({cc.codice if cc else "?"}) {indirizzo} anni {anni_str}'
+            if n_esistenti:
+                msg += f' ({n_esistenti} già presenti, saltati)'
+            flash(msg, 'success')
+        else:
+            flash('Tutte le righe selezionate erano già presenti.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Errore: {str(e)[:120]}', 'danger')
 
     return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
 
