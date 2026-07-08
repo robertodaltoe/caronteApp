@@ -764,6 +764,14 @@ def piano_studi():
 
     tutte_materie = Materia.query.filter_by(attiva=True).order_by(Materia.sigla).all()
 
+    # CC già presenti nel piano studi per questo indirizzo+anno
+    cc_presenti_ids = {r.id_classe_concorso for r in righe}
+    # CC non ancora presenti — disponibili per essere aggiunte
+    cc_mancanti = (ClasseConcorso.query
+                   .filter(ClasseConcorso.attiva == True,
+                           ~ClasseConcorso.id.in_(cc_presenti_ids))
+                   .order_by(ClasseConcorso.codice).all())
+
     # Override per-sezione: {id_piano_studi: [{ov}, ...]}
     from models.piano_studi import PianoStudiOverride
     ids_piano = [r.id for r in righe]
@@ -780,7 +788,8 @@ def piano_studi():
         anni_disponibili=anni_disponibili,
         materie_multi_cc=materie_multi_cc,
         tutte_materie=tutte_materie,
-        override_map=override_map)
+        override_map=override_map,
+        cc_mancanti=cc_mancanti)
 
 
 # ── PIANO STUDI: aggiungi / elimina riga ──────────────────────────────

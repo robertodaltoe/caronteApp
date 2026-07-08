@@ -38,6 +38,82 @@
     <input type="hidden" name="anno_scol" value="{{ anno }}">
     <input type="hidden" name="indirizzo" value="{{ indirizzo }}">
 
+    {# ── Aggiungi nuova CC a questo indirizzo ─────────────────────── #}
+    {% if cc_mancanti %}
+    <details style="margin-bottom:12px;">
+        <summary style="font-size:.82rem; color:#6366f1; cursor:pointer; user-select:none;
+                         font-weight:700; padding:8px 12px; background:#f0f0ff;
+                         border-radius:7px; border:1px solid #c7d2fe; list-style:none;">
+            ＋ Aggiungi classe di concorso a {{ indirizzo }} {{ anno }}
+            <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">
+                ({{ cc_mancanti|length }} CC disponibili non ancora presenti)
+            </span>
+        </summary>
+        <div style="padding:12px 14px; background:#f8f7ff; border:1px solid #c7d2fe;
+                    border-top:none; border-radius:0 0 7px 7px;">
+            <form method="post"
+                  action="{{ url_for('impostazione_anno.piano_studi_aggiungi') }}"
+                  style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                <input type="hidden" name="anno_scol" value="{{ anno }}">
+                <input type="hidden" name="indirizzo" value="{{ indirizzo }}">
+                <div>
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Classe di concorso *</div>
+                    <select name="id_cc" required
+                            style="padding:5px 8px; border:1px solid #c7d2fe; border-radius:5px;
+                                   font-size:.82rem; min-width:280px;">
+                        <option value="">— seleziona CC —</option>
+                        {% for cc in cc_mancanti %}
+                        <option value="{{ cc.id }}">{{ cc.codice }} — {{ cc.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Anno di corso *</div>
+                    <select name="anno_corso" required
+                            style="padding:5px 8px; border:1px solid #c7d2fe; border-radius:5px; font-size:.82rem;">
+                        {% for ac in anni_corso %}
+                        <option value="{{ ac }}">{{ ac }}°</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="min-width:160px;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome materia *</div>
+                    <input type="text" name="nome_materia_locale" required
+                           placeholder="es. Inglese"
+                           style="width:100%; padding:5px 8px; border:1px solid #c7d2fe;
+                                  border-radius:5px; font-size:.82rem;">
+                </div>
+                <div style="width:70px;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Ore/sett.</div>
+                    <input type="number" name="ore_settimanali" min="0" max="20" value="3"
+                           style="width:100%; padding:5px 6px; border:1px solid #c7d2fe;
+                                  border-radius:5px; font-size:.82rem; text-align:center;">
+                </div>
+                <div style="flex:2; min-width:160px;">
+                    <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Materia ufficiale</div>
+                    <select name="id_materia"
+                            style="width:100%; padding:5px 8px; border:1px solid #c7d2fe;
+                                   border-radius:5px; font-size:.82rem;">
+                        <option value="">— collega a materia —</option>
+                        {% for m in tutte_materie %}
+                        <option value="{{ m.id }}">{{ m.alias or m.sigla }} — {{ m.nome_breve or m.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-sm"
+                        style="background:#6366f1; color:white; white-space:nowrap; padding:6px 14px;">
+                    ＋ Aggiungi CC
+                </button>
+            </form>
+            <div style="font-size:.74rem; color:var(--grigio); margin-top:8px;">
+                💡 Dopo aver aggiunto la prima riga, usa il pulsante
+                <strong>＋ Aggiungi materia</strong> dentro il blocco CC appena creato
+                per completare tutti gli anni di corso.
+            </div>
+        </div>
+    </details>
+    {% endif %}
+
     {% if not da_cc %}
     <div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
         Nessun piano di studi per <strong>{{ indirizzo }}</strong> {{ anno }}.
