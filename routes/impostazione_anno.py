@@ -175,6 +175,14 @@ def materie_classi_concorso():
 
     if request.method == 'POST':
         for m in Materia.query.all():
+            # Aggiorna nome_breve e alias se presenti nel form
+            nb = request.form.get(f'nome_breve_{m.id}', '').strip()
+            al = request.form.get(f'alias_{m.id}', '').strip().upper()
+            if nb:
+                m.nome_breve = nb
+            if al:
+                m.alias = al
+
             key = f'cc_materia_{m.id}'
             ids_selezionati = request.form.getlist(key)
             ids_validi = [int(i) for i in ids_selezionati if i.isdigit()]
@@ -183,9 +191,6 @@ def materie_classi_concorso():
                          MateriaClasseConcorso.query.filter_by(id_materia=m.id).all()}
             nuove = set(ids_validi)
 
-            # Rimuove i collegamenti 'normativa' non più selezionati — non
-            # tocca mai le 'eccezione_istituto', che vanno gestite a parte
-            # (non si cancellano per sbaglio spuntando/togliendo checkbox).
             for cc_id, riga in esistenti.items():
                 if riga.fonte == 'normativa' and cc_id not in nuove:
                     db.session.delete(riga)
@@ -198,7 +203,7 @@ def materie_classi_concorso():
             m.id_classe_concorso = ids_validi[0] if ids_validi else None
 
         db.session.commit()
-        flash('Collegamenti materia → classi di concorso aggiornati.', 'success')
+        flash('Materie e collegamenti CC aggiornati.', 'success')
         return redirect(url_for('impostazione_anno.materie_classi_concorso'))
 
     materie = Materia.query.join(Dipartimento).order_by(
@@ -991,6 +996,24 @@ def api_save():
             co.ore_residue = int(valore) if valore != '' else 0
             db.session.commit()
             return jsonify(ok=True, msg='Ore residue aggiornate')
+
+        # ── Materia: nome breve ──────────────────────────────────────
+        elif campo == 'nome_breve_mat':
+            m = db.session.get(Materia, int(rec_id))
+            if not m:
+                return jsonify(ok=False, msg='Materia non trovata')
+            m.nome_breve = str(valore).strip() or None
+            db.session.commit()
+            return jsonify(ok=True, msg='Nome breve aggiornato')
+
+        # ── Materia: alias ────────────────────────────────────────────
+        elif campo == 'alias_mat':
+            m = db.session.get(Materia, int(rec_id))
+            if not m:
+                return jsonify(ok=False, msg='Materia non trovata')
+            m.alias = str(valore).strip().upper() or None
+            db.session.commit()
+            return jsonify(ok=True, msg='Alias aggiornato')
 
         else:
             return jsonify(ok=False, msg=f'Campo sconosciuto: {campo}')
