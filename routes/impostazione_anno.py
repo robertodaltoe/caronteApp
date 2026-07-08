@@ -1262,3 +1262,105 @@ def docenti_anno():
         ti_attivi=ti_attivi, uscenti=uscenti,
         ap_uscenti=ap_uscenti, ap_entranti=ap_entranti,
         td_anno=td_anno)
+
+
+# ── CONFRONTO TI ↔ ORGANICO USR ──────────────────────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/confronto-organico')
+def confronto_organico():
+    """
+    Mette a confronto i TI titolari della scuola collegati a ogni CC
+    (da docente_classi_concorso, filtrando solo TI con status non ap_uscente)
+    con il numero DOC dell'organico USR (cattedre_organico.n_docenti).
+
+    Il DOC USR = TI titolari inclusi AP uscenti e aspettative.
+    I TI presenti fisicamente = TI presenti + aspettativa (esclusi AP uscenti).
+
+    La colonna "in app" conta i TI collegati alla CC, indipendentemente
+    dal loro status di presenza — perché l'organico USR li conta tutti.
+    """
+    from models.classe_concorso import CattedraOrganico, DocenteClasseConcorso
+    from config_anno import get_anno_corrente
+
+    anno = request.args.get('anno', _anno_default_piano())
+    anno_corrente = get_anno_corrente()
+
+    # Tutte le CC con dati nel calcolo organico o nell'organico USR
+    cc_list = (ClasseConcorso.query
+               .join(CalcoloOrganico,
+                     (CalcoloOrganico.id_classe_concorso == ClasseConcorso.id) &
+                     (CalcoloOrganico.anno_scol == anno), isouter=True)
+               .join(CattedraOrganico,
+                     (CattedraOrganico.id_classe_concorso == ClasseConcorso.id) &
+                     (CattedraOrganico.anno_scol == anno) &
+                     (CattedraOrganico.tipo == 'diritto'), isouter=True)
+               .filter(
+                   db.or_(
+                       CalcoloOrganico.ore_totali_calcolate > 0,
+                       CattedraOrganico.n_docenti > 0))
+               .order_by(ClasseConcorso.codice)
+               .all())
+
+    righe = []
+    n_ok = n_warn = n_err = 0
+
+    for cc in cc_list:
+        # TI titolari della scuola collegati a questa CC
+        # (tutti i TI, indipendentemente da status_presenza —
+        #  perché l'USR li conta tutti nel DOC)
+        n_ti_app = (db.session.query(db.func.count(DocenteClasseConcorso.id))
+                    .join(Docente, DocenteClasseConcorso.id_docente == Docente.id)
+                    .filter(
+                        DocenteClasseConcorso.id_classe_concorso == cc.id,
+                        Docente.attivo == True,
+                        Docente.tipo_contratto == 'TI')
+                    .scalar() or 0)
+
+        # DOC dall'organico USR di diritto
+        cat = CattedraOrganico.query.filter_by(
+            anno_scol=anno, tipo='diritto',
+            id_classe_concorso=cc.id).first()
+        n_doc_usr = cat.n_docenti if cat and cat.n_docenti else 0
+
+        # Calcolo organico richiesto
+        calc = CalcoloOrganico.query.filter_by(
+            anno_scol=anno, id_classe_concorso=cc.id).first()
+        ore_richieste = calc.ore_totali_calcolate if calc else 0
+
+        # Scarto e semaforo
+        scarto = n_ti_app - n_doc_usr
+        if n_doc_usr == 0 and n_ti_app == 0:
+            semaforo = 'grigio'   # CC senza dati in nessuna delle due fonti
+        elif scarto == 0:
+            semaforo = 'verde'
+            n_ok += 1
+        elif abs(scarto) == 1:
+            semaforo = 'giallo'   # scarto di 1 — probabile AP o aspettativa
+            n_warn += 1
+        else:
+            semaforo = 'rosso'    # scarto > 1 — da verificare
+            n_err += 1
+
+        righe.append({
+            'cc': cc,
+            'ore_richieste': ore_richieste,
+            'n_ti_app': n_ti_app,
+            'n_doc_usr': n_doc_usr,
+            'scarto': scarto,
+            'semaforo': semaforo,
+            'tipo_organico': calc.tipo_calcolato if calc else '—',
+        })
+
+    # Filtra grigi (nessun dato utile)
+    righe = [r for r in righe if r['semaforo'] != 'grigio']
+
+    anni_disponibili = sorted(
+        {p.anno_scol for p in PianoStudi.query.all()} |
+        {c.anno_scol for c in CattedraOrganico.query.all()},
+        reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    return render_template('impostazione_anno/confronto_organico.html',
+        righe=righe, anno=anno, anni_disponibili=anni_disponibili,
+        n_ok=n_ok, n_warn=n_warn, n_err=n_err,
+        nessun_collegamento=(sum(r['n_ti_app'] for r in righe) == 0))

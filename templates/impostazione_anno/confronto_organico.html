@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Confronto TI ↔ Organico USR{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🔍 Confronto TI ↔ Organico USR — {{ anno }}</h1>
+    <div style="margin-left:auto; display:flex; gap:6px;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('impostazione_anno.confronto_organico', anno=a) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
+                  background:{{ '#7c3aed' if a == anno else '#f3f4f6' }};
+                  color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+{# ── KPI ────────────────────────────────────────────────────────── #}
+<div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+    <div class="card" style="flex:1; padding:12px 16px; border-left:4px solid #16a34a; min-width:120px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#16a34a;">{{ n_ok }}</div>
+        <div style="font-size:.74rem; color:var(--grigio);">CC allineate</div>
+    </div>
+    <div class="card" style="flex:1; padding:12px 16px; border-left:4px solid #f59e0b; min-width:120px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#f59e0b;">{{ n_warn }}</div>
+        <div style="font-size:.74rem; color:var(--grigio);">Scarto di 1 (AP/aspettativa?)</div>
+    </div>
+    <div class="card" style="flex:1; padding:12px 16px; border-left:4px solid #dc2626; min-width:120px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#dc2626;">{{ n_err }}</div>
+        <div style="font-size:.74rem; color:var(--grigio);">Scarto > 1 (da verificare)</div>
+    </div>
+</div>
+
+{% if nessun_collegamento %}
+<div class="card" style="padding:14px 18px; margin-bottom:14px; border-left:4px solid #f59e0b;
+     background:#fffbeb; font-size:.86rem; color:#92400e;">
+    ⚠ <strong>Nessun docente TI è ancora collegato alle classi di concorso.</strong>
+    Il confronto mostrerà 0 TI in app per tutte le CC.<br>
+    Vai al <a href="{{ url_for('impostazione_anno.docenti_classi_concorso', anno=anno) }}"
+              style="color:#92400e; font-weight:700;">Passo 8 — Docenti ↔ CC</a>
+    per collegare i docenti, poi torna qui per la verifica.
+</div>
+{% endif %}
+
+<div class="card" style="padding:14px 18px; margin-bottom:10px; font-size:.8rem;
+     color:var(--grigio); border-left:4px solid #7c3aed;">
+    <strong>DOC (colonna USR)</strong> = TI titolari dell'istituto secondo il bollettino USR
+    (inclusi AP uscenti e aspettative, esclusi TD e AP entranti).<br>
+    <strong>TI in app</strong> = TI collegati alla CC nella pagina "Docenti ↔ CC"
+    (tutti i TI, indipendentemente dallo status di presenza).<br>
+    Uno scarto di 1 è spesso spiegato da un'AP o un'aspettativa non ancora
+    registrata. Uno scarto > 1 richiede verifica manuale.
+</div>
+
+{# ── TABELLA ─────────────────────────────────────────────────────── #}
+<div class="card" style="padding:0; overflow-x:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+    <thead>
+        <tr style="background:#f8fafc; border-bottom:2px solid #e5e7eb;">
+            <th style="padding:10px 14px; text-align:left; font-weight:700; color:var(--blu);">CC</th>
+            <th style="padding:10px 14px; text-align:left; font-weight:700; color:var(--blu);">Nome</th>
+            <th style="padding:10px 8px; text-align:center; font-weight:700; color:var(--blu);">Ore richieste</th>
+            <th style="padding:10px 8px; text-align:center; font-weight:700; color:var(--blu);">Tipo org.</th>
+            <th style="padding:10px 8px; text-align:center; font-weight:700; color:#16a34a;">TI in app</th>
+            <th style="padding:10px 8px; text-align:center; font-weight:700; color:#0369a1;">DOC USR</th>
+            <th style="padding:10px 8px; text-align:center; font-weight:700; color:var(--blu);">Scarto</th>
+            <th style="padding:10px 8px; text-align:center; font-weight:700; color:var(--blu);">Stato</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for r in righe %}
+    {% set colore_riga = '#f0fdf4' if r.semaforo == 'verde' else ('#fffbeb' if r.semaforo == 'giallo' else '#fef2f2') %}
+    <tr style="border-bottom:1px solid #f0f0f0; background:{{ colore_riga }};">
+        <td style="padding:9px 14px; font-weight:700; color:var(--blu);">
+            <a href="{{ url_for('impostazione_anno.docenti_classi_concorso', anno=anno) }}#cc-{{ r.cc.id }}"
+               style="color:var(--blu); text-decoration:none;">{{ r.cc.codice }}</a>
+        </td>
+        <td style="padding:9px 14px; color:#374151;">{{ r.cc.nome }}</td>
+        <td style="padding:9px 8px; text-align:center; color:var(--grigio);">{{ r.ore_richieste }}h</td>
+        <td style="padding:9px 8px; text-align:center;">
+            <span style="font-size:.72rem; background:#f3f4f6; padding:2px 7px;
+                          border-radius:10px; font-weight:700;">{{ r.tipo_organico }}</span>
+        </td>
+        <td style="padding:9px 8px; text-align:center; font-weight:700;
+                   color:{{ '#16a34a' if r.n_ti_app > 0 else '#9ca3af' }};">
+            {{ r.n_ti_app }}
+        </td>
+        <td style="padding:9px 8px; text-align:center; font-weight:700; color:#0369a1;">
+            {{ r.n_doc_usr }}
+        </td>
+        <td style="padding:9px 8px; text-align:center; font-weight:700;
+                   color:{{ '#16a34a' if r.scarto == 0 else ('#f59e0b' if r.scarto == 1 else '#dc2626') }};">
+            {{ '+' if r.scarto > 0 else '' }}{{ r.scarto if r.scarto != 0 else '—' }}
+        </td>
+        <td style="padding:9px 8px; text-align:center; font-size:1rem;">
+            {% if r.semaforo == 'verde' %}✅
+            {% elif r.semaforo == 'giallo' %}⚠️
+            {% else %}❌
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div style="margin-top:10px; font-size:.78rem; color:var(--grigio);">
+    ✅ = TI in app = DOC USR &nbsp;|&nbsp;
+    ⚠️ = scarto di 1 (verifica AP/aspettativa) &nbsp;|&nbsp;
+    ❌ = scarto > 1 (da verificare)
+</div>
+{% endblock %}
