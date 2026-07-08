@@ -33,14 +33,9 @@
     </div>
 </div>
 
-{# Form principale: salva ore, nomi e CC #}
-<form method="post" id="form-piano">
-    <input type="hidden" name="anno_scol" value="{{ anno }}">
-    <input type="hidden" name="indirizzo" value="{{ indirizzo }}">
-
-    {# ── Aggiungi nuova CC a questo indirizzo ─────────────────────── #}
-    {% if cc_mancanti %}
-    <details style="margin-bottom:12px;">
+{# ── Aggiungi nuova CC — FUORI dal form principale (no form annidati) #}
+{% if cc_mancanti %}
+<details style="margin-bottom:12px;">
         <summary style="font-size:.82rem; color:#6366f1; cursor:pointer; user-select:none;
                          font-weight:700; padding:8px 12px; background:#f0f0ff;
                          border-radius:7px; border:1px solid #c7d2fe; list-style:none;">
@@ -111,10 +106,11 @@
                 per completare tutti gli anni di corso.
             </div>
         </div>
-    </details>
-    {% endif %}
+</details>
+{% endif %}
 
-    {% if not da_cc %}
+{# Form principale: salva ore, nomi e CC — non contiene form annidati #}
+{% if not da_cc %}
     <div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
         Nessun piano di studi per <strong>{{ indirizzo }}</strong> {{ anno }}.
     </div>
@@ -336,9 +332,7 @@
     </div>
     {% endfor %}
 
-    <button type="submit" class="btn btn-sm" style="margin-top:6px; background:#e5e7eb; color:#6b7280; font-size:.78rem;">↩ Salva tutto manualmente (fallback)</button>
     {% endif %}
-</form>
 
 {# Form nascosti per eliminazione righe (POST per sicurezza) #}
 <div id="delete-forms"></div>
