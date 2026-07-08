@@ -116,6 +116,39 @@
     </div>
     {% else %}
 
+    {# ── Riepilogo monte ore per anno di corso ─────────────────────── #}
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:stretch;">
+        {% for ac in anni_corso %}
+        {% set tot = ore_per_anno.get(ac, 0) %}
+        {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
+        {% if attivo or tot > 0 %}
+        <div style="background:white; border:1px solid #e5e7eb; border-radius:8px;
+                    padding:8px 14px; text-align:center; min-width:80px;
+                    border-top:3px solid {{ '#16a34a' if tot >= 27 else '#f59e0b' if tot >= 20 else '#dc2626' }};">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">{{ ac }}° anno</div>
+            <div style="font-size:1.3rem; font-weight:800;
+                        color:{{ '#16a34a' if tot >= 27 else '#f59e0b' if tot >= 20 else '#dc2626' }};">
+                {{ tot }}h
+            </div>
+            {% if attivo %}
+            <div style="font-size:.62rem; color:#16a34a; font-weight:600;">attivo</div>
+            {% else %}
+            <div style="font-size:.62rem; color:var(--grigio);">inattivo</div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        {# Totale complessivo #}
+        {% set tot_all = ore_per_anno.values() | sum %}
+        <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;
+                    padding:8px 14px; text-align:center; min-width:80px;
+                    border-top:3px solid var(--blu); margin-left:auto;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Totale</div>
+            <div style="font-size:1.3rem; font-weight:800; color:var(--blu);">{{ tot_all }}h</div>
+            <div style="font-size:.62rem; color:var(--grigio);">tutti gli anni</div>
+        </div>
+    </div>
+
     {% for cc_cod, gruppo in da_cc.items() %}
     <div class="card" style="padding:14px 18px; margin-bottom:10px; overflow-x:auto;">
         <div style="font-weight:700; color:var(--blu); margin-bottom:8px; font-size:.86rem;">
@@ -129,9 +162,10 @@
                 <tr style="background:#f8fafc;">
                     <th style="padding:5px 8px; text-align:left; border:1px solid #e5e7eb; min-width:160px;">Materia</th>
                     {% for ac in anni_corso %}
+                    {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
                     <th style="padding:5px 8px; text-align:center; border:1px solid #e5e7eb; min-width:80px;">
                         {{ ac }}° anno
-                        {% if (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
+                        {% if attivo %}
                         <span style="display:block; font-size:.65rem; color:#16a34a; font-weight:400;">attivo</span>
                         {% endif %}
                     </th>

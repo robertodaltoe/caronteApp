@@ -764,6 +764,16 @@ def piano_studi():
 
     tutte_materie = Materia.query.filter_by(attiva=True).order_by(Materia.sigla).all()
 
+    # Totale ore settimanali per anno di corso (somma di tutte le CC)
+    ore_per_anno = {}
+    for ac in anni_corso:
+        tot = db.session.query(
+            db.func.sum(PianoStudi.ore_settimanali)
+        ).filter_by(
+            anno_scol=anno, indirizzo=indirizzo_sel, anno_corso=ac
+        ).scalar() or 0
+        ore_per_anno[ac] = tot
+
     # CC già presenti nel piano studi per questo indirizzo+anno
     cc_presenti_ids = {r.id_classe_concorso for r in righe}
     # CC non ancora presenti — disponibili per essere aggiunte
@@ -789,7 +799,8 @@ def piano_studi():
         materie_multi_cc=materie_multi_cc,
         tutte_materie=tutte_materie,
         override_map=override_map,
-        cc_mancanti=cc_mancanti)
+        cc_mancanti=cc_mancanti,
+        ore_per_anno=ore_per_anno)
 
 
 # ── PIANO STUDI: aggiungi / elimina riga ──────────────────────────────
