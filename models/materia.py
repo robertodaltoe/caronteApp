@@ -31,6 +31,8 @@ class Materia(db.Model):
     indirizzi_json  = db.Column(db.String(200), default='[]')
     # Codice materia nel DB orario (per matching automatico con OrarioDocente.materia)
     codice_orario   = db.Column(db.String(40), nullable=True)
+    nome_breve      = db.Column(db.String(60),  nullable=True)  # es. 'Storia' — per stampe e badge
+    alias           = db.Column(db.String(20),  nullable=True)  # es. 'STO' — visibile all'utente
     attiva          = db.Column(db.Boolean, default=True)
     # Classe di concorso che insegna questa materia (es. A026 - Matematica)
     id_classe_concorso = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)

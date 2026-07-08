@@ -41,6 +41,8 @@
         {% for m in dip.materie %}
         <tr>
             <td><code style="background:#f3f4f6; padding:1px 5px; border-radius:3px;">{{ m.sigla }}</code></td>
+                    <td style="font-size:.8rem;">{{ m.nome_breve or '—' }}</td>
+                    <td><code style="background:#e0f2fe; padding:1px 5px; border-radius:3px; font-size:.78rem;">{{ m.alias or '—' }}</code></td>
             <td>{{ m.nome }}</td>
             <td style="color:var(--grigio); font-size:.78rem;">{{ m.codice_orario or '—' }}</td>
             <td style="font-size:.72rem;">{{ m.indirizzi | join(', ') }}</td>
@@ -64,6 +66,8 @@
                             </select>
                         </div>
                         <div><label style="font-size:.72rem;">Cod. orario</label><input type="text" name="codice_orario" value="{{ m.codice_orario or '' }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:110px;"></div>
+                        <div><label style="font-size:.72rem;">Nome breve</label><input type="text" name="nome_breve" value="{{ m.nome_breve or '' }}" placeholder="es. Storia" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:130px;"></div>
+                        <div><label style="font-size:.72rem;">Alias</label><input type="text" name="alias" value="{{ m.alias or '' }}" placeholder="es. STO" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:70px; text-transform:uppercase;"></div>
                         <div>
                             <label style="font-size:.72rem;">Indirizzi</label><br>
                             {% for ind in ['LLI','LSC','LSP','LSU','AFM','RIM','CAT'] %}
@@ -91,6 +95,8 @@
                 <div><label style="font-size:.72rem;">Nome *</label><input type="text" name="nome" required style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:180px;"></div>
                 <div><label style="font-size:.72rem;">Sigla *</label><input type="text" name="sigla" required style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:90px;"></div>
                 <div><label style="font-size:.72rem;">Cod. orario</label><input type="text" name="codice_orario" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:110px;"></div>
+                <div><label style="font-size:.72rem;">Nome breve</label><input type="text" name="nome_breve" placeholder="es. Storia" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:130px;"></div>
+                <div><label style="font-size:.72rem;">Alias</label><input type="text" name="alias" placeholder="es. STO" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:70px; text-transform:uppercase;"></div>
                 <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">Aggiungi</button>
             </div>
         </form>

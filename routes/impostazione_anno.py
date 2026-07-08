@@ -19,48 +19,37 @@ impostazione_anno_bp = Blueprint('impostazione_anno', __name__)
 
 def _docenti_per_anno(anno_scol):
     """
-    Restituisce i docenti attivi per un dato anno scolastico.
+    Restituisce i docenti per un dato anno scolastico.
 
-    Regola:
-      - attivo = True (nel registro operativo)
-      - anno_scol_inizio <= anno_scol  oppure  anno_scol_inizio IS NULL
-      - anno_scol_uscita >= anno_scol  oppure  anno_scol_uscita IS NULL
-
-    I TI senza anno_scol_inizio sono considerati presenti da sempre.
-    I TD/supplenti senza anno_scol_inizio NON compaiono nell'anno futuro
-    perché vengono inseriti solo quando arriva la nomina (con anno_scol_inizio).
-
-    Eccezione: se anno_scol == anno scolastico corrente del DB (quello con
-    dati operativi), mostra tutti i docenti attivi indipendentemente —
-    per non rompere le funzionalità operative (supplenze, assenze, ecc.).
+    - Anno corrente o passato (anno_scol <= anno_scol_corrente nel DB):
+      tutti i docenti attivi, senza filtro — serve per le funzioni operative.
+    - Anno futuro (anno_scol > anno_scol_corrente):
+      solo TI senza uscita segnalata + TD già inseriti con anno_scol_inizio.
+      Esclude chi ha anno_scol_uscita <= anno_scol (esce quell'anno o prima).
     """
     from sqlalchemy import or_
+    from config_anno import get_anno_corrente
 
-    # Tutti i docenti attivi senza vincoli temporali = anno operativo corrente
     base = Docente.query.filter_by(attivo=True)
+    anno_corrente = get_anno_corrente()  # fonte di verità: DB
 
-    # Per anni futuri (pianificazione), filtra per contratto e date
-    anni_operativi = {p.anno_scol for p in __import__('models.piano_studi',
-        fromlist=['PianoStudi']).PianoStudi.query.all()} or {anno_scol}
-    anno_operativo = min(anni_operativi) if anni_operativi else anno_scol
-
-    if anno_scol <= anno_operativo:
-        # Anno corrente o passato: tutti i docenti attivi
+    if anno_scol <= anno_corrente:
+        # Anno corrente o storico: tutti i docenti attivi
         return base.order_by(Docente.cognome).all()
 
-    # Anno futuro: solo chi sarà presente
+    # Anno futuro: filtra
     return base.filter(
-        # O è TI (nessuna data inizio = storico) o ha iniziato entro quell'anno
+        # TI storico (nessuna data inizio) o TD già inserito per quell'anno
         or_(
             Docente.anno_scol_inizio == None,
             Docente.anno_scol_inizio <= anno_scol,
         ),
-        # E non ha ancora una data di uscita, o uscirà dopo quell'anno
+        # Non ha una data di uscita, o esce dopo quell'anno
         or_(
             Docente.anno_scol_uscita == None,
-            Docente.anno_scol_uscita > anno_scol,  # esce DA quell'anno, non IN quell'anno
+            Docente.anno_scol_uscita > anno_scol,
         ),
-        # Escludi supplenti/TD senza data inizio (non confermati per l'anno futuro)
+        # TD/supplenti senza data inizio non compaiono (non ancora nominati)
         or_(
             Docente.tipo_contratto == 'TI',
             Docente.anno_scol_inizio != None,

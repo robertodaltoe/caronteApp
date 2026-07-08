@@ -387,14 +387,19 @@ def salva_materia():
     id_dip    = int(request.form['id_dipartimento'])
     cod_or    = request.form.get('codice_orario', '').strip() or None
     indirizzi = request.form.getlist('indirizzi')
+    nome_breve = request.form.get('nome_breve', '').strip() or None
+    alias      = request.form.get('alias', '').strip().upper() or None
+
     if id_m:
         m = Materia.query.get_or_404(int(id_m))
         m.nome=nome; m.sigla=sigla; m.id_dipartimento=id_dip
         m.codice_orario=cod_or; m.indirizzi_json=json.dumps(indirizzi)
+        m.nome_breve=nome_breve; m.alias=alias
     else:
         db.session.add(Materia(nome=nome, sigla=sigla, id_dipartimento=id_dip,
                                codice_orario=cod_or,
-                               indirizzi_json=json.dumps(indirizzi)))
+                               indirizzi_json=json.dumps(indirizzi),
+                               nome_breve=nome_breve, alias=alias))
     db.session.commit()
     flash('Materia salvata.', 'success')
     return redirect(url_for('attivita_ist.dipartimenti'))
