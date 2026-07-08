@@ -201,19 +201,13 @@
             {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
             <tr>
                 {# Nome materia editabile #}
-                <td style="padding:4px 6px; border:1px solid #e5e7eb;
-                           background:{{ '#fffbeb' if prima_riga.compresenza else 'transparent' }};">
+                <td style="padding:4px 6px; border:1px solid #e5e7eb;">
                     <div style="display:flex; align-items:center; gap:4px;">
                         <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}"
                                data-autosave="nome_piano:{{ prima_riga.id }}"
                                style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
                                       padding:3px 6px; font-size:.8rem; background:#fafafa;">
-                        {% if prima_riga.compresenza %}
-                        <span title="ITP in compresenza — ore escluse dal monte ore curricolare"
-                              style="font-size:.62rem; background:#fef3c7; color:#92400e;
-                                     padding:1px 5px; border-radius:4px; white-space:nowrap;
-                                     font-weight:700; flex-shrink:0;">ITP</span>
-                        {% endif %}
+
                     </div>
                 </td>
                 {# Celle per anno di corso — accesso diretto per chiave, no selectattr #}
@@ -247,6 +241,19 @@
                             <span title="Atipicità: CC diversa dal default normativo" style="font-size:.7rem;">⚠️</span>
                             {% endif %}
                         </div>
+                        {% endif %}
+                        {# Checkbox compresenza — solo per CC di tipo B (ITP) #}
+                        {% if cc_cod.startswith('B-') %}
+                        <label title="{{ 'Compresenza: esclusa dal monte ore curricolare' if riga.compresenza else 'Segna come compresenza per questo anno' }}"
+                               style="display:flex; align-items:center; gap:3px; cursor:pointer;
+                                      margin-top:3px; font-size:.68rem;
+                                      color:{{ '#92400e' if riga.compresenza else '#9ca3af' }};">
+                            <input type="checkbox"
+                                   data-autosave="compresenza_piano:{{ riga.id }}"
+                                   {% if riga.compresenza %}checked{% endif %}
+                                   style="accent-color:#f59e0b; width:11px; height:11px;">
+                            comp.
+                        </label>
                         {% endif %}
                         {# Override per-sezione: mostra quelli esistenti + form per aggiungerne #}
                         {% set ovs = override_map.get(riga.id, []) %}

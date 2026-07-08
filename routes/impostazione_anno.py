@@ -1043,6 +1043,16 @@ def api_save():
             db.session.commit()
             return jsonify(ok=True, msg='Ore residue aggiornate')
 
+        # ── Piano studi: compresenza (per anno, solo CC B-xx) ──────────
+        elif campo == 'compresenza_piano':
+            ps = db.session.get(PianoStudi, int(rec_id))
+            if not ps:
+                return jsonify(ok=False, msg='Riga non trovata')
+            ps.compresenza = bool(valore)
+            db.session.commit()
+            _ricalcola_organico(ps.anno_scol)
+            return jsonify(ok=True, msg='Compresenza aggiornata')
+
         # ── Materia: nome breve ──────────────────────────────────────
         elif campo == 'nome_breve_mat':
             m = db.session.get(Materia, int(rec_id))
