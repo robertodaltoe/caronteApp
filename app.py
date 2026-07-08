@@ -66,7 +66,9 @@ def create_app():
     from routes.attivita_ist import attivita_ist_bp
     app.register_blueprint(attivita_ist_bp)
     from routes.impostazioni import impostazioni_bp
+    from routes.cambio_anno import cambio_anno_bp
     app.register_blueprint(impostazioni_bp)
+    app.register_blueprint(cambio_anno_bp)
     from routes.impostazione_anno import impostazione_anno_bp
     app.register_blueprint(impostazione_anno_bp)
     from routes.recupero import recupero_bp

@@ -46,9 +46,14 @@
         <div class="kpi"><div class="kpi-n">{{ n_docenti }}</div><div class="kpi-l">Docenti attivi</div></div>
     </div>
     {% endif %}
+    <a href="{{ url_for('cambio_anno.index') }}" class="imp-link"
+       style="border-color:#dc2626; background:#fff0f0; font-weight:700;">
+        🔄 Prepara / Attiva nuovo anno scolastico
+        <span style="color:#dc2626; font-weight:700;">→</span>
+    </a>
     <a href="{{ url_for('impostazione_anno.index') }}" class="imp-link"
        style="border-color:#6366f1; background:#f0f0ff;">
-        📋 Hub impostazione anno (9 passi)
+        📋 Hub impostazione anno — 9 passi
         <span style="color:#6366f1; font-weight:700;">→</span>
     </a>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">
