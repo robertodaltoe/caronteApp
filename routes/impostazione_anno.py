@@ -372,8 +372,35 @@ def docenti_classi_concorso():
         reverse=True)
     if anno not in anni_disponibili:
         anni_disponibili.insert(0, anno)
+
+    # Confronto TI collegati vs DOC organico USR — inline nella pagina
+    from models.classe_concorso import CattedraOrganico, DocenteClasseConcorso
+    cc_con_dati = (ClasseConcorso.query
+        .join(CattedraOrganico,
+              (CattedraOrganico.id_classe_concorso == ClasseConcorso.id) &
+              (CattedraOrganico.anno_scol == anno) &
+              (CattedraOrganico.tipo == 'diritto'), isouter=True)
+        .filter(CattedraOrganico.n_docenti > 0)
+        .order_by(ClasseConcorso.codice).all())
+
+    confronto = []
+    for cc in cc_con_dati:
+        n_ti = (db.session.query(db.func.count(DocenteClasseConcorso.id))
+                .join(Docente, DocenteClasseConcorso.id_docente == Docente.id)
+                .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
+                        Docente.attivo == True, Docente.tipo_contratto == 'TI')
+                .scalar() or 0)
+        cat = CattedraOrganico.query.filter_by(
+            anno_scol=anno, tipo='diritto', id_classe_concorso=cc.id).first()
+        n_usr = cat.n_docenti if cat and cat.n_docenti else 0
+        scarto = n_ti - n_usr
+        sem = 'verde' if scarto == 0 else ('giallo' if abs(scarto) == 1 else 'rosso')
+        confronto.append({'cc': cc, 'n_ti_app': n_ti,
+                          'n_doc_usr': n_usr, 'scarto': scarto, 'semaforo': sem})
+
     return render_template('impostazione_anno/docenti_classi_concorso.html',
-        docenti=docenti, classi=classi, anno=anno, anni_disponibili=anni_disponibili)
+        docenti=docenti, classi=classi, anno=anno, anni_disponibili=anni_disponibili,
+        confronto=confronto)
 
 
 # ── DOCENTI ↔ MATERIE (filtrate per TUTTE le classi di concorso) ─────

@@ -116,4 +116,56 @@ function rimuoviBadge(xEl) {
     }
 }
 </script>
+
+{# ── CONFRONTO TI ↔ ORGANICO USR ─────────────────────────────── #}
+<div style="margin-top:28px;">
+    <h2 style="font-size:1rem; font-weight:700; color:#7c3aed; margin-bottom:10px;">
+        🔍 Verifica: TI collegati ↔ DOC Organico USR — {{ anno }}
+    </h2>
+    <div style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;
+         padding:8px 12px; background:#f5f3ff; border-radius:6px; border-left:3px solid #7c3aed;">
+        <strong>TI collegati</strong> = docenti TI assegnati a questa CC qui sopra &nbsp;|&nbsp;
+        <strong>DOC USR</strong> = titolari nel bollettino organico di diritto
+        (inclusi AP uscenti e aspettative) &nbsp;|&nbsp;
+        ✅ allineati &nbsp; ⚠️ scarto di 1 &nbsp; ❌ scarto &gt; 1
+    </div>
+    <div class="card" style="padding:0; overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+        <thead>
+            <tr style="background:#f8fafc; border-bottom:2px solid #e5e7eb;">
+                <th style="padding:9px 12px; text-align:left; color:var(--blu);">CC</th>
+                <th style="padding:9px 12px; text-align:left; color:var(--blu);">Nome</th>
+                <th style="padding:9px 8px; text-align:center; color:#16a34a;">TI collegati</th>
+                <th style="padding:9px 8px; text-align:center; color:#0369a1;">DOC USR</th>
+                <th style="padding:9px 8px; text-align:center; color:var(--blu);">Scarto</th>
+                <th style="padding:9px 8px; text-align:center;">Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in confronto %}
+        <tr style="border-bottom:1px solid #f0f0f0;
+                   background:{{ '#f0fdf4' if r.semaforo == 'verde' else ('#fffbeb' if r.semaforo == 'giallo' else '#fef2f2') }};">
+            <td style="padding:8px 12px; font-weight:700; color:var(--blu);">{{ r.cc.codice }}</td>
+            <td style="padding:8px 12px; color:#374151;">{{ r.cc.nome }}</td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700;
+                       color:{{ '#16a34a' if r.n_ti_app > 0 else '#9ca3af' }};">{{ r.n_ti_app }}</td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700; color:#0369a1;">{{ r.n_doc_usr }}</td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700;
+                       color:{{ '#16a34a' if r.scarto == 0 else ('#f59e0b' if r.scarto|abs == 1 else '#dc2626') }};">
+                {{ '+' if r.scarto > 0 else '' }}{{ r.scarto if r.scarto != 0 else '—' }}
+            </td>
+            <td style="padding:8px 8px; text-align:center; font-size:1rem;">
+                {% if r.semaforo == 'verde' %}✅{% elif r.semaforo == 'giallo' %}⚠️{% else %}❌{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        {% if not confronto %}
+        <tr><td colspan="6" style="padding:14px; text-align:center; color:var(--grigio); font-size:.82rem;">
+            Nessun dato — inserisci prima il bollettino organico di diritto (Passo 6).
+        </td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+    </div>
+</div>
 {% endblock %}

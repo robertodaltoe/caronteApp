@@ -25,10 +25,17 @@
 <form method="post" id="form-mcc">
 {% for m in materie %}
 <div class="riga-materia card" style="padding:10px 16px; margin-bottom:6px; display:flex;
-            align-items:center; gap:12px; flex-wrap:wrap;" data-nome="{{ m.nome|lower }}">
+            align-items:center; gap:12px; flex-wrap:wrap;"
+            data-nome="{{ m.nome|lower }} {{ (m.nome_breve or '')|lower }} {{ (m.alias or '')|lower }}">
     <div style="min-width:200px; font-weight:700; color:var(--blu); font-size:.86rem;">
-        {{ m.nome }}
-        <span style="font-size:.74rem; color:var(--grigio); font-weight:400;">({{ m.sigla }})</span>
+        {{ m.nome_breve or m.nome }}
+        {% if m.alias and m.alias != m.sigla %}
+        <code style="background:#e0f2fe; color:#0369a1; padding:1px 6px;
+                      border-radius:4px; font-size:.72rem; font-weight:700; margin-left:4px;">{{ m.alias }}</code>
+        {% endif %}
+        <div style="font-size:.72rem; color:var(--grigio); font-weight:400; margin-top:1px;">
+            {{ m.nome }} <span style="margin-left:4px; opacity:.6;">({{ m.sigla }})</span>
+        </div>
     </div>
 
     <div id="badges-{{ m.id }}" style="display:flex; gap:5px; flex-wrap:wrap; flex:1; min-width:200px;">
