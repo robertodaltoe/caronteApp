@@ -1,3 +1,4 @@
+from config_anno import get_anno_corrente
 from flask import Blueprint, render_template
 from models.docente import Docente
 from models.materia import Dipartimento, Materia
@@ -168,7 +169,8 @@ def periodi():
         RecuperoPeriodo.anno_scol.desc(), RecuperoPeriodo.data_inizio).all()
 
     return render_template('impostazioni/periodi.html',
-        periodi=righe, codici_noti=CODICI_NOTI, oggi=date.today())
+        periodi=righe, codici_noti=CODICI_NOTI, oggi=date.today(),
+        anno_corrente=get_anno_corrente())
 
 
 @impostazioni_bp.route('/impostazioni/anno-scolastico')

@@ -1,3 +1,4 @@
+from config_anno import get_anno_corrente
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
 from models.docente import Docente
@@ -142,7 +143,7 @@ def modifica(id):
             except ValueError:
                 continue
 
-        _sync_materia_roster(d, request.form.getlist('materie_ids'), '2025-2026')
+        _sync_materia_roster(d, request.form.getlist('materie_ids'), get_anno_corrente())
         db.session.commit()
         flash(f"Docente {d.nome_completo} aggiornato.", 'success')
         return redirect(url_for('docenti.lista'))
@@ -156,7 +157,7 @@ def modifica(id):
     id_next = tutti[idx + 1] if idx < len(tutti)-1 else None
     materie = Materia.query.join(Dipartimento).order_by(Dipartimento.ordine, Materia.nome).all()
     mat_assegnate = {dm.id_materia for dm in DocenteMateria.query.filter_by(
-        id_docente=id, anno_scol='2025-2026').all()}
+        id_docente=id, anno_scol=get_anno_corrente()).all()}
     titolari_disponibili = (Docente.query
         .filter(Docente.attivo == True, Docente.ruolo == 'titolare', Docente.id != d.id)
         .order_by(Docente.cognome).all())

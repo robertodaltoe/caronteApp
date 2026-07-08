@@ -9,7 +9,8 @@ from datetime import date, datetime
 
 attivita_ist_bp = Blueprint('attivita_ist', __name__)
 
-ANNO_SCOL_CORRENTE = '2025-2026'
+from config_anno import get_anno_corrente as _get_anno
+ANNO_SCOL_CORRENTE = _get_anno()
 
 
 def _anno_scolastico(d=None):

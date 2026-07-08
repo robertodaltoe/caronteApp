@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 
 rientro_bp = Blueprint('rientro', __name__)
 
-ANNO = '2025-2026'
+from config_anno import get_anno_corrente as _get_anno
+ANNO = _get_anno()
 PERIODO_CODICE = 'colloqui_rientro'
 DURATA_MIN = 45
 

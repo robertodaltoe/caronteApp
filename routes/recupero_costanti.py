@@ -8,11 +8,12 @@ quando recupero.py importa le route definite altrove.
 from datetime import date
 from models.docente import Docente
 
-ANNO = '2025-2026'
+from config_anno import get_anno_corrente as _get_anno
+ANNO = _get_anno()
 DATA_INIZIO = date(2026, 6, 15)
 DATA_FINE   = date(2026, 7, 4)
 
-ANNO_AGO     = '2025-2026'
+ANNO_AGO     = _get_anno()
 PERIODO_AGO  = 'prove_agosto'
 CONTRATTI_OK = ('TI', 'TD_annuale')  # solo tempo indeterminato + tempo determinato annuale
 
