@@ -119,34 +119,33 @@
     {# ── Riepilogo monte ore per anno di corso ─────────────────────── #}
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:stretch;">
         {% for ac in anni_corso %}
-        {% set tot = ore_per_anno.get(ac, 0) %}
+        {% set tot_sett = ore_per_anno.get(ac, 0) %}
+        {% set tot_ann = tot_sett * 33 %}
         {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
-        {% if attivo or tot > 0 %}
+        {% if attivo or tot_sett > 0 %}
+        {% set colore = '#16a34a' if tot_sett >= 27 else '#f59e0b' if tot_sett >= 20 else '#dc2626' %}
         <div style="background:white; border:1px solid #e5e7eb; border-radius:8px;
-                    padding:8px 14px; text-align:center; min-width:80px;
-                    border-top:3px solid {{ '#16a34a' if tot >= 27 else '#f59e0b' if tot >= 20 else '#dc2626' }};">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">{{ ac }}° anno</div>
-            <div style="font-size:1.3rem; font-weight:800;
-                        color:{{ '#16a34a' if tot >= 27 else '#f59e0b' if tot >= 20 else '#dc2626' }};">
-                {{ tot }}h
+                    padding:8px 14px; text-align:center; min-width:90px;
+                    border-top:3px solid {{ colore }};">
+            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px; font-weight:600;">
+                {{ ac }}° anno
             </div>
-            {% if attivo %}
-            <div style="font-size:.62rem; color:#16a34a; font-weight:600;">attivo</div>
-            {% else %}
-            <div style="font-size:.62rem; color:var(--grigio);">inattivo</div>
-            {% endif %}
+            <div style="font-size:1.25rem; font-weight:800; color:{{ colore }};"
+                 title="{{ tot_sett }} ore settimanali">
+                {{ tot_sett }}h/sett
+            </div>
+            <div style="font-size:.78rem; font-weight:700; color:{{ colore }}; margin-top:1px;"
+                 title="{{ tot_ann }} ore annuali ({{ tot_sett }} × 33 settimane)">
+                {{ tot_ann }}h/anno
+            </div>
+            <div style="font-size:.62rem; margin-top:3px;
+                        color:{{ '#16a34a' if attivo else '#9ca3af' }};
+                        font-weight:{{ '600' if attivo else '400' }};">
+                {{ 'attivo' if attivo else 'inattivo' }}
+            </div>
         </div>
         {% endif %}
         {% endfor %}
-        {# Totale complessivo #}
-        {% set tot_all = ore_per_anno.values() | sum %}
-        <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;
-                    padding:8px 14px; text-align:center; min-width:80px;
-                    border-top:3px solid var(--blu); margin-left:auto;">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Totale</div>
-            <div style="font-size:1.3rem; font-weight:800; color:var(--blu);">{{ tot_all }}h</div>
-            <div style="font-size:.62rem; color:var(--grigio);">tutti gli anni</div>
-        </div>
     </div>
 
     {% for cc_cod, gruppo in da_cc.items() %}
