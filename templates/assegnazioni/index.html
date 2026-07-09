@@ -267,11 +267,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </form>
                 </td>
             </tr>
-                {# Sub-riga dettaglio materie — visibile solo se multi_materia ▾ #}
-                {% set has_multi = classi | selectattr('__class__', 'defined') | list %}
-                {% if classi | map('regex_replace', '.+', '') | list %}{% endif %}
-                {% set show_sub = blk.classi | default([]) %}
-                {# Controlla se almeno una classe ha multi_materia #}
+                {# Sub-riga dettaglio materie — visibile solo se almeno una classe ha multi_materia #}
                 {% if blk.multi_materia.values() | select | list %}
                 <tr id="sub-{{ cc.id }}-{{ a.id }}" style="display:none;">
                     <td class="td-doc" style="padding:2px 10px 6px 22px; font-size:.75rem;
