@@ -149,7 +149,7 @@
             </select>
         </div>
 
-        <div id="sez-pt" style="display:none;">
+        <div id="sez-pt" style="display:{{ 'block' if tipo_sel == 'part_time' else 'none' }};">
             <div class="form-group" style="margin-bottom:0;">
                 <label>Ore contratto part-time</label>
                 <input type="number" name="ore_contratto_pt" min="1" max="17"
@@ -161,7 +161,7 @@
             </div>
         </div>
 
-        <div id="sez-multi" style="display:none;">
+        <div id="sez-multi" style="display:{{ 'block' if tipo_sel == 'multi_sede' else 'none' }};">
             <div class="form-group" style="margin-bottom:8px;">
                 <label>Altra scuola / istituto</label>
                 <input type="text" name="altra_scuola"
