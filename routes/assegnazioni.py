@@ -137,15 +137,31 @@ def _build_area(anno_scol, area):
                     ore_per_classe[lbl] += ac.ore
             tot_doc[a.id] = sum(ore_doc_classe[a.id].values())
 
+        # Docenti con questa CC già collegata (passo 8) ma non ancora assegnati
+        # — vengono mostrati in tabella con 0h come riga "disponibile"
+        from models.classe_concorso import DocenteClasseConcorso
+        id_gia_assegnati = {a.id_docente for a in assegnazioni if a.id_docente}
+        docenti_cc_precaricati = (
+            Docente.query
+            .join(DocenteClasseConcorso,
+                  DocenteClasseConcorso.id_docente == Docente.id)
+            .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
+                    Docente.attivo == True,
+                    ~Docente.id.in_(id_gia_assegnati) if id_gia_assegnati
+                    else True)
+            .order_by(Docente.cognome).all()
+        )
+
         blocks.append({
-            'cc':            cc,
-            'classi':        classi,
-            'piano':         piano,
-            'budget':        budget,
-            'assegnazioni':  assegnazioni,
-            'ore_doc_classe': ore_doc_classe,
-            'tot_doc':       tot_doc,
-            'ore_per_classe': ore_per_classe,
+            'cc':                 cc,
+            'classi':             classi,
+            'piano':              piano,
+            'budget':             budget,
+            'assegnazioni':       assegnazioni,
+            'ore_doc_classe':     ore_doc_classe,
+            'tot_doc':            tot_doc,
+            'ore_per_classe':     ore_per_classe,
+            'docenti_precaricati': docenti_cc_precaricati,
         })
     return blocks
 

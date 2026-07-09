@@ -102,10 +102,15 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <th style="min-width:50px; background:#f1f5f9; border:1px solid #e2e8f0;
                                font-size:.7rem; color:var(--grigio);">Tipo</th>
                     {% for classe in classi %}
-                    <th style="min-width:52px;">{{ classe }}</th>
+                    <th style="min-width:52px; background:#e8edf5; color:#1e293b;
+                               writing-mode:vertical-rl; text-orientation:mixed;
+                               transform:rotate(180deg); height:80px; padding:6px 4px;
+                               font-size:.7rem; font-weight:700; white-space:nowrap;">
+                        {{ classe }}
+                    </th>
                     {% endfor %}
-                    <th style="min-width:48px; background:#e8edf5;">Tot.</th>
-                    <th style="min-width:44px; background:#e8edf5; color:var(--grigio);">Max</th>
+                    <th style="min-width:48px; background:#dde3ee; color:#1e293b;">Tot.</th>
+                    <th style="min-width:44px; background:#dde3ee; color:#6b7280;">Max</th>
                     <th style="width:30px;"></th>
                 </tr>
                 {# Riga ore previste da piano studi #}
@@ -175,6 +180,43 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                                 style="background:none; border:none; cursor:pointer;
                                        color:#dc2626; font-size:.8rem;">🗑</button>
                     </form>
+                </td>
+            </tr>
+            {% endfor %}
+
+            {# Righe docenti precaricati — con CC ma non ancora assegnati #}
+            {% for d in blk.docenti_precaricati %}
+            <tr style="background:#f8f9ff; opacity:.7;">
+                <td class="td-doc">
+                    <span style="font-weight:600; color:#6b7280;">
+                        {{ d.cognome }} {{ d.nome }}
+                    </span>
+                    {% if d.ore_contratto_pt %}
+                    <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
+                    {% endif %}
+                    <span style="font-size:.65rem; color:#9ca3af; margin-left:4px;">
+                        (max {{ d.ore_max_effettive }}h — da assegnare)
+                    </span>
+                </td>
+                <td style="text-align:center; border:1px solid #e2e8f0; color:#9ca3af; font-size:.7rem;">
+                    TI
+                </td>
+                {% for classe in classi %}
+                <td style="border:1px solid #e2e8f0; color:#cbd5e1; text-align:center;">—</td>
+                {% endfor %}
+                <td style="background:#e8edf5; color:#9ca3af; text-align:center;">—</td>
+                <td style="background:#e8edf5; color:#9ca3af; text-align:center; font-size:.74rem;">
+                    {{ d.ore_max_effettive }}h
+                </td>
+                <td style="text-align:center;">
+                    {# Quick-assign: click per aprire form pre-compilato con questo docente #}
+                    <button type="button"
+                            onclick="quickAssign('{{ cc.id }}', '{{ d.id }}')"
+                            style="background:none; border:1px solid #c7d2fe; border-radius:4px;
+                                   cursor:pointer; color:#6366f1; font-size:.7rem; padding:2px 6px;"
+                            title="Assegna {{ d.cognome }} {{ d.nome }}">
+                        ＋
+                    </button>
                 </td>
             </tr>
             {% endfor %}
@@ -293,6 +335,19 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 {% endfor %}
 
 <script>
+function quickAssign(ccId, docId) {
+    // Apre il form di aggiunta e pre-seleziona il docente
+    const formDiv = document.getElementById('form-' + ccId);
+    formDiv.classList.add('open');
+    const sel = document.getElementById('doc-' + ccId);
+    if (sel) {
+        sel.value = docId;
+        verificaOre(ccId, sel.closest('form') ?
+            sel.closest('form').querySelector('[name="anno_scol"]').value : '');
+    }
+    formDiv.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
 function toggleForm(id) {
     const el = document.getElementById(id);
     el.classList.toggle('open');
