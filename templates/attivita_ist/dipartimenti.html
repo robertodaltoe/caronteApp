@@ -1,83 +1,166 @@
 {% extends "base.html" %}
 {% block title %}Dipartimenti e Materie{% endblock %}
 {% block content %}
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">📚 Dipartimenti e Materie</h1>
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">⚙ Impostazioni</a>
-    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">← Lista eventi</a>
 </div>
 
 {% for dip in dipartimenti %}
-<div class="card" style="margin-bottom:16px; padding:16px 20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="font-size:1rem; color:var(--blu);">
-            <span style="background:var(--blu); color:white; border-radius:4px; padding:2px 8px; font-size:.78rem; margin-right:6px;">{{ dip.sigla }}</span>
-            {{ dip.nome }}
-        </h2>
-        <button onclick="toggleEdit('dip-{{ dip.id }}')" class="btn btn-sm btn-primary" style="font-size:.75rem;">✏ Modifica</button>
+<div class="card" style="margin-bottom:14px; padding:14px 18px;">
+
+    {# ── Header dipartimento ────────────────────────────────────── #}
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <span style="background:var(--blu); color:white; border-radius:5px;
+                     padding:2px 9px; font-size:.76rem; font-weight:700; letter-spacing:.03em;">
+            {{ dip.sigla }}
+        </span>
+        <h2 style="font-size:.95rem; color:var(--blu); margin:0; font-weight:700;">{{ dip.nome }}</h2>
+        <button onclick="toggleEdit('dip-{{ dip.id }}')"
+                class="btn btn-sm btn-primary" style="font-size:.72rem; margin-left:auto;">
+            ✏ Modifica dipartimento
+        </button>
     </div>
 
-    <!-- Form modifica dipartimento (nascosto) -->
+    {# ── Form modifica dipartimento ─────────────────────────────── #}
     <form method="post" action="{{ url_for('attivita_ist.salva_dipartimento') }}"
-          id="dip-{{ dip.id }}" style="display:none; background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:10px;">
+          id="dip-{{ dip.id }}"
+          style="display:none; background:#f8fafc; padding:10px 14px;
+                 border-radius:8px; margin-bottom:10px; border:1px solid #e5e7eb;">
         <input type="hidden" name="id" value="{{ dip.id }}">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-            <div><label style="font-size:.75rem;">Nome</label><input type="text" name="nome" value="{{ dip.nome }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:220px;"></div>
-            <div><label style="font-size:.75rem;">Sigla</label><input type="text" name="sigla" value="{{ dip.sigla }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:80px;"></div>
-            <div><label style="font-size:.75rem;">Ordine</label><input type="number" name="ordine" value="{{ dip.ordine }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:60px;"></div>
-            <button type="submit" class="btn btn-success btn-sm">Salva</button>
+            <div>
+                <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome</div>
+                <input type="text" name="nome" value="{{ dip.nome }}"
+                       style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                              font-size:.82rem; width:220px;">
+            </div>
+            <div>
+                <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Sigla</div>
+                <input type="text" name="sigla" value="{{ dip.sigla }}"
+                       style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                              font-size:.82rem; width:80px;">
+            </div>
+            <div>
+                <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Ordine</div>
+                <input type="number" name="ordine" value="{{ dip.ordine }}"
+                       style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                              font-size:.82rem; width:60px;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">✓ Salva</button>
         </div>
     </form>
 
-    <!-- Tabella materie -->
-    <table style="width:100%; font-size:.83rem;">
-        <thead><tr>
-            <th style="width:80px;">Sigla</th><th>Nome</th>
-            <th style="width:160px;">Cod. orario</th>
-            <th style="width:180px;">Indirizzi</th>
-            <th style="width:60px; text-align:center;">✏</th>
-        </tr></thead>
+    {# ── Tabella materie ────────────────────────────────────────── #}
+    <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+        <thead>
+            <tr style="background:#f1f5f9; border-bottom:2px solid #e2e8f0;">
+                <th style="padding:7px 10px; text-align:left; width:80px; color:var(--blu);">Sigla</th>
+                <th style="padding:7px 10px; text-align:left; color:var(--blu);">Nome ministeriale</th>
+                <th style="padding:7px 10px; text-align:left; width:140px; color:var(--blu);">Nome breve</th>
+                <th style="padding:7px 10px; text-align:left; width:90px; color:var(--blu);">Alias</th>
+                <th style="padding:7px 10px; text-align:left; width:110px; color:var(--blu);">Cod. orario</th>
+                <th style="padding:7px 10px; text-align:center; width:36px;"></th>
+            </tr>
+        </thead>
         <tbody>
         {% for m in dip.materie %}
-        <tr>
-            <td><code style="background:#f3f4f6; padding:1px 5px; border-radius:3px;">{{ m.sigla }}</code></td>
-                    <td style="font-size:.8rem;">{{ m.nome_breve or '—' }}</td>
-                    <td><code style="background:#e0f2fe; padding:1px 5px; border-radius:3px; font-size:.78rem;">{{ m.alias or '—' }}</code></td>
-            <td>{{ m.nome }}</td>
-            <td style="color:var(--grigio); font-size:.78rem;">{{ m.codice_orario or '—' }}</td>
-            <td style="font-size:.72rem;">{{ m.indirizzi | join(', ') }}</td>
-            <td style="text-align:center;">
-                <button onclick="toggleEdit('mat-{{ m.id }}')" class="btn btn-sm btn-primary" style="font-size:.7rem; padding:2px 6px;">✏</button>
+        <tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:6px 10px;">
+                <code style="background:#f3f4f6; padding:1px 6px; border-radius:4px;
+                              font-size:.78rem; color:#374151;">{{ m.sigla }}</code>
+            </td>
+            <td style="padding:6px 10px; color:#374151;">{{ m.nome }}</td>
+            <td style="padding:6px 10px; font-weight:600; color:var(--blu);">{{ m.nome_breve or '—' }}</td>
+            <td style="padding:6px 10px;">
+                {% if m.alias %}
+                <code style="background:#e0f2fe; color:#0369a1; padding:1px 6px;
+                              border-radius:4px; font-size:.76rem; font-weight:700;">{{ m.alias }}</code>
+                {% else %}
+                <span style="color:#d1d5db;">—</span>
+                {% endif %}
+            </td>
+            <td style="padding:6px 10px; color:var(--grigio); font-size:.78rem;">{{ m.codice_orario or '—' }}</td>
+            <td style="padding:6px 4px; text-align:center;">
+                <button onclick="toggleEdit('mat-{{ m.id }}')"
+                        class="btn btn-sm btn-primary"
+                        style="font-size:.68rem; padding:2px 7px;">✏</button>
             </td>
         </tr>
+        {# Form modifica materia inline #}
         <tr id="mat-{{ m.id }}" style="display:none; background:#f8fafc;">
-            <td colspan="5" style="padding:10px;">
+            <td colspan="6" style="padding:10px 14px; border-bottom:1px solid #e5e7eb;">
                 <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}">
                     <input type="hidden" name="id" value="{{ m.id }}">
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-                        <div><label style="font-size:.72rem;">Nome</label><input type="text" name="nome" value="{{ m.nome }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:200px;"></div>
-                        <div><label style="font-size:.72rem;">Sigla</label><input type="text" name="sigla" value="{{ m.sigla }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:90px;"></div>
                         <div>
-                            <label style="font-size:.72rem;">Dipartimento</label>
-                            <select name="id_dipartimento" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem;">
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome ministeriale *</div>
+                            <input type="text" name="nome" value="{{ m.nome }}"
+                                   style="padding:3px 7px; border:1px solid #d1d5db; border-radius:4px;
+                                          font-size:.8rem; width:200px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Sigla *</div>
+                            <input type="text" name="sigla" value="{{ m.sigla }}"
+                                   style="padding:3px 7px; border:1px solid #d1d5db; border-radius:4px;
+                                          font-size:.8rem; width:90px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome breve</div>
+                            <input type="text" name="nome_breve" value="{{ m.nome_breve or '' }}"
+                                   placeholder="es. Storia"
+                                   style="padding:3px 7px; border:1px solid #d1d5db; border-radius:4px;
+                                          font-size:.8rem; width:130px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Alias</div>
+                            <input type="text" name="alias" value="{{ m.alias or '' }}"
+                                   placeholder="es. STO"
+                                   style="padding:3px 7px; border:1px solid #d1d5db; border-radius:4px;
+                                          font-size:.8rem; width:70px; text-transform:uppercase;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Cod. orario</div>
+                            <input type="text" name="codice_orario" value="{{ m.codice_orario or '' }}"
+                                   style="padding:3px 7px; border:1px solid #d1d5db; border-radius:4px;
+                                          font-size:.8rem; width:100px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Dipartimento</div>
+                            <select name="id_dipartimento"
+                                    style="padding:3px 7px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem;">
                                 {% for d2 in dipartimenti %}
-                                <option value="{{ d2.id }}" {% if d2.id == dip.id %}selected{% endif %}>{{ d2.sigla }}</option>
+                                <option value="{{ d2.id }}" {% if d2.id == dip.id %}selected{% endif %}>
+                                    {{ d2.sigla }} — {{ d2.nome }}
+                                </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div><label style="font-size:.72rem;">Cod. orario</label><input type="text" name="codice_orario" value="{{ m.codice_orario or '' }}" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:110px;"></div>
-                        <div><label style="font-size:.72rem;">Nome breve</label><input type="text" name="nome_breve" value="{{ m.nome_breve or '' }}" placeholder="es. Storia" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:130px;"></div>
-                        <div><label style="font-size:.72rem;">Alias</label><input type="text" name="alias" value="{{ m.alias or '' }}" placeholder="es. STO" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:70px; text-transform:uppercase;"></div>
                         <div>
-                            <label style="font-size:.72rem;">Indirizzi</label><br>
-                            {% for ind in ['LLI','LSC','LSP','LSU','AFM','RIM','CAT'] %}
-                            <label style="font-size:.72rem; margin-right:4px;">
-                                <input type="checkbox" name="indirizzi" value="{{ ind }}"
-                                    {% if ind in m.indirizzi %}checked{% endif %}>{{ ind }}
-                            </label>
-                            {% endfor %}
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Indirizzi</div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                {% for ind in ['LLI','LSC','LSP','LSU','AFM','RIM','CAT'] %}
+                                <label style="font-size:.72rem; display:flex; align-items:center; gap:2px;
+                                               cursor:pointer; padding:2px 6px; border-radius:4px;
+                                               border:1px solid {{ '#0369a1' if ind in m.indirizzi else '#e5e7eb' }};
+                                               background:{{ '#e0f2fe' if ind in m.indirizzi else 'white' }};
+                                               color:{{ '#0369a1' if ind in m.indirizzi else 'var(--grigio)' }};">
+                                    <input type="checkbox" name="indirizzi" value="{{ ind }}"
+                                           {% if ind in m.indirizzi %}checked{% endif %}
+                                           style="width:11px; height:11px;">
+                                    {{ ind }}
+                                </label>
+                                {% endfor %}
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">Salva</button>
+                        <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">
+                            ✓ Salva
+                        </button>
+                        <button type="button" onclick="toggleEdit('mat-{{ m.id }}')"
+                                class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.75rem;">
+                            Annulla
+                        </button>
                     </div>
                 </form>
             </td>
@@ -86,38 +169,88 @@
         </tbody>
     </table>
 
-    <!-- Aggiungi nuova materia -->
+    {# ── Aggiungi nuova materia ─────────────────────────────────── #}
     <details style="margin-top:10px;">
-        <summary style="font-size:.8rem; cursor:pointer; color:var(--blu);">+ Aggiungi materia a {{ dip.sigla }}</summary>
-        <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}" style="margin-top:8px; background:#f0f4f8; padding:10px; border-radius:8px;">
-            <input type="hidden" name="id_dipartimento" value="{{ dip.id }}">
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-                <div><label style="font-size:.72rem;">Nome *</label><input type="text" name="nome" required style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:180px;"></div>
-                <div><label style="font-size:.72rem;">Sigla *</label><input type="text" name="sigla" required style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:90px;"></div>
-                <div><label style="font-size:.72rem;">Cod. orario</label><input type="text" name="codice_orario" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:110px;"></div>
-                <div><label style="font-size:.72rem;">Nome breve</label><input type="text" name="nome_breve" placeholder="es. Storia" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:130px;"></div>
-                <div><label style="font-size:.72rem;">Alias</label><input type="text" name="alias" placeholder="es. STO" style="padding:3px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; width:70px; text-transform:uppercase;"></div>
-                <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">Aggiungi</button>
-            </div>
-        </form>
+        <summary style="font-size:.8rem; cursor:pointer; color:var(--blu); font-weight:600;
+                         padding:4px 0; user-select:none;">
+            ＋ Aggiungi materia a {{ dip.nome }}
+        </summary>
+        <div style="margin-top:8px; background:#f0f4f8; padding:12px 14px;
+                    border-radius:8px; border:1px solid #e0e7ef;">
+            <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}">
+                <input type="hidden" name="id_dipartimento" value="{{ dip.id }}">
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                    <div>
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome ministeriale *</div>
+                        <input type="text" name="nome" required
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                      font-size:.82rem; width:200px;">
+                    </div>
+                    <div>
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Sigla *</div>
+                        <input type="text" name="sigla" required
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                      font-size:.82rem; width:90px;">
+                    </div>
+                    <div>
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome breve</div>
+                        <input type="text" name="nome_breve" placeholder="es. Storia"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                      font-size:.82rem; width:130px;">
+                    </div>
+                    <div>
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Alias</div>
+                        <input type="text" name="alias" placeholder="es. STO"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                      font-size:.82rem; width:70px; text-transform:uppercase;">
+                    </div>
+                    <div>
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Cod. orario</div>
+                        <input type="text" name="codice_orario"
+                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                      font-size:.82rem; width:100px;">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+                </div>
+            </form>
+        </div>
     </details>
 </div>
 {% endfor %}
 
-<!-- Nuovo dipartimento -->
-<div class="card" style="padding:16px 20px;">
-    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Nuovo dipartimento</h3>
-    <form method="post" action="{{ url_for('attivita_ist.salva_dipartimento') }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-        <div><label style="font-size:.75rem;">Nome *</label><input type="text" name="nome" required style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:200px;"></div>
-        <div><label style="font-size:.75rem;">Sigla *</label><input type="text" name="sigla" required style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:80px;"></div>
-        <div><label style="font-size:.75rem;">Ordine</label><input type="number" name="ordine" value="{{ dipartimenti|length + 1 }}" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:60px;"></div>
-        <button type="submit" class="btn btn-success btn-sm">Crea</button>
+{# ── Nuovo dipartimento ─────────────────────────────────────────── #}
+<div class="card" style="padding:14px 18px;">
+    <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
+        ➕ Nuovo dipartimento
+    </div>
+    <form method="post" action="{{ url_for('attivita_ist.salva_dipartimento') }}"
+          style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Nome *</div>
+            <input type="text" name="nome" required
+                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                          font-size:.82rem; width:200px;">
+        </div>
+        <div>
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Sigla *</div>
+            <input type="text" name="sigla" required
+                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                          font-size:.82rem; width:80px;">
+        </div>
+        <div>
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Ordine</div>
+            <input type="number" name="ordine" value="{{ dipartimenti|length + 1 }}"
+                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                          font-size:.82rem; width:60px;">
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">✓ Crea</button>
     </form>
 </div>
 
 <script>
 function toggleEdit(id) {
     const el = document.getElementById(id);
+    if (!el) return;
     el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 </script>
