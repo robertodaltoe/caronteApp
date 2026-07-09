@@ -43,6 +43,7 @@ def nuovo():
             ruolo          = request.form.get('ruolo', 'titolare').strip(),
             part_time      = (request.form.get('tipo_servizio') == 'part_time'),
             ore_contratto_pt= int(request.form.get('ore_contratto_pt') or 0) or None,
+            ore_max_anno   = int(request.form.get('ore_max_anno') or 0) or None,
             altra_scuola   = (request.form.get('altra_scuola','').strip() or None) if request.form.get('tipo_servizio') == 'multi_sede' else None,
             giorni_presenza= (','.join(request.form.getlist('giorni_presenza')) or None) if request.form.get('tipo_servizio') == 'multi_sede' else None,
             attivo         = True
@@ -66,6 +67,7 @@ def modifica(id):
         d.cognome        = request.form['cognome'].strip().upper()
         d.nome           = request.form['nome'].strip().title()
         d.ore_contratto  = int(request.form.get('ore_contratto', 18) or 0)
+        d.ore_max_anno   = int(request.form.get('ore_max_anno') or 0) or None
         d.email          = request.form.get('email', '').strip()
         d.tipo_contratto = request.form.get('tipo_contratto', '').strip()
         d.ruolo          = request.form.get('ruolo', 'titolare').strip()
