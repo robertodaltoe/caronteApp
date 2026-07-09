@@ -120,9 +120,18 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </td>
                     <td></td>
                     {% for classe in classi %}
+                    {% set mats = blk.piano_materie[classe] %}
                     <td style="font-size:.72rem; color:var(--grigio); font-weight:600;
-                               border:1px solid #e2e8f0; text-align:center;">
+                               border:1px solid #e2e8f0; text-align:center;
+                               cursor:{{ 'pointer' if blk.multi_materia[classe] else 'default' }};"
+                        {% if blk.multi_materia[classe] %}
+                        title="{{ mats | map(attribute='nome') | join(' / ') }}"
+                        onclick="toggleMaterie('mat-{{ cc.id }}-{{ loop.index }}')"
+                        {% endif %}>
                         {{ blk.piano[classe] }}h
+                        {% if blk.multi_materia[classe] %}
+                        <span style="font-size:.6rem; color:#6366f1;">▾</span>
+                        {% endif %}
                     </td>
                     {% endfor %}
                     <td style="border:1px solid #e2e8f0; text-align:center; font-size:.72rem; color:var(--grigio);">
@@ -131,6 +140,35 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <td colspan="2"></td>
                 </tr>
             </thead>
+            {# Sub-righe materie — nascoste, appaiono col toggle ▾ sulla riga piano studi #}
+            {% for classe in classi %}
+            {% if blk.multi_materia[classe] %}
+            <tbody id="mat-{{ cc.id }}-{{ loop.index }}" style="display:none;">
+                <tr style="background:#f0f9ff;">
+                    <td class="td-doc" colspan="2"
+                        style="font-size:.68rem; color:#0369a1; font-style:italic; padding:4px 10px;">
+                        Dettaglio materie — {{ classe }}
+                    </td>
+                    {% for c2 in classi %}
+                    {% if c2 == classe %}
+                    <td style="border:1px solid #e2e8f0; padding:2px 4px;">
+                        {% for mat in blk.piano_materie[classe] %}
+                        <div style="font-size:.68rem; white-space:nowrap;
+                                    display:flex; justify-content:space-between; gap:6px;">
+                            <span style="color:#374151;">{{ mat.nome }}</span>
+                            <span style="font-weight:700; color:#0369a1;">{{ mat.ore }}h</span>
+                        </div>
+                        {% endfor %}
+                    </td>
+                    {% else %}
+                    <td style="border:1px solid #e2e8f0; background:#f8fafc;"></td>
+                    {% endif %}
+                    {% endfor %}
+                    <td colspan="3" style="border:1px solid #e2e8f0; background:#f8fafc;"></td>
+                </tr>
+            </tbody>
+            {% endif %}
+            {% endfor %}
             <tbody>
             {% for a in blk.assegnazioni %}
             {% set tot = blk.tot_doc[a.id] %}
@@ -160,8 +198,16 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 </td>
                 {% for classe in classi %}
                 {% set ore = blk.ore_doc_classe[a.id].get(classe, 0) %}
-                <td class="{{ 'ore-val' if ore else 'ore-zero' }}">
+                <td class="{{ 'ore-val' if ore else 'ore-zero' }}"
+                    style="{{ 'cursor:pointer;' if blk.multi_materia[classe] and ore else '' }}"
+                    {% if blk.multi_materia[classe] and ore %}
+                    title="Clicca per vedere dettaglio materie — {{ classe }}"
+                    onclick="toggleMaterie('mat-{{ cc.id }}-{{ loop.index }}')"
+                    {% endif %}>
                     {{ ore if ore else '—' }}
+                    {% if blk.multi_materia[classe] and ore %}
+                    <span style="font-size:.6rem; color:#6366f1;">▾</span>
+                    {% endif %}
                 </td>
                 {% endfor %}
                 <td style="background:#e8edf5; text-align:center; font-weight:800;
@@ -335,6 +381,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 {% endfor %}
 
 <script>
+function toggleMaterie(id) {
+    const tbody = document.getElementById(id);
+    if (!tbody) return;
+    tbody.style.display = tbody.style.display === 'none' ? 'table-row-group' : 'none';
+}
+
 function quickAssign(ccId, docId) {
     // Apre il form di aggiunta e pre-seleziona il docente
     const formDiv = document.getElementById('form-' + ccId);

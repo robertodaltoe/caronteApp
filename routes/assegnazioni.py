@@ -118,8 +118,31 @@ def _build_area(anno_scol, area):
         if not classi:
             continue  # CC senza classi attive, salta
 
-        piano = {c: _ore_piano_per_classe(anno_scol, cc.id, c)
-                 for c in classi}
+        # piano: {label_classe: ore_totali}
+        # piano_materie: {label_classe: [{nome, ore, id_materia}]}
+        # multi_materia: {label_classe: bool}  — True se >1 materia
+        import re as _re
+        piano = {}
+        piano_materie = {}
+        for c in classi:
+            m = _re.match(r'(\d+)([AB]?)\s+(.+)', c)
+            if not m:
+                piano[c] = 0
+                piano_materie[c] = []
+                continue
+            ac = int(m.group(1))
+            ind = m.group(3).strip()
+            righe_p = PianoStudi.query.filter_by(
+                anno_scol=anno_scol, id_classe_concorso=cc.id,
+                anno_corso=ac, indirizzo=ind, compresenza=False).all()
+            piano[c] = sum(r.ore_settimanali for r in righe_p)
+            piano_materie[c] = [
+                {'nome': r.nome_materia_locale,
+                 'ore':  r.ore_settimanali,
+                 'id':   r.id}
+                for r in righe_p
+            ]
+        multi_materia = {c: len(piano_materie[c]) > 1 for c in classi}
         budget = _budget(anno_scol, cc.id)
         assegnazioni = AssegnazioneDocente.query.filter_by(
             anno_scol=anno_scol, id_classe_concorso=cc.id).all()
@@ -156,6 +179,8 @@ def _build_area(anno_scol, area):
             'cc':                 cc,
             'classi':             classi,
             'piano':              piano,
+            'piano_materie':      piano_materie,
+            'multi_materia':      multi_materia,
             'budget':             budget,
             'assegnazioni':       assegnazioni,
             'ore_doc_classe':     ore_doc_classe,
