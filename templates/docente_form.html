@@ -51,7 +51,7 @@
 {% endif %}
 
 <form method="post">
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1100px;">
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1280px;">
 
 {# ══ COLONNA SINISTRA ════════════════════════════════════════════════ #}
 <div style="display:flex; flex-direction:column; gap:14px;">
@@ -107,13 +107,13 @@
                 <input type="number" name="ore_contratto" min="0" max="24"
                        value="{{ docente.ore_contratto if docente else 18 }}">
             </div>
-            <div class="form-group" style="flex:1; margin-bottom:0;">
+            <div class="form-group" style="flex:1.5; margin-bottom:0;">
                 <label title="Sovrascrive le ore contratto per l'anno scolastico indicato">
                     Ore max <span style="font-size:.67rem; color:var(--grigio);">(override)</span>
                 </label>
                 <div style="display:flex; gap:5px; align-items:center;">
                     <input type="number" name="ore_max_anno" min="1" max="36"
-                           placeholder="—" style="width:64px;"
+                           placeholder="—" style="width:58px; flex-shrink:0;"
                            value="{{ docente.ore_max_anno or '' if docente else '' }}">
                     <select name="anno_scol_ore_max"
                             style="flex:1; padding:5px 6px; border:1px solid #d1d5db;
@@ -430,7 +430,7 @@
 </div>{# fine grid #}
 
 {# ── Azioni ────────────────────────────────────────────────────────── #}
-<div style="display:flex; gap:10px; margin-top:16px; max-width:1100px;">
+<div style="display:flex; gap:10px; margin-top:16px; max-width:1280px;">
     <button class="btn btn-success" type="submit">
         {{ 'Salva modifiche' if docente else 'Aggiungi docente' }}
     </button>
