@@ -122,21 +122,18 @@
                 La prima materia selezionata aggiorna il campo "materia" del profilo.
             </div>
 
-        <div style="display:flex; gap:16px;">
+        <div style="display:flex; gap:16px; align-items:flex-end;">
             <div class="form-group" style="flex:1;">
-                <label>Ore settimanali contratto</label>
+                <label>Ore contratto</label>
                 <input type="number" name="ore_contratto" min="0" max="24"
                        value="{{ docente.ore_contratto if docente else 18 }}">
             </div>
             <div class="form-group" style="flex:1;">
-                <label title="Sovrascrive ore contratto per l'anno in corso (es. 19h per eccedenza)">
+                <label title="Override per quest'anno (es. 19h per eccedenza) — lascia vuoto per usare le ore contratto">
                     Ore max anno
-                    <span style="font-size:.72rem; color:var(--grigio); font-weight:400;">
-                        (eccedenza/override)
-                    </span>
                 </label>
                 <input type="number" name="ore_max_anno" min="1" max="36"
-                       placeholder="default: ore contratto"
+                       placeholder="es. 19"
                        value="{{ docente.ore_max_anno or '' if docente else '' }}">
             </div>
             <div class="form-group" style="flex:2;">
