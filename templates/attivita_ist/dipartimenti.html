@@ -86,16 +86,7 @@
                 <button onclick="toggleEdit('mat-{{ m.id }}')"
                         class="btn btn-sm btn-primary"
                         style="font-size:.68rem; padding:2px 7px;">✏</button>
-                <form method="post"
-                      action="{{ url_for('attivita_ist.rimuovi_materia_dipartimento') }}"
-                      style="display:inline;"
-                      onsubmit="return confirm('Rimuovere {{ m.sigla }} da questo dipartimento?')">
-                    <input type="hidden" name="id_materia" value="{{ m.id }}">
-                    <button type="submit"
-                            style="background:none; border:none; cursor:pointer;
-                                   color:#dc2626; font-size:.8rem; padding:2px 4px;"
-                            title="Rimuovi dal dipartimento">✕</button>
-                </form>
+
             </td>
         </tr>
         {# Form modifica materia inline #}

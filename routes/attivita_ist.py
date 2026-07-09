@@ -381,18 +381,7 @@ def assegna_materia_dipartimento():
     return redirect(url_for('attivita_ist.dipartimenti'))
 
 
-@attivita_ist_bp.route('/attivita-ist/dipartimenti/rimuovi-materia', methods=['POST'])
-def rimuovi_materia_dipartimento():
-    """Rimuove una materia dal dipartimento (id_dipartimento → NULL)."""
-    id_materia = request.form.get('id_materia', type=int)
-    if id_materia:
-        m = Materia.query.get(id_materia)
-        if m:
-            nome = m.nome_breve or m.nome
-            m.id_dipartimento = None
-            db.session.commit()
-            flash(f'Materia "{nome}" rimossa dal dipartimento.', 'warning')
-    return redirect(url_for('attivita_ist.dipartimenti'))
+
 
 
 @attivita_ist_bp.route('/attivita-ist/dipartimenti/salva', methods=['POST'])
