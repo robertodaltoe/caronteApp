@@ -147,5 +147,16 @@
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→</div>
     </a>
+    <a href="{{ url_for('assegnazioni.index', anno=anno_piano) }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #6366f1;">
+        <div style="font-size:1.6rem;">📋</div>
+        <div>
+            <div style="font-weight:700; color:#6366f1;">10. Assegnazioni classi → docenti</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Assegnazione nominativa con controllo ore max, budget USR e placeholder supplenti
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→</div>
+    </a>
 </div>
 {% endblock %}
