@@ -368,9 +368,25 @@ def dipartimenti():
         materie_da_assegnare = []
     # Filtra i dipartimenti reali (escludi "Non assegnato" dall'elenco principale)
     dips_reali = [d for d in dips if d.sigla != '—']
+
+    # Referenti di dipartimento per l'anno corrente
+    from config_anno import get_anno_corrente
+    from models.incarico import IncaricaDocente, TipoIncarico
+    anno_c = get_anno_corrente()
+    tipo_ref = TipoIncarico.query.filter_by(nome='Referente di dipartimento').first()
+    referenti = {}  # {id_dipartimento: Docente}
+    if tipo_ref:
+        nomine = IncaricaDocente.query.filter_by(
+            anno_scol=anno_c, id_tipo_incarico=tipo_ref.id).all()
+        for n in nomine:
+            if n.id_dipartimento:
+                referenti[n.id_dipartimento] = n.docente
+
     return render_template('attivita_ist/dipartimenti.html',
                            dipartimenti=dips_reali,
                            tutte_materie=materie_da_assegnare,
+                           referenti=referenti,
+                           anno_c=anno_c,
                            tipi=TIPI_ATTIVITA)
 
 
