@@ -1,7 +1,7 @@
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, jsonify)
 from models import db
-from models.incarico import TipoIncarico, IncaricaDocente
+from models.incarico import TipoIncarico, IncaricaDocente, CategoriaIncarico
 from models.docente import Docente
 from models.materia import Dipartimento
 from models.piano_studi import ClasseSezione
@@ -9,18 +9,12 @@ from config_anno import get_anno_corrente
 
 incarichi_bp = Blueprint('incarichi', __name__)
 
-CAT_LABEL = {
-    'strutturale':          'Incarichi strutturali',
-    'funzione_strumentale': 'Funzioni strumentali',
-    'fis':                  'FIS — Fondo istituto',
-    'mof':                  'MOF',
-}
-CAT_COLOR = {
-    'strutturale':          '#1e40af',
-    'funzione_strumentale': '#0369a1',
-    'fis':                  '#15803d',
-    'mof':                  '#7c3aed',
-}
+def _cat_map():
+    """Restituisce (cat_label, cat_color) da DB + codice stringa come fallback."""
+    cats = CategoriaIncarico.query.order_by(CategoriaIncarico.ordine).all()
+    labels = {c.codice: c.nome   for c in cats}
+    colors = {c.codice: c.colore for c in cats}
+    return labels, colors, cats
 
 
 def _anni():
@@ -65,12 +59,14 @@ def index():
     dipartimenti = Dipartimento.query.filter(
         Dipartimento.sigla != '—').order_by(Dipartimento.ordine).all()
 
+    cat_label, cat_color, categorie = _cat_map()
     return render_template('incarichi/index.html',
         anno=anno, anni_disponibili=anni,
         per_cat=per_cat, tipi=tipi,
         docenti=docenti, classi=classi,
         dipartimenti=dipartimenti,
-        cat_label=CAT_LABEL, cat_color=CAT_COLOR)
+        cat_label=cat_label, cat_color=cat_color,
+        categorie=categorie)
 
 
 @incarichi_bp.route('/incarichi/salva', methods=['POST'])
@@ -137,8 +133,10 @@ def tipi():
     """Gestione tipi incarico (CRUD)."""
     tipi_list = TipoIncarico.query.order_by(
         TipoIncarico.ordine, TipoIncarico.nome).all()
+    cat_label, cat_color, categorie = _cat_map()
     return render_template('incarichi/tipi.html',
-        tipi=tipi_list, cat_label=CAT_LABEL, cat_color=CAT_COLOR)
+        tipi=tipi_list, cat_label=cat_label, cat_color=cat_color,
+        categorie=categorie)
 
 
 @incarichi_bp.route('/incarichi/tipi/salva', methods=['POST'])
@@ -166,4 +164,30 @@ def salva_tipo():
             attivo=True, ordine=ordine))
     db.session.commit()
     flash('Tipo incarico salvato.', 'success')
+    return redirect(url_for('incarichi.tipi'))
+
+
+@incarichi_bp.route('/incarichi/categorie/salva', methods=['POST'])
+def salva_categoria():
+    id_c   = request.form.get('id', type=int)
+    codice = request.form.get('codice', '').strip().lower().replace(' ', '_')
+    nome   = request.form.get('nome', '').strip()
+    colore = request.form.get('colore', '#1e40af').strip()
+    ordine = request.form.get('ordine', type=int) or 0
+
+    if not codice or not nome:
+        flash('Codice e nome sono obbligatori.', 'danger')
+        return redirect(url_for('incarichi.tipi'))
+
+    if id_c:
+        c = db.session.get(CategoriaIncarico, id_c)
+        c.nome=nome; c.colore=colore; c.ordine=ordine
+    else:
+        if CategoriaIncarico.query.filter_by(codice=codice).first():
+            flash(f'Categoria "{codice}" già esistente.', 'warning')
+            return redirect(url_for('incarichi.tipi'))
+        c = CategoriaIncarico(codice=codice, nome=nome, colore=colore, ordine=ordine)
+        db.session.add(c)
+    db.session.commit()
+    flash(f'Categoria "{nome}" salvata.', 'success')
     return redirect(url_for('incarichi.tipi'))
