@@ -108,13 +108,27 @@
                        value="{{ docente.ore_contratto if docente else 18 }}">
             </div>
             <div class="form-group" style="flex:1; margin-bottom:0;">
-                <label title="Sovrascrive le ore contratto per l'a.s. in corso">
-                    Ore max anno
+                <label title="Sovrascrive le ore contratto per l'anno scolastico indicato">
+                    Ore max
                     <span style="font-size:.67rem; color:var(--grigio);">(override)</span>
                 </label>
-                <input type="number" name="ore_max_anno" min="1" max="36"
-                       placeholder="default"
-                       value="{{ docente.ore_max_anno or '' if docente else '' }}">
+                <div style="display:flex; gap:4px; align-items:center;">
+                    <input type="number" name="ore_max_anno" min="1" max="36"
+                           placeholder="18" style="width:52px;"
+                           value="{{ docente.ore_max_anno or '' if docente else '' }}">
+                    <span style="font-size:.7rem; color:var(--grigio);">h per</span>
+                </div>
+                <select name="anno_scol_ore_max"
+                        style="margin-top:4px; width:100%; padding:4px 6px;
+                               border:1px solid #d1d5db; border-radius:5px; font-size:.76rem;">
+                    <option value="">— anno —</option>
+                    {% for a in anni_disponibili_ore_max %}
+                    <option value="{{ a }}"
+                            {% if docente and docente.anno_scol_ore_max == a %}selected{% endif %}>
+                        {{ a }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
 

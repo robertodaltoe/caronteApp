@@ -57,11 +57,14 @@ def nuovo():
         return redirect(url_for('docenti.modifica', id=d.id))
     titolari_disponibili = Docente.query.filter(
         Docente.attivo == True, Docente.ruolo == 'titolare').order_by(Docente.cognome).all()
+    anni_ore_max_n = ['2025-2026', '2026-2027', '2027-2028']
     return render_template('docente_form.html', docente=None, giorni=list(enumerate(GIORNI)), eccezioni=[],
+                           anni_disponibili_ore_max=anni_ore_max_n,
         titolari_disponibili=titolari_disponibili)
 
 @docenti_bp.route('/docenti/<int:id>/modifica', methods=['GET', 'POST'])
 def modifica(id):
+    from config_anno import get_anno_corrente
     d = Docente.query.get_or_404(id)
     if request.method == 'POST':
         d.cognome        = request.form['cognome'].strip().upper()
@@ -157,7 +160,21 @@ def modifica(id):
     idx   = tutti.index(id) if id in tutti else -1
     id_prev = tutti[idx - 1] if idx > 0            else None
     id_next = tutti[idx + 1] if idx < len(tutti)-1 else None
-    materie = Materia.query.join(Dipartimento).order_by(Dipartimento.ordine, Materia.nome).all()
+    # Mostra solo le materie insegnabili dal docente (filtrate per le sue CC)
+    # Se non ha CC collegate, lista vuota con messaggio.
+    from models.classe_concorso import MateriaClasseConcorso, DocenteClasseConcorso
+    cc_ids = [r.id_classe_concorso for r in
+              DocenteClasseConcorso.query.filter_by(id_docente=id).all()]
+    if cc_ids:
+        materie_ids_per_cc = {r.id_materia for r in
+                              MateriaClasseConcorso.query.filter(
+                                  MateriaClasseConcorso.id_classe_concorso.in_(cc_ids)).all()}
+        materie = (Materia.query
+                   .join(Dipartimento)
+                   .filter(Materia.id.in_(materie_ids_per_cc))
+                   .order_by(Dipartimento.ordine, Materia.nome).all())
+    else:
+        materie = []
     mat_assegnate = {dm.id_materia for dm in DocenteMateria.query.filter_by(
         id_docente=id, anno_scol=get_anno_corrente()).all()}
     titolari_disponibili = (Docente.query
@@ -168,12 +185,21 @@ def modifica(id):
     abbinamenti_itp = (CoppiaDocenteItp.query
         .filter_by(id_itp=d.id, attiva=True).all())
 
+    # Anni disponibili per il campo ore_max_anno
+    from models.piano_studi import PianoStudi as PS2, ClasseSezione as CS2
+    anni_ore_max = sorted(
+        {r.anno_scol for r in PS2.query.with_entities(PS2.anno_scol).distinct()} |
+        {r.anno_scol for r in CS2.query.with_entities(CS2.anno_scol).distinct()} |
+        {get_anno_corrente()},
+        reverse=True)
+
     return render_template('docente_form.html', docente=d,
                            materie=materie, mat_assegnate=mat_assegnate,
         giorni=list(enumerate(GIORNI)), eccezioni=eccezioni,
         id_prev=id_prev, id_next=id_next,
         titolari_disponibili=titolari_disponibili,
-        abbinamenti_itp=abbinamenti_itp)
+        abbinamenti_itp=abbinamenti_itp,
+        anni_disponibili_ore_max=anni_ore_max)
 
 @docenti_bp.route('/docenti/<int:id>/anonimizza', methods=['POST'])
 def anonimizza(id):

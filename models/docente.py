@@ -54,18 +54,29 @@ class Docente(db.Model):
     anno_scol_inizio  = db.Column(db.String(9), nullable=True)   # es. '2025-2026'; NULL = TI storico
     anno_scol_uscita  = db.Column(db.String(9), nullable=True)   # NULL = ancora in servizio
     motivo_uscita     = db.Column(db.String(20), nullable=True)  # 'trasferimento'|'pensionamento'|'fine_td'
-    # Ore max assegnabili per l'anno in corso (sovrascrive ore_contratto/ore_contratto_pt)
+    # Ore max assegnabili per un anno specifico (sovrascrive ore_contratto/ore_contratto_pt)
     # NULL = usa ore_contratto_pt se presente, altrimenti ore_contratto
     ore_max_anno      = db.Column(db.Integer, nullable=True)
+    # Anno scolastico a cui si riferisce ore_max_anno (es. '2026-2027')
+    anno_scol_ore_max = db.Column(db.String(9), nullable=True)
 
-    @property
-    def ore_max_effettive(self):
-        """Ore massime assegnabili: ore_max_anno > ore_contratto_pt > ore_contratto."""
-        if self.ore_max_anno is not None:
+    def ore_max_effettive_per_anno(self, anno_scol=None):
+        """
+        Ore massime assegnabili per un dato anno scolastico.
+        Se ore_max_anno è impostato e si riferisce all'anno richiesto, lo usa.
+        Altrimenti usa ore_contratto_pt > ore_contratto.
+        """
+        if (self.ore_max_anno is not None and
+                (anno_scol is None or self.anno_scol_ore_max == anno_scol)):
             return self.ore_max_anno
         if self.ore_contratto_pt is not None:
             return self.ore_contratto_pt
         return self.ore_contratto or 18
+
+    @property
+    def ore_max_effettive(self):
+        """Compatibilità: usa ore_max_effettive_per_anno senza filtro anno."""
+        return self.ore_max_effettive_per_anno()
     # Presenza fisica nell'anno scolastico corrente
     # 'presente'    = insegna fisicamente qui (default)
     # 'ap_entrante' = assegnazione provvisoria in entrata (titolare altrove, insegna qui)
