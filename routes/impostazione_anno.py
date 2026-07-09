@@ -847,6 +847,18 @@ def piano_studi_aggiungi():
                 if esiste_mat:
                     n_esistenti += 1
                     continue
+            # Sincronizza MateriaClasseConcorso: se la combinazione materia+CC
+            # non esiste ancora, la aggiunge automaticamente come 'normativa'
+            if id_mat:
+                from models.classe_concorso import MateriaClasseConcorso
+                mcc_esiste = MateriaClasseConcorso.query.filter_by(
+                    id_materia=id_mat, id_classe_concorso=id_cc).first()
+                if not mcc_esiste:
+                    db.session.add(MateriaClasseConcorso(
+                        id_materia=id_mat, id_classe_concorso=id_cc,
+                        fonte='normativa',
+                        riferimento='Aggiunta da piano studi'))
+
             # compresenza automatica: True se la CC è di tipo B (ITP)
             is_compresenza = cc.codice.startswith('B-') if cc else False
             db.session.add(PianoStudi(

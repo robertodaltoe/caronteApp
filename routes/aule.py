@@ -9,7 +9,22 @@ aule_bp = Blueprint('aule', __name__)
 
 
 def _classi_da_orario():
-    """Restituisce lista ordinata di classi presenti nell'orario."""
+    """
+    Restituisce lista ordinata di classi attive per l'anno corrente.
+    Usa ClasseSezione (dati di pianificazione) se disponibile,
+    con fallback all'orario importato.
+    """
+    from config_anno import get_anno_corrente
+    from models.piano_studi import ClasseSezione
+    anno = get_anno_corrente()
+    sezioni = ClasseSezione.query.filter_by(anno_scol=anno, attiva=True).all()
+    if sezioni:
+        # Costruisce la stringa classe nel formato usato dall'orario (es. "1A LSU")
+        classi = []
+        for s in sezioni:
+            classi.append(f'{s.anno_corso}{s.sezione} {s.indirizzo}')
+        return sorted(classi)
+    # Fallback: legge dall'orario importato
     classi_raw = db.session.query(OrarioDocente.classe).distinct().all()
     return sorted(set(
         c[0] for c in classi_raw
