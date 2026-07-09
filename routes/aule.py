@@ -4,27 +4,25 @@ from models.aula import Aula, SEDI, AULE_LIST
 from models.aula_override import AulaOverride
 from models.supplenza import Supplenza
 from models.orario_docente import OrarioDocente
+from models.piano_studi import ClasseSezione
+from config_anno import get_anno_corrente
 
 aule_bp = Blueprint('aule', __name__)
 
 
-def _classi_da_orario():
+def _classi_per_anno(anno_scol):
     """
-    Restituisce lista ordinata di classi attive per l'anno corrente.
-    Usa ClasseSezione (dati di pianificazione) se disponibile,
-    con fallback all'orario importato.
+    Restituisce lista ordinata di etichette classe (es. "1A AFM")
+    per l'anno scolastico dato, basandosi sulle ClasseSezione attive.
+    Fallback sull'orario importato se non ci sono sezioni configurate.
     """
-    from config_anno import get_anno_corrente
-    from models.piano_studi import ClasseSezione
-    anno = get_anno_corrente()
-    sezioni = ClasseSezione.query.filter_by(anno_scol=anno, attiva=True).all()
+    sezioni = ClasseSezione.query.filter_by(
+        anno_scol=anno_scol, attiva=True).order_by(
+        ClasseSezione.indirizzo, ClasseSezione.anno_corso,
+        ClasseSezione.sezione).all()
     if sezioni:
-        # Costruisce la stringa classe nel formato usato dall'orario (es. "1A LSU")
-        classi = []
-        for s in sezioni:
-            classi.append(f'{s.anno_corso}{s.sezione} {s.indirizzo}')
-        return sorted(classi)
-    # Fallback: legge dall'orario importato
+        return [f'{s.anno_corso}{s.sezione} {s.indirizzo}' for s in sezioni]
+    # Fallback: orario importato (anno corrente)
     classi_raw = db.session.query(OrarioDocente.classe).distinct().all()
     return sorted(set(
         c[0] for c in classi_raw
@@ -33,56 +31,98 @@ def _classi_da_orario():
     ))
 
 
+def _anni_disponibili():
+    """Anni con sezioni configurate, anni con aule assegnate, + anno corrente."""
+    anni = set()
+    anni.update(cs.anno_scol for cs in ClasseSezione.query.all())
+    anni.update(a.anno_scol for a in Aula.query.all())
+    anni.add(get_anno_corrente())
+    return sorted(anni, reverse=True)
+
+
 @aule_bp.route('/aule')
 def lista():
-    # Rimozione rapida via query string
+    anno = request.args.get('anno', get_anno_corrente())
+
+    # Rimozione rapida
     rimuovi = request.args.get('rimuovi')
     if rimuovi:
-        a = Aula.query.filter_by(classe=rimuovi.upper()).first()
+        a = Aula.query.filter_by(anno_scol=anno,
+                                  classe=rimuovi.upper()).first()
         if a:
             db.session.delete(a)
             db.session.commit()
-            flash(f'Aula rimossa per {rimuovi.upper()}.', 'warning')
-        from flask import redirect
-        return redirect(url_for('aule.lista'))
-    aule = Aula.query.order_by(Aula.classe).all()
-    classi_orario = _classi_da_orario()
-    # Classi senza aula assegnata
+            flash(f'Aula rimossa per {rimuovi.upper()} ({anno}).', 'warning')
+        return redirect(url_for('aule.lista', anno=anno))
+
+    aule = Aula.query.filter_by(anno_scol=anno).order_by(Aula.classe).all()
+    classi_anno = _classi_per_anno(anno)
     classi_assegnate = {a.classe for a in aule}
-    classi_mancanti  = [c for c in classi_orario if c not in classi_assegnate]
+    classi_mancanti = [c for c in classi_anno if c not in classi_assegnate]
+    anni_disponibili = _anni_disponibili()
+
     return render_template('aule/lista.html',
         aule=aule, classi_mancanti=classi_mancanti,
-        sedi=SEDI, aule_list=AULE_LIST)
+        sedi=SEDI, aule_list=AULE_LIST,
+        anno=anno, anni_disponibili=anni_disponibili)
 
 
 @aule_bp.route('/aule/salva', methods=['POST'])
 def salva():
-    """Salva o aggiorna l'aula per una classe."""
+    anno   = request.form.get('anno_scol', get_anno_corrente())
     classe = request.form.get('classe', '').strip().upper()
     aula   = request.form.get('aula', '').strip()
     sede   = request.form.get('sede', '').strip()
     if not classe or not aula or not sede:
         flash('Classe, aula e sede sono obbligatori.', 'error')
-        return redirect(url_for('aule.lista'))
+        return redirect(url_for('aule.lista', anno=anno))
 
-    a = Aula.query.filter_by(classe=classe).first()
+    a = Aula.query.filter_by(anno_scol=anno, classe=classe).first()
     if a:
         a.aula = aula
         a.sede = sede
     else:
-        db.session.add(Aula(classe=classe, aula=aula, sede=sede))
+        db.session.add(Aula(anno_scol=anno, classe=classe,
+                            aula=aula, sede=sede))
     db.session.commit()
-    flash(f'Aula {aula} ({sede}) assegnata a {classe}.', 'success')
-    return redirect(url_for('aule.lista'))
+    flash(f'Aula {aula} ({sede}) → {classe} per {anno}.', 'success')
+    return redirect(url_for('aule.lista', anno=anno))
+
+
+@aule_bp.route('/aule/copia', methods=['POST'])
+def copia_anno():
+    """Copia le assegnazioni aule da un anno all'altro."""
+    anno_da  = request.form.get('anno_da', '').strip()
+    anno_a   = request.form.get('anno_a', '').strip()
+    if not anno_da or not anno_a or anno_da == anno_a:
+        flash('Seleziona due anni diversi.', 'danger')
+        return redirect(url_for('aule.lista', anno=anno_a or get_anno_corrente()))
+
+    sorgenti = Aula.query.filter_by(anno_scol=anno_da).all()
+    n_copiate = n_saltate = 0
+    for s in sorgenti:
+        esiste = Aula.query.filter_by(anno_scol=anno_a,
+                                       classe=s.classe).first()
+        if esiste:
+            n_saltate += 1
+        else:
+            db.session.add(Aula(anno_scol=anno_a, classe=s.classe,
+                                aula=s.aula, sede=s.sede))
+            n_copiate += 1
+    db.session.commit()
+    msg = f'Copiate {n_copiate} aule da {anno_da} a {anno_a}'
+    if n_saltate:
+        msg += f' ({n_saltate} già presenti, saltate)'
+    flash(msg, 'success')
+    return redirect(url_for('aule.lista', anno=anno_a))
 
 
 @aule_bp.route('/aule/override/<int:id_supplenza>', methods=['GET', 'POST'])
 def override(id_supplenza):
     """Override temporaneo aula per una supplenza specifica."""
     s = Supplenza.query.get_or_404(id_supplenza)
-    # Aula standard della classe
-    aula_std = Aula.query.filter_by(classe=s.classe).first()
-    # Override esistente
+    anno = get_anno_corrente()
+    aula_std = Aula.query.filter_by(anno_scol=anno, classe=s.classe).first()
     ov = AulaOverride.query.filter_by(id_supplenza=id_supplenza).first()
 
     if request.method == 'POST':
@@ -108,12 +148,10 @@ def override(id_supplenza):
         else:
             db.session.add(AulaOverride(
                 id_supplenza=id_supplenza,
-                aula=aula_ov, sede=sede_ov, note=note_ov
-            ))
+                aula=aula_ov, sede=sede_ov, note=note_ov))
         db.session.commit()
-        flash(f'Aula temporanea impostata: Aula {aula_ov} — {sede_ov}', 'success')
-        next_url = request.form.get('next') or url_for('dashboard.index')
-        return redirect(next_url)
+        flash(f'Aula temporanea: Aula {aula_ov} — {sede_ov}', 'success')
+        return redirect(request.form.get('next') or url_for('dashboard.index'))
 
     return render_template('aule/override.html',
         supplenza=s, aula_std=aula_std, override=ov,
