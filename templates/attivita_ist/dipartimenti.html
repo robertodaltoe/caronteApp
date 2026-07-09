@@ -82,10 +82,20 @@
                 {% endif %}
             </td>
             <td style="padding:6px 10px; color:var(--grigio); font-size:.78rem;">{{ m.codice_orario or '—' }}</td>
-            <td style="padding:6px 4px; text-align:center;">
+            <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                 <button onclick="toggleEdit('mat-{{ m.id }}')"
                         class="btn btn-sm btn-primary"
                         style="font-size:.68rem; padding:2px 7px;">✏</button>
+                <form method="post"
+                      action="{{ url_for('attivita_ist.rimuovi_materia_dipartimento') }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Rimuovere {{ m.sigla }} da questo dipartimento?')">
+                    <input type="hidden" name="id_materia" value="{{ m.id }}">
+                    <button type="submit"
+                            style="background:none; border:none; cursor:pointer;
+                                   color:#dc2626; font-size:.8rem; padding:2px 4px;"
+                            title="Rimuovi dal dipartimento">✕</button>
+                </form>
             </td>
         </tr>
         {# Form modifica materia inline #}
@@ -169,50 +179,88 @@
         </tbody>
     </table>
 
-    {# ── Aggiungi nuova materia ─────────────────────────────────── #}
+    {# ── Aggiungi materia esistente al dipartimento ──────────────── #}
+    {% set materie_altre = tutte_materie | rejectattr('id_dipartimento', 'equalto', dip.id) | list %}
     <details style="margin-top:10px;">
         <summary style="font-size:.8rem; cursor:pointer; color:var(--blu); font-weight:600;
                          padding:4px 0; user-select:none;">
             ＋ Aggiungi materia a {{ dip.nome }}
+            {% if materie_altre %}
+            <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
+                ({{ materie_altre | length }} disponibili)
+            </span>
+            {% endif %}
         </summary>
         <div style="margin-top:8px; background:#f0f4f8; padding:12px 14px;
                     border-radius:8px; border:1px solid #e0e7ef;">
-            <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}">
+
+            {# Assegna materia esistente #}
+            <div style="font-size:.78rem; font-weight:600; color:var(--blu); margin-bottom:8px;">
+                Seleziona materia già presente nel piano studi
+            </div>
+            <form method="post"
+                  action="{{ url_for('attivita_ist.assegna_materia_dipartimento') }}"
+                  style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px;">
                 <input type="hidden" name="id_dipartimento" value="{{ dip.id }}">
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-                    <div>
-                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome ministeriale *</div>
-                        <input type="text" name="nome" required
-                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
-                                      font-size:.82rem; width:200px;">
-                    </div>
-                    <div>
-                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Sigla *</div>
-                        <input type="text" name="sigla" required
-                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
-                                      font-size:.82rem; width:90px;">
-                    </div>
-                    <div>
-                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome breve</div>
-                        <input type="text" name="nome_breve" placeholder="es. Storia"
-                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
-                                      font-size:.82rem; width:130px;">
-                    </div>
-                    <div>
-                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Alias</div>
-                        <input type="text" name="alias" placeholder="es. STO"
-                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
-                                      font-size:.82rem; width:70px; text-transform:uppercase;">
-                    </div>
-                    <div>
-                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Cod. orario</div>
-                        <input type="text" name="codice_orario"
-                               style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
-                                      font-size:.82rem; width:100px;">
-                    </div>
-                    <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+                <div style="flex:1; min-width:280px;">
+                    <select name="id_materia" required
+                            style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                                   border-radius:5px; font-size:.82rem;">
+                        <option value="">— seleziona materia —</option>
+                        {% for m in tutte_materie | sort(attribute='sigla') %}
+                        {% if m.id_dipartimento != dip.id %}
+                        <option value="{{ m.id }}">
+                            {{ m.sigla }} — {{ m.nome_breve or m.nome }}
+                            {% if m.id_dipartimento %}
+                            (attualmente: {{ m.dipartimento.sigla if m.dipartimento else '?' }})
+                            {% else %}
+                            (nessun dipartimento)
+                            {% endif %}
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
                 </div>
+                <button type="submit" class="btn btn-success btn-sm">✓ Assegna</button>
             </form>
+
+            {# Crea nuova materia (per casi non ancora presenti) #}
+            <details>
+                <summary style="font-size:.76rem; cursor:pointer; color:var(--grigio); user-select:none;">
+                    + Crea nuova materia (se non è ancora nel piano studi)
+                </summary>
+                <form method="post" action="{{ url_for('attivita_ist.salva_materia') }}"
+                      style="margin-top:8px;">
+                    <input type="hidden" name="id_dipartimento" value="{{ dip.id }}">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome *</div>
+                            <input type="text" name="nome" required
+                                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                          font-size:.82rem; width:200px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Sigla *</div>
+                            <input type="text" name="sigla" required
+                                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                          font-size:.82rem; width:90px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome breve</div>
+                            <input type="text" name="nome_breve" placeholder="es. Storia"
+                                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                          font-size:.82rem; width:130px;">
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Alias</div>
+                            <input type="text" name="alias" placeholder="es. STO"
+                                   style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
+                                          font-size:.82rem; width:70px; text-transform:uppercase;">
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm">➕ Crea</button>
+                    </div>
+                </form>
+            </details>
         </div>
     </details>
 </div>

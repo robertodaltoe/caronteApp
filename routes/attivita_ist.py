@@ -358,8 +358,41 @@ def _import_piano_2025_26():
 @attivita_ist_bp.route('/attivita-ist/dipartimenti', methods=['GET', 'POST'])
 def dipartimenti():
     dips = Dipartimento.query.order_by(Dipartimento.ordine).all()
-    return render_template('attivita_ist/dipartimenti.html', dipartimenti=dips,
+    # Materie disponibili per l'assegnazione a dipartimento
+    # = tutte le materie, ordinate per sigla
+    tutte_materie = Materia.query.order_by(Materia.sigla).all()
+    return render_template('attivita_ist/dipartimenti.html',
+                           dipartimenti=dips,
+                           tutte_materie=tutte_materie,
                            tipi=TIPI_ATTIVITA)
+
+
+@attivita_ist_bp.route('/attivita-ist/dipartimenti/assegna-materia', methods=['POST'])
+def assegna_materia_dipartimento():
+    """Assegna una materia esistente a un dipartimento (cambia id_dipartimento)."""
+    id_materia = request.form.get('id_materia', type=int)
+    id_dip     = request.form.get('id_dipartimento', type=int)
+    if id_materia and id_dip:
+        m = Materia.query.get(id_materia)
+        if m:
+            m.id_dipartimento = id_dip
+            db.session.commit()
+            flash(f'Materia "{m.nome_breve or m.nome}" assegnata al dipartimento.', 'success')
+    return redirect(url_for('attivita_ist.dipartimenti'))
+
+
+@attivita_ist_bp.route('/attivita-ist/dipartimenti/rimuovi-materia', methods=['POST'])
+def rimuovi_materia_dipartimento():
+    """Rimuove una materia dal dipartimento (id_dipartimento → NULL)."""
+    id_materia = request.form.get('id_materia', type=int)
+    if id_materia:
+        m = Materia.query.get(id_materia)
+        if m:
+            nome = m.nome_breve or m.nome
+            m.id_dipartimento = None
+            db.session.commit()
+            flash(f'Materia "{nome}" rimossa dal dipartimento.', 'warning')
+    return redirect(url_for('attivita_ist.dipartimenti'))
 
 
 @attivita_ist_bp.route('/attivita-ist/dipartimenti/salva', methods=['POST'])
