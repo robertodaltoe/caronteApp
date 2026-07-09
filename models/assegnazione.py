@@ -75,15 +75,20 @@ class AssegnazioneClasse(db.Model):
     anno_corso           = db.Column(db.Integer,    nullable=False)
     sezione              = db.Column(db.String(2),  nullable=False)
     ore                  = db.Column(db.Integer,    nullable=False)
+    # Materia specifica (NULL = ore totali senza distinzione per materia)
+    id_materia           = db.Column(db.Integer,
+                                     db.ForeignKey('materie.id'),
+                                     nullable=True)
 
     assegnazione = db.relationship('AssegnazioneDocente',
                                    backref=db.backref('classi',
                                                       cascade='all, delete-orphan'))
+    materia      = db.relationship('Materia')
 
     __table_args__ = (
         db.UniqueConstraint('id_assegnazione', 'indirizzo',
-                            'anno_corso', 'sezione',
-                            name='uq_assegnazione_classe'),
+                            'anno_corso', 'sezione', 'id_materia',
+                            name='uq_assegnazione_classe_materia'),
     )
 
     @property

@@ -147,15 +147,26 @@ def _build_area(anno_scol, area):
         assegnazioni = AssegnazioneDocente.query.filter_by(
             anno_scol=anno_scol, id_classe_concorso=cc.id).all()
 
+        # ore_doc_classe[asgn_id][label_classe] = ore totali
+        # ore_doc_mat[asgn_id][label_classe][id_materia] = ore per materia
+        # ore_per_classe[label_classe] = ore coperte totali
         ore_doc_classe = {}
+        ore_doc_mat    = {}
         tot_doc        = {}
         ore_per_classe = {c: 0 for c in classi}
 
         for a in assegnazioni:
             ore_doc_classe[a.id] = {}
+            ore_doc_mat[a.id]    = {}
             for ac in a.classi:
                 lbl = ac.label_classe
-                ore_doc_classe[a.id][lbl] = ac.ore
+                ore_doc_classe[a.id][lbl] = (
+                    ore_doc_classe[a.id].get(lbl, 0) + ac.ore)
+                if lbl not in ore_doc_mat[a.id]:
+                    ore_doc_mat[a.id][lbl] = {}
+                mat_key = ac.id_materia or 0
+                ore_doc_mat[a.id][lbl][mat_key] = (
+                    ore_doc_mat[a.id][lbl].get(mat_key, 0) + ac.ore)
                 if lbl in ore_per_classe:
                     ore_per_classe[lbl] += ac.ore
             tot_doc[a.id] = sum(ore_doc_classe[a.id].values())
@@ -184,6 +195,7 @@ def _build_area(anno_scol, area):
             'budget':             budget,
             'assegnazioni':       assegnazioni,
             'ore_doc_classe':     ore_doc_classe,
+            'ore_doc_mat':        ore_doc_mat,
             'tot_doc':            tot_doc,
             'ore_per_classe':     ore_per_classe,
             'docenti_precaricati': docenti_cc_precaricati,
@@ -231,14 +243,33 @@ def salva():
         flash('Seleziona un docente o inserisci un nome placeholder.', 'danger')
         return redirect(url_for('assegnazioni.index', anno=anno))
 
-    import re
-    classi_ore = {}
+    import re as _re2
+    # Raccoglie ore dal form:
+    # formato singolo:  ore_{label_classe}
+    # formato materia:  ore_{label_classe}_{id_mat}
+    classi_ore = {}  # {(lbl, id_mat_or_None): ore}
     for key, val in request.form.items():
-        if key.startswith('ore_') and val and val != '0':
+        if not key.startswith('ore_') or not val or val == '0':
+            continue
+        try:
+            ore_v = int(val)
+        except ValueError:
+            continue
+        if ore_v <= 0:
+            continue
+        raw = key[4:]
+        idx_ = raw.rfind('_')
+        if idx_ > 0:
             try:
-                classi_ore[key[4:]] = int(val)
+                id_mat = int(raw[idx_+1:])
+                lbl = raw[:idx_]
             except ValueError:
-                pass
+                id_mat = None
+                lbl = raw
+        else:
+            id_mat = None
+            lbl = raw
+        classi_ore[(lbl, id_mat)] = ore_v
 
     if not classi_ore:
         flash('Inserisci almeno un\'ora su una classe.', 'warning')
@@ -266,15 +297,16 @@ def salva():
     db.session.add(asgn)
     db.session.flush()
 
-    for lbl, ore in classi_ore.items():
-        m = re.match(r'(\d)([AB]?)\s+(.+)', lbl)
+    for (lbl, id_mat), ore in classi_ore.items():
+        m = _re2.match(r'(\d+)([AB]?)\s+(.+)', lbl)
         if m:
             db.session.add(AssegnazioneClasse(
                 id_assegnazione=asgn.id,
                 indirizzo=m.group(3).strip(),
                 anno_corso=int(m.group(1)),
                 sezione=m.group(2) or 'A',
-                ore=ore))
+                ore=ore,
+                id_materia=id_mat))
 
     db.session.commit()
     flash(f'Assegnazione {asgn.display_name} salvata.', 'success')

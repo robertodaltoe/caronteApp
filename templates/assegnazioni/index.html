@@ -33,6 +33,30 @@ table.pivot tr.tr-add td { background:#fafbff; }
 .form-add.open { display:block; }
 .verifica-ore { font-size:.75rem; padding:4px 10px; border-radius:5px;
     margin-top:6px; display:none; }
+.tbl-wrap { overflow-x:auto; }
+table.pivot td.td-doc,
+table.pivot th.th-doc {
+    position:sticky; left:0; z-index:2;
+    background:white;
+    box-shadow:2px 0 4px rgba(0,0,0,.06);
+}
+table.pivot th.th-doc { background:#f1f5f9; z-index:3; }
+table.pivot td.td-sticky-r,
+table.pivot th.th-sticky-r {
+    position:sticky; right:0; z-index:2;
+    background:#dde3ee;
+    box-shadow:-2px 0 4px rgba(0,0,0,.06);
+}
+table.pivot th.th-sticky-r { z-index:3; }
+table.pivot td.td-tipo,
+table.pivot th.th-tipo {
+    position:sticky; left:0; z-index:2;
+}
+.nome-da-assegnare {
+    font-size:.62rem; color:#9ca3af;
+    display:block; line-height:1.2; margin-top:1px;
+}
+.subrow td { background:#f0f9ff !important; font-size:.75rem; }
 input.inp-ore { width:38px; padding:2px 4px; text-align:center;
     border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; }
 input.inp-ore:focus { border-color:#6366f1; outline:none; }
@@ -94,7 +118,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             </button>
         </div>
 
-        <div style="overflow-x:auto; padding:0 0 0 0;">
+        <div class="tbl-wrap">
         <table class="pivot">
             <thead>
                 <tr>
@@ -109,8 +133,8 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {{ classe }}
                     </th>
                     {% endfor %}
-                    <th style="min-width:48px; background:#dde3ee; color:#1e293b;">Tot.</th>
-                    <th style="min-width:44px; background:#dde3ee; color:#6b7280;">Max</th>
+                    <th class="th-sticky-r" style="min-width:48px; color:#1e293b;">Tot.</th>
+                    <th class="th-sticky-r" style="min-width:44px; color:#6b7280; right:30px;">Max</th>
                     <th style="width:30px;"></th>
                 </tr>
                 {# Riga ore previste da piano studi #}
@@ -140,35 +164,6 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <td colspan="2"></td>
                 </tr>
             </thead>
-            {# Sub-righe materie — nascoste, appaiono col toggle ▾ sulla riga piano studi #}
-            {% for classe in classi %}
-            {% if blk.multi_materia[classe] %}
-            <tbody id="mat-{{ cc.id }}-{{ loop.index }}" style="display:none;">
-                <tr style="background:#f0f9ff;">
-                    <td class="td-doc" colspan="2"
-                        style="font-size:.68rem; color:#0369a1; font-style:italic; padding:4px 10px;">
-                        Dettaglio materie — {{ classe }}
-                    </td>
-                    {% for c2 in classi %}
-                    {% if c2 == classe %}
-                    <td style="border:1px solid #e2e8f0; padding:2px 4px;">
-                        {% for mat in blk.piano_materie[classe] %}
-                        <div style="font-size:.68rem; white-space:nowrap;
-                                    display:flex; justify-content:space-between; gap:6px;">
-                            <span style="color:#374151;">{{ mat.nome }}</span>
-                            <span style="font-weight:700; color:#0369a1;">{{ mat.ore }}h</span>
-                        </div>
-                        {% endfor %}
-                    </td>
-                    {% else %}
-                    <td style="border:1px solid #e2e8f0; background:#f8fafc;"></td>
-                    {% endif %}
-                    {% endfor %}
-                    <td colspan="3" style="border:1px solid #e2e8f0; background:#f8fafc;"></td>
-                </tr>
-            </tbody>
-            {% endif %}
-            {% endfor %}
             <tbody>
             {% for a in blk.assegnazioni %}
             {% set tot = blk.tot_doc[a.id] %}
@@ -202,7 +197,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     style="{{ 'cursor:pointer;' if blk.multi_materia[classe] and ore else '' }}"
                     {% if blk.multi_materia[classe] and ore %}
                     title="Clicca per vedere dettaglio materie — {{ classe }}"
-                    onclick="toggleMaterie('mat-{{ cc.id }}-{{ loop.index }}')"
+                    onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
                     {% endif %}>
                     {{ ore if ore else '—' }}
                     {% if blk.multi_materia[classe] and ore %}
@@ -210,14 +205,23 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% endif %}
                 </td>
                 {% endfor %}
-                <td style="background:#e8edf5; text-align:center; font-weight:800;
-                           color:{{ '#dc2626' if is_over else 'var(--blu)' }};">
+                <td class="td-sticky-r"
+                    style="text-align:center; font-weight:800; cursor:pointer;
+                           right:60px; color:{{ '#dc2626' if is_over else 'var(--blu)' }};"
+                    {% if blk.multi_materia.values() | select | list %}
+                    onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
+                    title="Mostra/nascondi dettaglio materie"
+                    {% endif %}>
                     {{ tot }}h
+                    {% if blk.multi_materia.values() | select | list %}
+                    <span style="font-size:.62rem; color:#6366f1;">▾</span>
+                    {% endif %}
                 </td>
-                <td style="background:#e8edf5; text-align:center; font-size:.74rem; color:var(--grigio);">
+                <td class="td-sticky-r" style="text-align:center; font-size:.74rem;
+                    color:var(--grigio); right:30px;">
                     {{ max_ore }}h
                 </td>
-                <td style="text-align:center;">
+                <td class="td-sticky-r" style="text-align:center; right:0; width:30px;">
                     <form method="post"
                           action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
                           style="margin:0;"
@@ -228,6 +232,40 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </form>
                 </td>
             </tr>
+                {# Sub-riga dettaglio materie — visibile solo se multi_materia ▾ #}
+                {% set has_multi = classi | selectattr('__class__', 'defined') | list %}
+                {% if classi | map('regex_replace', '.+', '') | list %}{% endif %}
+                {% set show_sub = blk.classi | default([]) %}
+                {# Controlla se almeno una classe ha multi_materia #}
+                {% if blk.multi_materia.values() | select | list %}
+                <tr id="sub-{{ cc.id }}-{{ a.id }}" style="display:none;">
+                    <td class="td-doc" style="padding:2px 10px 6px 22px; font-size:.75rem;
+                                               color:#6b7280; border-bottom:1px solid #e2e8f0;">
+                        {% for mat in blk.piano_materie[classi[0]] if classi %}
+                        {# mostrato per ogni materia #}{% endfor %}
+                    </td>
+                    <td style="border:1px solid #e2e8f0;"></td>
+                    {% for classe in classi %}
+                    <td style="border:1px solid #e2e8f0; padding:2px 4px; vertical-align:top;">
+                        {% if blk.multi_materia[classe] %}
+                        {% for mat in blk.piano_materie[classe] %}
+                        <div style="font-size:.7rem; white-space:nowrap; color:#374151;
+                                    display:flex; gap:4px; align-items:center;">
+                            <span style="color:#9ca3af;">└</span>
+                            <span>{{ mat.nome | truncate(12, true, '…') }}</span>
+                            <span style="font-weight:700; color:var(--blu); margin-left:auto;">
+                                {{ blk.ore_doc_mat[a.id].get(classe, {}).get(mat.id, 0) }}h
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="td-sticky-r" style="right:60px;"></td>
+                    <td class="td-sticky-r" style="right:30px;"></td>
+                    <td class="td-sticky-r" style="right:0;"></td>
+                </tr>
+                {% endif %}
             {% endfor %}
 
             {# Righe docenti precaricati — con CC ma non ancora assegnati #}
@@ -240,9 +278,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% if d.ore_contratto_pt %}
                     <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
                     {% endif %}
-                    <span style="font-size:.65rem; color:#9ca3af; margin-left:4px;">
-                        (max {{ d.ore_max_effettive }}h — da assegnare)
-                    </span>
+                    <span class="nome-da-assegnare">max {{ d.ore_max_effettive }}h — da assegnare</span>
                 </td>
                 <td style="text-align:center; border:1px solid #e2e8f0; color:#9ca3af; font-size:.7rem;">
                     TI
@@ -250,19 +286,15 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% for classe in classi %}
                 <td style="border:1px solid #e2e8f0; color:#cbd5e1; text-align:center;">—</td>
                 {% endfor %}
-                <td style="background:#e8edf5; color:#9ca3af; text-align:center;">—</td>
-                <td style="background:#e8edf5; color:#9ca3af; text-align:center; font-size:.74rem;">
-                    {{ d.ore_max_effettive }}h
-                </td>
-                <td style="text-align:center;">
-                    {# Quick-assign: click per aprire form pre-compilato con questo docente #}
+                <td class="td-sticky-r" style="text-align:center; color:#9ca3af; right:60px;">—</td>
+                <td class="td-sticky-r" style="text-align:center; font-size:.74rem;
+                    color:#9ca3af; right:30px;">{{ d.ore_max_effettive }}h</td>
+                <td class="td-sticky-r" style="text-align:center; right:0; width:30px;">
                     <button type="button"
                             onclick="quickAssign('{{ cc.id }}', '{{ d.id }}')"
                             style="background:none; border:1px solid #c7d2fe; border-radius:4px;
                                    cursor:pointer; color:#6366f1; font-size:.7rem; padding:2px 6px;"
-                            title="Assegna {{ d.cognome }} {{ d.nome }}">
-                        ＋
-                    </button>
+                            title="Assegna {{ d.cognome }} {{ d.nome }}">＋</button>
                 </td>
             </tr>
             {% endfor %}
@@ -281,7 +313,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {{ cop }}/{{ prev }}
                 </td>
                 {% endfor %}
-                <td colspan="3" style="border:1px solid #e2e8f0;"></td>
+                <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:60px;"></td>
+                <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:30px;"></td>
+                <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:0;"></td>
             </tr>
             </tbody>
         </table>
@@ -338,24 +372,46 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </div>
                 </div>
 
-                {# Ore per classe — inline nella riga #}
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:8px;">
+                {# Ore per classe — se multi_materia mostra un campo per materia #}
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; margin-bottom:8px;">
                     {% for classe in classi %}
                     {% set libere = blk.piano[classe] - blk.ore_per_classe[classe] %}
-                    <div style="text-align:center;">
-                        <div style="font-size:.68rem; font-weight:700; color:var(--blu); margin-bottom:2px;">
+                    <div style="text-align:center; border:1px solid #e2e8f0; border-radius:7px;
+                                padding:6px 8px; background:white; min-width:80px;">
+                        <div style="font-size:.7rem; font-weight:700; color:var(--blu); margin-bottom:4px;
+                                    border-bottom:1px solid #f0f0f0; padding-bottom:3px;">
                             {{ classe }}
+                            <span style="font-size:.6rem; font-weight:400;
+                                         color:{{ '#16a34a' if libere == 0 else '#f59e0b' if libere > 0 else '#dc2626' }};">
+                                ({{ libere }}h lib.)
+                            </span>
                         </div>
-                        <input type="number" class="inp-ore"
-                               name="ore_{{ classe }}"
-                               id="ore-{{ cc.id }}-{{ loop.index }}"
-                               min="0" max="{{ blk.piano[classe] }}" value="0"
-                               onchange="verificaOre('{{ cc.id }}', '{{ anno }}')"
-                               title="{{ libere }}h libere su {{ blk.piano[classe] }}h">
-                        <div style="font-size:.62rem; margin-top:1px;
-                                    color:{{ '#16a34a' if libere == 0 else '#f59e0b' if libere > 0 else '#dc2626' }};">
-                            {{ libere }}h lib.
-                        </div>
+                        {% if blk.multi_materia[classe] %}
+                            {# Un campo per ogni materia #}
+                            {% for mat in blk.piano_materie[classe] %}
+                            <div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
+                                <span style="font-size:.65rem; color:#6b7280; flex:1; text-align:left;
+                                              white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+                                              max-width:70px;" title="{{ mat.nome }}">
+                                    {{ mat.nome | truncate(10, true, '…') }}
+                                </span>
+                                <input type="number" class="inp-ore"
+                                       name="ore_{{ classe }}_{{ mat.id }}"
+                                       min="0" max="{{ mat.ore }}" value="0"
+                                       onchange="verificaOre('{{ cc.id }}', '{{ anno }}')"
+                                       style="width:36px;"
+                                       title="{{ mat.nome }}: max {{ mat.ore }}h">
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            {# Campo singolo #}
+                            <input type="number" class="inp-ore"
+                                   name="ore_{{ classe }}"
+                                   id="ore-{{ cc.id }}-{{ loop.index }}"
+                                   min="0" max="{{ blk.piano[classe] }}" value="0"
+                                   onchange="verificaOre('{{ cc.id }}', '{{ anno }}')"
+                                   title="{{ libere }}h libere su {{ blk.piano[classe] }}h">
+                        {% endif %}
                     </div>
                     {% endfor %}
 
@@ -381,10 +437,10 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 {% endfor %}
 
 <script>
-function toggleMaterie(id) {
-    const tbody = document.getElementById(id);
-    if (!tbody) return;
-    tbody.style.display = tbody.style.display === 'none' ? 'table-row-group' : 'none';
+function toggleMaterie(ccId, asgnId) {
+    const row = document.getElementById('sub-' + ccId + '-' + asgnId);
+    if (!row) return;
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
 }
 
 function quickAssign(ccId, docId) {
