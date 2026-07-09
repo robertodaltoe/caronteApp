@@ -181,6 +181,9 @@ def _build_area(anno_scol, area):
                   DocenteClasseConcorso.id_docente == Docente.id)
             .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
                     Docente.attivo == True,
+                    # Escludi chi non è fisicamente presente
+                    Docente.status_presenza.notin_(
+                        ['aspettativa', 'ap_uscente']),
                     ~Docente.id.in_(id_gia_assegnati) if id_gia_assegnati
                     else True)
             .order_by(Docente.cognome).all()
@@ -220,7 +223,13 @@ def index():
             aree_data.append({'nome': area['nome'], 'blocks': blocks})
 
     from routes.impostazione_anno import _docenti_per_anno
-    docenti_anno = _docenti_per_anno(anno)
+    # Per le assegnazioni: solo docenti fisicamente presenti a scuola.
+    # Escludi aspettativa e AP uscenti (non insegnano qui).
+    _tutti = _docenti_per_anno(anno)
+    docenti_anno = [
+        d for d in _tutti
+        if d.status_presenza not in ('aspettativa', 'ap_uscente')
+    ]
 
     return render_template('assegnazioni/index.html',
         anno=anno, anni_disponibili=anni,
