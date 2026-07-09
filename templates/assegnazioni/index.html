@@ -1,7 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Assegnazioni classi — {{ anno }}{% endblock %}
+
+{% block extra_style %}
+<style>
+.area-card { background:white; border:1px solid #e5eaf0; border-radius:10px;
+    margin-bottom:20px; overflow:hidden; }
+.area-header { padding:12px 18px; font-weight:800; font-size:.95rem;
+    color:white; display:flex; align-items:center; gap:10px; }
+.cc-block { border-top:1px solid #e5eaf0; }
+.cc-header { padding:8px 18px; background:#f8fafc; display:flex;
+    align-items:center; gap:10px; font-size:.82rem; font-weight:700; color:var(--blu); }
+.cc-budget { font-size:.72rem; font-weight:400; padding:2px 7px; border-radius:5px; }
+table.pivot { width:100%; border-collapse:collapse; font-size:.78rem; }
+table.pivot th { padding:5px 6px; text-align:center; background:#f1f5f9;
+    border:1px solid #e2e8f0; font-weight:700; white-space:nowrap; font-size:.72rem; }
+table.pivot th.th-doc { text-align:left; min-width:150px; background:#f1f5f9; }
+table.pivot td { padding:4px 6px; text-align:center; border:1px solid #e2e8f0;
+    font-size:.8rem; }
+table.pivot td.td-doc { text-align:left; padding:5px 10px; }
+table.pivot td.ore-val { font-weight:700; color:var(--blu); }
+table.pivot td.ore-zero { color:#e2e8f0; }
+table.pivot tr.tr-copertura td { font-size:.7rem; font-weight:700;
+    background:#f8fafc; border-top:2px solid #e2e8f0; }
+table.pivot tr.tr-add td { background:#fafbff; }
+.badge-tipo { font-size:.65rem; padding:1px 5px; border-radius:4px;
+    font-weight:700; margin-left:4px; }
+.btn-add { background:none; border:1px dashed #c7d2fe; border-radius:6px;
+    color:#6366f1; cursor:pointer; font-size:.75rem; padding:3px 8px; }
+.btn-add:hover { background:#f0f0ff; }
+.form-add { display:none; padding:10px 18px; background:#f8f7ff;
+    border-top:1px solid #e5e7eb; }
+.form-add.open { display:block; }
+.verifica-ore { font-size:.75rem; padding:4px 10px; border-radius:5px;
+    margin-top:6px; display:none; }
+input.inp-ore { width:38px; padding:2px 4px; text-align:center;
+    border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; }
+input.inp-ore:focus { border-color:#6366f1; outline:none; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">📋 Assegnazioni classi — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
@@ -13,44 +53,293 @@
     </div>
 </div>
 
-<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
-     color:var(--grigio); border-left:4px solid #6366f1;">
-    Seleziona una classe di concorso per gestire le assegnazioni nominative.
-    I dati di riferimento sono il <strong>piano studi</strong> (ore per classe)
-    e l'<strong>organico USR di fatto</strong> (budget COI/COE/residue).
-</div>
+{% set colori_area = ['#1e40af','#15803d','#b45309','#0e7490','#7c2d12','#86198f','#0f766e','#6b7280'] %}
 
-<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px;">
-{% for cc in cc_list %}
-{% set s = stato_cc[cc.id] %}
-{% set b = s.budget %}
-<a href="{{ url_for('assegnazioni.per_cc', cc_id=cc.id, anno=anno) }}"
-   style="padding:14px 18px; border-radius:10px; border:1px solid #e5e7eb;
-          background:white; text-decoration:none; display:block;
-          border-left:4px solid {{ '#16a34a' if s.n_assegnazioni > 0 else '#e5e7eb' }};">
-    <div style="font-weight:700; color:var(--blu); font-size:.9rem;">{{ cc.codice }}</div>
-    <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">{{ cc.nome }}</div>
-    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-        <span style="font-size:.72rem; background:#dbeafe; color:#1e40af;
-                     padding:2px 7px; border-radius:5px;">
-            {{ b.n_coi }} COI
-        </span>
-        <span style="font-size:.72rem; background:#fef3c7; color:#92400e;
-                     padding:2px 7px; border-radius:5px;">
-            {{ b.n_coe }} COE
-        </span>
-        {% if b.ore_residue %}
-        <span style="font-size:.72rem; background:#f3f4f6; color:#6b7280;
-                     padding:2px 7px; border-radius:5px;">
-            {{ b.ore_residue }}h res.
-        </span>
-        {% endif %}
-        <span style="font-size:.72rem; margin-left:auto;
-                     color:{{ '#16a34a' if s.n_assegnazioni > 0 else '#9ca3af' }}; font-weight:700;">
-            {{ s.n_assegnazioni }} assegn.
+{% for area in aree_data %}
+{% set col = colori_area[loop.index0 % colori_area|length] %}
+<div class="area-card">
+    <div class="area-header" style="background:{{ col }};">
+        {{ area.nome }}
+        <span style="font-size:.78rem; font-weight:400; opacity:.85;">
+            {{ area.blocks|length }} CC
         </span>
     </div>
-</a>
+
+    {% for blk in area.blocks %}
+    {% set cc = blk.cc %}
+    {% set classi = blk.classi %}
+    {% set budget = blk.budget %}
+
+    <div class="cc-block">
+        <div class="cc-header">
+            <span>{{ cc.codice }} — {{ cc.nome }}</span>
+            {% if budget %}
+            <span class="cc-budget" style="background:#dbeafe; color:#1e40af;">
+                {{ budget.n_coi or 0 }} COI
+            </span>
+            {% if budget.n_coe %}
+            <span class="cc-budget" style="background:#fef3c7; color:#92400e;">
+                {{ budget.n_coe }} COE
+            </span>
+            {% endif %}
+            {% if budget.ore_residue %}
+            <span class="cc-budget" style="background:#f3f4f6; color:#6b7280;">
+                {{ budget.ore_residue }}h res.
+            </span>
+            {% endif %}
+            {% endif %}
+            <button class="btn-add" type="button"
+                    onclick="toggleForm('form-{{ cc.id }}')">
+                ＋ Aggiungi docente
+            </button>
+        </div>
+
+        <div style="overflow-x:auto; padding:0 0 0 0;">
+        <table class="pivot">
+            <thead>
+                <tr>
+                    <th class="th-doc">Docente</th>
+                    <th style="min-width:50px; background:#f1f5f9; border:1px solid #e2e8f0;
+                               font-size:.7rem; color:var(--grigio);">Tipo</th>
+                    {% for classe in classi %}
+                    <th style="min-width:52px;">{{ classe }}</th>
+                    {% endfor %}
+                    <th style="min-width:48px; background:#e8edf5;">Tot.</th>
+                    <th style="min-width:44px; background:#e8edf5; color:var(--grigio);">Max</th>
+                    <th style="width:30px;"></th>
+                </tr>
+                {# Riga ore previste da piano studi #}
+                <tr style="background:#f8fafc;">
+                    <td class="td-doc" style="font-size:.7rem; color:var(--grigio); font-style:italic;">
+                        Piano studi
+                    </td>
+                    <td></td>
+                    {% for classe in classi %}
+                    <td style="font-size:.72rem; color:var(--grigio); font-weight:600;
+                               border:1px solid #e2e8f0; text-align:center;">
+                        {{ blk.piano[classe] }}h
+                    </td>
+                    {% endfor %}
+                    <td style="border:1px solid #e2e8f0; text-align:center; font-size:.72rem; color:var(--grigio);">
+                        {{ blk.piano.values()|sum }}h
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for a in blk.assegnazioni %}
+            {% set tot = blk.tot_doc[a.id] %}
+            {% set max_ore = a.docente.ore_max_effettive if a.docente else '—' %}
+            {% set is_over = a.docente and tot > a.docente.ore_max_effettive %}
+            <tr style="{{ 'background:#fef2f2;' if is_over else '' }}">
+                <td class="td-doc">
+                    {% if a.docente %}
+                    <span style="font-weight:600;">{{ a.docente.cognome }} {{ a.docente.nome }}</span>
+                    {% if a.docente.ore_contratto_pt %}
+                    <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
+                    {% endif %}
+                    {% else %}
+                    <span style="color:#6366f1; font-weight:600; font-style:italic;">
+                        {{ a.nome_placeholder }}
+                    </span>
+                    <span class="badge-tipo" style="background:#e0e7ff; color:#3730a3;">ph</span>
+                    {% endif %}
+                    {% if a.note %}
+                    <div style="font-size:.68rem; color:var(--grigio);">{{ a.note }}</div>
+                    {% endif %}
+                </td>
+                <td style="text-align:center; border:1px solid #e2e8f0;">
+                    <span style="font-size:.68rem; background:#f3f4f6; padding:1px 5px; border-radius:4px;">
+                        {{ tipo_display.get(a.tipo, a.tipo) }}
+                    </span>
+                </td>
+                {% for classe in classi %}
+                {% set ore = blk.ore_doc_classe[a.id].get(classe, 0) %}
+                <td class="{{ 'ore-val' if ore else 'ore-zero' }}">
+                    {{ ore if ore else '—' }}
+                </td>
+                {% endfor %}
+                <td style="background:#e8edf5; text-align:center; font-weight:800;
+                           color:{{ '#dc2626' if is_over else 'var(--blu)' }};">
+                    {{ tot }}h
+                </td>
+                <td style="background:#e8edf5; text-align:center; font-size:.74rem; color:var(--grigio);">
+                    {{ max_ore }}h
+                </td>
+                <td style="text-align:center;">
+                    <form method="post"
+                          action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
+                          style="margin:0;"
+                          onsubmit="return confirm('Eliminare?')">
+                        <button type="submit"
+                                style="background:none; border:none; cursor:pointer;
+                                       color:#dc2626; font-size:.8rem;">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+
+            {# Riga copertura: ore coperte / ore previste per classe #}
+            <tr class="tr-copertura">
+                <td class="td-doc" colspan="2"
+                    style="font-size:.7rem; color:var(--grigio); font-style:italic;">
+                    Copertura
+                </td>
+                {% for classe in classi %}
+                {% set cop  = blk.ore_per_classe[classe] %}
+                {% set prev = blk.piano[classe] %}
+                <td style="color:{{ '#16a34a' if cop == prev else ('#dc2626' if cop > prev else '#f59e0b') }};
+                            border:1px solid #e2e8f0;">
+                    {{ cop }}/{{ prev }}
+                </td>
+                {% endfor %}
+                <td colspan="3" style="border:1px solid #e2e8f0;"></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+
+        {# ── Form aggiunta ──────────────────────────────────────── #}
+        <div class="form-add" id="form-{{ cc.id }}">
+            <form method="post" action="{{ url_for('assegnazioni.salva') }}"
+                  id="fasgn-{{ cc.id }}">
+                <input type="hidden" name="anno_scol" value="{{ anno }}">
+                <input type="hidden" name="id_cc" value="{{ cc.id }}">
+
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
+                             margin-bottom:8px;">
+                    <div style="flex:2; min-width:180px;">
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Docente</div>
+                        <select name="id_docente" id="doc-{{ cc.id }}"
+                                onchange="verificaOre('{{ cc.id }}', '{{ anno }}')"
+                                style="width:100%; padding:4px 7px; border:1px solid #d1d5db;
+                                       border-radius:5px; font-size:.8rem;">
+                            <option value="">— placeholder —</option>
+                            {% for d in docenti_anno %}
+                            <option value="{{ d.id }}">
+                                {{ d.cognome }} {{ d.nome }}
+                                (max {{ d.ore_max_effettive }}h)
+                                {% if d.ore_contratto_pt %}[PT]{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex:2; min-width:150px;" id="ph-div-{{ cc.id }}">
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Nome placeholder</div>
+                        <input type="text" name="nome_placeholder"
+                               placeholder="es. SUPPLENTE 1"
+                               style="width:100%; padding:4px 7px; border:1px solid #d1d5db;
+                                      border-radius:5px; font-size:.8rem;">
+                    </div>
+                    <div style="min-width:120px;">
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Tipo</div>
+                        <select name="tipo"
+                                style="width:100%; padding:4px 7px; border:1px solid #d1d5db;
+                                       border-radius:5px; font-size:.8rem;">
+                            {% for k, v in tipo_display.items() %}
+                            <option value="{{ k }}">{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex:2; min-width:140px;">
+                        <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">Note</div>
+                        <input type="text" name="note"
+                               placeholder="es. COE +3h NERVI, PT 14h"
+                               style="width:100%; padding:4px 7px; border:1px solid #d1d5db;
+                                      border-radius:5px; font-size:.8rem;">
+                    </div>
+                </div>
+
+                {# Ore per classe — inline nella riga #}
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:8px;">
+                    {% for classe in classi %}
+                    {% set libere = blk.piano[classe] - blk.ore_per_classe[classe] %}
+                    <div style="text-align:center;">
+                        <div style="font-size:.68rem; font-weight:700; color:var(--blu); margin-bottom:2px;">
+                            {{ classe }}
+                        </div>
+                        <input type="number" class="inp-ore"
+                               name="ore_{{ classe }}"
+                               id="ore-{{ cc.id }}-{{ loop.index }}"
+                               min="0" max="{{ blk.piano[classe] }}" value="0"
+                               onchange="verificaOre('{{ cc.id }}', '{{ anno }}')"
+                               title="{{ libere }}h libere su {{ blk.piano[classe] }}h">
+                        <div style="font-size:.62rem; margin-top:1px;
+                                    color:{{ '#16a34a' if libere == 0 else '#f59e0b' if libere > 0 else '#dc2626' }};">
+                            {{ libere }}h lib.
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div style="display:flex; gap:6px; align-items:flex-end; margin-left:auto;">
+                        <div id="verifica-{{ cc.id }}" class="verifica-ore"></div>
+                        <button type="submit" class="btn btn-success btn-sm"
+                                style="font-size:.78rem; padding:5px 12px;">
+                            ✓ Salva
+                        </button>
+                        <button type="button" class="btn btn-sm"
+                                style="background:#e5e7eb; color:#6b7280; font-size:.78rem; padding:5px 10px;"
+                                onclick="toggleForm('form-{{ cc.id }}')">
+                            Annulla
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+    </div>{# fine cc-block #}
+    {% endfor %}
+</div>{# fine area-card #}
 {% endfor %}
-</div>
+
+<script>
+function toggleForm(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+    // Mostra/nasconde placeholder in base al docente selezionato
+    const ccId = id.replace('form-', '');
+    const sel = document.getElementById('doc-' + ccId);
+    if (sel) {
+        const ph = document.getElementById('ph-div-' + ccId);
+        ph.style.display = sel.value ? 'none' : 'block';
+    }
+}
+
+function verificaOre(ccId, anno) {
+    const sel = document.getElementById('doc-' + ccId);
+    const phDiv = document.getElementById('ph-div-' + ccId);
+    if (sel) phDiv.style.display = sel.value ? 'none' : 'block';
+
+    const div = document.getElementById('verifica-' + ccId);
+    if (!sel || !sel.value) { div.style.display='none'; return; }
+
+    const classiOre = {};
+    document.querySelectorAll('[id^="ore-' + ccId + '-"]').forEach(inp => {
+        const v = parseInt(inp.value) || 0;
+        if (v > 0) {
+            // Ricava label dal name: "ore_1A AFM" → "1A AFM"
+            classiOre[inp.name.replace('ore_', '')] = v;
+        }
+    });
+
+    fetch('{{ url_for("assegnazioni.api_verifica") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({anno_scol: anno, id_docente: sel.value,
+                              classi_ore: classiOre})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.avvisi || !data.avvisi.length) { div.style.display='none'; return; }
+        const a = data.avvisi[0];
+        const col = {error:'#dc2626', ok:'#16a34a', info:'#0369a1'};
+        const bg  = {error:'#fef2f2', ok:'#f0fdf4', info:'#eff6ff'};
+        div.style.color = col[a.livello] || '#374151';
+        div.style.background = bg[a.livello] || '#f8fafc';
+        div.style.borderLeft = '3px solid ' + (col[a.livello] || '#6b7280');
+        div.textContent = a.msg;
+        div.style.display = 'block';
+    });
+}
+</script>
 {% endblock %}
