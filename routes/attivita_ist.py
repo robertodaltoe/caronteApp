@@ -358,12 +358,19 @@ def _import_piano_2025_26():
 @attivita_ist_bp.route('/attivita-ist/dipartimenti', methods=['GET', 'POST'])
 def dipartimenti():
     dips = Dipartimento.query.order_by(Dipartimento.ordine).all()
-    # Materie disponibili per l'assegnazione a dipartimento
-    # = tutte le materie, ordinate per sigla
-    tutte_materie = Materia.query.order_by(Materia.sigla).all()
+    # Materie non ancora assegnate = quelle nel dipartimento "Non assegnato" (sigla '—')
+    dip_non_ass = Dipartimento.query.filter_by(sigla='—').first()
+    if dip_non_ass:
+        materie_da_assegnare = (Materia.query
+                                .filter_by(id_dipartimento=dip_non_ass.id)
+                                .order_by(Materia.sigla).all())
+    else:
+        materie_da_assegnare = []
+    # Filtra i dipartimenti reali (escludi "Non assegnato" dall'elenco principale)
+    dips_reali = [d for d in dips if d.sigla != '—']
     return render_template('attivita_ist/dipartimenti.html',
-                           dipartimenti=dips,
-                           tutte_materie=tutte_materie,
+                           dipartimenti=dips_reali,
+                           tutte_materie=materie_da_assegnare,
                            tipi=TIPI_ATTIVITA)
 
 

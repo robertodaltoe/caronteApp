@@ -171,15 +171,16 @@
     </table>
 
     {# ── Aggiungi materia esistente al dipartimento ──────────────── #}
-    {% set materie_altre = tutte_materie | rejectattr('id_dipartimento', 'equalto', dip.id) | list %}
     <details style="margin-top:10px;">
         <summary style="font-size:.8rem; cursor:pointer; color:var(--blu); font-weight:600;
                          padding:4px 0; user-select:none;">
             ＋ Aggiungi materia a {{ dip.nome }}
-            {% if materie_altre %}
+            {% if tutte_materie %}
             <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
-                ({{ materie_altre | length }} disponibili)
+                ({{ tutte_materie | length }} ancora da assegnare)
             </span>
+            {% else %}
+            <span style="font-size:.72rem; font-weight:400; color:#16a34a;">✓ tutte assegnate</span>
             {% endif %}
         </summary>
         <div style="margin-top:8px; background:#f0f4f8; padding:12px 14px;
@@ -198,18 +199,14 @@
                             style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
                                    border-radius:5px; font-size:.82rem;">
                         <option value="">— seleziona materia —</option>
-                        {% for m in tutte_materie | sort(attribute='sigla') %}
-                        {% if m.id_dipartimento != dip.id %}
+                        {% for m in tutte_materie %}
                         <option value="{{ m.id }}">
                             {{ m.sigla }} — {{ m.nome_breve or m.nome }}
-                            {% if m.id_dipartimento %}
-                            (attualmente: {{ m.dipartimento.sigla if m.dipartimento else '?' }})
-                            {% else %}
-                            (nessun dipartimento)
-                            {% endif %}
                         </option>
-                        {% endif %}
                         {% endfor %}
+                        {% if not tutte_materie %}
+                        <option value="" disabled>— tutte le materie sono già assegnate —</option>
+                        {% endif %}
                     </select>
                 </div>
                 <button type="submit" class="btn btn-success btn-sm">✓ Assegna</button>
