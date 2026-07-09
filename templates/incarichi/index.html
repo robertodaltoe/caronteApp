@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}Incarichi docenti — {{ anno }}{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">🎖 Incarichi docenti — {{ anno }}</h1>
+    <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('incarichi.index', anno=a) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
+                  background:{{ '#1e40af' if a == anno else '#f3f4f6' }};
+                  color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
+        {% endfor %}
+        <a href="{{ url_for('incarichi.tipi') }}" class="btn btn-sm"
+           style="background:#f3f4f6; color:#374151; font-size:.76rem;">⚙ Gestisci tipi</a>
+    </div>
+</div>
+
+{# ── Form aggiunta incarico ───────────────────────────────────────── #}
+<div class="card" style="padding:16px 18px; margin-bottom:20px; border-left:4px solid #1e40af;">
+    <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
+        ➕ Assegna incarico
+    </div>
+    <form method="post" action="{{ url_for('incarichi.salva') }}"
+          style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+
+        <div style="flex:2; min-width:200px;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Tipo incarico *</div>
+            <select name="id_tipo" id="sel-tipo" required
+                    onchange="aggiornaCampiContesto()"
+                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                           border-radius:5px; font-size:.82rem;">
+                <option value="">— seleziona —</option>
+                {% for cat, label in cat_label.items() %}
+                <optgroup label="{{ label }}">
+                    {% for t in tipi if t.categoria == cat %}
+                    <option value="{{ t.id }}"
+                            data-collegato="{{ t.collegato_a or '' }}"
+                            data-compenso="{{ t.compenso_tipo or '' }}"
+                            data-importo="{{ t.importo_default or '' }}">
+                        {{ t.nome }}
+                    </option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex:2; min-width:180px;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Docente *</div>
+            <select name="id_docente" required
+                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                           border-radius:5px; font-size:.82rem;">
+                <option value="">— seleziona —</option>
+                {% for d in docenti %}
+                <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# Contesto: classe (se collegato_a == 'classe') #}
+        <div id="ctx-classe" style="display:none; min-width:150px;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Classe</div>
+            <select name="indirizzo" id="sel-indirizzo"
+                    style="padding:5px 7px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; margin-right:4px;">
+                <option value="">— ind —</option>
+                {% for cs in classi %}
+                <option value="{{ cs.indirizzo }}">{{ cs.indirizzo }}</option>
+                {% endfor %}
+            </select>
+            <select name="anno_corso"
+                    style="padding:5px 7px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:52px; margin-right:4px;">
+                <option value="">—</option>
+                {% for ac in range(1,6) %}
+                <option value="{{ ac }}">{{ ac }}°</option>
+                {% endfor %}
+            </select>
+            <select name="sezione"
+                    style="padding:5px 7px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:52px;">
+                <option value="">—</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+            </select>
+        </div>
+
+        {# Contesto: dipartimento #}
+        <div id="ctx-dip" style="display:none; min-width:160px;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Dipartimento</div>
+            <select name="id_dipartimento"
+                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                           border-radius:5px; font-size:.82rem;">
+                <option value="">— seleziona —</option>
+                {% for dip in dipartimenti %}
+                <option value="{{ dip.id }}">{{ dip.sigla }} — {{ dip.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# Compenso #}
+        <div id="ctx-compenso" style="display:none;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;" id="lbl-compenso">Importo €</div>
+            <div style="display:flex; gap:4px; align-items:center;">
+                <input type="number" name="ore" id="inp-ore" step="0.5" min="0"
+                       placeholder="ore" style="width:60px; padding:4px 6px; border:1px solid #d1d5db;
+                              border-radius:5px; font-size:.82rem; display:none;">
+                <input type="number" name="importo" id="inp-importo" step="0.01" min="0"
+                       placeholder="€" style="width:80px; padding:4px 6px; border:1px solid #d1d5db;
+                              border-radius:5px; font-size:.82rem;">
+            </div>
+        </div>
+
+        <div style="flex:2; min-width:160px;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Note</div>
+            <input type="text" name="note" placeholder="opzionale"
+                   style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
+                          border-radius:5px; font-size:.82rem;">
+        </div>
+
+        <button type="submit" class="btn btn-success btn-sm" style="white-space:nowrap;">
+            ✓ Assegna
+        </button>
+    </form>
+</div>
+
+{# ── Incarichi per categoria ──────────────────────────────────────── #}
+{% for cat, label in cat_label.items() %}
+{% if per_cat[cat] %}
+<div class="card" style="margin-bottom:14px; overflow:hidden;">
+    <div style="background:{{ cat_color[cat] }}; padding:10px 18px;
+                color:white; font-weight:700; font-size:.9rem;">
+        {{ label }}
+    </div>
+    <div style="padding:0;">
+        {% for tipo, nomine_tipo in per_cat[cat].items() %}
+        <div style="border-bottom:1px solid #f0f0f0;">
+            {# Intestazione tipo #}
+            <div style="padding:8px 18px; background:#f8fafc; display:flex;
+                        align-items:center; gap:8px; font-size:.84rem; font-weight:700;
+                        color:{{ cat_color[cat] }};">
+                {{ tipo.nome }}
+                {% if tipo.collegato_a %}
+                <span style="font-size:.68rem; background:#e0e7ff; color:#3730a3;
+                              padding:1px 6px; border-radius:4px; font-weight:400;">
+                    per {{ tipo.collegato_a }}
+                </span>
+                {% endif %}
+                {% if tipo.compenso_tipo %}
+                <span style="font-size:.68rem; background:#d1fae5; color:#065f46;
+                              padding:1px 6px; border-radius:4px; font-weight:400;">
+                    {{ tipo.compenso_tipo }}
+                </span>
+                {% endif %}
+                <span style="margin-left:auto; font-size:.74rem; font-weight:400;
+                              color:var(--grigio);">{{ nomine_tipo|length }} nomina/e</span>
+            </div>
+            {# Righe nomine #}
+            <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+                <tbody>
+                {% for n in nomine_tipo %}
+                <tr style="border-bottom:1px solid #f5f5f5;">
+                    <td style="padding:7px 18px; font-weight:600;">
+                        {{ n.docente.cognome }} {{ n.docente.nome }}
+                    </td>
+                    <td style="padding:7px 8px; color:var(--grigio); font-size:.78rem;">
+                        {% if n.label_classe %}
+                        <span style="background:#e0f2fe; color:#0369a1; padding:1px 7px;
+                                      border-radius:5px; font-weight:700;">
+                            {{ n.label_classe }}
+                        </span>
+                        {% elif n.dipartimento %}
+                        <span style="background:#f0fdf4; color:#166534; padding:1px 7px;
+                                      border-radius:5px;">
+                            {{ n.dipartimento.nome }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:7px 8px; font-size:.78rem; color:#166534; font-weight:600;">
+                        {{ n.compenso_display }}
+                    </td>
+                    <td style="padding:7px 8px; color:var(--grigio); font-size:.76rem;">
+                        {{ n.note or '' }}
+                    </td>
+                    <td style="padding:7px 8px; text-align:right;">
+                        <form method="post"
+                              action="{{ url_for('incarichi.elimina', id=n.id) }}"
+                              style="margin:0;"
+                              onsubmit="return confirm('Eliminare questa nomina?')">
+                            <button type="submit"
+                                    style="background:none; border:none; cursor:pointer;
+                                           color:#dc2626; font-size:.8rem;">🗑</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if not per_cat %}
+<div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
+    Nessun incarico assegnato per {{ anno }}. Usa il form sopra per iniziare.
+</div>
+{% endif %}
+
+<script>
+function aggiornaCampiContesto() {
+    const sel = document.getElementById('sel-tipo');
+    const opt = sel.options[sel.selectedIndex];
+    const collegato = opt ? opt.dataset.collegato : '';
+    const compenso  = opt ? opt.dataset.compenso  : '';
+    const importo   = opt ? opt.dataset.importo   : '';
+
+    document.getElementById('ctx-classe').style.display    = collegato === 'classe'       ? 'flex' : 'none';
+    document.getElementById('ctx-dip').style.display       = collegato === 'dipartimento' ? 'block': 'none';
+    document.getElementById('ctx-compenso').style.display  = compenso  ? 'block' : 'none';
+
+    const inpOre    = document.getElementById('inp-ore');
+    const inpImp    = document.getElementById('inp-importo');
+    const lblComp   = document.getElementById('lbl-compenso');
+
+    if (compenso === 'orario') {
+        inpOre.style.display = 'block';
+        lblComp.textContent  = 'Ore + tariffa €/h';
+        inpImp.placeholder   = importo ? `€ ${importo}/h` : '€/h';
+    } else {
+        inpOre.style.display = 'none';
+        lblComp.textContent  = 'Importo €';
+        inpImp.placeholder   = importo ? `€ ${importo}` : '€';
+        if (importo) inpImp.value = importo;
+    }
+}
+document.addEventListener('DOMContentLoaded', aggiornaCampiContesto);
+</script>
+{% endblock %}
