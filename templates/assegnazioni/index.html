@@ -349,6 +349,23 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:30px;"></td>
                 <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:0;"></td>
             </tr>
+            {# Riga export per classe #}
+            <tr style="background:#f8f9ff;">
+                <td class="td-doc" colspan="2"
+                    style="font-size:.68rem; color:var(--grigio); font-style:italic; padding:4px 10px;">
+                    📥 Scheda classe
+                </td>
+                {% for classe in classi %}
+                <td style="border:1px solid #e2e8f0; text-align:center; padding:3px 4px;">
+                    <a href="{{ url_for('export_xlsx.export_classe', label=classe, anno=anno) }}"
+                       style="font-size:.65rem; color:#16a34a; text-decoration:none;"
+                       title="Scarica scheda {{ classe }}">📥</a>
+                </td>
+                {% endfor %}
+                <td class="td-sticky-r" style="right:60px;"></td>
+                <td class="td-sticky-r" style="right:30px;"></td>
+                <td class="td-sticky-r" style="right:0;"></td>
+            </tr>
             </tbody>
         </table>
         </div>

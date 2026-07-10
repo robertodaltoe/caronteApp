@@ -551,11 +551,18 @@ def classi_attive():
     if anno not in anni_disponibili:
         anni_disponibili.insert(0, anno)
 
+    # Lista classi attive per export
+    sezioni_attive_list = sorted([
+        f'{s.anno_corso}{s.sezione} {s.indirizzo}'
+        for s in ClasseSezione.query.filter_by(anno_scol=anno, attiva=True).all()
+    ])
+
     return render_template('impostazione_anno/classi_attive.html',
         struttura=struttura, anno=anno,
         indirizzi_ordine=INDIRIZZI_ORDINE,
         sezioni_template=SEZIONI_TEMPLATE,
-        anni_disponibili=anni_disponibili)
+        anni_disponibili=anni_disponibili,
+        sezioni_attive_list=sezioni_attive_list)
 
 
 def _ricalcola_organico(anno):
