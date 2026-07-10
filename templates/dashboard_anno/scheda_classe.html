@@ -41,7 +41,7 @@
         {% for asgn, materie in doc_map.items() %}
         {% for mat in materie %}
         <tr style="border-bottom:1px solid #f0f0f0;
-                    background:{{ '#f8fafc' if loop.parent.loop.index is even else 'white' }}">
+                    background:{{ '#f8fafc' if loop.index is even else 'white' }}">
             <td style="padding:6px 12px; font-weight:{{ '600' if loop.first else '400' }};
                         color:{{ 'var(--blu)' if loop.first else '#9ca3af' }}">
                 {{ asgn.display_name if loop.first else '' }}
