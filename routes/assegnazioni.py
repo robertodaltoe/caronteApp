@@ -14,6 +14,27 @@ from config_anno import get_anno_corrente
 
 assegnazioni_bp = Blueprint('assegnazioni', __name__)
 
+
+def _sync_docente_materie(id_docente, asgn, anno_scol):
+    """Crea DocenteMateria per le materie dell'assegnazione, se non esistono."""
+    from models.piano_studi import DocenteMateria
+
+    materie_ids = {ac.id_materia for ac in asgn.classi if ac.id_materia}
+    if not materie_ids:
+        return
+
+    for id_mat in materie_ids:
+        esiste = DocenteMateria.query.filter_by(
+            id_docente=id_docente,
+            id_materia=id_mat,
+            anno_scol=anno_scol).first()
+        if not esiste:
+            db.session.add(DocenteMateria(
+                id_docente=id_docente,
+                id_materia=id_mat,
+                anno_scol=anno_scol))
+    db.session.commit()
+
 # ── Aree disciplinari e CC (dal file ASSEGNAZIONI CLASSI) ─────────────
 AREE = [
     {'nome': 'Area Umanistica',
@@ -318,6 +339,11 @@ def salva():
                 id_materia=id_mat))
 
     db.session.commit()
+
+    # Sincronizza DocenteMateria se è un docente reale
+    if id_doc:
+        _sync_docente_materie(id_doc, asgn, anno)
+
     flash(f'Assegnazione {asgn.display_name} salvata.', 'success')
     return redirect(url_for('assegnazioni.index', anno=anno))
 
@@ -358,7 +384,9 @@ def nomina(asgn_id):
         asgn.id_docente = id_doc
         asgn.nome_placeholder = None
         db.session.commit()
-        flash(f'Nominato: {doc.cognome} {doc.nome}.', 'success')
+        # Il docente nominato eredita le materie del placeholder
+        _sync_docente_materie(id_doc, asgn, asgn.anno_scol)
+        flash(f'Nominato: {doc.cognome} {doc.nome} — materie sincronizzate.', 'success')
     return redirect(url_for('assegnazioni.index', anno=asgn.anno_scol))
 
 
