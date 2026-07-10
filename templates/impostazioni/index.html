@@ -65,6 +65,15 @@
             🏫 Classi attive
             <span class="badge-count">{{ n_sezioni_attive }} sez.</span>
         </a>
+        <a href="{{ url_for('dashboard_anno.index') }}" class="imp-link"
+           style="border-left:4px solid #16a34a;">
+            📊 Dashboard anno
+            <span>→</span>
+        </a>
+        <a href="{{ url_for('dashboard_anno.incarichi_docenti') }}" class="imp-link">
+            🎖 Incarichi per docente
+            <span>→</span>
+        </a>
         <a href="{{ url_for('incarichi.index') }}" class="imp-link">
             🎖 Incarichi docenti
             <span>→</span>

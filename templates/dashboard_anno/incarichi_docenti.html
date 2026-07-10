@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Incarichi per docente — {{ anno }}{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">← Dashboard</a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">🎖 Incarichi per docente — {{ anno }}</h1>
+    <div style="margin-left:auto; display:flex; gap:6px;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('dashboard_anno.incarichi_docenti', anno=a) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
+                  background:{{ '#1e40af' if a==anno else '#f3f4f6' }};
+                  color:{{ 'white' if a==anno else '#374151' }};">{{ a }}</a>
+        {% endfor %}
+        <a href="{{ url_for('incarichi.index', anno=anno) }}" class="btn btn-sm btn-primary">⚙ Gestisci incarichi</a>
+    </div>
+</div>
+{% if per_doc %}
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:12px;">
+    {% for doc, nomine in per_doc.items() %}
+    <div class="card" style="padding:14px 16px;">
+        <div style="font-weight:700; color:var(--blu); font-size:.88rem; margin-bottom:8px;
+                    border-bottom:1px solid #f0f0f0; padding-bottom:6px;">
+            {{ doc.cognome }} {{ doc.nome }}
+            <span style="font-size:.7rem; font-weight:400; color:var(--grigio);">({{ nomine|length }} incarico/i)</span>
+        </div>
+        {% for n in nomine %}
+        <div style="display:flex; align-items:flex-start; gap:6px; margin-bottom:6px;">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%;
+                          margin-top:4px; flex-shrink:0; background:#1e40af;"></span>
+            <div>
+                <div style="font-size:.8rem; font-weight:600; color:#1e293b;">{{ n.tipo.nome }}</div>
+                {% if n.label_classe %}
+                <span style="font-size:.7rem; background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px;">{{ n.label_classe }}</span>
+                {% elif n.dipartimento %}
+                <span style="font-size:.7rem; background:#f0fdf4; color:#166534; padding:1px 5px; border-radius:4px;">{{ n.dipartimento.nome }}</span>
+                {% endif %}
+                {% if n.importo %}
+                <span style="font-size:.7rem; color:#15803d; font-weight:700; margin-left:4px;">e {{ n.importo }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
+    Nessun incarico assegnato per {{ anno }}.
+    <a href="{{ url_for('incarichi.index', anno=anno) }}" style="color:var(--blu);">→ Assegna incarichi</a>
+</div>
+{% endif %}
+{% endblock %}

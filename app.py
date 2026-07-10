@@ -70,11 +70,13 @@ def create_app():
     from routes.assegnazioni import assegnazioni_bp
     from routes.incarichi import incarichi_bp
     from routes.export_xlsx import export_bp
+    from routes.dashboard_anno import dashboard_anno_bp
     app.register_blueprint(impostazioni_bp)
     app.register_blueprint(cambio_anno_bp)
     app.register_blueprint(assegnazioni_bp)
     app.register_blueprint(incarichi_bp)
     app.register_blueprint(export_bp)
+    app.register_blueprint(dashboard_anno_bp)
     from routes.impostazione_anno import impostazione_anno_bp
     app.register_blueprint(impostazione_anno_bp)
     from routes.recupero import recupero_bp

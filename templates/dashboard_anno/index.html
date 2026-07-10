@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Dashboard anno — {{ anno }}{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">📊 Dashboard {{ anno }}</h1>
+    <div style="margin-left:auto; display:flex; gap:6px;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('dashboard_anno.index', anno=a) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
+                  background:{{ '#1e40af' if a==anno else '#f3f4f6' }};
+                  color:{{ 'white' if a==anno else '#374151' }};">{{ a }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+{# ── KPI cards ─────────────────────────────────────────────────── #}
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-bottom:20px;">
+
+    {% macro kpi(icon, label, valore, sub='', color='var(--blu)', bg='#eff6ff', url='') %}
+    {% if url %}<a href="{{ url }}" style="text-decoration:none;">{% endif %}
+    <div style="background:{{ bg }}; border-radius:10px; padding:16px 18px;
+                border-left:4px solid {{ color }}; transition:transform .1s;"
+         onmouseover="this.style.transform='translateY(-2px)'"
+         onmouseout="this.style.transform=''">
+        <div style="font-size:1.4rem; margin-bottom:4px;">{{ icon }}</div>
+        <div style="font-size:1.6rem; font-weight:800; color:{{ color }};">{{ valore }}</div>
+        <div style="font-size:.78rem; font-weight:700; color:#374151;">{{ label }}</div>
+        {% if sub %}<div style="font-size:.7rem; color:#6b7280; margin-top:2px;">{{ sub }}</div>{% endif %}
+    </div>
+    {% if url %}</a>{% endif %}
+    {% endmacro %}
+
+    {{ kpi('🏫', 'Classi attive', n_classi,
+           indirizzi|join(' · '),
+           url=url_for('impostazione_anno.classi_attive')) }}
+
+    {{ kpi('👥', 'Docenti in organico', n_docenti,
+           'TI: ' ~ n_ti ~ ' · TD: ' ~ n_td,
+           url=url_for('impostazione_anno.docenti_anno')) }}
+
+    {% if n_ap_entrante or n_ap_uscente or n_aspettativa %}
+    {{ kpi('🔄', 'Movimenti', (n_ap_entrante + n_ap_uscente + n_aspettativa),
+           ('Entranti: '~n_ap_entrante~' · Uscenti: '~n_ap_uscente~' · Asp: '~n_aspettativa),
+           color='#d97706', bg='#fffbeb') }}
+    {% endif %}
+
+    {{ kpi('📋', 'Assegnazioni', n_assegnazioni,
+           (n_cc_assegnate|string~'/'~n_cc_totali~' CC coperte ('~perc_assegnazioni~'%)'),
+           color=('#16a34a' if perc_assegnazioni==100 else '#d97706' if perc_assegnazioni>50 else '#dc2626'),
+           bg=('#f0fdf4' if perc_assegnazioni==100 else '#fffbeb' if perc_assegnazioni>50 else '#fef2f2'),
+           url=url_for('assegnazioni.index', anno=anno)) }}
+
+    {{ kpi('🎖', 'Incarichi assegnati', n_incarichi,
+           'Coord. mancanti: '~n_coord_mancanti~' · Ref. dip. mancanti: '~n_ref_mancanti,
+           color=('#16a34a' if (n_coord_mancanti+n_ref_mancanti)==0 else '#d97706'),
+           bg=('#f0fdf4' if (n_coord_mancanti+n_ref_mancanti)==0 else '#fffbeb'),
+           url=url_for('incarichi.index', anno=anno)) }}
+
+    {% if n_aule_mancanti %}
+    {{ kpi('🚪', 'Aule mancanti', n_aule_mancanti,
+           'Da assegnare per '~anno,
+           color='#dc2626', bg='#fef2f2',
+           url=url_for('aule.lista')) }}
+    {% endif %}
+
+    {% if n_materie_no_mat %}
+    {{ kpi('⚠', 'Materie non collegate', n_materie_no_mat,
+           'Righe piano studi senza materia ufficiale',
+           color='#dc2626', bg='#fef2f2',
+           url=url_for('impostazione_anno.piano_studi')) }}
+    {% endif %}
+
+</div>
+
+{# ── Classi per indirizzo ──────────────────────────────────────── #}
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+
+    <div class="card" style="padding:14px 18px;">
+        <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
+            🏫 Classi attive — schede
+        </div>
+<div style="font-size:.8rem; color:var(--grigio); margin-bottom:8px;">
+            Clicca su una classe per aprire la scheda docenti e incarichi.
+        </div>
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            {% for cs in classi_sezioni %}
+            {% set lbl = cs.anno_corso|string + cs.sezione + ' ' + cs.indirizzo %}
+            <a href="{{ url_for('dashboard_anno.scheda_classe', label=lbl, anno=anno) }}"
+               style="padding:4px 9px; border-radius:6px; font-size:.76rem; text-decoration:none;
+                      background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; font-weight:600;">
+                {{ lbl }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card" style="padding:14px 18px;">
+        <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
+            🎖 Incarichi — riepilogo
+        </div>
+        {% if n_coord_mancanti == 0 and n_ref_mancanti == 0 %}
+        <div style="color:#16a34a; font-size:.84rem; font-weight:600;">
+            ✅ Coordinatori e referenti dipartimento tutti assegnati
+        </div>
+        {% else %}
+        {% if n_coord_mancanti %}
+        <div style="color:#dc2626; font-size:.82rem; margin-bottom:6px;">
+            ⚠ {{ n_coord_mancanti }} coordinatori di classe mancanti
+        </div>
+        {% endif %}
+        {% if n_ref_mancanti %}
+        <div style="color:#dc2626; font-size:.82rem; margin-bottom:6px;">
+            ⚠ {{ n_ref_mancanti }} referenti di dipartimento mancanti
+        </div>
+        {% endif %}
+        {% endif %}
+        <div style="margin-top:10px;">
+            <a href="{{ url_for('incarichi.index', anno=anno) }}"
+               class="btn btn-sm btn-primary">→ Gestisci incarichi</a>
+            <a href="{{ url_for('dashboard_anno.incarichi_docenti', anno=anno) }}"
+               class="btn btn-sm" style="background:#f3f4f6; color:#374151; margin-left:6px;">
+                → Vista per docente
+            </a>
+        </div>
+    </div>
+</div>
+
+{# ── Confronto TI vs USR ───────────────────────────────────────── #}
+{% if confronto_cc %}
+<div class="card" style="padding:14px 18px; margin-bottom:14px;">
+    <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
+        ⚖ Scarti organico TI vs DOC USR
+        <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
+            — {{ confronto_cc|length }} CC con scarto
+        </span>
+    </div>
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        {% for item in confronto_cc %}
+        <div style="padding:5px 10px; border-radius:7px; font-size:.78rem;
+                    background:{{ '#fef2f2' if item.scarto > 0 else '#fffbeb' }};
+                    border:1px solid {{ '#fecaca' if item.scarto > 0 else '#fde68a' }};
+                    color:{{ '#dc2626' if item.scarto > 0 else '#d97706' }};">
+            <strong>{{ item.cc.codice }}</strong>
+            TI={{ item.n_ti }} · USR={{ item.n_usr }}
+            <span style="font-weight:800;">
+                ({{ '+' if item.scarto > 0 else '' }}{{ item.scarto }})
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="margin-top:10px;">
+        <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}"
+           class="btn btn-sm btn-primary" style="font-size:.76rem;">
+            → Passo 8 — Confronto completo
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{# ── Link rapidi ───────────────────────────────────────────────── #}
+<div class="card" style="padding:14px 18px;">
+    <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
+        🔗 Azioni rapide
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-sm btn-primary">
+            ⚙ Hub impostazione anno
+        </a>
+        <a href="{{ url_for('assegnazioni.index', anno=anno) }}" class="btn btn-sm btn-primary">
+            📋 Assegnazioni classi
+        </a>
+        <a href="{{ url_for('incarichi.index', anno=anno) }}" class="btn btn-sm btn-primary">
+            🎖 Incarichi
+        </a>
+        <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm btn-primary">
+            📚 Dipartimenti
+        </a>
+        <a href="{{ url_for('export_xlsx.tutte_classi', anno=anno) }}"
+           class="btn btn-sm" style="background:#16a34a; color:white;">
+            📥 Tutte le classi XLSX
+        </a>
+        <a href="{{ url_for('export_xlsx.export_passo', passo='p9', anno=anno) }}"
+           class="btn btn-sm" style="background:#16a34a; color:white;">
+            📥 Assegnazioni XLSX
+        </a>
+    </div>
+</div>
+
+{% endblock %}
