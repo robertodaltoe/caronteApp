@@ -527,3 +527,102 @@ def export_classe(label):
     wb = _export_classe(anno, label)
     nome = f'classe_{label.replace(" ", "_")}_{anno}.xlsx'
     return _send(wb, nome)
+
+
+# ══ EXPORT TUTTE LE CLASSI in un unico file ══════════════════════════
+
+def _aggiungi_foglio_classe(wb, anno, label_classe):
+    """Aggiunge un foglio classe al workbook esistente."""
+    import re
+    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+    from models.incarico import IncaricaDocente
+    from models.materia import Materia
+    from collections import defaultdict
+
+    m = re.match(r'(\d+)([AB]?)\s+(.+)', label_classe)
+    if not m:
+        return
+    anno_corso = int(m.group(1))
+    sezione    = m.group(2) or 'A'
+    indirizzo  = m.group(3).strip()
+
+    sheet_name = label_classe[:31].replace('/', '-')
+    ws = wb.create_sheet(sheet_name)
+    ws.column_dimensions['A'].width = 22
+    ws.column_dimensions['B'].width = 35
+    ws.column_dimensions['C'].width = 8
+    ws.column_dimensions['D'].width = 25
+
+    r = _title(ws, f'Classe {anno_corso}{sezione} {indirizzo}', anno)
+    r = _hdr(ws, r, ['Docente', 'Materia', 'Ore', 'Incarico nella classe'])
+
+    assegnazioni_classe = (AssegnazioneClasse.query
+        .filter_by(indirizzo=indirizzo, anno_corso=anno_corso, sezione=sezione)
+        .join(AssegnazioneDocente,
+              AssegnazioneClasse.id_assegnazione == AssegnazioneDocente.id)
+        .filter(AssegnazioneDocente.anno_scol == anno).all())
+
+    doc_map = defaultdict(list)
+    for ac in assegnazioni_classe:
+        a = ac.assegnazione
+        mat = Materia.query.get(ac.id_materia) if ac.id_materia else None
+        nome_mat = (mat.nome_breve or mat.nome) if mat else '—'
+        doc_map[a].append((nome_mat, ac.ore))
+
+    incarichi_map = {
+        inc.id_docente: inc.tipo.nome
+        for inc in IncaricaDocente.query.filter_by(
+            anno_scol=anno, indirizzo=indirizzo,
+            anno_corso=anno_corso, sezione=sezione).all()
+    }
+
+    if doc_map:
+        for a, materie_ore in sorted(
+                doc_map.items(),
+                key=lambda x: x[0].docente.cognome if x[0].docente else 'zzz'):
+            incarico = incarichi_map.get(a.id_docente, '')
+            for i, (mat, ore) in enumerate(materie_ore):
+                r = _row(ws, r, [a.display_name if i == 0 else '',
+                                  mat, ore,
+                                  incarico if i == 0 else ''])
+    else:
+        ws.cell(r, 1, 'Nessuna assegnazione presente.').font = \
+            Font(italic=True, color='9CA3AF', name='Arial')
+        r += 1
+
+    if incarichi_map:
+        r += 1
+        ws.cell(r, 1, 'Incarichi di classe').font = \
+            Font(bold=True, color=BLU, name='Arial', size=10)
+        r += 1
+        r = _hdr(ws, r, ['Tipo incarico', 'Docente', '', ''], color='374151')
+        for inc in IncaricaDocente.query.filter_by(
+                anno_scol=anno, indirizzo=indirizzo,
+                anno_corso=anno_corso, sezione=sezione).all():
+            r = _row(ws, r, [inc.tipo.nome,
+                              f'{inc.docente.cognome} {inc.docente.nome}', '', ''])
+    _border_all(ws, 4, r-1, 1, 4)
+
+
+@export_bp.route('/export/tutte-classi')
+def tutte_classi():
+    from config_anno import get_anno_corrente
+    from models.piano_studi import ClasseSezione
+    anno = request.args.get('anno', get_anno_corrente())
+
+    sezioni = ClasseSezione.query.filter_by(
+        anno_scol=anno, attiva=True).order_by(
+        ClasseSezione.indirizzo,
+        ClasseSezione.anno_corso,
+        ClasseSezione.sezione).all()
+
+    wb = _wb()
+    for s in sezioni:
+        label = f'{s.anno_corso}{s.sezione} {s.indirizzo}'
+        _aggiungi_foglio_classe(wb, anno, label)
+
+    if not wb.sheetnames:
+        ws = wb.create_sheet('Nessuna classe')
+        ws.cell(1, 1, 'Nessuna classe attiva trovata.')
+
+    return _send(wb, f'schede_classi_{anno}.xlsx')
