@@ -88,20 +88,25 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 
 {% set colori_area = ['#1e40af','#15803d','#b45309','#0e7490','#7c2d12','#86198f','#0f766e','#6b7280'] %}
 
-{# ── Badge area disciplinare (ancore) ────────────────────────────── #}
+{# ── Badge area disciplinare — filtra visibilità ─────────────────── #}
 {% set colori_badge = ['#1e40af','#15803d','#b45309','#0e7490','#7c2d12','#86198f','#0f766e','#6b7280'] %}
 <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
-    <span style="font-size:.8rem; color:var(--grigio); font-weight:600; white-space:nowrap;">Vai a:</span>
+    <span style="font-size:.8rem; color:var(--grigio); font-weight:600; white-space:nowrap;">Mostra:</span>
+    <button onclick="filtraArea('tutti')" data-area="tutti"
+            style="padding:5px 14px; border-radius:20px; border:2px solid var(--blu);
+                   background:var(--blu); color:white; font-size:.76rem; font-weight:700;
+                   cursor:pointer; white-space:nowrap;">
+        Tutte
+    </button>
     {% for area in aree_data %}
     {% set col = colori_badge[loop.index0 % colori_badge|length] %}
-    <a href="#area-{{ loop.index0 }}"
-       style="padding:5px 14px; border-radius:20px; border:2px solid {{ col }};
-              background:white; color:{{ col }}; font-size:.76rem; font-weight:700;
-              text-decoration:none; white-space:nowrap; transition:all .15s;"
-       onmouseover="this.style.background='{{ col }}'; this.style.color='white';"
-       onmouseout="this.style.background='white'; this.style.color='{{ col }}';">
+    <button onclick="filtraArea('area-{{ loop.index0 }}')" data-area="area-{{ loop.index0 }}"
+            style="padding:5px 14px; border-radius:20px; border:2px solid {{ col }};
+                   background:white; color:{{ col }}; font-size:.76rem; font-weight:700;
+                   cursor:pointer; white-space:nowrap; transition:all .15s;"
+            data-col="{{ col }}">
         {{ area.nome }}
-    </a>
+    </button>
     {% endfor %}
 </div>
 
@@ -936,6 +941,44 @@ document.addEventListener('click', e => {
     }
 });
 
+
+function filtraArea(areaId) {
+    // Aggiorna stile badge
+    document.querySelectorAll('[data-area]').forEach(btn => {
+        const col = btn.dataset.col || 'var(--blu)';
+        if (btn.dataset.area === areaId) {
+            btn.style.background = col;
+            btn.style.color = 'white';
+        } else {
+            btn.style.background = 'white';
+            btn.style.color = col;
+        }
+    });
+    // Badge "Tutte"
+    const btnTutte = document.querySelector('[data-area="tutti"]');
+    if (btnTutte) {
+        if (areaId === 'tutti') {
+            btnTutte.style.background = 'var(--blu)';
+            btnTutte.style.color = 'white';
+        } else {
+            btnTutte.style.background = 'white';
+            btnTutte.style.color = 'var(--blu)';
+        }
+    }
+    // Mostra/nasconde le area-card
+    document.querySelectorAll('.area-card').forEach(card => {
+        if (areaId === 'tutti') {
+            card.style.display = '';
+        } else {
+            card.style.display = card.id === areaId ? '' : 'none';
+        }
+    });
+    // Scrolla in cima alla sezione se singola area
+    if (areaId !== 'tutti') {
+        const el = document.getElementById(areaId);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+}
 
 function togglePianoMat(id) {
     const tbody = document.getElementById(id);
