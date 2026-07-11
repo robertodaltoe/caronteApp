@@ -356,6 +356,33 @@ def salva():
     return redirect(url_for('assegnazioni.index', anno=anno))
 
 
+@assegnazioni_bp.route('/assegnazioni/crea-e-assegna', methods=['POST'])
+def crea_e_assegna():
+    """AJAX: crea AssegnazioneDocente per un precaricato e restituisce l'id."""
+    from flask import jsonify
+    data  = request.json or {}
+    anno  = data.get('anno')
+    cc_id = int(data.get('cc_id', 0))
+    id_doc= int(data.get('id_doc', 0))
+
+    if not all([anno, cc_id, id_doc]):
+        return jsonify(ok=False, msg='Parametri mancanti'), 400
+
+    # Cerca assegnazione esistente
+    asgn = AssegnazioneDocente.query.filter_by(
+        anno_scol=anno, id_classe_concorso=cc_id,
+        id_docente=id_doc).first()
+
+    if not asgn:
+        asgn = AssegnazioneDocente(
+            anno_scol=anno, id_classe_concorso=cc_id,
+            id_docente=id_doc, tipo='TI')
+        db.session.add(asgn)
+        db.session.commit()
+
+    return jsonify(ok=True, asgn_id=asgn.id)
+
+
 @assegnazioni_bp.route('/assegnazioni/<int:asgn_id>/aggiorna-ore', methods=['POST'])
 def aggiorna_ore(asgn_id):
     """AJAX: aggiorna/crea ore per una specifica classe+materia di un'assegnazione."""

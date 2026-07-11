@@ -361,8 +361,31 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 <td style="text-align:center; border:1px solid #e2e8f0; color:#9ca3af; font-size:.7rem;">
                     TI
                 </td>
+                {% set IND_COL_PRE = {
+                    'AFM':'#1e40af','RIM':'#1d4ed8',
+                    'CAT':'#b45309','LLI':'#15803d',
+                    'LSC':'#0e7490','LSP':'#7c3aed',
+                    'LSU':'#be185d','SOS':'#6b7280'} %}
+                {% set prev_ind_pre = namespace(v='') %}
                 {% for classe in classi %}
-                <td style="border:1px solid #e2e8f0; color:#cbd5e1; text-align:center;">—</td>
+                {% set ind_pre = classe.split(' ')[-1] %}
+                {% set is_first_pre = (ind_pre != prev_ind_pre.v) %}
+                {% set prev_ind_pre.v = ind_pre %}
+                {% set mat_list_pre = blk.piano_materie[classe] %}
+                <td style="border:1px solid #e2e8f0; color:#cbd5e1; text-align:center;
+                           cursor:pointer;
+                           {{ 'border-left:3px solid '~IND_COL_PRE.get(ind_pre,'#374151')~';' if is_first_pre else '' }}"
+                    title="Clicca per assegnare ore a {{ d.cognome }}"
+                    data-anno="{{ anno }}"
+                    data-ccid="{{ cc.id }}"
+                    data-docid="{{ d.id }}"
+                    data-classe="{{ classe }}"
+                    data-multi="{{ blk.multi_materia[classe]|tojson }}"
+                    data-matids='{{ mat_list_pre | map(attribute='id') | list | tojson }}'
+                    data-matnomi='{{ mat_list_pre | map(attribute='nome') | list | tojson }}'
+                    onclick="apriPopoverPrecaricato(this)">
+                    —
+                </td>
                 {% endfor %}
                 <td class="td-sticky-r col-tot">—</td>
                 <td class="td-sticky-r col-max">{{ d.ore_max_effettive }}h</td>
@@ -556,6 +579,34 @@ let _popMulti  = false;
 let _popMats   = [];
 let _popNomi   = [];
 let _popCell   = null;
+
+async function apriPopoverPrecaricato(td) {
+    // Crea AssegnazioneDocente al volo, poi apre il popover
+    const anno  = td.dataset.anno;
+    const ccId  = td.dataset.ccid;
+    const docId = td.dataset.docid;
+
+    const res = await fetch('/assegnazioni/crea-e-assegna', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({anno, cc_id: parseInt(ccId), id_doc: parseInt(docId)})
+    });
+    const data = await res.json();
+    if (!data.ok) { alert('Errore: ' + data.msg); return; }
+
+    // Aggiorna il td con i dati dell'assegnazione creata
+    const asgnId = data.asgn_id;
+    td.dataset.asgn  = asgnId;
+    td.dataset.oreatt = '{}';
+    td.removeAttribute('onclick');
+    td.setAttribute('onclick', 'apriPopoverData(this)');
+
+    // Ricarica la riga dal server sarebbe overkill — apriamo direttamente il popover
+    const multi   = JSON.parse(td.dataset.multi);
+    const matIds  = JSON.parse(td.dataset.matids);
+    const matNomi = JSON.parse(td.dataset.matnomi);
+    apriPopover(td, asgnId, td.dataset.classe, multi, matIds, matNomi, {});
+}
 
 function apriPopoverData(td) {
     const asgnId     = parseInt(td.dataset.asgn);
