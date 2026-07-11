@@ -281,9 +281,16 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% set prev_ind3.v = ind3 %}
                 {% set ore = blk.ore_doc_classe[a.id].get(classe, 0) %}
                 {% set mat_list = blk.piano_materie[classe] %}
+                {% set ore_mat_over_cella = [] %}
+                {% for mat in blk.piano_materie[classe] %}
+                {% set ore_mat_cella = blk.ore_doc_mat[a.id].get(classe, {}).get(mat.id, 0) %}
+                {% if ore_mat_cella > mat.ore %}{% set _ = ore_mat_over_cella.append(1) %}{% endif %}
+                {% endfor %}
+                {% set ore_cl_over = ore > blk.piano[classe] %}
                 <td class="{{ 'ore-val' if ore else 'ore-zero' }}"
                     style="cursor:pointer; width:34px; text-align:center; border:1px solid #e2e8f0;
-                           {{ 'border-left:3px solid '~IND_COL3.get(ind3,'#374151')~';' if is_first_of_ind3 else '' }}"
+                           {{ 'border-left:3px solid '~IND_COL3.get(ind3,'#374151')~';' if is_first_of_ind3 else '' }}
+                           {% if is_over %}color:#b91c1c;{% elif ore_mat_over_cella %}color:#9a3412;{% elif ore_cl_over %}color:#92400e;{% endif %}"
                     title="Clicca per inserire/modificare ore"
                     data-asgn="{{ a.id }}"
                     data-classe="{{ classe }}"
@@ -730,6 +737,8 @@ function _aggiornaCellaTd(ore, tot) {
     _popCell.className = _popCell.className
         .replace('ore-zero','').replace('ore-val','').trim();
     _popCell.classList.add(ore ? 'ore-val' : 'ore-zero');
+    // Resetta colore testo cella (verrà impostato da _aggiornaColoreRiga)
+    _popCell.style.color = '';
 
     // Aggiorna Tot. nella riga + colore sforamento
     const tr = _popCell.closest('tr');
@@ -745,21 +754,25 @@ function _aggiornaColoreRiga(res) {
     if (!tr) return;
     tr.style.background = '';
     tr.style.outline    = '';
+    // Resetta colore testo di tutte le celle ore della riga
+    tr.querySelectorAll('td[data-asgn], td[data-docid]').forEach(td => td.style.color = '');
     const totEl = tr.querySelector('.tot-ore');
+
     if (res.warn_docente) {
-        // Rosso: supera ore max docente (priorità massima)
-        tr.style.background = '#fde8e8';
-        tr.style.outline    = res.warn_classe ? '2px solid #dc2626' : '';
+        tr.style.background  = '#fde8e8';
+        tr.style.outline     = res.warn_classe ? '2px solid #dc2626' : '';
+        _popCell.style.color = '#b91c1c';  // rosso scuro sulla cella
         if (totEl) { totEl.style.color='#dc2626'; totEl.title='Supera le ore max del docente'; }
     } else if (res.warn_materia) {
-        // Arancio scuro: ore materia superate in questa classe
-        tr.style.background = '#fff0e0';
-        if (totEl) { totEl.style.color='#c2410c'; totEl.title='Supera le ore previste per questa materia in questa classe'; }
+        tr.style.background  = '#fff0e0';
+        _popCell.style.color = '#9a3412';  // arancio scuro sulla cella
+        if (totEl) { totEl.style.color='#c2410c'; totEl.title='Supera le ore previste per questa materia'; }
     } else if (res.warn_classe) {
-        // Giallo: ore CC superate in questa classe
-        tr.style.background = '#fff3cd';
-        if (totEl) { totEl.style.color='#d97706'; totEl.title='Supera le ore previste per questa CC in questa classe'; }
+        tr.style.background  = '#fff3cd';
+        _popCell.style.color = '#92400e';  // ambra scura sulla cella
+        if (totEl) { totEl.style.color='#d97706'; totEl.title='Supera le ore previste per questa CC'; }
     } else {
+        _popCell.style.color = '';
         if (totEl) { totEl.style.color=''; totEl.title=''; }
     }
 }
