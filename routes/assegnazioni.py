@@ -91,11 +91,13 @@ def _classi_per_cc(anno_scol, cc_id):
             if lbl not in classi:
                 classi.append(lbl)
     import re as _re_sort
+    IND_ORDER = {'AFM':0,'RIM':1,'CAT':2,'LLI':3,'LSC':4,'LSP':5,'LSU':6,'SOS':7}
     def _sort_key(lbl):
         m = _re_sort.match(r'(\d+)([AB]?)\s+(.+)', lbl)
         if m:
-            return (m.group(3), int(m.group(1)), m.group(2))
-        return (lbl, 0, '')
+            ind = m.group(3).strip()
+            return (IND_ORDER.get(ind, 99), ind, int(m.group(1)), m.group(2))
+        return (99, lbl, 0, '')
     return sorted(classi, key=_sort_key)
 
 

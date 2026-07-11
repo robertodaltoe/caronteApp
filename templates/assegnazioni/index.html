@@ -43,6 +43,7 @@ table.pivot th.th-doc {
 table.pivot th.th-doc { background:#f1f5f9; z-index:3; }
 table.pivot td.td-sticky-r,
 table.pivot th.th-sticky-r {
+    width:44px; min-width:44px;
     position:sticky; right:0; z-index:2;
     background:#dde3ee;
     box-shadow:-2px 0 4px rgba(0,0,0,.06);
@@ -135,22 +136,20 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% for classe in classi %}
                     {% set ind = classe.split(' ')[-1] %}
                     {% set col = IND_COLORS.get(ind, '#374151') %}
-                    {% if ind != prev_ind.v %}
-                    {# Separatore cambia indirizzo #}
-                    <th style="width:3px; background:{{ col }}; padding:0; border:none;"></th>
+                    {% set is_first_of_ind = (ind != prev_ind.v) %}
                     {% set prev_ind.v = ind %}
-                    {% endif %}
                     <th style="min-width:30px; max-width:36px; background:{{ col }};
                                color:white; writing-mode:vertical-rl;
                                text-orientation:mixed; transform:rotate(180deg);
                                height:70px; padding:4px 2px;
                                font-size:.65rem; font-weight:700; white-space:nowrap;
-                               border:1px solid rgba(255,255,255,.3);">
+                               border:1px solid rgba(255,255,255,.3);
+                               {{ 'border-left:3px solid rgba(0,0,0,.25);' if is_first_of_ind else '' }}">
                         {{ classe }}
                     </th>
                     {% endfor %}
-                    <th class="th-sticky-r" style="min-width:48px; color:#1e293b;">Tot.</th>
-                    <th class="th-sticky-r" style="min-width:44px; color:#6b7280; right:30px;">Max</th>
+                    <th class="th-sticky-r" style="width:44px; min-width:44px; max-width:44px; color:#1e293b;">Tot.</th>
+                    <th class="th-sticky-r" style="width:44px; min-width:44px; max-width:44px; color:#6b7280; right:44px;">Max</th>
                     <th style="width:30px;"></th>
                 </tr>
                 {# Riga ore previste da piano studi #}
@@ -167,13 +166,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% set prev_ind2 = namespace(v='') %}
                     {% for classe in classi %}
                     {% set ind2 = classe.split(' ')[-1] %}
-                    {% if ind2 != prev_ind2.v %}
-                    <td style="width:3px; padding:0; background:#e5e7eb; border:none;"></td>
+                    {% set is_first_of_ind2 = (ind2 != prev_ind2.v) %}
                     {% set prev_ind2.v = ind2 %}
-                    {% endif %}
                     {% set mats = blk.piano_materie[classe] %}
                     <td style="font-size:.72rem; color:var(--grigio); font-weight:600;
                                border:1px solid #e2e8f0; text-align:center; width:34px;
+                               {{ 'border-left:3px solid '~IND_COLORS2.get(ind2,'#374151')~';' if is_first_of_ind2 else '' }}
                                cursor:{{ 'pointer' if blk.multi_materia[classe] else 'default' }};"
                         {% if blk.multi_materia[classe] %}
                         title="{{ mats | map(attribute='nome') | join(' / ') }}"
@@ -261,16 +259,14 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% set prev_ind3 = namespace(v='') %}
                 {% for classe in classi %}
                 {% set ind3 = classe.split(' ')[-1] %}
-                {% if ind3 != prev_ind3.v %}
-                <td style="width:3px; padding:0; background:#e5e7eb; border:none;"></td>
+                {% set is_first_of_ind3 = (ind3 != prev_ind3.v) %}
                 {% set prev_ind3.v = ind3 %}
-                {% endif %}
                 {% set ore = blk.ore_doc_classe[a.id].get(classe, 0) %}
                 {% set mat_list = blk.piano_materie[classe] %}
                 <td class="{{ 'ore-val' if ore else 'ore-zero' }}"
                     style="cursor:pointer; width:34px; text-align:center; border:1px solid #e2e8f0;
-                           border-left:2px solid {{ IND_COL3.get(ind3,'#374151') }}22;"
-                    title="{{ 'Clicca per inserire/modificare ore' }}"
+                           {{ 'border-left:3px solid '~IND_COL3.get(ind3,'#374151')~';' if is_first_of_ind3 else '' }}"
+                    title="Clicca per inserire/modificare ore"
                     onclick="apriPopover(this, {{ a.id }}, '{{ classe }}',
                              {{ blk.multi_materia[classe]|tojson }},
                              {{ mat_list | map(attribute='id') | list | tojson }},
