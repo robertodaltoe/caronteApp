@@ -126,11 +126,26 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <th class="th-doc">Docente</th>
                     <th style="min-width:50px; background:#f1f5f9; border:1px solid #e2e8f0;
                                font-size:.7rem; color:var(--grigio);">Tipo</th>
+                    {% set IND_COLORS = {
+                        'AFM':'#1e40af','RIM':'#1d4ed8',
+                        'CAT':'#b45309','LLI':'#15803d',
+                        'LSC':'#0e7490','LSP':'#7c3aed',
+                        'LSU':'#be185d','SOS':'#6b7280'} %}
+                    {% set prev_ind = namespace(v='') %}
                     {% for classe in classi %}
-                    <th style="min-width:52px; background:#e8edf5; color:#1e293b;
-                               writing-mode:vertical-rl; text-orientation:mixed;
-                               transform:rotate(180deg); height:80px; padding:6px 4px;
-                               font-size:.7rem; font-weight:700; white-space:nowrap;">
+                    {% set ind = classe.split(' ')[-1] %}
+                    {% set col = IND_COLORS.get(ind, '#374151') %}
+                    {% if ind != prev_ind.v %}
+                    {# Separatore cambia indirizzo #}
+                    <th style="width:3px; background:{{ col }}; padding:0; border:none;"></th>
+                    {% set prev_ind.v = ind %}
+                    {% endif %}
+                    <th style="min-width:30px; max-width:36px; background:{{ col }};
+                               color:white; writing-mode:vertical-rl;
+                               text-orientation:mixed; transform:rotate(180deg);
+                               height:70px; padding:4px 2px;
+                               font-size:.65rem; font-weight:700; white-space:nowrap;
+                               border:1px solid rgba(255,255,255,.3);">
                         {{ classe }}
                     </th>
                     {% endfor %}
@@ -144,10 +159,21 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         Piano studi
                     </td>
                     <td></td>
+                    {% set IND_COLORS2 = {
+                        'AFM':'#1e40af','RIM':'#1d4ed8',
+                        'CAT':'#b45309','LLI':'#15803d',
+                        'LSC':'#0e7490','LSP':'#7c3aed',
+                        'LSU':'#be185d','SOS':'#6b7280'} %}
+                    {% set prev_ind2 = namespace(v='') %}
                     {% for classe in classi %}
+                    {% set ind2 = classe.split(' ')[-1] %}
+                    {% if ind2 != prev_ind2.v %}
+                    <td style="width:3px; padding:0; background:#e5e7eb; border:none;"></td>
+                    {% set prev_ind2.v = ind2 %}
+                    {% endif %}
                     {% set mats = blk.piano_materie[classe] %}
                     <td style="font-size:.72rem; color:var(--grigio); font-weight:600;
-                               border:1px solid #e2e8f0; text-align:center;
+                               border:1px solid #e2e8f0; text-align:center; width:34px;
                                cursor:{{ 'pointer' if blk.multi_materia[classe] else 'default' }};"
                         {% if blk.multi_materia[classe] %}
                         title="{{ mats | map(attribute='nome') | join(' / ') }}"
@@ -227,17 +253,34 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {{ tipo_display.get(a.tipo, a.tipo) }}
                     </span>
                 </td>
+                {% set IND_COL3 = {
+                    'AFM':'#1e40af','RIM':'#1d4ed8',
+                    'CAT':'#b45309','LLI':'#15803d',
+                    'LSC':'#0e7490','LSP':'#7c3aed',
+                    'LSU':'#be185d','SOS':'#6b7280'} %}
+                {% set prev_ind3 = namespace(v='') %}
                 {% for classe in classi %}
+                {% set ind3 = classe.split(' ')[-1] %}
+                {% if ind3 != prev_ind3.v %}
+                <td style="width:3px; padding:0; background:#e5e7eb; border:none;"></td>
+                {% set prev_ind3.v = ind3 %}
+                {% endif %}
                 {% set ore = blk.ore_doc_classe[a.id].get(classe, 0) %}
+                {% set mat_list = blk.piano_materie[classe] %}
                 <td class="{{ 'ore-val' if ore else 'ore-zero' }}"
-                    style="{{ 'cursor:pointer;' if blk.multi_materia[classe] and ore else '' }}"
+                    style="cursor:pointer; width:34px; text-align:center; border:1px solid #e2e8f0;
+                           border-left:2px solid {{ IND_COL3.get(ind3,'#374151') }}22;"
+                    title="{{ 'Clicca per inserire/modificare ore' }}"
+                    onclick="apriPopover(this, {{ a.id }}, '{{ classe }}',
+                             {{ blk.multi_materia[classe]|tojson }},
+                             {{ mat_list | map(attribute='id') | list | tojson }},
+                             {{ mat_list | map(attribute='nome') | list | tojson }},
+                             {{ blk.ore_doc_mat[a.id].get(classe, {})|tojson }})">
+                    <span class="cell-ore" id="cell-{{ a.id }}-{{ classe|replace(' ','_') }}">
+                        {{ ore if ore else '—' }}
+                    </span>
                     {% if blk.multi_materia[classe] and ore %}
-                    title="Clicca per vedere dettaglio materie — {{ classe }}"
-                    onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
-                    {% endif %}>
-                    {{ ore if ore else '—' }}
-                    {% if blk.multi_materia[classe] and ore %}
-                    <span style="font-size:.6rem; color:#6366f1;">▾</span>
+                    <span style="font-size:.55rem; color:#6366f1;">▾</span>
                     {% endif %}
                 </td>
                 {% endfor %}
@@ -248,7 +291,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
                     title="Mostra/nascondi dettaglio materie"
                     {% endif %}>
-                    {{ tot }}h
+                    <span class="tot-ore">{{ tot }}h</span>
                     {% if blk.multi_materia.values() | select | list %}
                     <span style="font-size:.62rem; color:#6366f1;">▾</span>
                     {% endif %}
@@ -486,6 +529,142 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 {% endfor %}
 
 <script>
+
+{# ── Popover autosave ore ─────────────────────────────────────────── #}
+<div id="ore-popover" style="display:none; position:fixed; z-index:9999;
+     background:white; border:1px solid #e2e8f0; border-radius:10px;
+     box-shadow:0 8px 24px rgba(0,0,0,.18); padding:12px 14px; min-width:200px;">
+    <div id="pop-title" style="font-size:.78rem; font-weight:700; color:var(--blu);
+                                margin-bottom:8px;"></div>
+    <div id="pop-fields"></div>
+    <div style="display:flex; gap:6px; margin-top:10px; align-items:center;">
+        <button onclick="salvaPopover()" class="btn btn-success btn-sm" style="font-size:.76rem;">
+            ✓ Salva
+        </button>
+        <button onclick="chiudiPopover()" class="btn btn-sm"
+                style="background:#f3f4f6; color:#374151; font-size:.76rem;">
+            Annulla
+        </button>
+        <span id="pop-msg" style="font-size:.7rem; color:#16a34a; margin-left:4px;"></span>
+    </div>
+</div>
+
+<script>
+let _popAsgnId = null;
+let _popClasse = null;
+let _popMulti  = false;
+let _popMats   = [];
+let _popNomi   = [];
+let _popCell   = null;
+
+function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
+    _popAsgnId = asgnId;
+    _popClasse = classe;
+    _popMulti  = multi;
+    _popMats   = matIds;
+    _popNomi   = matNomi;
+    _popCell   = td;
+
+    document.getElementById('pop-title').textContent = classe;
+    const fields = document.getElementById('pop-fields');
+    fields.innerHTML = '';
+
+    if (multi && matIds.length > 0) {
+        matIds.forEach((id, i) => {
+            const val = oreAttuale[id] || 0;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:5px;';
+            row.innerHTML = `
+                <span style="flex:1;font-size:.78rem;color:#374151;">${matNomi[i]}</span>
+                <input type="number" min="0" max="20" value="${val}"
+                       data-mat="${id}"
+                       style="width:50px;padding:3px 6px;border:1px solid #d1d5db;
+                              border-radius:5px;font-size:.82rem;text-align:center;"
+                       onkeydown="if(event.key==='Enter')salvaPopover()">`;
+            fields.appendChild(row);
+        });
+    } else {
+        const ore = oreAttuale[0] || oreAttuale[''] || Object.values(oreAttuale)[0] || 0;
+        fields.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:.78rem;color:#374151;">Ore</span>
+                <input type="number" min="0" max="20" value="${ore}" id="pop-single"
+                       style="width:60px;padding:4px 8px;border:1px solid #d1d5db;
+                              border-radius:5px;font-size:.9rem;text-align:center;"
+                       onkeydown="if(event.key==='Enter')salvaPopover()">
+            </div>`;
+        setTimeout(() => document.getElementById('pop-single')?.focus(), 50);
+    }
+
+    // Posiziona il popover vicino alla cella cliccata
+    const rect = td.getBoundingClientRect();
+    const pop  = document.getElementById('ore-popover');
+    pop.style.display = 'block';
+    pop.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+    pop.style.left = Math.min(rect.left + window.scrollX,
+                              window.innerWidth - 240) + 'px';
+    pop.querySelector('input')?.focus();
+}
+
+function chiudiPopover() {
+    document.getElementById('ore-popover').style.display = 'none';
+    _popAsgnId = null; _popCell = null;
+}
+
+async function salvaPopover() {
+    if (!_popAsgnId) return;
+    const msg = document.getElementById('pop-msg');
+    msg.textContent = '…';
+
+    const salvaOre = async (idMat, ore) => {
+        const r = await fetch(`/assegnazioni/${_popAsgnId}/aggiorna-ore`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({classe: _popClasse, id_materia: idMat || null, ore: ore})
+        });
+        return r.json();
+    };
+
+    let tot = 0;
+    if (_popMulti && _popMats.length > 0) {
+        const inputs = document.querySelectorAll('#pop-fields input[data-mat]');
+        for (const inp of inputs) {
+            const idMat = parseInt(inp.dataset.mat);
+            const ore   = parseInt(inp.value) || 0;
+            const res   = await salvaOre(idMat, ore);
+            if (res.ok) tot = res.tot;
+        }
+    } else {
+        const inp = document.getElementById('pop-single');
+        const ore = parseInt(inp?.value) || 0;
+        const res = await salvaOre(null, ore);
+        if (res.ok) {
+            tot = res.tot;
+            // Aggiorna cella
+            const cellId = `cell-${_popAsgnId}-${_popClasse.replace(/ /g,'_')}`;
+            const cellEl = document.getElementById(cellId);
+            if (cellEl) cellEl.textContent = ore || '—';
+        }
+    }
+
+    // Aggiorna Tot. nella riga
+    const totEl = _popCell?.closest('tr')?.querySelector('.tot-ore');
+    if (totEl) totEl.textContent = tot + 'h';
+
+    msg.textContent = '✓ Salvato';
+    setTimeout(chiudiPopover, 800);
+}
+
+// Chiudi popover cliccando fuori
+document.addEventListener('click', e => {
+    const pop = document.getElementById('ore-popover');
+    if (pop.style.display === 'block' &&
+        !pop.contains(e.target) &&
+        !e.target.closest('td[onclick*="apriPopover"]')) {
+        chiudiPopover();
+    }
+});
+
 function togglePianoMat(id) {
     const tbody = document.getElementById(id);
     if (!tbody) return;

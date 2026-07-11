@@ -17,7 +17,7 @@ assegnazioni_bp = Blueprint('assegnazioni', __name__)
 
 def _sync_docente_materie(id_docente, asgn, anno_scol):
     """Crea DocenteMateria per le materie dell'assegnazione, se non esistono."""
-    from models.piano_studi import DocenteMateria
+    from models.materia import DocenteMateria
 
     materie_ids = {ac.id_materia for ac in asgn.classi if ac.id_materia}
     if not materie_ids:
@@ -90,7 +90,13 @@ def _classi_per_cc(anno_scol, cc_id):
             lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
             if lbl not in classi:
                 classi.append(lbl)
-    return sorted(classi)
+    import re as _re_sort
+    def _sort_key(lbl):
+        m = _re_sort.match(r'(\d+)([AB]?)\s+(.+)', lbl)
+        if m:
+            return (m.group(3), int(m.group(1)), m.group(2))
+        return (lbl, 0, '')
+    return sorted(classi, key=_sort_key)
 
 
 def _ore_piano_per_classe(anno_scol, cc_id, label_classe):
@@ -346,6 +352,57 @@ def salva():
 
     flash(f'Assegnazione {asgn.display_name} salvata.', 'success')
     return redirect(url_for('assegnazioni.index', anno=anno))
+
+
+@assegnazioni_bp.route('/assegnazioni/<int:asgn_id>/aggiorna-ore', methods=['POST'])
+def aggiorna_ore(asgn_id):
+    """AJAX: aggiorna/crea ore per una specifica classe+materia di un'assegnazione."""
+    from flask import jsonify
+    import re as _re3
+    asgn = db.session.get(AssegnazioneDocente, asgn_id)
+    if not asgn:
+        return jsonify(ok=False, msg='Assegnazione non trovata'), 404
+
+    lbl      = request.json.get('classe', '')
+    id_mat   = request.json.get('id_materia')  # può essere None
+    ore      = request.json.get('ore', 0)
+
+    m = _re3.match(r'(\d+)([AB]?)\s+(.+)', lbl)
+    if not m:
+        return jsonify(ok=False, msg='Label classe non valida'), 400
+
+    anno_corso = int(m.group(1))
+    sezione    = m.group(2) or 'A'
+    indirizzo  = m.group(3).strip()
+
+    # Cerca riga esistente
+    filtro = dict(id_assegnazione=asgn_id, indirizzo=indirizzo,
+                  anno_corso=anno_corso, sezione=sezione, id_materia=id_mat)
+    ac = AssegnazioneClasse.query.filter_by(**filtro).first()
+
+    if ore == 0 or ore is None:
+        if ac:
+            db.session.delete(ac)
+            db.session.commit()
+        return jsonify(ok=True, ore=0, tot=_tot_ore(asgn_id))
+
+    if ac:
+        ac.ore = ore
+    else:
+        ac = AssegnazioneClasse(ore=ore, **filtro)
+        db.session.add(ac)
+    db.session.commit()
+
+    # Sincronizza DocenteMateria se docente reale
+    if asgn.id_docente and id_mat:
+        _sync_docente_materie(asgn.id_docente, asgn, asgn.anno_scol)
+
+    return jsonify(ok=True, ore=ore, tot=_tot_ore(asgn_id))
+
+
+def _tot_ore(asgn_id):
+    return sum(ac.ore for ac in AssegnazioneClasse.query.filter_by(
+        id_assegnazione=asgn_id).all())
 
 
 @assegnazioni_bp.route('/assegnazioni/<int:asgn_id>/elimina', methods=['POST'])

@@ -456,7 +456,7 @@ def _export_classe(anno, label_classe):
     for ac in assegnazioni_classe:
         a = ac.assegnazione
         mat = Materia.query.get(ac.id_materia) if ac.id_materia else None
-        nome_mat = mat.nome_breve or mat.nome if mat else a.tipo.nome if hasattr(a, 'tipo') else '—'
+        nome_mat = (mat.nome_breve or mat.nome) if mat else (a.tipo if a.tipo else '—')
         doc_map[a].append((nome_mat, ac.ore))
 
     # Incarichi per questa classe
