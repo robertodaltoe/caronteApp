@@ -560,15 +560,10 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
     <div id="pop-title" style="font-size:.78rem; font-weight:700; color:var(--blu);
                                 margin-bottom:8px;"></div>
     <div id="pop-fields"></div>
-    <div style="display:flex; gap:6px; margin-top:10px; align-items:center;">
-        <button onclick="salvaPopover()" class="btn btn-success btn-sm" style="font-size:.76rem;">
-            ✓ Salva
-        </button>
-        <button onclick="chiudiPopover()" class="btn btn-sm"
-                style="background:#f3f4f6; color:#374151; font-size:.76rem;">
-            Annulla
-        </button>
-        <span id="pop-msg" style="font-size:.7rem; color:#16a34a; margin-left:4px;"></span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+        <span id="pop-msg" style="font-size:.72rem; color:#16a34a;"></span>
+        <button onclick="chiudiPopover()" style="background:none; border:none; cursor:pointer;
+                font-size:.8rem; color:#9ca3af;" title="Chiudi">✕</button>
     </div>
 </div>
 
