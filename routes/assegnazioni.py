@@ -373,6 +373,38 @@ def salva():
     return redirect(url_for('assegnazioni.index', anno=anno))
 
 
+@assegnazioni_bp.route('/assegnazioni/blocco-cc/<int:cc_id>')
+def blocco_cc(cc_id):
+    """AJAX: restituisce l'HTML aggiornato del blocco CC per una specifica area."""
+    from flask import jsonify
+    anno = request.args.get('anno', get_anno_corrente())
+    from models.classe_concorso import ClasseConcorso
+    cc = db.session.get(ClasseConcorso, cc_id)
+    if not cc:
+        return jsonify(ok=False), 404
+
+    # Trova l'area di questa CC
+    area_trovata = None
+    for area in AREE:
+        if cc.codice in area['cc']:
+            area_trovata = area
+            break
+    if not area_trovata:
+        return jsonify(ok=False), 404
+
+    blocks = _build_area(anno, area_trovata)
+    blk = next((b for b in blocks if b['cc'].id == cc_id), None)
+    if not blk:
+        return jsonify(ok=False), 404
+
+    from flask import render_template_string
+    # Render del solo blocco CC
+    html = render_template('assegnazioni/_blocco_cc.html',
+        blk=blk, cc=blk['cc'], classi=blk['classi'], anno=anno,
+        TIPO_DISPLAY={})
+    return jsonify(ok=True, html=html)
+
+
 @assegnazioni_bp.route('/assegnazioni/crea-e-assegna', methods=['POST'])
 def crea_e_assegna():
     """AJAX: crea AssegnazioneDocente per un precaricato e restituisce l'id."""

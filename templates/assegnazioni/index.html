@@ -646,7 +646,42 @@ async function apriPopoverPrecaricato(td) {
     td.removeAttribute('onclick');
     td.setAttribute('onclick', 'apriPopoverData(this)');
 
-    // Ricarica la riga dal server sarebbe overkill — apriamo direttamente il popover
+    // Promuove la riga precaricata a "assegnata" aggiornando il DOM
+    const tr = td.closest('tr');
+    if (tr) {
+        // Riga diventa nera (non più grigia)
+        tr.style.background = '';
+        tr.style.opacity    = '1';
+        // Aggiunge data-asgn-id per i controlli colore
+        tr.dataset.asgnId = asgnId;
+        // Aggiunge span tot-ore nella cella Tot se non esiste
+        const totTd = tr.querySelector('.col-tot');
+        if (totTd && !totTd.querySelector('.tot-ore')) {
+            totTd.innerHTML = `<span class="tot-ore" id="tot-span-${asgnId}">0h</span>`;
+        }
+        // Rende il nome del docente non più grigio
+        const nomeTd = tr.querySelector('.td-doc');
+        if (nomeTd) {
+            nomeTd.querySelectorAll('span').forEach(s => {
+                if (s.style.color === 'rgb(156, 163, 175)' || s.classList.contains('nome-da-assegnare')) {
+                    s.style.color = '';
+                }
+            });
+            // Rimuove il testo "da assegnare"
+            nomeTd.querySelectorAll('.nome-da-assegnare').forEach(el => el.remove());
+        }
+        // Aggiorna data-asgn su tutte le celle cliccabili della riga
+        tr.querySelectorAll('td[data-docid]').forEach(cellTd => {
+            cellTd.dataset.asgn = asgnId;
+            // Rimuove onclick precaricato e aggiunge quello standard
+            cellTd.removeAttribute('data-docid');
+            cellTd.removeAttribute('data-ccid');
+            cellTd.removeAttribute('data-anno');
+            cellTd.setAttribute('onclick', 'apriPopoverData(this)');
+            cellTd.dataset.oreatt = '{}';
+        });
+    }
+
     const multi   = JSON.parse(td.dataset.multi);
     const matIds  = JSON.parse(td.dataset.matids);
     const matNomi = JSON.parse(td.dataset.matnomi);
