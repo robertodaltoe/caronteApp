@@ -245,11 +245,22 @@ def index():
         anni.insert(0, anno)
 
     # Costruisce tutte le aree
+    import re as _re_ind2
     aree_data = []
     for area in AREE:
         blocks = _build_area(anno, area)
         if blocks:
-            aree_data.append({'nome': area['nome'], 'blocks': blocks})
+            inds = set()
+            for blk in blocks:
+                for lbl in blk['classi']:
+                    m = _re_ind2.match(r'\d+[AB]?\s+(.+)', lbl)
+                    if m:
+                        inds.add(m.group(1).strip())
+            aree_data.append({
+                'nome': area['nome'],
+                'blocks': blocks,
+                'indirizzi': sorted(inds),
+            })
 
     from routes.impostazione_anno import _docenti_per_anno
     # Per le assegnazioni: solo docenti fisicamente presenti a scuola.
