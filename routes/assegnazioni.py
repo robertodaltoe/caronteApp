@@ -260,9 +260,15 @@ def index():
         if d.status_presenza not in ('aspettativa', 'ap_uscente')
     ]
 
+    _IND_ORD = {'AFM':0,'RIM':1,'CAT':2,'LLI':3,'LSC':4,'LSP':5,'LSU':6,'SOS':7}
+    indirizzi_attivi = sorted(
+        {s.indirizzo for s in ClasseSezione.query.filter_by(anno_scol=anno, attiva=True).all()},
+        key=lambda x: _IND_ORD.get(x, 99))
+
     return render_template('assegnazioni/index.html',
         anno=anno, anni_disponibili=anni,
         aree_data=aree_data,
+        indirizzi_attivi=indirizzi_attivi,
         docenti_anno=docenti_anno,
         tipo_display=TIPO_DISPLAY)
 
