@@ -337,7 +337,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
                     title="Mostra/nascondi dettaglio materie"
                     {% endif %}>
-                    <span class="tot-ore">{{ tot }}h</span>
+                    <span class="tot-ore" id="tot-span-{{ a.id }}">{{ tot }}h</span>
                     {% if blk.multi_materia.values() | select | list %}
                     <span style="font-size:.62rem; color:#6366f1;">▾</span>
                     {% endif %}
@@ -765,12 +765,10 @@ function _aggiornaCellaTd(ore, tot) {
     // Resetta colore testo cella (verrà impostato da _aggiornaColoreRiga)
     _popCell.style.color = '';
 
-    // Aggiorna Tot. nella riga + colore sforamento
-    const tr = _popCell.closest('tr');
-    if (tr) {
-        const totEl = tr.querySelector('.tot-ore');
-        if (totEl) totEl.textContent = tot + 'h';
-    }
+    // Aggiorna Tot. via id diretto (più affidabile che navigare il DOM)
+    const _totEl = document.getElementById('tot-span-' + _popAsgnId)
+                || _popCell.closest('tr')?.querySelector('.tot-ore');
+    if (_totEl) _totEl.textContent = tot + 'h';
 }
 
 function _aggiornaColoreRiga(res) {
@@ -790,7 +788,8 @@ function _aggiornaColoreRiga(res) {
     }
 
     // ── Colore Tot. ─────────────────────────────────────────────────
-    const totEl = tr.querySelector('.tot-ore');
+    const totEl = document.getElementById('tot-span-' + _popAsgnId)
+               || tr.querySelector('.tot-ore');
     if (totEl) {
         if (res.warn_docente) {
             totEl.style.color = '#dc2626';
