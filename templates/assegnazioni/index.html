@@ -686,6 +686,34 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
     setTimeout(() => pop.querySelector('input')?.select(), 50);
 }
 
+function _aggiornaCellaTd(ore, tot) {
+    if (!_popCell) return;
+    // Aggiorna la cella cliccata
+    const span = _popCell.querySelector('.cell-ore');
+    if (span) {
+        span.textContent = ore || '—';
+    } else {
+        // Cella precaricata — aggiorna il testo diretto
+        _popCell.textContent = '';
+        const s = document.createElement('span');
+        s.className = 'cell-ore';
+        s.id = `cell-${_popAsgnId}-${_popClasse.replace(/ /g,'_')}`;
+        s.textContent = ore || '—';
+        _popCell.appendChild(s);
+    }
+    // Colore in base allo stato
+    _popCell.className = _popCell.className
+        .replace('ore-zero','').replace('ore-val','').trim();
+    _popCell.classList.add(ore ? 'ore-val' : 'ore-zero');
+
+    // Aggiorna Tot. nella riga
+    const tr = _popCell.closest('tr');
+    if (tr) {
+        const totEl = tr.querySelector('.tot-ore');
+        if (totEl) totEl.textContent = tot + 'h';
+    }
+}
+
 function chiudiPopover() {
     document.getElementById('ore-popover').style.display = 'none';
     _popAsgnId = null; _popCell = null;
@@ -709,28 +737,24 @@ async function salvaPopover(keepOpen = false) {
     let tot = 0;
     if (_popMulti && _popMats.length > 0) {
         const inputs = document.querySelectorAll('#pop-fields input[data-mat]');
+        let oreMultiTot = 0;
         for (const inp of inputs) {
             const idMat = parseInt(inp.dataset.mat);
             const ore   = parseInt(inp.value) || 0;
             const res   = await salvaOre(idMat, ore);
-            if (res.ok) tot = res.tot;
+            if (res.ok) { tot = res.tot; oreMultiTot += ore; }
         }
+        // Aggiorna cella: somma delle ore multi-materia
+        _aggiornaCellaTd(oreMultiTot, tot);
     } else {
         const inp = document.getElementById('pop-single');
         const ore = parseInt(inp?.value) || 0;
         const res = await salvaOre(null, ore);
         if (res.ok) {
             tot = res.tot;
-            // Aggiorna cella
-            const cellId = `cell-${_popAsgnId}-${_popClasse.replace(/ /g,'_')}`;
-            const cellEl = document.getElementById(cellId);
-            if (cellEl) cellEl.textContent = ore || '—';
+            _aggiornaCellaTd(ore, tot);
         }
     }
-
-    // Aggiorna Tot. nella riga
-    const totEl = _popCell?.closest('tr')?.querySelector('.tot-ore');
-    if (totEl) totEl.textContent = tot + 'h';
 
     msg.textContent = '✓';
     msg.style.color = '#16a34a';
