@@ -150,7 +150,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
         </div>
 
         <div class="tbl-wrap">
-        <table class="pivot">
+        <table class="pivot" data-cc-id="{{ cc.id }}">
             <thead>
                 <tr>
                     <th class="th-doc">Docente</th>
@@ -254,7 +254,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             </tbody>
             {% endif %}
             {% endfor %}
-            <tbody>
+            <tbody id="tbody-cc-{{ cc.id }}">
             {% for a in blk.assegnazioni %}
             {% set tot = blk.tot_doc[a.id] %}
             {% set max_ore = a.docente.ore_max_effettive if a.docente else '—' %}
@@ -450,7 +450,10 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% for classe in classi %}
                 {% set cop  = blk.ore_per_classe[classe] %}
                 {% set prev = blk.piano[classe] %}
-                <td style="color:{{ '#16a34a' if cop == prev else ('#dc2626' if cop > prev else '#f59e0b') }};
+                <td class="td-cop"
+                    id="cop-{{ cc.id }}-{{ classe|replace(' ','_') }}"
+                    data-prev="{{ prev }}"
+                    style="color:{{ '#16a34a' if cop == prev else ('#dc2626' if cop > prev else '#f59e0b') }};
                             border:1px solid #e2e8f0;">
                     {{ cop }}/{{ prev }}
                 </td>
@@ -807,6 +810,32 @@ function _aggiornaCellaTd(ore, tot) {
     if (_totEl) _totEl.textContent = tot + 'h';
 }
 
+function _aggiornaCopertura(ccId, classe) {
+    // Somma tutte le ore della colonna classe per questa CC
+    const classeKey = classe.replace(/ /g,'_');
+    const copEl = document.getElementById('cop-' + ccId + '-' + classeKey);
+    if (!copEl) return;
+    const prev = parseInt(copEl.dataset.prev) || 0;
+
+    // Somma tutte le .cell-ore nella colonna di questa classe
+    // Le celle hanno id="cell-{asgnId}-{classeKey}"
+    let totCop = 0;
+    document.querySelectorAll(`[id^="cell-"][id$="-${classeKey}"]`).forEach(span => {
+        const val = parseInt(span.textContent) || 0;
+        // Verifica che appartenga alla stessa CC (la td ha data-asgn)
+        const td = span.closest('td');
+        if (td && td.dataset.classe === classe) {
+            totCop += val;
+        }
+    });
+
+    // Aggiorna testo e colore
+    copEl.textContent = totCop + '/' + prev;
+    if (totCop === prev)      copEl.style.color = '#16a34a';
+    else if (totCop > prev)   copEl.style.color = '#dc2626';
+    else                      copEl.style.color = '#f59e0b';
+}
+
 function _aggiornaColoreRiga(res) {
     if (!_popCell) return;
     const tr = _popCell.closest('tr');
@@ -899,8 +928,7 @@ async function salvaPopover(keepOpen = false) {
     }
     if (lastRes) {
         _aggiornaColoreRiga(lastRes);
-        // Aggiorna anche il data-oreatt della cella col nuovo valore per
-        // permettere il ricalcolo corretto alla prossima chiamata
+        _aggiornaCopertura(_popCell?.closest('table[data-cc-id]')?.dataset?.ccId || '', _popClasse);
         _ricalcolaColoriTutteRighe();
     }
 
