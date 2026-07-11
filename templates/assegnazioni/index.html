@@ -14,6 +14,7 @@
 table.pivot { width:100%; border-collapse:collapse; font-size:.78rem; }
 table.pivot th { padding:5px 6px; text-align:center; background:#f1f5f9;
     border:1px solid #e2e8f0; font-weight:700; white-space:nowrap; font-size:.72rem; }
+table.pivot td[data-classe], table.pivot th[data-classe-th] { min-width:28px; }
 table.pivot th.th-doc, table.pivot td.td-doc { width:170px; min-width:170px; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; padding:5px 8px; background:#f1f5f9; }
 table.pivot td { padding:4px 3px; text-align:center; border:1px solid #e2e8f0; font-size:.8rem; }
 table.pivot .col-tot { width:44px; min-width:44px; max-width:44px; }
@@ -174,7 +175,8 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% set col = IND_COLORS.get(ind, '#374151') %}
                     {% set is_first_of_ind = (ind != prev_ind.v) %}
                     {% set prev_ind.v = ind %}
-                    <th style="min-width:30px; max-width:36px; background:{{ col }};
+                    <th data-classe-th="{{ classe }}"
+                        style="background:{{ col }};
                                color:white; writing-mode:vertical-rl;
                                text-orientation:mixed; transform:rotate(180deg);
                                height:70px; padding:4px 2px;
