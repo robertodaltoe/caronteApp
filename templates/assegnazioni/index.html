@@ -486,6 +486,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                   id="fasgn-{{ cc.id }}">
                 <input type="hidden" name="anno_scol" value="{{ anno }}">
                 <input type="hidden" name="id_cc" value="{{ cc.id }}">
+                <input type="hidden" name="ancora" value="" class="input-ancora">
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
                              margin-bottom:8px;">
@@ -1038,6 +1039,18 @@ function quickAssign(ccId, docId) {
     }
     formDiv.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
+
+// Imposta l'ancora prima del submit di ogni form assegnazione
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('form[id^="fasgn-"]').forEach(form => {
+        form.addEventListener('submit', () => {
+            // Trova l'area-card padre e usa il suo id
+            const card = form.closest('.area-card');
+            const ancora = form.querySelector('.input-ancora');
+            if (card && ancora) ancora.value = card.id.replace('area-', '');
+        });
+    });
+});
 
 function toggleForm(id) {
     const el = document.getElementById(id);

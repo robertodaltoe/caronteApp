@@ -370,7 +370,9 @@ def salva():
         _sync_docente_materie(id_doc, asgn, anno)
 
     flash(f'Assegnazione {asgn.display_name} salvata.', 'success')
-    return redirect(url_for('assegnazioni.index', anno=anno))
+    ancora = request.form.get('ancora', '')
+    url = url_for('assegnazioni.index', anno=anno)
+    return redirect(url + ('#area-' + ancora if ancora else ''))
 
 
 @assegnazioni_bp.route('/assegnazioni/blocco-cc/<int:cc_id>')
