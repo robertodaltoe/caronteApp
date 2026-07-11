@@ -11,18 +11,25 @@
 .cc-header { padding:8px 18px; background:#f8fafc; display:flex;
     align-items:center; gap:10px; font-size:.82rem; font-weight:700; color:var(--blu); }
 .cc-budget { font-size:.72rem; font-weight:400; padding:2px 7px; border-radius:5px; }
-table.pivot { width:100%; border-collapse:collapse; font-size:.78rem; }
-table.pivot th { padding:5px 6px; text-align:center; background:#f1f5f9;
+table.pivot { width:100%; border-collapse:collapse; font-size:.78rem; table-layout:auto; }
+/* th generici — NON sovrascrive bg delle intestazioni colorate */
+table.pivot th { padding:5px 4px; text-align:center;
     border:1px solid #e2e8f0; font-weight:700; white-space:nowrap; font-size:.72rem; }
-table.pivot td[data-classe], table.pivot th[data-classe-th] { min-width:28px; }
-table.pivot th.th-doc, table.pivot td.td-doc { width:170px; min-width:170px; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; padding:5px 8px; background:#f1f5f9; }
-table.pivot td { padding:4px 3px; text-align:center; border:1px solid #e2e8f0; font-size:.8rem; }
-table.pivot .col-tot { width:44px; min-width:44px; max-width:44px; }
-table.pivot .col-max { width:44px; min-width:44px; max-width:44px; }
-table.pivot .col-azioni { width:30px; min-width:30px; max-width:30px; }
-
-table.pivot .th-tipo, table.pivot .td-tipo { width:44px; min-width:44px; max-width:44px; }
-table.pivot .th-pot,  table.pivot .td-pot  { width:34px; min-width:34px; max-width:34px; }
+/* Colonne fisse — stessa larghezza in tutte le tabelle */
+table.pivot th.th-doc,
+table.pivot td.td-doc  { width:170px; min-width:170px; max-width:170px;
+                          overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+                          text-align:left; padding:5px 8px; background:#f1f5f9; }
+table.pivot .th-tipo,
+table.pivot .td-tipo   { width:46px; min-width:46px; max-width:46px; background:#f1f5f9; }
+table.pivot .th-pot,
+table.pivot .td-pot    { width:34px; min-width:34px; max-width:34px; }
+table.pivot .col-tot   { width:44px; min-width:44px; max-width:44px; }
+table.pivot .col-max   { width:44px; min-width:44px; max-width:44px; }
+table.pivot .col-azioni{ width:30px; min-width:30px; max-width:30px; }
+/* Colonne classi — larghezza minima, si adattano al contenuto */
+table.pivot td[data-classe],
+table.pivot th[data-classe-th] { min-width:28px; }
 
 table.pivot td.ore-val { font-weight:700; color:var(--blu); }
 table.pivot td.ore-zero { color:#e2e8f0; }
