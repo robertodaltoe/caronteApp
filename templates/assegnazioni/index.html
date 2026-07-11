@@ -649,7 +649,7 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
             fields.appendChild(row);
         });
     } else {
-        const ore = oreAttuale[0] || oreAttuale[''] || Object.values(oreAttuale)[0] || 0;
+        const ore = oreAttuale['_'] ?? oreAttuale[0] ?? oreAttuale[''] ?? Object.values(oreAttuale)[0] ?? 0;
         fields.innerHTML = `
             <div style="display:flex;align-items:center;gap:8px;">
                 <span style="font-size:.78rem;color:#374151;">Ore</span>
@@ -688,6 +688,21 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
 
 function _aggiornaCellaTd(ore, tot) {
     if (!_popCell) return;
+
+    // Aggiorna data-oreatt con i valori attuali degli input
+    // così alla prossima apertura i valori sono pre-popolati
+    const inputs = document.querySelectorAll('#pop-fields input[data-mat]');
+    if (inputs.length > 0) {
+        // Caso multi-materia: oggetto {id_mat: ore}
+        const nuovoOreAtt = {};
+        inputs.forEach(inp => { nuovoOreAtt[inp.dataset.mat] = parseInt(inp.value) || 0; });
+        _popCell.dataset.oreatt = JSON.stringify(nuovoOreAtt);
+    } else {
+        // Caso singolo: valore diretto
+        const singolo = document.getElementById('pop-single');
+        if (singolo) _popCell.dataset.oreatt = JSON.stringify({_: parseInt(singolo.value) || 0});
+    }
+
     // Aggiorna la cella cliccata
     const span = _popCell.querySelector('.cell-ore');
     if (span) {
