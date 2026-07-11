@@ -88,35 +88,26 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 
 {% set colori_area = ['#1e40af','#15803d','#b45309','#0e7490','#7c2d12','#86198f','#0f766e','#6b7280'] %}
 
-{# ── Badge selezione indirizzo ───────────────────────────────────── #}
-{% set IND_COL_BADGE = {
-    'AFM':'#1e40af','RIM':'#1d4ed8','CAT':'#b45309',
-    'LLI':'#15803d','LSC':'#0e7490','LSP':'#7c3aed',
-    'LSU':'#be185d','SOS':'#6b7280'} %}
-<div style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
-    <span style="font-size:.8rem; color:var(--grigio); font-weight:600;">Mostra:</span>
-    <button class="badge-ind attivo" data-ind="tutti"
-            onclick="filtraIndirizzo('tutti')"
-            style="padding:5px 14px; border-radius:20px; border:2px solid var(--blu);
-                   background:var(--blu); color:white; font-size:.78rem; font-weight:700;
-                   cursor:pointer;">
-        Tutti
-    </button>
-    {% for ind in indirizzi_attivi %}
-    {% set col = IND_COL_BADGE.get(ind, '#374151') %}
-    <button class="badge-ind" data-ind="{{ ind }}"
-            onclick="filtraIndirizzo('{{ ind }}')"
-            style="padding:5px 14px; border-radius:20px; border:2px solid {{ col }};
-                   background:white; color:{{ col }}; font-size:.78rem; font-weight:700;
-                   cursor:pointer; transition:all .15s;">
-        {{ ind }}
-    </button>
+{# ── Badge area disciplinare (ancore) ────────────────────────────── #}
+{% set colori_badge = ['#1e40af','#15803d','#b45309','#0e7490','#7c2d12','#86198f','#0f766e','#6b7280'] %}
+<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+    <span style="font-size:.8rem; color:var(--grigio); font-weight:600; white-space:nowrap;">Vai a:</span>
+    {% for area in aree_data %}
+    {% set col = colori_badge[loop.index0 % colori_badge|length] %}
+    <a href="#area-{{ loop.index0 }}"
+       style="padding:5px 14px; border-radius:20px; border:2px solid {{ col }};
+              background:white; color:{{ col }}; font-size:.76rem; font-weight:700;
+              text-decoration:none; white-space:nowrap; transition:all .15s;"
+       onmouseover="this.style.background='{{ col }}'; this.style.color='white';"
+       onmouseout="this.style.background='white'; this.style.color='{{ col }}';">
+        {{ area.nome }}
+    </a>
     {% endfor %}
 </div>
 
 {% for area in aree_data %}
 {% set col = colori_area[loop.index0 % colori_area|length] %}
-<div class="area-card" data-indirizzi="{{ area.indirizzi | join(',') }}">
+<div class="area-card" id="area-{{ loop.index0 }}" data-indirizzi="{{ area.indirizzi | join(',') }}">
     <div class="area-header" style="background:{{ col }};">
         {{ area.nome }}
         <span style="font-size:.78rem; font-weight:400; opacity:.85;">
@@ -945,40 +936,6 @@ document.addEventListener('click', e => {
     }
 });
 
-function filtraIndirizzo(ind) {
-    // Aggiorna badge
-    document.querySelectorAll('.badge-ind').forEach(b => {
-        const col = b.style.borderColor;
-        if (b.dataset.ind === ind) {
-            b.style.background = b.style.borderColor;
-            b.style.color = 'white';
-        } else {
-            b.style.background = 'white';
-            b.style.color = b.style.borderColor;
-        }
-    });
-    // Gestione badge "Tutti"
-    const btnTutti = document.querySelector('.badge-ind[data-ind="tutti"]');
-    if (btnTutti) {
-        if (ind === 'tutti') {
-            btnTutti.style.background = 'var(--blu)';
-            btnTutti.style.color = 'white';
-        } else {
-            btnTutti.style.background = 'white';
-            btnTutti.style.color = 'var(--blu)';
-        }
-    }
-
-    // Mostra/nasconde le area-card
-    document.querySelectorAll('.area-card').forEach(card => {
-        if (ind === 'tutti') {
-            card.style.display = '';
-            return;
-        }
-        const inds = (card.dataset.indirizzi || '').split(',');
-        card.style.display = inds.includes(ind) ? '' : 'none';
-    });
-}
 
 function togglePianoMat(id) {
     const tbody = document.getElementById(id);
