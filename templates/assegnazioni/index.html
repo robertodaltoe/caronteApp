@@ -605,14 +605,28 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
         setTimeout(() => document.getElementById('pop-single')?.focus(), 50);
     }
 
-    // Posiziona il popover vicino alla cella cliccata
+    // Posiziona il popover vicino alla cella — position:fixed usa coordinate viewport
     const rect = td.getBoundingClientRect();
     const pop  = document.getElementById('ore-popover');
     pop.style.display = 'block';
-    pop.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
-    pop.style.left = Math.min(rect.left + window.scrollX,
-                              window.innerWidth - 240) + 'px';
-    pop.querySelector('input')?.focus();
+
+    // Calcola posizione: sotto la cella se c'è spazio, altrimenti sopra
+    const popH = 160;  // altezza stimata popover
+    const spazioSotto = window.innerHeight - rect.bottom;
+    if (spazioSotto >= popH || spazioSotto >= 100) {
+        pop.style.top    = (rect.bottom + 4) + 'px';
+        pop.style.bottom = 'auto';
+    } else {
+        pop.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        pop.style.top    = 'auto';
+    }
+
+    // Orizzontale: non uscire dal bordo destro
+    const leftRaw = rect.left;
+    pop.style.left = Math.max(4, Math.min(leftRaw, window.innerWidth - 220)) + 'px';
+
+    // Focus sul primo input
+    setTimeout(() => pop.querySelector('input')?.select(), 50);
 }
 
 function chiudiPopover() {
