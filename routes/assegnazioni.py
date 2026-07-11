@@ -426,7 +426,37 @@ def aggiorna_ore(asgn_id):
     if asgn.id_docente and id_mat:
         _sync_docente_materie(asgn.id_docente, asgn, asgn.anno_scol)
 
-    return jsonify(ok=True, ore=ore, tot=_tot_ore(asgn_id))
+    tot = _tot_ore(asgn_id)
+
+    # Controllo ore max docente
+    warn_docente = False
+    if asgn.docente:
+        ore_max = asgn.docente.ore_max_effettive_per_anno(asgn.anno_scol)
+        warn_docente = tot > ore_max
+
+    # Controllo ore previste per classe (piano studi per questa CC)
+    warn_classe = False
+    from models.piano_studi import PianoStudi
+    from models.classe_concorso import ClasseConcorso
+    ac_rows = AssegnazioneClasse.query.filter_by(id_assegnazione=asgn_id).all()
+    for ac_row in ac_rows:
+        ps = PianoStudi.query.filter_by(
+            anno_scol=asgn.anno_scol,
+            id_classe_concorso=asgn.id_classe_concorso,
+            indirizzo=ac_row.indirizzo,
+            anno_corso=ac_row.anno_corso).all()
+        ore_previste = sum(p.ore_settimanali for p in ps if not p.compresenza)
+        # somma ore assegnate a questa classe da questo docente
+        ore_assegnate_classe = sum(
+            r.ore for r in ac_rows
+            if r.indirizzo==ac_row.indirizzo and r.anno_corso==ac_row.anno_corso
+            and r.sezione==ac_row.sezione)
+        if ore_assegnate_classe > ore_previste:
+            warn_classe = True
+            break
+
+    return jsonify(ok=True, ore=ore, tot=tot,
+                   warn_docente=warn_docente, warn_classe=warn_classe)
 
 
 def _tot_ore(asgn_id):
