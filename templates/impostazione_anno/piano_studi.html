@@ -195,20 +195,71 @@
                 </tr>
             </thead>
             <tbody>
+            {% set n_materie = gruppo.materie | length %}
+            {% if n_materie > 1 %}
+            {# ── CC multi-materia: riga unica con celle verticali ── #}
+            <tr>
+                <td style="padding:4px 6px; border:1px solid #e5e7eb; vertical-align:top;">
+                    {# Elenco nomi materie nella prima colonna #}
+                    {% for mat in gruppo.materie %}
+                    {% set prima_riga = mat.prima_riga %}
+                    {% set sigla_mat = prima_riga.materia.nome_breve or prima_riga.materia.sigla if prima_riga.id_materia and prima_riga.materia else '' %}
+                    <div style="display:flex; align-items:center; gap:4px;
+                                {{ 'margin-top:6px; padding-top:6px; border-top:1px solid #e0e7ff;' if not loop.first else '' }}">
+                        <span style="font-size:.65rem; font-weight:700; color:#6366f1; min-width:28px;">{{ sigla_mat }}</span>
+                        <input type="text" name="nome_{{ prima_riga.id }}" value="{{ mat.nome }}"
+                               data-autosave="nome_piano:{{ prima_riga.id }}"
+                               style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
+                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                    </div>
+                    {% endfor %}
+                </td>
+                {% for ac in anni_corso %}
+                {% set attivo = (ac, 'A') in sezioni_attive or (ac, 'B') in sezioni_attive %}
+                <td style="padding:4px 6px; border:1px solid #e5e7eb; text-align:center; vertical-align:top;">
+                    {% for mat in gruppo.materie %}
+                    {% set riga = mat.righe_per_anno.get(ac) %}
+                    {% set prima_riga = mat.prima_riga %}
+                    {% set sigla_mat = prima_riga.materia.nome_breve or prima_riga.materia.sigla if prima_riga.id_materia and prima_riga.materia else '' %}
+                    <div style="{{ 'margin-top:6px; padding-top:6px; border-top:1px solid #e0e7ff;' if not loop.first else '' }}
+                                display:flex; flex-direction:column; align-items:center; gap:1px;">
+                        <span style="font-size:.6rem; font-weight:700; color:#6366f1;">{{ sigla_mat }}</span>
+                        {% if riga %}
+                        <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
+                               data-autosave="ore_piano:{{ riga.id }}"
+                               min="0" max="20"
+                               style="width:40px; text-align:center; border:1px solid #d1d5db;
+                                      border-radius:4px; padding:2px 3px; font-size:.8rem;">
+                        {% else %}
+                        <span style="color:#e2e8f0; font-size:.8rem;">—</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+                {# Azione elimina — per la prima materia del gruppo #}
+                <td style="padding:4px; border:1px solid #e5e7eb; text-align:center; vertical-align:top;">
+                    {% set prima_mat = gruppo.materie[0] %}
+                    <button type="button"
+                            onclick="eliminaRighe({{ prima_mat.righe | map(attribute='id') | list }})"
+                            style="background:none; border:none; cursor:pointer; color:#dc2626; font-size:.8rem;"
+                            title="Elimina questa materia">🗑</button>
+                </td>
+            </tr>
+            {% else %}
+            {# ── CC materia singola: riga standard ── #}
             {% for mat in gruppo.materie %}
             {% set nome_mat = mat.nome %}
             {% set righe_mat = mat.righe %}
             {% set prima_riga = mat.prima_riga %}
             {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
             <tr>
-                {# Nome materia editabile #}
                 <td style="padding:4px 6px; border:1px solid #e5e7eb;">
                     <div style="display:flex; align-items:center; gap:4px;">
                         <input type="text" name="nome_{{ prima_riga.id }}" value="{{ nome_mat }}"
                                data-autosave="nome_piano:{{ prima_riga.id }}"
                                style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
                                       padding:3px 6px; font-size:.8rem; background:#fafafa;">
-
                     </div>
                 </td>
                 {# Celle per anno di corso — accesso diretto per chiave, no selectattr #}
@@ -220,6 +271,11 @@
                            vertical-align:middle;">
                     {% if riga %}
                     <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        {% if n_materie > 1 %}
+                        <span style="font-size:.6rem; font-weight:700; color:#6366f1; letter-spacing:.02em;">
+                            {{ sigla_mat }}
+                        </span>
+                        {% endif %}
                         <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}" data-autosave="ore_piano:{{ riga.id }}"
                                min="0" max="20"
                                style="width:44px; text-align:center; border:1px solid #d1d5db;
@@ -351,7 +407,8 @@
                     </button>
                 </td>
             </tr>
-            {% endfor %}{# fine loop materie #}
+            {% endfor %}{# fine loop materie singola #}
+            {% endif %}{# fine if/else n_materie #}
             </tbody>
         </table>
 
