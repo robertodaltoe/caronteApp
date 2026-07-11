@@ -11,7 +11,7 @@
 .cc-header { padding:8px 18px; background:#f8fafc; display:flex;
     align-items:center; gap:10px; font-size:.82rem; font-weight:700; color:var(--blu); }
 .cc-budget { font-size:.72rem; font-weight:400; padding:2px 7px; border-radius:5px; }
-table.pivot { width:100%; border-collapse:collapse; font-size:.78rem; table-layout:auto; }
+table.pivot { width:auto; min-width:100%; border-collapse:collapse; font-size:.78rem; table-layout:fixed; }
 /* th generici — NON sovrascrive bg delle intestazioni colorate */
 table.pivot th { padding:5px 4px; text-align:center;
     border:1px solid #e2e8f0; font-weight:700; white-space:nowrap; font-size:.72rem; }
@@ -164,6 +164,15 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 
         <div class="tbl-wrap">
         <table class="pivot" data-cc-id="{{ cc.id }}">
+            <colgroup>
+                <col style="width:170px;"><!-- Docente -->
+                <col style="width:46px;"> <!-- Tipo -->
+                {% if blk.potenziamento %}<col style="width:34px;">{% endif %} <!-- POT -->
+                {% for classe in classi %}<col style="width:30px;">{% endfor %} <!-- Classi -->
+                <col style="width:44px;"><!-- Tot -->
+                <col style="width:44px;"><!-- Max -->
+                <col style="width:30px;"><!-- Azioni -->
+            </colgroup>
             <thead>
                 <tr>
                     <th class="th-doc">Docente</th>
