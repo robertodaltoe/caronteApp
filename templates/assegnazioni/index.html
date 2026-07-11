@@ -247,7 +247,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             {% if ore_mat_doc > mat.ore %}{% set _ = ore_mat_over.append(cl) %}{% endif %}
             {% endfor %}
             {% endfor %}
-            <tr style="{{ 'background:#fde8e8;' if is_over else ('background:#fff0e0;' if ore_mat_over else ('background:#fff3cd;' if ore_classe_over else '')) }}">
+            <tr data-asgn-id="{{ a.id }}"
+                data-max-ore="{{ a.docente.ore_max_effettive if a.docente else 9999 }}"
+                style="{{ 'background:#fde8e8;' if is_over else ('background:#fff0e0;' if ore_mat_over else ('background:#fff3cd;' if ore_classe_over else '')) }}">
                 <td class="td-doc">
                     {% if a.docente %}
                     <span style="font-weight:600;">{{ a.docente.cognome }} {{ a.docente.nome }}</span>
@@ -298,6 +300,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     data-matids='{{ mat_list | map(attribute='id') | list | tojson }}'
                     data-matnomi='{{ mat_list | map(attribute='nome') | list | tojson }}'
                     data-oreatt='{{ blk.ore_doc_mat[a.id].get(classe, {})|tojson }}'
+                    data-piano-tot="{{ blk.piano[classe] }}"
                     onclick="apriPopoverData(this)">
                     <span class="cell-ore" id="cell-{{ a.id }}-{{ classe|replace(' ','_') }}">
                         {{ ore if ore else '—' }}
@@ -752,28 +755,46 @@ function _aggiornaColoreRiga(res) {
     if (!_popCell) return;
     const tr = _popCell.closest('tr');
     if (!tr) return;
-    tr.style.background = '';
-    tr.style.outline    = '';
-    // Resetta colore testo di tutte le celle ore della riga
-    tr.querySelectorAll('td[data-asgn], td[data-docid]').forEach(td => td.style.color = '');
-    const totEl = tr.querySelector('.tot-ore');
 
+    // ── Colore riga (sfondo) ────────────────────────────────────────
     if (res.warn_docente) {
-        tr.style.background  = '#fde8e8';
-        tr.style.outline     = res.warn_classe ? '2px solid #dc2626' : '';
-        _popCell.style.color = '#b91c1c';  // rosso scuro sulla cella
-        if (totEl) { totEl.style.color='#dc2626'; totEl.title='Supera le ore max del docente'; }
+        tr.style.background = '#fde8e8';
     } else if (res.warn_materia) {
-        tr.style.background  = '#fff0e0';
-        _popCell.style.color = '#9a3412';  // arancio scuro sulla cella
-        if (totEl) { totEl.style.color='#c2410c'; totEl.title='Supera le ore previste per questa materia'; }
+        tr.style.background = '#fff0e0';
     } else if (res.warn_classe) {
-        tr.style.background  = '#fff3cd';
-        _popCell.style.color = '#92400e';  // ambra scura sulla cella
-        if (totEl) { totEl.style.color='#d97706'; totEl.title='Supera le ore previste per questa CC'; }
+        tr.style.background = '#fff3cd';
+    } else {
+        tr.style.background = '';
+    }
+
+    // ── Colore Tot. ─────────────────────────────────────────────────
+    const totEl = tr.querySelector('.tot-ore');
+    if (totEl) {
+        if (res.warn_docente) {
+            totEl.style.color = '#dc2626';
+            totEl.title = 'Supera le ore max del docente';
+        } else if (res.warn_materia) {
+            totEl.style.color = '#c2410c';
+            totEl.title = 'Supera le ore previste per questa materia';
+        } else if (res.warn_classe) {
+            totEl.style.color = '#d97706';
+            totEl.title = 'Supera le ore previste per questa CC';
+        } else {
+            totEl.style.color = '';
+            totEl.title = '';
+        }
+    }
+
+    // ── Colore cella specifica appena modificata ────────────────────
+    // (usa il warning più grave applicabile a quella cella)
+    if (res.warn_docente) {
+        _popCell.style.color = '#b91c1c';
+    } else if (res.warn_materia) {
+        _popCell.style.color = '#9a3412';
+    } else if (res.warn_classe) {
+        _popCell.style.color = '#92400e';
     } else {
         _popCell.style.color = '';
-        if (totEl) { totEl.style.color=''; totEl.title=''; }
     }
 }
 
@@ -819,12 +840,74 @@ async function salvaPopover(keepOpen = false) {
             lastRes = res;
         }
     }
-    if (lastRes) _aggiornaColoreRiga(lastRes);
+    if (lastRes) {
+        _aggiornaColoreRiga(lastRes);
+        // Aggiorna anche il data-oreatt della cella col nuovo valore per
+        // permettere il ricalcolo corretto alla prossima chiamata
+        _ricalcolaColoriTutteRighe();
+    }
 
     msg.textContent = '✓';
     msg.style.color = '#16a34a';
     if (!keepOpen) setTimeout(chiudiPopover, 600);
 }
+
+// ── Ricalcola colori di tutte le righe al caricamento ─────────────
+function _ricalcolaColoriTutteRighe() {
+    // Per ogni riga docente assegnato
+    document.querySelectorAll('tr[data-asgn-id]').forEach(tr => {
+        const maxOre  = parseInt(tr.dataset.maxOre)  || 9999;
+        const totSpan = tr.querySelector('.tot-ore');
+        const tot     = totSpan ? parseInt(totSpan.textContent) || 0 : 0;
+        const warnDoc = tot > maxOre;
+
+        let warnCella = false;
+        let warnMat   = false;
+
+        tr.querySelectorAll('td[data-asgn]').forEach(td => {
+            const oreAtt  = JSON.parse(td.dataset.oreatt || '{}');
+            const matIds  = JSON.parse(td.dataset.matids || '[]');
+            const piano   = JSON.parse(td.dataset.pianoMat || '{}'); // {id: ore_previste}
+            const pianoTot = parseInt(td.dataset.pianoTot) || 0;
+
+            // Ore totali in questa cella
+            const oreCella = Object.values(oreAtt).reduce((a,b) => a + (b||0), 0)
+                          || (Object.keys(oreAtt).length === 0
+                              ? parseInt(td.querySelector('.cell-ore')?.textContent) || 0 : 0);
+
+            if (pianoTot > 0 && oreCella > pianoTot) warnCella = true;
+
+            // Controlla ogni materia
+            Object.entries(oreAtt).forEach(([idMat, ore]) => {
+                const prev = piano[idMat];
+                if (prev !== undefined && ore > prev) warnMat = true;
+            });
+
+            // Colora testo cella
+            if (warnDoc)      td.style.color = '#b91c1c';
+            else if (warnMat) td.style.color = '#9a3412';
+            else if (warnCella) td.style.color = '#92400e';
+            else              td.style.color = '';
+        });
+
+        // Colora sfondo riga e Tot.
+        if (warnDoc) {
+            tr.style.background = '#fde8e8';
+            if (totSpan) { totSpan.style.color='#dc2626'; totSpan.title='Supera ore max docente'; }
+        } else if (warnMat) {
+            tr.style.background = '#fff0e0';
+            if (totSpan) { totSpan.style.color='#c2410c'; totSpan.title='Supera ore materia'; }
+        } else if (warnCella) {
+            tr.style.background = '#fff3cd';
+            if (totSpan) { totSpan.style.color='#d97706'; totSpan.title='Supera ore CC'; }
+        } else {
+            tr.style.background = '';
+            if (totSpan) { totSpan.style.color=''; totSpan.title=''; }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', _ricalcolaColoriTutteRighe);
 
 // Chiudi popover cliccando fuori
 document.addEventListener('click', e => {
