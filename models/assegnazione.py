@@ -98,3 +98,26 @@ class AssegnazioneClasse(db.Model):
     def __repr__(self):
         return (f'<AssegnazioneClasse {self.label_classe} '
                 f'{self.ore}h asgn={self.id_assegnazione}>')
+
+
+class CattedraPotenziamento(db.Model):
+    """Ore di potenziamento assegnate a una CC per anno scolastico."""
+    __tablename__ = 'cattedre_potenziamento'
+
+    id                  = db.Column(db.Integer, primary_key=True)
+    anno_scol           = db.Column(db.String(9), nullable=False)
+    id_classe_concorso  = db.Column(db.Integer,
+                                     db.ForeignKey('classi_concorso.id'),
+                                     nullable=False)
+    ore                 = db.Column(db.Integer, nullable=False, default=18)
+    note                = db.Column(db.String(200), nullable=True)
+
+    classe_concorso = db.relationship('ClasseConcorso')
+
+    __table_args__ = (
+        db.UniqueConstraint('anno_scol', 'id_classe_concorso',
+                            name='uq_potenziamento_anno_cc'),
+    )
+
+    def __repr__(self):
+        return f'<CattedraPotenziamento {self.anno_scol} {self.classe_concorso.codice} {self.ore}h>'

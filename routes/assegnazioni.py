@@ -5,7 +5,7 @@ Vista per area disciplinare, identica alla struttura del file ASSEGNAZIONI CLASS
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, jsonify)
 from models import db
-from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse, CattedraPotenziamento
 from models.docente import Docente
 from models.classe_concorso import (ClasseConcorso, CattedraOrganico,
                                     MateriaClasseConcorso)
@@ -218,6 +218,26 @@ def _build_area(anno_scol, area):
             .order_by(Docente.cognome).all()
         )
 
+        # Potenziamento per questa CC
+        pot = CattedraPotenziamento.query.filter_by(
+            anno_scol=anno_scol, id_classe_concorso=cc.id).first()
+        ore_pot_doc = {}
+        if pot:
+            for a in assegnazioni:
+                ac_pot = AssegnazioneClasse.query.filter_by(
+                    id_assegnazione=a.id,
+                    indirizzo='POT', anno_corso=0, sezione='A').first()
+                ore_pot_doc[a.id] = ac_pot.ore if ac_pot else 0
+            for d in docenti_cc_precaricati:
+                a_pre = AssegnazioneDocente.query.filter_by(
+                    anno_scol=anno_scol, id_classe_concorso=cc.id,
+                    id_docente=d.id).first()
+                if a_pre:
+                    ac_pot = AssegnazioneClasse.query.filter_by(
+                        id_assegnazione=a_pre.id,
+                        indirizzo='POT', anno_corso=0, sezione='A').first()
+                    ore_pot_doc[d.id] = ac_pot.ore if ac_pot else 0
+
         blocks.append({
             'cc':                 cc,
             'classi':             classi,
@@ -231,6 +251,9 @@ def _build_area(anno_scol, area):
             'tot_doc':            tot_doc,
             'ore_per_classe':     ore_per_classe,
             'docenti_precaricati': docenti_cc_precaricati,
+            'potenziamento':      pot,
+            'ore_pot_doc':        ore_pot_doc,
+            'ore_pot_totali':     sum(ore_pot_doc.values()),
         })
     return blocks
 
@@ -447,13 +470,18 @@ def aggiorna_ore(asgn_id):
     id_mat   = request.json.get('id_materia')  # può essere None
     ore      = request.json.get('ore', 0)
 
-    m = _re3.match(r'(\d+)([AB]?)\s+(.+)', lbl)
-    if not m:
-        return jsonify(ok=False, msg='Label classe non valida'), 400
-
-    anno_corso = int(m.group(1))
-    sezione    = m.group(2) or 'A'
-    indirizzo  = m.group(3).strip()
+    # Gestione speciale per potenziamento
+    if lbl == '__POT__':
+        anno_corso = 0
+        sezione    = 'A'
+        indirizzo  = 'POT'
+    else:
+        m = _re3.match(r'(\d+)([AB]?)\s+(.+)', lbl)
+        if not m:
+            return jsonify(ok=False, msg='Label classe non valida'), 400
+        anno_corso = int(m.group(1))
+        sezione    = m.group(2) or 'A'
+        indirizzo  = m.group(3).strip()
 
     # Cerca riga esistente
     filtro = dict(id_assegnazione=asgn_id, indirizzo=indirizzo,

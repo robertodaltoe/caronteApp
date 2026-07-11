@@ -40,7 +40,7 @@ table.pivot th.th-doc {
     background:white;
     box-shadow:2px 0 4px rgba(0,0,0,.06);
 }
-table.pivot th.th-doc { background:#f1f5f9; z-index:3; }
+table.pivot th.th-doc { background:#f1f5f9; z-index:3; color:#1e293b; font-weight:700; }
 /* Tre colonne sticky destra: 🗑 (30px) | Max (44px) | Tot (44px) */
 table.pivot td.td-sticky-r,
 table.pivot th.th-sticky-r {
@@ -156,6 +156,13 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <th class="th-doc">Docente</th>
                     <th style="min-width:50px; background:#f1f5f9; border:1px solid #e2e8f0;
                                font-size:.7rem; color:var(--grigio);">Tipo</th>
+                    {% if blk.potenziamento %}
+                    <th style="min-width:38px; background:#7c3aed; color:white; font-size:.65rem;
+                               font-weight:700; border:1px solid #6d28d9; writing-mode:vertical-rl;
+                               transform:rotate(180deg); height:60px; padding:4px 2px;">
+                        POT {{ blk.potenziamento.ore }}h
+                    </th>
+                    {% endif %}
                     {% set IND_COLORS = {
                         'AFM':'#1e40af','RIM':'#1d4ed8',
                         'CAT':'#b45309','LLI':'#15803d',
@@ -187,6 +194,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         Piano studi
                     </td>
                     <td></td>
+                    {% if blk.potenziamento %}
+                    <td style="border:1px solid #6d28d9; background:#f5f3ff;
+                               text-align:center; font-size:.72rem; color:#7c3aed; font-weight:700;">
+                        {{ blk.potenziamento.ore }}h
+                    </td>
+                    {% endif %}
                     {% set IND_COLORS2 = {
                         'AFM':'#1e40af','RIM':'#1d4ed8',
                         'CAT':'#b45309','LLI':'#15803d',
@@ -293,6 +306,21 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {{ tipo_display.get(a.tipo, a.tipo) }}
                     </span>
                 </td>
+                {% if blk.potenziamento %}
+                {% set ore_pot = blk.ore_pot_doc.get(a.id, 0) %}
+                <td class="{{ 'ore-val' if ore_pot else 'ore-zero' }}"
+                    style="border:1px solid #6d28d9; text-align:center; cursor:pointer; width:38px;
+                           background:{{ '#f5f3ff' if ore_pot else 'white' }};
+                           color:{{ '#7c3aed' if ore_pot else '#d8b4fe' }};"
+                    data-asgn="{{ a.id }}" data-classe="__POT__"
+                    data-multi="false" data-matids="[]"
+                    data-matnomi='["Potenziamento"]'
+                    data-oreatt='{{ {"_": ore_pot}|tojson }}'
+                    data-piano-tot="{{ blk.potenziamento.ore }}"
+                    onclick="apriPopoverData(this)" title="Ore potenziamento">
+                    <span class="cell-ore" id="cell-{{ a.id }}-__POT__">{{ ore_pot if ore_pot else '—' }}</span>
+                </td>
+                {% endif %}
                 {% set IND_COL3 = {
                     'AFM':'#1e40af','RIM':'#1d4ed8',
                     'CAT':'#b45309','LLI':'#15803d',
@@ -458,6 +486,15 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {{ cop }}/{{ prev }}
                 </td>
                 {% endfor %}
+                {% if blk.potenziamento %}
+                {% set cop_pot = blk.ore_pot_totali %}
+                {% set prev_pot = blk.potenziamento.ore %}
+                <td class="td-cop" id="cop-{{ cc.id }}-__POT__" data-prev="{{ prev_pot }}"
+                    style="color:{{ '#16a34a' if cop_pot==prev_pot else ('#dc2626' if cop_pot>prev_pot else '#f59e0b') }};
+                           border:1px solid #6d28d9; background:#f5f3ff; font-weight:700; text-align:center;">
+                    {{ cop_pot }}/{{ prev_pot }}
+                </td>
+                {% endif %}
                 <td class="td-sticky-r col-tot"></td>
                 <td class="td-sticky-r col-max"></td>
                 <td class="td-sticky-r col-azioni"></td>
