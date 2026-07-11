@@ -190,10 +190,11 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {% endif %}
                     </td>
                     {% endfor %}
-                    <td style="border:1px solid #e2e8f0; text-align:center; font-size:.72rem; color:var(--grigio);">
+                    <td class="td-sticky-r col-tot" style="font-size:.72rem; color:var(--grigio);">
                         {{ blk.piano.values()|sum }}h
                     </td>
-                    <td colspan="2"></td>
+                    <td class="td-sticky-r col-max"></td>
+                    <td class="td-sticky-r col-azioni"></td>
                 </tr>
             </thead>
             {# Sub-righe dettaglio materie per il piano studi (una per classe con multi_materia) #}
