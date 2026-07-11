@@ -238,11 +238,16 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             {% set max_ore = a.docente.ore_max_effettive if a.docente else '—' %}
             {% set is_over = a.docente and tot > a.docente.ore_max_effettive %}
             {% set ore_classe_over = [] %}
+            {% set ore_mat_over = [] %}
             {% for cl in classi %}
             {% set ore_cl = blk.ore_doc_classe[a.id].get(cl, 0) %}
             {% if ore_cl > blk.piano[cl] %}{% set _ = ore_classe_over.append(cl) %}{% endif %}
+            {% for mat in blk.piano_materie[cl] %}
+            {% set ore_mat_doc = blk.ore_doc_mat[a.id].get(cl, {}).get(mat.id, 0) %}
+            {% if ore_mat_doc > mat.ore %}{% set _ = ore_mat_over.append(cl) %}{% endif %}
             {% endfor %}
-            <tr style="{{ 'background:#fde8e8;' if is_over else ('background:#fff3cd;' if ore_classe_over else '') }}">
+            {% endfor %}
+            <tr style="{{ 'background:#fde8e8;' if is_over else ('background:#fff0e0;' if ore_mat_over else ('background:#fff3cd;' if ore_classe_over else '')) }}">
                 <td class="td-doc">
                     {% if a.docente %}
                     <span style="font-weight:600;">{{ a.docente.cognome }} {{ a.docente.nome }}</span>
@@ -738,20 +743,22 @@ function _aggiornaColoreRiga(res) {
     if (!_popCell) return;
     const tr = _popCell.closest('tr');
     if (!tr) return;
-    // Rimuove stili precedenti
     tr.style.background = '';
     tr.style.outline    = '';
     const totEl = tr.querySelector('.tot-ore');
-    if (res.warn_docente && res.warn_classe) {
+    if (res.warn_docente) {
+        // Rosso: supera ore max docente (priorità massima)
         tr.style.background = '#fde8e8';
-        tr.style.outline    = '2px solid #dc2626';
-        if (totEl) { totEl.style.color='#dc2626'; totEl.title='Supera ore max docente E ore previste per la classe'; }
-    } else if (res.warn_docente) {
-        tr.style.background = '#fde8e8';
+        tr.style.outline    = res.warn_classe ? '2px solid #dc2626' : '';
         if (totEl) { totEl.style.color='#dc2626'; totEl.title='Supera le ore max del docente'; }
+    } else if (res.warn_materia) {
+        // Arancio scuro: ore materia superate in questa classe
+        tr.style.background = '#fff0e0';
+        if (totEl) { totEl.style.color='#c2410c'; totEl.title='Supera le ore previste per questa materia in questa classe'; }
     } else if (res.warn_classe) {
+        // Giallo: ore CC superate in questa classe
         tr.style.background = '#fff3cd';
-        if (totEl) { totEl.style.color='#d97706'; totEl.title='Supera le ore previste per questa classe'; }
+        if (totEl) { totEl.style.color='#d97706'; totEl.title='Supera le ore previste per questa CC in questa classe'; }
     } else {
         if (totEl) { totEl.style.color=''; totEl.title=''; }
     }

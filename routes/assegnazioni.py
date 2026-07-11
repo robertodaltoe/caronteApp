@@ -434,29 +434,54 @@ def aggiorna_ore(asgn_id):
         ore_max = asgn.docente.ore_max_effettive_per_anno(asgn.anno_scol)
         warn_docente = tot > ore_max
 
-    # Controllo ore previste per classe (piano studi per questa CC)
-    warn_classe = False
+    # Controllo ore previste per classe e per materia
+    warn_classe  = False
+    warn_materia = False
     from models.piano_studi import PianoStudi
-    from models.classe_concorso import ClasseConcorso
     ac_rows = AssegnazioneClasse.query.filter_by(id_assegnazione=asgn_id).all()
     for ac_row in ac_rows:
-        ps = PianoStudi.query.filter_by(
+        # Ore totali previste per questa CC in questa classe
+        ps_all = PianoStudi.query.filter_by(
             anno_scol=asgn.anno_scol,
             id_classe_concorso=asgn.id_classe_concorso,
             indirizzo=ac_row.indirizzo,
             anno_corso=ac_row.anno_corso).all()
-        ore_previste = sum(p.ore_settimanali for p in ps if not p.compresenza)
-        # somma ore assegnate a questa classe da questo docente
-        ore_assegnate_classe = sum(
+        ore_previste_tot = sum(p.ore_settimanali for p in ps_all if not p.compresenza)
+
+        # Ore assegnate a questa classe da questo docente (tutte le materie)
+        ore_asgn_classe = sum(
             r.ore for r in ac_rows
-            if r.indirizzo==ac_row.indirizzo and r.anno_corso==ac_row.anno_corso
+            if r.indirizzo==ac_row.indirizzo
+            and r.anno_corso==ac_row.anno_corso
             and r.sezione==ac_row.sezione)
-        if ore_assegnate_classe > ore_previste:
+        if ore_asgn_classe > ore_previste_tot:
             warn_classe = True
-            break
+
+        # Controllo per singola materia (se id_materia valorizzato)
+        if ac_row.id_materia:
+            ps_mat = next((p for p in ps_all
+                           if p.id_materia == ac_row.id_materia), None)
+            if ps_mat:
+                # Ore assegnate a TUTTI i docenti per questa materia+classe
+                from models.assegnazione import AssegnazioneDocente as AD2
+                ore_mat_totali = 0
+                for a2 in AD2.query.filter_by(
+                        anno_scol=asgn.anno_scol,
+                        id_classe_concorso=asgn.id_classe_concorso).all():
+                    for r2 in AssegnazioneClasse.query.filter_by(
+                            id_assegnazione=a2.id,
+                            indirizzo=ac_row.indirizzo,
+                            anno_corso=ac_row.anno_corso,
+                            sezione=ac_row.sezione,
+                            id_materia=ac_row.id_materia).all():
+                        ore_mat_totali += r2.ore
+                if ore_mat_totali > ps_mat.ore_settimanali:
+                    warn_materia = True
 
     return jsonify(ok=True, ore=ore, tot=tot,
-                   warn_docente=warn_docente, warn_classe=warn_classe)
+                   warn_docente=warn_docente,
+                   warn_classe=warn_classe,
+                   warn_materia=warn_materia)
 
 
 def _tot_ore(asgn_id):
