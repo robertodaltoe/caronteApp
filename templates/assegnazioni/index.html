@@ -579,6 +579,14 @@ let _popMulti  = false;
 let _popMats   = [];
 let _popNomi   = [];
 let _popCell   = null;
+let _autoT     = null;
+
+function schedAutosave() {
+    clearTimeout(_autoT);
+    const msg = document.getElementById('pop-msg');
+    msg.textContent = '…'; msg.style.color = '#9ca3af';
+    _autoT = setTimeout(async () => { await salvaPopover(true); }, 900);
+}
 
 async function apriPopoverPrecaricato(td) {
     // Crea AssegnazioneDocente al volo, poi apre il popover
@@ -641,7 +649,8 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
                        data-mat="${id}"
                        style="width:50px;padding:3px 6px;border:1px solid #d1d5db;
                               border-radius:5px;font-size:.82rem;text-align:center;"
-                       onkeydown="if(event.key==='Enter')salvaPopover()">`;
+                       oninput="schedAutosave()"
+                       onkeydown="if(event.key==='Enter'){clearTimeout(_autoT);salvaPopover();}else if(event.key==='Escape')chiudiPopover();">`;
             fields.appendChild(row);
         });
     } else {
@@ -652,7 +661,8 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
                 <input type="number" min="0" max="20" value="${ore}" id="pop-single"
                        style="width:60px;padding:4px 8px;border:1px solid #d1d5db;
                               border-radius:5px;font-size:.9rem;text-align:center;"
-                       onkeydown="if(event.key==='Enter')salvaPopover()">
+                       oninput="schedAutosave()"
+                       onkeydown="if(event.key==='Enter'){clearTimeout(_autoT);salvaPopover();}else if(event.key==='Escape')chiudiPopover();">
             </div>`;
         setTimeout(() => document.getElementById('pop-single')?.focus(), 50);
     }
@@ -686,8 +696,9 @@ function chiudiPopover() {
     _popAsgnId = null; _popCell = null;
 }
 
-async function salvaPopover() {
+async function salvaPopover(keepOpen = false) {
     if (!_popAsgnId) return;
+    clearTimeout(_autoT);
     const msg = document.getElementById('pop-msg');
     msg.textContent = '…';
 
@@ -726,8 +737,9 @@ async function salvaPopover() {
     const totEl = _popCell?.closest('tr')?.querySelector('.tot-ore');
     if (totEl) totEl.textContent = tot + 'h';
 
-    msg.textContent = '✓ Salvato';
-    setTimeout(chiudiPopover, 800);
+    msg.textContent = '✓';
+    msg.style.color = '#16a34a';
+    if (!keepOpen) setTimeout(chiudiPopover, 600);
 }
 
 // Chiudi popover cliccando fuori
