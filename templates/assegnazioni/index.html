@@ -41,14 +41,21 @@ table.pivot th.th-doc {
     box-shadow:2px 0 4px rgba(0,0,0,.06);
 }
 table.pivot th.th-doc { background:#f1f5f9; z-index:3; }
+/* Tre colonne sticky destra: 🗑 (30px) | Max (44px) | Tot (44px) */
 table.pivot td.td-sticky-r,
 table.pivot th.th-sticky-r {
-    width:44px; min-width:44px;
-    position:sticky; right:0; z-index:2;
+    position:sticky; z-index:2;
     background:#dde3ee;
     box-shadow:-2px 0 4px rgba(0,0,0,.06);
+    text-align:center;
 }
 table.pivot th.th-sticky-r { z-index:3; }
+/* Colonna 🗑 — più a destra, 30px */
+table.pivot .col-azioni  { right:0;    width:30px;  min-width:30px;  max-width:30px; }
+/* Colonna Max */
+table.pivot .col-max     { right:30px; width:44px;  min-width:44px;  max-width:44px; }
+/* Colonna Tot */
+table.pivot .col-tot     { right:74px; width:44px;  min-width:44px;  max-width:44px; }
 table.pivot td.td-tipo,
 table.pivot th.th-tipo {
     position:sticky; left:0; z-index:2;
@@ -148,9 +155,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {{ classe }}
                     </th>
                     {% endfor %}
-                    <th class="th-sticky-r" style="width:44px; min-width:44px; max-width:44px; color:#1e293b;">Tot.</th>
-                    <th class="th-sticky-r" style="width:44px; min-width:44px; max-width:44px; color:#6b7280; right:44px;">Max</th>
-                    <th style="width:30px;"></th>
+                    <th class="th-sticky-r col-tot" style="color:#1e293b;">Tot.</th>
+                    <th class="th-sticky-r col-max" style="color:#6b7280;">Max</th>
+                    <th class="th-sticky-r col-azioni" style="background:#f1f5f9;"></th>
                 </tr>
                 {# Riga ore previste da piano studi #}
                 <tr style="background:#f8fafc;">
@@ -217,9 +224,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <td style="border:1px solid #e2e8f0; background:#f8fafc;"></td>
                     {% endif %}
                     {% endfor %}
-                    <td class="td-sticky-r" style="right:60px;"></td>
-                    <td class="td-sticky-r" style="right:30px;"></td>
-                    <td class="td-sticky-r" style="right:0;"></td>
+                    <td class="td-sticky-r col-tot"></td>
+                    <td class="td-sticky-r col-max"></td>
+                    <td class="td-sticky-r col-azioni"></td>
                 </tr>
             </tbody>
             {% endif %}
@@ -267,11 +274,13 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     style="cursor:pointer; width:34px; text-align:center; border:1px solid #e2e8f0;
                            {{ 'border-left:3px solid '~IND_COL3.get(ind3,'#374151')~';' if is_first_of_ind3 else '' }}"
                     title="Clicca per inserire/modificare ore"
-                    onclick="apriPopover(this, {{ a.id }}, '{{ classe }}',
-                             {{ blk.multi_materia[classe]|tojson }},
-                             {{ mat_list | map(attribute='id') | list | tojson }},
-                             {{ mat_list | map(attribute='nome') | list | tojson }},
-                             {{ blk.ore_doc_mat[a.id].get(classe, {})|tojson }})">
+                    data-asgn="{{ a.id }}"
+                    data-classe="{{ classe }}"
+                    data-multi="{{ blk.multi_materia[classe]|tojson }}"
+                    data-matids='{{ mat_list | map(attribute='id') | list | tojson }}'
+                    data-matnomi='{{ mat_list | map(attribute='nome') | list | tojson }}'
+                    data-oreatt='{{ blk.ore_doc_mat[a.id].get(classe, {})|tojson }}'
+                    onclick="apriPopoverData(this)">
                     <span class="cell-ore" id="cell-{{ a.id }}-{{ classe|replace(' ','_') }}">
                         {{ ore if ore else '—' }}
                     </span>
@@ -280,9 +289,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% endif %}
                 </td>
                 {% endfor %}
-                <td class="td-sticky-r"
-                    style="text-align:center; font-weight:800; cursor:pointer;
-                           right:60px; color:{{ '#dc2626' if is_over else 'var(--blu)' }};"
+                <td class="td-sticky-r col-tot"
                     {% if blk.multi_materia.values() | select | list %}
                     onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
                     title="Mostra/nascondi dettaglio materie"
@@ -292,11 +299,10 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <span style="font-size:.62rem; color:#6366f1;">▾</span>
                     {% endif %}
                 </td>
-                <td class="td-sticky-r" style="text-align:center; font-size:.74rem;
-                    color:var(--grigio); right:30px;">
+                <td class="td-sticky-r col-max">
                     {{ max_ore }}h
                 </td>
-                <td class="td-sticky-r" style="text-align:center; right:0; width:30px;">
+                <td class="td-sticky-r col-azioni">
                     <form method="post"
                           action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
                           style="margin:0;"
@@ -332,9 +338,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {% endif %}
                     </td>
                     {% endfor %}
-                    <td class="td-sticky-r" style="right:60px;"></td>
-                    <td class="td-sticky-r" style="right:30px;"></td>
-                    <td class="td-sticky-r" style="right:0;"></td>
+                    <td class="td-sticky-r col-tot"></td>
+                    <td class="td-sticky-r col-max"></td>
+                    <td class="td-sticky-r col-azioni"></td>
                 </tr>
                 {% endif %}
             {% endfor %}
@@ -357,10 +363,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% for classe in classi %}
                 <td style="border:1px solid #e2e8f0; color:#cbd5e1; text-align:center;">—</td>
                 {% endfor %}
-                <td class="td-sticky-r" style="text-align:center; color:#9ca3af; right:60px;">—</td>
-                <td class="td-sticky-r" style="text-align:center; font-size:.74rem;
-                    color:#9ca3af; right:30px;">{{ d.ore_max_effettive }}h</td>
-                <td class="td-sticky-r" style="text-align:center; right:0; width:30px;">
+                <td class="td-sticky-r col-tot">—</td>
+                <td class="td-sticky-r col-max">{{ d.ore_max_effettive }}h</td>
+                <td class="td-sticky-r col-azioni">
                     <button type="button"
                             onclick="quickAssign('{{ cc.id }}', '{{ d.id }}')"
                             style="background:none; border:1px solid #c7d2fe; border-radius:4px;
@@ -384,9 +389,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {{ cop }}/{{ prev }}
                 </td>
                 {% endfor %}
-                <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:60px;"></td>
-                <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:30px;"></td>
-                <td class="td-sticky-r" style="border:1px solid #e2e8f0; right:0;"></td>
+                <td class="td-sticky-r col-tot"></td>
+                <td class="td-sticky-r col-max"></td>
+                <td class="td-sticky-r col-azioni"></td>
             </tr>
             {# Riga export per classe #}
             <tr style="background:#f8f9ff;">
@@ -401,9 +406,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                        title="Scarica scheda {{ classe }}">📥</a>
                 </td>
                 {% endfor %}
-                <td class="td-sticky-r" style="right:60px;"></td>
-                <td class="td-sticky-r" style="right:30px;"></td>
-                <td class="td-sticky-r" style="right:0;"></td>
+                <td class="td-sticky-r col-tot"></td>
+                <td class="td-sticky-r col-max"></td>
+                <td class="td-sticky-r col-azioni"></td>
             </tr>
             </tbody>
         </table>
@@ -551,6 +556,16 @@ let _popMats   = [];
 let _popNomi   = [];
 let _popCell   = null;
 
+function apriPopoverData(td) {
+    const asgnId     = parseInt(td.dataset.asgn);
+    const classe     = td.dataset.classe;
+    const multi      = JSON.parse(td.dataset.multi);
+    const matIds     = JSON.parse(td.dataset.matids);
+    const matNomi    = JSON.parse(td.dataset.matnomi);
+    const oreAttuale = JSON.parse(td.dataset.oreatt);
+    apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale);
+}
+
 function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
     _popAsgnId = asgnId;
     _popClasse = classe;
@@ -654,7 +669,7 @@ document.addEventListener('click', e => {
     const pop = document.getElementById('ore-popover');
     if (pop.style.display === 'block' &&
         !pop.contains(e.target) &&
-        !e.target.closest('td[onclick*="apriPopover"]')) {
+        !e.target.closest('td[onclick*="apriPopover"]') && !e.target.closest('td[data-asgn]')) {
         chiudiPopover();
     }
 });
