@@ -811,25 +811,38 @@ function _aggiornaCellaTd(ore, tot) {
 }
 
 function _aggiornaCopertura(ccId, classe) {
-    // Somma tutte le ore della colonna classe per questa CC
     const classeKey = classe.replace(/ /g,'_');
     const copEl = document.getElementById('cop-' + ccId + '-' + classeKey);
     if (!copEl) return;
     const prev = parseInt(copEl.dataset.prev) || 0;
 
-    // Somma tutte le .cell-ore nella colonna di questa classe
-    // Le celle hanno id="cell-{asgnId}-{classeKey}"
+    // Trova l'indice di colonna della classe nella tabella
+    // cercando l'header th con testo corrispondente
+    const table = document.querySelector('table[data-cc-id="' + ccId + '"]');
+    if (!table) return;
+
+    // Trova l'indice della colonna tramite le celle con data-classe
+    let colIdx = -1;
+    const firstDocRow = table.querySelector('tr[data-asgn-id]');
+    if (firstDocRow) {
+        const cells = firstDocRow.querySelectorAll('td[data-classe]');
+        cells.forEach((td, i) => {
+            if (td.dataset.classe === classe) colIdx = i;
+        });
+    }
+    if (colIdx === -1) return;
+
+    // Somma le ore di tutti i docenti in quella colonna
     let totCop = 0;
-    document.querySelectorAll(`[id^="cell-"][id$="-${classeKey}"]`).forEach(span => {
-        const val = parseInt(span.textContent) || 0;
-        // Verifica che appartenga alla stessa CC (la td ha data-asgn)
-        const td = span.closest('td');
-        if (td && td.dataset.classe === classe) {
+    table.querySelectorAll('tr[data-asgn-id]').forEach(tr => {
+        const cells = tr.querySelectorAll('td[data-classe]');
+        if (cells[colIdx]) {
+            const span = cells[colIdx].querySelector('.cell-ore');
+            const val = parseInt(span ? span.textContent : cells[colIdx].textContent) || 0;
             totCop += val;
         }
     });
 
-    // Aggiorna testo e colore
     copEl.textContent = totCop + '/' + prev;
     if (totCop === prev)      copEl.style.color = '#16a34a';
     else if (totCop > prev)   copEl.style.color = '#dc2626';
