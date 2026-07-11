@@ -14,12 +14,15 @@
 table.pivot { width:100%; border-collapse:collapse; font-size:.78rem; }
 table.pivot th { padding:5px 6px; text-align:center; background:#f1f5f9;
     border:1px solid #e2e8f0; font-weight:700; white-space:nowrap; font-size:.72rem; }
-table.pivot th.th-doc { text-align:left; width:160px; min-width:160px; max-width:160px; background:#f1f5f9; }
+table.pivot th.th-doc, table.pivot td.td-doc { width:170px; min-width:170px; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; padding:5px 8px; background:#f1f5f9; }
 table.pivot td { padding:4px 3px; text-align:center; border:1px solid #e2e8f0; font-size:.8rem; }
-table.pivot td.td-doc { text-align:left; padding:5px 8px; width:160px; min-width:160px; max-width:160px; overflow:hidden; }
+table.pivot .col-tot { width:44px; min-width:44px; max-width:44px; }
+table.pivot .col-max { width:44px; min-width:44px; max-width:44px; }
+table.pivot .col-azioni { width:30px; min-width:30px; max-width:30px; }
+
 table.pivot .th-tipo, table.pivot .td-tipo { width:44px; min-width:44px; max-width:44px; }
 table.pivot .th-pot,  table.pivot .td-pot  { width:34px; min-width:34px; max-width:34px; }
-table.pivot td[data-classe] { width:30px; min-width:30px; max-width:30px; }
+
 table.pivot td.ore-val { font-weight:700; color:var(--blu); }
 table.pivot td.ore-zero { color:#e2e8f0; }
 table.pivot tr.tr-copertura td { font-size:.7rem; font-weight:700;
