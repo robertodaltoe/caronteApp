@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Piantina Aule{% endblock %}
+
+{% block extra_style %}
+<style>
+.mappa-wrap { position: relative; display: inline-block; width: 100%; max-width: 750px; }
+.mappa-img { display: block; width: 100%; height: auto; border: 1px solid #d1d5db;
+             border-radius: 8px; }
+.aula-hot {
+    position: absolute; cursor: pointer; background: none; border: none;
+}
+.modo-toggle { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+.modo-toggle a { padding: 7px 16px; font-size: .85rem; font-weight: 600; text-decoration: none;
+                 color: var(--grigio); background: white; }
+.modo-toggle a.attivo { background: var(--blu); color: white; }
+.contenuto-mappa { display: flex; gap: 16px; align-items: flex-start; }
+.tabella-aule { flex: 0 0 260px; max-height: 780px; overflow-y: auto; }
+.tabella-aule table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.tabella-aule th { background: var(--blu); color: white; padding: 6px 8px; text-align: left;
+                    position: sticky; top: 0; }
+.tabella-aule td { padding: 5px 8px; border-bottom: 1px solid #eef0f3; }
+.tabella-aule tr.occupata-riga td { background: #f0fdf4; }
+.tabella-aule .cella-vuota { color: var(--grigio); font-style: italic; }
+.sezione-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.sezione-tabs button {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid #d1d5db; background: white;
+    font-size: .82rem; cursor: pointer; color: var(--grigio); font-weight: 600;
+}
+.sezione-tabs button.attiva { background: var(--blu); color: white; border-color: var(--blu); }
+.sezione-pannello { display: none; }
+.sezione-pannello.attiva { display: block; }
+#popover-aula {
+    position: fixed; z-index: 50; background: white; border: 1px solid #d1d5db;
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 14px 16px;
+    min-width: 240px; display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+    <a href="{{ url_for('aule.lista', anno=anno) }}" class="btn btn-primary btn-sm">←︎ Elenco aule</a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">⌖︎️ Piantina aule</h1>
+</div>
+
+<div class="card" style="padding:12px 16px; margin-bottom:14px; display:flex; gap:18px;
+                          align-items:center; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:.72rem; color:var(--grigio); display:block;">Anno scolastico</label>
+        <select onchange="location.href='{{ url_for('aule.mappa') }}?anno='+this.value+'&modo={{ modo }}'"
+                style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            {% for a in anni_disponibili %}
+            <option value="{{ a }}" {% if a == anno %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:3px;">Modalità</label>
+        <div class="modo-toggle">
+            <a href="?anno={{ anno }}&modo=visualizza" class="{{ 'attivo' if modo=='visualizza' else '' }}">◉︎ Visualizza</a>
+            <a href="?anno={{ anno }}&modo=assegna" class="{{ 'attivo' if modo=='assegna' else '' }}">✎︎️ Assegna</a>
+        </div>
+    </div>
+    <div style="font-size:.78rem; color:var(--grigio); max-width:340px;">
+        {% if modo == 'assegna' %}
+        Clicca un'aula per assegnarle una classe (o cambiarla / liberarla).
+        {% else %}
+        Clicca un'aula per vedere quale classe la occupa. Passa a "Assegna" per modificare.
+        {% endif %}
+    </div>
+</div>
+
+<div class="contenuto-mappa">
+<div style="flex:1; min-width:0;">
+
+<div class="sezione-tabs">
+    {% for chiave, sez in sezioni.items() %}
+    <button type="button" data-target="pannello-{{ chiave }}"
+            class="{{ 'attiva' if loop.first else '' }}"
+            onclick="mostraSezione('{{ chiave }}')">{{ sez.titolo }}</button>
+    {% endfor %}
+</div>
+
+{% for chiave, sez in sezioni.items() %}
+<div class="card sezione-pannello {{ 'attiva' if loop.first else '' }}" id="pannello-{{ chiave }}" style="padding:16px;">
+    <div class="mappa-wrap">
+        <img src="{{ url_for('static', filename=sez.immagine) }}" class="mappa-img" alt="{{ sez.titolo }}">
+        {% for num, box in sez.aule.items() %}
+        {% set classi_qui = occupazione.get(num, []) %}
+        <div class="aula-hot {{ 'occupata' if classi_qui else '' }}"
+             style="left:{{ box.x }}%; top:{{ box.y }}%; width:{{ box.w }}%; height:{{ box.h }}%;"
+             data-aula="{{ num }}" data-sede="{{ sez.sede }}"
+             data-classi='{{ classi_qui | tojson }}'
+             onmouseenter="apriPopover(event, '{{ num }}')"
+             onmouseleave="chiudiPopoverHover(event)"
+             onclick="apriPopover(event, '{{ num }}')" title="Aula {{ num }}">
+        </div>
+        {% endfor %}
+    </div>
+    {% if not sez.aule %}
+    <p style="color:var(--grigio); font-size:.82rem; margin-top:10px;">
+        Coordinate non ancora calibrate per questa sezione.
+    </p>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div style="display:flex; gap:16px; margin-top:12px; font-size:.78rem; color:var(--grigio); flex-wrap:wrap;">
+    <span><span style="display:inline-block; width:12px; height:12px; background:rgba(22,163,74,.3);
+          border:2px solid rgba(22,163,74,.65); border-radius:3px; vertical-align:middle;"></span>
+          Occupata</span>
+    <span><span style="display:inline-block; width:12px; height:12px; background:rgba(37,99,235,.15);
+          border:2px solid rgba(37,99,235,.55); border-radius:3px; vertical-align:middle;"></span>
+          Libera</span>
+</div>
+
+</div>
+
+{% if modo == 'visualizza' %}
+<div class="card tabella-aule">
+    <table>
+        <thead>
+            <tr><th>N° Aula</th><th>Classe</th><th>Sede</th></tr>
+        </thead>
+        <tbody>
+            {% for a in tutte_aule %}
+            {% set classi_qui = occupazione.get(a.numero, []) %}
+            <tr class="{{ 'occupata-riga' if classi_qui else '' }}">
+                <td><strong>{{ a.numero }}</strong></td>
+                <td>{% if classi_qui %}{{ classi_qui | join(', ') }}{% else %}<span class="cella-vuota">—</span>{% endif %}</td>
+                <td style="font-size:.72rem; color:var(--grigio);">{{ a.sede }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+</div>
+
+{# ── Popover aula (view + assegna) ──────────────────────────────── #}
+<div id="popover-aula">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong id="pop-titolo" style="color:var(--blu);"></strong>
+        <button onclick="chiudiPopover()" style="background:none; border:none; cursor:pointer;
+                font-size:1rem; color:var(--grigio);">✕︎</button>
+    </div>
+    <div id="pop-sede" style="font-size:.74rem; color:var(--grigio); margin-bottom:10px;"></div>
+
+    <div id="pop-view"></div>
+
+    {% if modo == 'assegna' %}
+    <div id="pop-assign" style="display:none;">
+        <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:4px;">
+            Assegna classe
+        </label>
+        <select id="pop-select-classe" style="width:100%; padding:6px 8px; border:1px solid #d1d5db;
+                border-radius:6px; font-size:.84rem; margin-bottom:8px;">
+            <option value="">— scegli classe —</option>
+            {% for c in classi_libere %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="assegnaAula()" class="btn btn-success btn-sm" style="width:100%;">
+            ▤︎ Assegna
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const ANNO = "{{ anno }}";
+const MODO = "{{ modo }}";
+let popAula = null;
+
+function mostraSezione(chiave) {
+    document.querySelectorAll('.sezione-pannello').forEach(function(p) {
+        p.classList.toggle('attiva', p.id === 'pannello-' + chiave);
+    });
+    document.querySelectorAll('.sezione-tabs button').forEach(function(b) {
+        b.classList.toggle('attiva', b.dataset.target === 'pannello-' + chiave);
+    });
+}
+
+function apriPopover(ev, num) {
+    if (ev.type === 'mouseenter' && MODO !== 'visualizza') return;
+    const hot = ev.currentTarget;
+    const sede = hot.dataset.sede;
+    const classi = JSON.parse(hot.dataset.classi);
+    popAula = num;
+
+    document.getElementById('pop-titolo').textContent = 'Aula ' + num;
+    document.getElementById('pop-sede').textContent = sede;
+    if (document.getElementById('pop-assign')) {
+        document.getElementById('pop-assign').dataset.sede = sede;
+    }
+
+    const viewDiv = document.getElementById('pop-view');
+    if (classi.length) {
+        viewDiv.innerHTML = classi.map(c =>
+            '<div style="display:flex; justify-content:space-between; align-items:center; ' +
+            'background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:5px 8px; ' +
+            'margin-bottom:5px; font-size:.82rem;">' +
+            '<span>' + c + '</span>' +
+            (MODO === 'assegna'
+                ? '<button onclick="liberaAula(\'' + c + '\')" style="background:none; border:none; ' +
+                  'color:#dc2626; cursor:pointer; font-size:.72rem;">Libera</button>'
+                : '') +
+            '</div>'
+        ).join('');
+    } else {
+        viewDiv.innerHTML = '<div style="font-size:.82rem; color:var(--grigio); font-style:italic;">' +
+            'Nessuna classe assegnata.</div>';
+    }
+
+    const assignDiv = document.getElementById('pop-assign');
+    if (assignDiv) assignDiv.style.display = (MODO === 'assegna') ? 'block' : 'none';
+
+    const pop = document.getElementById('popover-aula');
+    const rect = hot.getBoundingClientRect();
+    pop.style.display = 'block';
+    let left = rect.right + 10;
+    if (left + 260 > window.innerWidth) left = rect.left - 270;
+    pop.style.left = Math.max(8, left) + 'px';
+    pop.style.top = Math.max(8, rect.top) + 'px';
+    ev.stopPropagation();
+}
+
+function chiudiPopoverHover(ev) {
+    if (MODO !== 'visualizza') return;
+    chiudiPopover();
+}
+
+function chiudiPopover() {
+    document.getElementById('popover-aula').style.display = 'none';
+    popAula = null;
+}
+
+document.addEventListener('click', function(ev) {
+    const pop = document.getElementById('popover-aula');
+    if (pop.style.display === 'block' && !pop.contains(ev.target)) chiudiPopover();
+});
+
+async function ricaricaDatiSenzaScroll() {
+    // Rilegge la pagina in background e aggiorna solo i dati dinamici
+    // (stato aule + tabella), senza navigare via: resta sulla scheda
+    // e sulla posizione di scroll corrente.
+    const resp = await fetch(location.href, {cache: 'no-store'});
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    doc.querySelectorAll('.aula-hot').forEach(nuovoHot => {
+        const num = nuovoHot.dataset.aula;
+        const vecchioHot = document.querySelector(
+            '.aula-hot[data-aula="' + CSS.escape(num) + '"][data-sede="' + CSS.escape(nuovoHot.dataset.sede) + '"]'
+        );
+        if (vecchioHot) {
+            vecchioHot.className = nuovoHot.className;
+            vecchioHot.dataset.classi = nuovoHot.dataset.classi;
+        }
+    });
+
+    const nuovaTabella = doc.querySelector('.tabella-aule tbody');
+    const vecchiaTabella = document.querySelector('.tabella-aule tbody');
+    if (nuovaTabella && vecchiaTabella) vecchiaTabella.innerHTML = nuovaTabella.innerHTML;
+
+    const nuovoSelect = doc.getElementById('pop-select-classe');
+    const vecchioSelect = document.getElementById('pop-select-classe');
+    if (nuovoSelect && vecchioSelect) vecchioSelect.innerHTML = nuovoSelect.innerHTML;
+}
+
+async function assegnaAula() {
+    const classe = document.getElementById('pop-select-classe').value;
+    const sede = document.getElementById('pop-assign').dataset.sede;
+    if (!classe || !popAula) return;
+    const resp = await fetch("{{ url_for('aule.mappa_assegna') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({anno_scol: ANNO, aula: popAula, classe: classe, sede: sede})
+    });
+    const data = await resp.json();
+    if (data.ok) {
+        await ricaricaDatiSenzaScroll();
+        chiudiPopover();
+    }
+}
+
+async function liberaAula(classe) {
+    if (!confirm('Rimuovere l\'assegnazione di ' + classe + '?')) return;
+    const resp = await fetch("{{ url_for('aule.mappa_libera') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({anno_scol: ANNO, classe: classe})
+    });
+    const data = await resp.json();
+    if (data.ok) {
+        await ricaricaDatiSenzaScroll();
+        chiudiPopover();
+    }
+}
+</script>
+{% endblock %}

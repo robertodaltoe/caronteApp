@@ -1,14 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Log Accessi{% endblock %}
+{% block title %}Cronologia attività{% endblock %}
 {% block content %}
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">📋 Log Accessi</h1>
-        <p style="color:var(--grigio); font-size:.85rem;">Ultimi 500 accessi e operazioni</p>
+        <h1 style="font-size:1.3rem; color:var(--blu);">▤︎ Cronologia attività</h1>
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            Accessi e modifiche ai dati (docenti, supplenze, assenze, sospensioni, dati istituto, utenti) — ultimi 300 risultati.
+        </p>
     </div>
-    <a href="{{ url_for('auth.lista_utenti') }}" class="btn btn-primary btn-sm">← Utenti</a>
+    <a href="{{ url_for('auth.lista_utenti') }}" class="btn btn-primary btn-sm">←︎ Utenti</a>
 </div>
+
+<form method="get" class="card" style="padding:14px 18px; margin-bottom:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Cerca (azione o dettaglio)</label>
+        <input type="text" name="q" value="{{ q }}" placeholder="es. FERRARI, sospensione..."
+               style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+    </div>
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Azione</label>
+        <select name="azione" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <option value="">Tutte</option>
+            {% for a in azioni_disponibili %}
+            <option value="{{ a }}" {% if a == azione_f %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Utente</label>
+        <select name="username" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <option value="">Tutti</option>
+            {% for u in utenti_disponibili %}
+            <option value="{{ u }}" {% if u == username_f %}selected{% endif %}>{{ u }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Dal</label>
+        <input type="date" name="data_da" value="{{ data_da }}"
+               style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+    </div>
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Al</label>
+        <input type="date" name="data_a" value="{{ data_a }}"
+               style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+    </div>
+    <div style="display:flex; gap:6px;">
+        <button type="submit" class="btn btn-primary btn-sm">Filtra</button>
+        {% if q or azione_f or username_f or data_da or data_a %}
+        <a href="{{ url_for('auth.log_accessi') }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">Azzera</a>
+        {% endif %}
+    </div>
+</form>
 
 <div class="card" style="padding:0; overflow:hidden;">
     <table>
@@ -17,7 +61,7 @@
                 <th style="width:150px;">Data / Ora</th>
                 <th style="width:100px;">Utente</th>
                 <th style="width:100px;">Ruolo</th>
-                <th style="width:160px;">Azione</th>
+                <th style="width:170px;">Azione</th>
                 <th>Dettaglio</th>
                 <th style="width:80px; text-align:center;">IP</th>
                 <th style="width:70px; text-align:center;">Esito</th>
@@ -39,12 +83,14 @@
             <td style="font-size:.75rem; color:var(--grigio); text-align:center;">{{ l.ip }}</td>
             <td style="text-align:center;">
                 {% if l.esito == 'ok' %}
-                <span class="badge badge-verde" style="font-size:.65rem;">✓</span>
+                <span class="badge badge-verde" style="font-size:.65rem;">✓︎</span>
                 {% else %}
-                <span class="badge badge-rosso" style="font-size:.65rem;">✗</span>
+                <span class="badge badge-rosso" style="font-size:.65rem;">✕︎</span>
                 {% endif %}
             </td>
         </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center; padding:32px; color:var(--grigio);">Nessun risultato per questi filtri.</td></tr>
         {% endfor %}
         </tbody>
     </table>

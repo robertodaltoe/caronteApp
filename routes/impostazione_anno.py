@@ -9,6 +9,7 @@ orario, periodi, dati istituto.
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db
 from models.classe_concorso import ClasseConcorso, CattedraOrganico
+from models.assegnazione import CattedraPotenziamento
 from models.materia import Materia, Dipartimento, DocenteMateria
 from models.docente import Docente
 from models.piano_studi import ClasseSezione, PianoStudi, CalcoloOrganico
@@ -326,6 +327,76 @@ def organico():
         righe=righe, classi_disponibili=classi_disponibili,
         anno=anno, tipo=tipo, anni_esistenti=anni_esistenti,
         tot_residue=tot_residue, tot_potenziamento=tot_potenziamento)
+
+
+# ── CATTEDRE DI POTENZIAMENTO (ore POT per CC/anno) ────────────────────
+@impostazione_anno_bp.route('/impostazione-anno/cattedre-potenziamento', methods=['GET', 'POST'])
+def cattedre_potenziamento():
+    """
+    Gestisce le ore di potenziamento assegnate a ciascuna classe di
+    concorso per anno scolastico (tabella cattedre_potenziamento).
+    Sono le ore che poi vengono distribuite ai docenti nel modulo
+    Assegnazioni tramite la colonna POT.
+    """
+    anno = request.args.get('anno', _anno_scolastico_corrente())
+
+    if request.method == 'POST':
+        azione = request.form.get('azione')
+
+        if azione == 'aggiungi':
+            id_cc = int(request.form.get('id_classe_concorso', 0))
+            anno_f = request.form.get('anno_scol', anno).strip()
+            ore = request.form.get('ore', '').strip()
+            ore = int(ore) if ore else 18
+            note = request.form.get('note', '').strip() or None
+            if not id_cc:
+                flash('Seleziona una classe di concorso.', 'warning')
+                return redirect(url_for('impostazione_anno.cattedre_potenziamento', anno=anno_f))
+            esiste = CattedraPotenziamento.query.filter_by(
+                anno_scol=anno_f, id_classe_concorso=id_cc).first()
+            if esiste:
+                flash('Esiste già una cattedra di potenziamento per questa classe di concorso e anno: modificala invece.', 'warning')
+                return redirect(url_for('impostazione_anno.cattedre_potenziamento', anno=anno_f))
+            db.session.add(CattedraPotenziamento(
+                anno_scol=anno_f, id_classe_concorso=id_cc, ore=ore, note=note))
+            db.session.commit()
+            flash('Cattedra di potenziamento aggiunta.', 'success')
+            return redirect(url_for('impostazione_anno.cattedre_potenziamento', anno=anno_f))
+
+        elif azione == 'modifica':
+            row_id = int(request.form.get('id', 0))
+            r = CattedraPotenziamento.query.get_or_404(row_id)
+            ore = request.form.get('ore', '').strip()
+            r.ore = int(ore) if ore else r.ore
+            r.note = request.form.get('note', '').strip() or None
+            db.session.commit()
+            flash('Cattedra di potenziamento aggiornata.', 'success')
+            return redirect(url_for('impostazione_anno.cattedre_potenziamento', anno=anno))
+
+        elif azione == 'elimina':
+            row_id = int(request.form.get('id', 0))
+            r = CattedraPotenziamento.query.get_or_404(row_id)
+            db.session.delete(r)
+            db.session.commit()
+            flash('Cattedra di potenziamento eliminata.', 'warning')
+            return redirect(url_for('impostazione_anno.cattedre_potenziamento', anno=anno))
+
+    righe = (CattedraPotenziamento.query
+             .filter_by(anno_scol=anno)
+             .join(ClasseConcorso)
+             .order_by(ClasseConcorso.codice)
+             .all())
+    classi_disponibili = ClasseConcorso.query.filter_by(attiva=True).order_by(ClasseConcorso.codice).all()
+
+    tot_ore = sum(r.ore or 0 for r in righe)
+
+    anni_esistenti = sorted({r.anno_scol for r in CattedraPotenziamento.query.all()}, reverse=True)
+    if anno not in anni_esistenti:
+        anni_esistenti.insert(0, anno)
+
+    return render_template('impostazione_anno/cattedre_potenziamento.html',
+        righe=righe, classi_disponibili=classi_disponibili,
+        anno=anno, anni_esistenti=anni_esistenti, tot_ore=tot_ore)
 
 
 # ── DOCENTI ↔ CLASSI DI CONCORSO (multiple) ───────────────────────────
@@ -909,6 +980,37 @@ def piano_studi_elimina(ps_id):
     db.session.commit()
     _ricalcola_organico(anno)
     flash(f'Eliminata: {nome} {indirizzo} {ac}° anno.', 'success')
+    return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
+
+
+@impostazione_anno_bp.route('/impostazione-anno/piano-studi/elimina-multi', methods=['POST'])
+def piano_studi_elimina_multi():
+    """
+    Elimina in un'unica richiesta tutte le righe di piano studi indicate
+    (una materia su più anni di corso, o tutte le materie di un gruppo
+    multi-materia nella stessa classe di concorso). Sostituisce il vecchio
+    pattern JS che inviava più form in sequenza — solo il primo veniva
+    eseguito perché il submit di un form causa la navigazione della pagina.
+    """
+    ids = [int(x) for x in request.form.getlist('ids[]') if x.strip()]
+    if not ids:
+        flash('Nessuna riga da eliminare.', 'warning')
+        return redirect(url_for('impostazione_anno.piano_studi'))
+
+    righe = PianoStudi.query.filter(PianoStudi.id.in_(ids)).all()
+    if not righe:
+        flash('Righe non trovate.', 'danger')
+        return redirect(url_for('impostazione_anno.piano_studi'))
+
+    anno      = righe[0].anno_scol
+    indirizzo = righe[0].indirizzo
+    nomi = sorted({r.nome_materia_locale for r in righe})
+    n = len(righe)
+    for r in righe:
+        db.session.delete(r)
+    db.session.commit()
+    _ricalcola_organico(anno)
+    flash(f'Eliminate {n} righe ({", ".join(nomi)}) — {indirizzo}.', 'success')
     return redirect(url_for('impostazione_anno.piano_studi', anno=anno, indirizzo=indirizzo))
 
 

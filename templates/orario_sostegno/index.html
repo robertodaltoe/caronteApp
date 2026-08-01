@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Orario sostegno{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">◐︎ Orario docenti di sostegno</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #0d9488;">
+    Orario separato da quello principale: caricare qui il quadro orario dei docenti di sostegno,
+    ora per ora. Un docente di sostegno presente in classe insieme al titolare potrà essere
+    proposto come supplente in caso di assenza, esattamente come una compresenza ITP.
+</div>
+
+{% if not docenti_sostegno %}
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:#92400e; background:#fffbeb; border-left:4px solid #d97706;">
+    ⚠︎ Nessun docente con ruolo "Sostegno" trovato. Vai su
+    <a href="{{ url_for('docenti.lista') }}">Docenti</a> e imposta il ruolo didattico
+    "◐︎ Sostegno" per i docenti interessati prima di inserire il loro orario qui.
+</div>
+{% else %}
+
+<datalist id="classi-attive-list">
+    {% for c in classi_attive %}
+    <option value="{{ c }}">
+    {% endfor %}
+</datalist>
+
+<!-- FORM AGGIUNGI -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi slot orario</h3>
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Docente *</label><br>
+                <select name="id_docente" required
+                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    <option value="">—</option>
+                    {% for d in docenti_sostegno %}
+                    <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome or '' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Giorno *</label><br>
+                <select name="giorno" required
+                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% for idx, nome in giorni %}
+                    <option value="{{ idx }}">{{ nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Ora *</label><br>
+                <select name="ora" required
+                        style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% for o in ore %}
+                    <option value="{{ o }}">{{ o }}ª</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Classe *</label><br>
+                <input type="text" name="classe" required placeholder="Es. 3A LSC"
+                       list="classi-attive-list" autocomplete="off"
+                       style="width:110px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <label style="font-size:.75rem; color:var(--grigio);">Note</label><br>
+                <input type="text" name="note" placeholder="facoltativo"
+                       style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-success btn-sm">Aggiungi</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- FILTRO / SELEZIONE DOCENTE PER GRIGLIA RAPIDA -->
+<div style="margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+        <label style="font-size:.8rem; color:var(--grigio);">Docente:</label>
+        <select name="id_docente" onchange="this.form.submit()"
+                style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <option value="">— Tutti (solo elenco sotto) —</option>
+            {% for d in docenti_sostegno %}
+            <option value="{{ d.id }}" {% if filtro_docente == d.id %}selected{% endif %}>{{ d.cognome }} {{ d.nome or '' }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+{% if filtro_docente %}
+{% set doc_sel = docenti_sostegno | selectattr('id', 'equalto', filtro_docente) | first %}
+<!-- GRIGLIA RAPIDA: tutta la settimana di un docente in un solo salvataggio -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px; border-left:4px solid #0d9488;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:4px;">
+        ⚡ Inserimento rapido — {{ doc_sel.cognome }} {{ doc_sel.nome or '' }}
+    </h3>
+    <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
+        Scrivi la classe in ogni ora in cui il docente è di sostegno. Casella vuota = nessuna lezione.
+        Un solo "Salva griglia" registra tutta la settimana.
+    </p>
+    <form method="post">
+        <input type="hidden" name="azione" value="salva_griglia">
+        <input type="hidden" name="id_docente" value="{{ filtro_docente }}">
+        <div style="overflow-x:auto;">
+        <table style="border-collapse:collapse; font-size:.84rem;">
+            <thead>
+                <tr>
+                    <th style="padding:6px 10px; text-align:center; width:50px;">Ora</th>
+                    {% for idx, nome in giorni %}
+                    <th style="padding:6px 10px; text-align:center; min-width:100px;">{{ nome[:3] }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in ore %}
+                <tr>
+                    <td style="text-align:center; font-weight:700; color:var(--grigio); padding:4px;">{{ o }}ª</td>
+                    {% for idx, nome in giorni %}
+                    {% set slot = griglia.get(idx ~ '_' ~ o) %}
+                    <td style="padding:3px 4px; text-align:center;">
+                        <input type="text" name="cella_{{ idx }}_{{ o }}"
+                               list="classi-attive-list" autocomplete="off"
+                               value="{{ slot.classe if slot else '' }}"
+                               placeholder="—" maxlength="20"
+                               title="{{ slot.note if slot and slot.note else '' }}"
+                               style="width:78px; padding:5px 4px; text-align:center; text-transform:uppercase;
+                                      border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;
+                                      {% if slot %}background:#f0fdfa; border-color:#0d9488; font-weight:700;{% endif %}">
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <button type="submit" class="btn btn-success btn-sm" style="margin-top:12px;">💾 Salva griglia</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- ELENCO -->
+<div class="card" style="padding:0; overflow:hidden;">
+    {% if slots %}
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th style="width:160px;">Docente</th>
+                <th style="width:100px;">Giorno</th>
+                <th style="width:60px; text-align:center;">Ora</th>
+                <th style="width:80px;">Classe</th>
+                <th>Note</th>
+                <th style="width:70px; text-align:center;">✕︎</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in slots %}
+        <tr id="row-{{ s.id }}">
+            <td style="font-size:.88rem;"><strong>{{ s.docente.cognome }}</strong> {{ s.docente.nome or '' }}</td>
+            <td style="font-size:.86rem;">{{ s.giorno_nome }}</td>
+            <td style="text-align:center; font-size:.86rem;">{{ s.ora }}ª</td>
+            <td style="font-size:.86rem;"><strong>{{ s.classe }}</strong></td>
+            <td style="font-size:.84rem; color:var(--grigio);">{{ s.note or '—' }}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ s.id }})" title="Modifica">✎︎️</button>
+                <form method="post" onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ s.id }}">
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                </form>
+            </td>
+        </tr>
+        <tr id="edit-{{ s.id }}" style="display:none; background:#f0fdfa;">
+            <td colspan="6" style="padding:10px 14px;">
+                <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ s.id }}">
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Giorno</label><br>
+                        <select name="giorno" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                            {% for idx, nome in giorni %}
+                            <option value="{{ idx }}" {% if idx == s.giorno %}selected{% endif %}>{{ nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Ora</label><br>
+                        <select name="ora" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                            {% for o in ore %}
+                            <option value="{{ o }}" {% if o == s.ora %}selected{% endif %}>{{ o }}ª</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem; color:var(--grigio);">Classe</label><br>
+                        <input type="text" name="classe" required value="{{ s.classe }}"
+                               list="classi-attive-list" autocomplete="off"
+                               style="width:110px; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div style="flex:1; min-width:160px;">
+                        <label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+                        <input type="text" name="note" value="{{ s.note or '' }}"
+                               style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+                        <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
+                                onclick="toggleEdit({{ s.id }})">Annulla</button>
+                    </div>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding:32px; color:var(--grigio);">
+        Nessuno slot orario configurato{% if filtro_docente %} per questo docente{% endif %}.
+    </div>
+    {% endif %}
+</div>
+<script>
+function toggleEdit(id) {
+    const row  = document.getElementById('row-' + id);
+    const edit = document.getElementById('edit-' + id);
+    const vis  = edit.style.display === 'none';
+    edit.style.display = vis ? '' : 'none';
+    row.style.opacity  = vis ? '0.4' : '';
+}
+</script>
+{% endif %}
+{% endblock %}

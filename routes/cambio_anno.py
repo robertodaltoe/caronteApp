@@ -80,7 +80,7 @@ def prepara():
                     anno_corso=ac, sezione=sez, attiva=False))
                 n_sez += 1
     db.session.commit()
-    risultati.append(f'✓ Classi sezioni: {n_sez} create (tutte inattive)')
+    risultati.append(f'✓︎ Classi sezioni: {n_sez} create (tutte inattive)')
 
     # 2. Piano studi — copia dall'anno corrente come bozza
     righe_esistenti = PianoStudi.query.filter_by(anno_scol=anno_nuovo).count()
@@ -101,7 +101,7 @@ def prepara():
             ))
             n_piano += 1
         db.session.commit()
-        risultati.append(f'✓ Piano studi: {n_piano} righe copiate da {anno_corrente} (atipicità resettate)')
+        risultati.append(f'✓︎ Piano studi: {n_piano} righe copiate da {anno_corrente} (atipicità resettate)')
     else:
         risultati.append(f'ℹ Piano studi: già presente ({righe_esistenti} righe) — non sovrascritto')
 
@@ -119,7 +119,9 @@ def attiva():
     - Cambia anno_scol_corrente nel DB
     - Svuota orario_docenti (in attesa del nuovo import)
     - Svuota indisponibilita non ricorrenti
-    - Svuota banca_ore (i movimenti restano per storico — tabella con data)
+    - Banca ore: nessuna cancellazione — il saldo si azzera da solo perché
+      è sempre calcolato per anno scolastico (colonna anno_scol), lo storico
+      degli anni precedenti resta consultabile
     - Azzera flag attivo di docenti non TI senza anno_scol_inizio per il nuovo anno
     ATTENZIONE: operazione irreversibile per i dati operativi.
     """
@@ -144,29 +146,33 @@ def attiva():
     # 1. Cambia anno scolastico corrente
     anno_precedente = get_anno_corrente()
     set_anno_corrente(anno_nuovo)
-    risultati.append(f'✓ Anno corrente: {anno_precedente} → {anno_nuovo}')
+    risultati.append(f'✓︎ Anno corrente: {anno_precedente} →︎ {anno_nuovo}')
 
     # 2. Svuota orario docenti (viene reimportato)
     from models.orario_docente import OrarioDocente
     n_orario = OrarioDocente.query.count()
     OrarioDocente.query.delete()
     db.session.commit()
-    risultati.append(f'✓ Orario docenti: {n_orario} righe archiviate (svuotato)')
+    risultati.append(f'✓︎ Orario docenti: {n_orario} righe archiviate (svuotato)')
 
     # 3. Svuota indisponibilità non ricorrenti
     from models.indisponibilita import Indisponibilita
     n_ind = Indisponibilita.query.count()
     Indisponibilita.query.delete()
     db.session.commit()
-    risultati.append(f'✓ Indisponibilità: {n_ind} righe archiviate (svuotato)')
+    risultati.append(f'✓︎ Indisponibilità: {n_ind} righe archiviate (svuotato)')
 
-    # 4. Banca ore: i movimenti hanno una data, restano per storico.
-    # Nessuna cancellazione — le viste filtra già per anno scolastico.
-    risultati.append('ℹ Banca ore: storico conservato, nuovi movimenti saranno dell\'anno nuovo')
+    # 4. Banca ore: nessuna azione necessaria. Il saldo mostrato ovunque
+    # (routes/report.py::get_saldi_docente) è sempre filtrato per anno
+    # scolastico (colonna anno_scol, calcolata automaticamente dalla data
+    # di ogni movimento): cambiando l'anno corrente il saldo del nuovo
+    # anno parte da zero, i movimenti degli anni precedenti restano nel
+    # database e sono consultabili scegliendo l'anno nella pagina Banca Ore.
+    risultati.append('✓︎ Banca ore: saldo azzerato per il nuovo anno, storico degli anni precedenti conservato e consultabile')
 
     # 5. Ricalcola organico per il nuovo anno (con le sezioni attive impostate)
     _ricalcola_organico(anno_nuovo)
-    risultati.append(f'✓ Calcolo organico {anno_nuovo}: ricalcolato')
+    risultati.append(f'✓︎ Calcolo organico {anno_nuovo}: ricalcolato')
 
     flash(' | '.join(risultati), 'success')
     return redirect(url_for('cambio_anno.index'))

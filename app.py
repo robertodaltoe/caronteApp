@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_wtf import CSRFProtect
 from models import db
 import os, locale, shutil
 
@@ -15,10 +16,18 @@ def create_app():
     base_dir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = 'suplenzeapp-chiave-locale-2025'
+    # SECRET_KEY: preferisce la variabile d'ambiente CARONTE_SECRET_KEY;
+    # se non impostata, usa il valore storico come fallback (nessuna sessione
+    # esistente viene invalidata da questa modifica).
+    app.config['SECRET_KEY'] = os.environ.get('CARONTE_SECRET_KEY', 'suplenzeapp-chiave-locale-2025')
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)  # fine giornata lavorativa
 
     db.init_app(app)
+
+    # Protezione CSRF su tutte le route POST/PUT/PATCH/DELETE.
+    # Il token viene iniettato lato client automaticamente (vedi
+    # templates/base.html) per non dover modificare ogni singolo form.
+    CSRFProtect(app)
 
     try:
         locale.setlocale(locale.LC_TIME, 'it_IT.UTF-8')
@@ -37,7 +46,6 @@ def create_app():
     from routes.cambi_quadro import cambi_bp
     from routes.sincronizzazione import sync_bp
     from routes.report import report_bp
-    from routes.email_report import email_bp
     from routes.mail_bozze import mail_bozze_bp
     from routes.auth import auth_bp
     from routes.indisponibilita import indisp_bp
@@ -55,7 +63,6 @@ def create_app():
     app.register_blueprint(cambi_bp)
     app.register_blueprint(sync_bp)
     app.register_blueprint(report_bp)
-    app.register_blueprint(email_bp)
     app.register_blueprint(mail_bozze_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(indisp_bp)
@@ -85,6 +92,10 @@ def create_app():
     app.register_blueprint(rientro_bp)
     from routes.att_differite import att_differite_bp
     app.register_blueprint(att_differite_bp)
+    from routes.ricerca import ricerca_bp
+    app.register_blueprint(ricerca_bp)
+    from routes.orario_sostegno import orario_sostegno_bp
+    app.register_blueprint(orario_sostegno_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json
@@ -124,6 +135,18 @@ def create_app():
 
         if endpoint in ROUTE_PUBBLICHE or endpoint.startswith('static'):
             return None
+
+        # ── BYPASS SOLO PER VERIFICA VISIVA IN LOCALE ──────────────────
+        # Attivo SOLO se CARONTE_SKIP_LOGIN=1 è impostata esplicitamente
+        # prima dell'avvio. Simula login come utente 'dsga'. NON usare in
+        # produzione/rete condivisa: disattivare subito dopo il test.
+        if os.environ.get('CARONTE_SKIP_LOGIN') == '1' and not session.get('utente_id'):
+            from models.utente import Utente
+            u_bypass = Utente.query.filter_by(username='dsga', attivo=True).first()
+            if u_bypass:
+                session['utente_id'] = u_bypass.id
+                session['ruolo'] = u_bypass.ruolo
+                session.permanent = True
 
         u = get_utente_corrente()
         if not u or not u.attivo:
@@ -179,10 +202,36 @@ def create_app():
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()
+        _migra_vincolo_aule()
+        _backfill_anno_scol_banca_ore()
         _seed_dipartimenti_materie()
         _seed_sospensioni()
         _backup_automatico(base_dir)
         _pulizia_log(base_dir)
+
+    @app.context_processor
+    def _inject_dati_istituto():
+        """
+        Rende nome_istituto/indirizzo_istituto disponibili in tutti i
+        template senza doverli passare esplicitamente da ogni singola
+        route (che prima ripetevano la stringa "IIS Leonardo da Vinci —
+        Chiavenna" a mano in oltre 10 punti diversi). Vedi config_istituto.py.
+        """
+        try:
+            from config_istituto import get_dati_istituto
+            dati = get_dati_istituto()
+            return {
+                'nome_istituto': dati['nome_istituto'],
+                'indirizzo_istituto': dati['indirizzo_istituto'],
+            }
+        except Exception:
+            # Fuori da un contesto applicativo con DB pronto (es. primissimo
+            # avvio prima di create_all): usa i default statici, non rompere.
+            from config_istituto import DEFAULTS
+            return {
+                'nome_istituto': DEFAULTS['nome_istituto'],
+                'indirizzo_istituto': DEFAULTS['indirizzo_istituto'],
+            }
 
     return app
 
@@ -220,7 +269,6 @@ def _auto_migrate():
         ('migrazione_slots',    'usa_docente_automatico', 'BOOLEAN', 0),
         ('migrazione_slots',    'id_docente_assegnato',  'INTEGER', None),
         ('docenti',             'ruolo',                 'VARCHAR(20)', 'titolare'),
-        ('assenze',              'motivo_interno',        'VARCHAR(200)', None),
         ('docenti',             'altra_scuola',          'VARCHAR(120)', None),
         ('docenti',             'giorni_presenza',       'VARCHAR(20)',  None),
         ('docenti',             'part_time',             'BOOLEAN',     0),
@@ -232,6 +280,8 @@ def _auto_migrate():
         ('log_accessi', 'nome_completo',        'VARCHAR(160)', None),
         ('docenti',   'id_classe_concorso',  'INTEGER',     None),
         ('materie',   'id_classe_concorso',  'INTEGER',     None),
+        ('banca_ore', 'anno_scol',           'VARCHAR(9)',  None),
+        ('docenti',   'modificato_il',       'DATETIME',    None),
     ]
 
     with db.engine.connect() as conn:
@@ -255,6 +305,108 @@ def _auto_migrate():
             conn.execute(text(sql))
 
         conn.commit()
+
+
+def _migra_vincolo_aule():
+    """
+    Corregge il vincolo UNIQUE della tabella 'aule'.
+
+    Storicamente il vincolo reale nel database era UNIQUE(classe) da solo,
+    mentre il modello Python dichiara UNIQUE(anno_scol, classe) — SQLite non
+    permette di alterare un vincolo UNIQUE con ALTER TABLE, quindi la vecchia
+    tabella non veniva mai corretta automaticamente (vedi DEVLOG Sessione 4).
+
+    Le classi devono poter avere aule diverse in anni diversi: questa
+    migrazione ricrea la tabella con il vincolo corretto, preservando tutti
+    i dati esistenti (sempre validi per il nuovo vincolo, essendo questo
+    meno restrittivo del precedente). Idempotente: se il vincolo è già
+    corretto, non fa nulla.
+    """
+    from sqlalchemy import text
+
+    with db.engine.connect() as conn:
+        row = conn.execute(text(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='aule'"
+        )).fetchone()
+        if not row or not row[0]:
+            return  # tabella non ancora creata, nulla da migrare
+
+        sql_tabella = row[0]
+        # Se il vincolo combinato è già presente, non c'è nulla da fare.
+        if 'UNIQUE (anno_scol, classe)' in sql_tabella or \
+           'uq_aula_anno_classe' in sql_tabella:
+            return
+
+        # Migrazione: ricrea la tabella con il vincolo corretto (pattern
+        # standard SQLite per modificare un vincolo su tabella esistente).
+        conn.execute(text("""
+            CREATE TABLE aule_new (
+                id INTEGER NOT NULL,
+                anno_scol VARCHAR(9) NOT NULL,
+                classe VARCHAR(20) NOT NULL,
+                aula VARCHAR(50) NOT NULL,
+                sede VARCHAR(60) NOT NULL,
+                PRIMARY KEY (id),
+                CONSTRAINT uq_aula_anno_classe UNIQUE (anno_scol, classe)
+            )
+        """))
+        conn.execute(text("""
+            INSERT INTO aule_new (id, anno_scol, classe, aula, sede)
+            SELECT id, anno_scol, classe, aula, sede FROM aule
+        """))
+        conn.execute(text("DROP TABLE aule"))
+        conn.execute(text("ALTER TABLE aule_new RENAME TO aule"))
+        conn.commit()
+        print("Migrazione: vincolo tabella 'aule' corretto a UNIQUE(anno_scol, classe).")
+
+
+def _backfill_anno_scol_banca_ore():
+    """
+    Popola la colonna 'anno_scol' per i movimenti di banca ore storici
+    che non ce l'hanno ancora (creati prima che questa colonna esistesse).
+
+    Prima di questa correzione il saldo banca ore era un totale cumulativo
+    infinito, senza alcun concetto di anno scolastico: due docenti con
+    movimenti di anni diversi venivano sommati insieme in un unico saldo
+    perenne. Da qui in avanti ogni movimento nuovo riceve anno_scol
+    automaticamente dalla propria data (vedi models/movimento_banca_ore.py),
+    ma i movimenti già esistenti nel database vanno corretti una volta sola.
+
+    Idempotente: aggiorna solo le righe con anno_scol ancora NULL.
+    """
+    from sqlalchemy import text
+    from models.movimento_banca_ore import anno_scol_da_data
+
+    with db.engine.connect() as conn:
+        t_exists = conn.execute(text(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='banca_ore'"
+        )).fetchone()
+        if not t_exists:
+            return
+
+        cols = [row[1] for row in conn.execute(text("PRAGMA table_info(banca_ore)"))]
+        if 'anno_scol' not in cols:
+            return  # _auto_migrate() non ancora passata da qui
+
+        righe = conn.execute(text(
+            "SELECT id, data FROM banca_ore WHERE anno_scol IS NULL"
+        )).fetchall()
+        if not righe:
+            return
+
+        for id_riga, data_str in righe:
+            if not data_str:
+                continue
+            anno_iso, mese, giorno = data_str.split('-')
+            from datetime import date as _date
+            data_obj = _date(int(anno_iso), int(mese), int(giorno))
+            anno_scol = anno_scol_da_data(data_obj)
+            conn.execute(text(
+                "UPDATE banca_ore SET anno_scol = :a WHERE id = :id"
+            ), {'a': anno_scol, 'id': id_riga})
+
+        conn.commit()
+        print(f"Migrazione: anno_scol assegnato a {len(righe)} movimenti banca ore storici.")
 
 
 def _pulizia_log(base_dir):
@@ -428,4 +580,9 @@ def _seed_sospensioni():
 
 if __name__ == '__main__':
     app = create_app()
+    if os.environ.get('CARONTE_SKIP_LOGIN') == '1':
+        print('\n' + '=' * 60)
+        print('  ATTENZIONE: CARONTE_SKIP_LOGIN=1 — login DISATTIVATO')
+        print('  Accesso automatico come utente "dsga". Solo per test locali.')
+        print('=' * 60 + '\n')
     app.run(debug=True, use_reloader=True, host='0.0.0.0', port=5002)

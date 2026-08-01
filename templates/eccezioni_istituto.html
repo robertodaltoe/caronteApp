@@ -4,13 +4,13 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">📅 Periodi eccezione colloqui — Istituto</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">▦︎ Periodi eccezione colloqui — Istituto</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:4px;">
             Definisci i periodi in cui i colloqui si svolgono al pomeriggio o online per tutti i docenti.<br>
             I docenti senza colloqui fissi configurati non vengono modificati.
         </p>
     </div>
-    <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary">← Docenti</a>
+    <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary">←︎ Docenti</a>
 </div>
 
 <!-- DOCENTI COINVOLTI -->
@@ -31,7 +31,7 @@
 <!-- FORM PERIODI -->
 <div class="card" style="max-width:700px;">
     <h2 style="font-size:1rem; color:var(--blu); margin-bottom:16px;">
-        🗓 Periodi di eccezione (validi per tutto l'istituto)
+        ▦︎ Periodi di eccezione (validi per tutto l'istituto)
     </h2>
     <form method="post">
         <input type="hidden" name="azione" value="salva_istituto">
@@ -67,7 +67,7 @@
                    style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
             <button type="button" onclick="this.closest('.ecc-riga').remove()"
                     style="background:none; border:none; color:var(--rosso);
-                           cursor:pointer; font-size:1.2rem; padding:0 4px;">✕</button>
+                           cursor:pointer; font-size:1.2rem; padding:0 4px;">✕︎</button>
         </div>
         {% endfor %}
         </div>
@@ -80,7 +80,7 @@
         <div style="display:flex; gap:10px; margin-top:20px; padding-top:16px;
                     border-top:1px solid #e5eaf0; align-items:center; flex-wrap:wrap;">
             <button class="btn btn-success" type="submit">
-                ✓ Salva e applica a tutti i docenti
+                ✓︎ Salva e applica a tutti i docenti
             </button>
             <span style="font-size:.78rem; color:var(--grigio);">
                 Sovrascrive le eccezioni esistenti di tutti i {{ docenti|length }} docenti con colloqui.
@@ -103,7 +103,7 @@ function aggiungiRiga() {
         <input type="text" name="eccezione_note[]" placeholder="Es. colloqui pomeriggio"
                style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
         <button type="button" onclick="this.closest('.ecc-riga').remove()"
-                style="background:none; border:none; color:var(--rosso); cursor:pointer; font-size:1.2rem; padding:0 4px;">✕</button>
+                style="background:none; border:none; color:var(--rosso); cursor:pointer; font-size:1.2rem; padding:0 4px;">✕︎</button>
     `;
     c.appendChild(div);
     div.querySelector('input[type=date]').focus();

@@ -2,9 +2,9 @@
 {% block title %}Docenti — {{ anno }}{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p7', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">👥 Docenti per anno — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p7', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎ Docenti per anno — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('impostazione_anno.docenti_anno', anno=a) }}"
@@ -26,7 +26,7 @@
 {# ── SEZIONE 1: Uscite TI ─────────────────────────────────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#dc2626; margin-bottom:10px; font-size:.9rem;">
-        🚪 Uscite TI per {{ anno }}
+        ⎋︎ Uscite TI per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ uscenti|length }})</span>
     </div>
     {% if not uscenti %}
@@ -45,7 +45,7 @@
             <input type="hidden" name="id_docente" value="{{ d.id }}">
             <input type="hidden" name="anno_scol" value="{{ anno }}">
             <button type="submit" title="Annulla uscita"
-                    style="background:none; border:none; cursor:pointer; font-size:.8rem; color:#6b7280;">↩</button>
+                    style="background:none; border:none; cursor:pointer; font-size:.8rem; color:#6b7280;">↩︎</button>
         </form>
     </div>
     {% endfor %}
@@ -55,7 +55,7 @@
 {# ── SEZIONE 2: AP Uscenti (titolari qui, insegnano altrove) ──── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#f59e0b; margin-bottom:10px; font-size:.9rem;">
-        🔄 AP Uscenti — titolari qui, insegnano altrove
+        ↻︎ AP Uscenti — titolari qui, insegnano altrove
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ ap_uscenti|length }})</span>
     </div>
     <div style="font-size:.75rem; color:var(--grigio); margin-bottom:8px;">
@@ -68,13 +68,13 @@
     <div style="padding:5px 8px; background:#fffbeb; border:1px solid #fde68a;
                 border-radius:6px; margin-bottom:4px; font-size:.8rem;">
         <span style="font-weight:600;">{{ d.cognome }} {{ d.nome }}</span>
-        {% if d.scuola_ap %}<span style="color:var(--grigio); margin-left:6px;">→ {{ d.scuola_ap }}</span>{% endif %}
+        {% if d.scuola_ap %}<span style="color:var(--grigio); margin-left:6px;">→︎ {{ d.scuola_ap }}</span>{% endif %}
         <form method="post" style="display:inline; margin-left:8px;">
             <input type="hidden" name="azione" value="annulla_status">
             <input type="hidden" name="id_docente" value="{{ d.id }}">
             <input type="hidden" name="anno_scol" value="{{ anno }}">
             <button type="submit" style="background:none; border:none; cursor:pointer;
-                    font-size:.72rem; color:#6b7280;">↩ ripristina</button>
+                    font-size:.72rem; color:#6b7280;">↩︎ ripristina</button>
         </form>
     </div>
     {% endfor %}
@@ -84,7 +84,7 @@
 {# ── SEZIONE 3: AP Entranti (titolari altrove, insegnano qui) ─── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#0891b2; margin-bottom:10px; font-size:.9rem;">
-        🔄 AP Entranti — titolari altrove, insegnano qui
+        ↻︎ AP Entranti — titolari altrove, insegnano qui
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ ap_entranti|length }})</span>
     </div>
     <div style="font-size:.75rem; color:var(--grigio); margin-bottom:8px;">
@@ -98,13 +98,13 @@
     <div style="padding:5px 8px; background:#e0f9ff; border:1px solid #bae6fd;
                 border-radius:6px; margin-bottom:4px; font-size:.8rem;">
         <span style="font-weight:600;">{{ d.cognome }} {{ d.nome }}</span>
-        {% if d.scuola_ap %}<span style="color:var(--grigio); margin-left:6px;">← {{ d.scuola_ap }}</span>{% endif %}
+        {% if d.scuola_ap %}<span style="color:var(--grigio); margin-left:6px;">←︎ {{ d.scuola_ap }}</span>{% endif %}
         <form method="post" style="display:inline; margin-left:8px;">
             <input type="hidden" name="azione" value="annulla_status">
             <input type="hidden" name="id_docente" value="{{ d.id }}">
             <input type="hidden" name="anno_scol" value="{{ anno }}">
             <button type="submit" style="background:none; border:none; cursor:pointer;
-                    font-size:.72rem; color:#6b7280;">↩ ripristina</button>
+                    font-size:.72rem; color:#6b7280;">↩︎ ripristina</button>
         </form>
     </div>
     {% endfor %}
@@ -114,7 +114,7 @@
 {# ── SEZIONE 4: TD/Supplenti inseriti per questo anno ─────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#16a34a; margin-bottom:10px; font-size:.9rem;">
-        📋 TD / Supplenti inseriti per {{ anno }}
+        ▤︎ TD / Supplenti inseriti per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ td_anno|length }})</span>
     </div>
     {% if not td_anno %}
@@ -134,7 +134,7 @@
 {# ── FORM AGGIUNTA ──────────────────────────────────────────────── #}
 <div class="card" style="padding:16px 20px; margin-bottom:14px;">
     <div style="font-weight:700; color:var(--blu); margin-bottom:12px; font-size:.9rem;">
-        ➕ Aggiungi / Registra docente per {{ anno }}
+        + Aggiungi / Registra docente per {{ anno }}
     </div>
     <form method="post" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
         <input type="hidden" name="azione" value="aggiungi_docente">
@@ -183,7 +183,7 @@
                           border-radius:5px; font-size:.82rem;">
         </div>
         <button type="submit" class="btn btn-success btn-sm" style="white-space:nowrap;">
-            ➕ Aggiungi
+            + Aggiungi
         </button>
     </form>
 </div>
@@ -191,7 +191,7 @@
 {# ── GRIGLIA TI: segna uscite, AP, aspettativa ─────────────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
-        📋 Docenti TI — gestione presenza per {{ anno }}
+        ▤︎ Docenti TI — gestione presenza per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ ti_attivi|length }} titolari)</span>
     </div>
     <div style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
@@ -210,7 +210,7 @@
             <span style="flex:1; font-weight:{{ '600' if status != 'presente' else '400' }};">
                 {{ d.cognome }} {{ d.nome }}
                 {% if status == 'ap_uscente' %}
-                <span style="font-size:.68rem; color:#f59e0b;">→ AP uscente</span>
+                <span style="font-size:.68rem; color:#f59e0b;">→︎ AP uscente</span>
                 {% elif status == 'aspettativa' %}
                 <span style="font-size:.68rem; color:#0891b2;">aspettativa</span>
                 {% endif %}
@@ -228,11 +228,11 @@
                 <button type="submit" name="azione" value="segna_uscita"
                         style="background:none; border:1px solid #fca5a5; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#dc2626;">
-                    ✕ Esce</button>
+                    ✕︎ Esce</button>
                 <button type="submit" name="azione" value="segna_ap_uscente"
                         style="background:none; border:1px solid #fde68a; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#b45309;">
-                    → AP</button>
+                    →︎ AP</button>
                 <button type="submit" name="azione" value="segna_aspettativa"
                         style="background:none; border:1px solid #bae6fd; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#0369a1;">
@@ -241,7 +241,7 @@
                 <button type="submit" name="azione" value="annulla_status"
                         style="background:none; border:1px solid #d1d5db; border-radius:4px;
                                cursor:pointer; padding:2px 6px; font-size:.68rem; color:#6b7280;">
-                    ↩ Ripristina</button>
+                    ↩︎ Ripristina</button>
                 {% endif %}
             </form>
         </div>

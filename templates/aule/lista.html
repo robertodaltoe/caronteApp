@@ -90,8 +90,9 @@
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">🚪 Aule — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">⎋︎ Aule — {{ anno }}</h1>
+    <a href="{{ url_for('aule.mappa', anno=anno) }}" class="btn btn-success btn-sm">⌖︎️ Piantina interattiva</a>
     <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('aule.lista', anno=a) }}"
@@ -125,7 +126,7 @@
             <input type="hidden" name="anno_a" value="{{ anno }}">
             <button type="submit" class="btn btn-sm"
                     style="background:#0891b2; color:white; font-size:.78rem; padding:4px 10px;">
-                📋 Copia a {{ anno }}
+                ▤︎ Copia a {{ anno }}
             </button>
         </form>
     </div>
@@ -135,7 +136,7 @@
 {% if classi_mancanti %}
 <div class="card" style="border-left:4px solid #f59e0b; padding:12px 16px; margin-bottom:16px;">
     <p style="font-size:.88rem; color:#92400e; font-weight:600;">
-        ⚠ {{ classi_mancanti|length }} classi senza aula: {{ classi_mancanti | join(', ') }}
+        ⚠︎ {{ classi_mancanti|length }} classi senza aula: {{ classi_mancanti | join(', ') }}
     </p>
 </div>
 {% endif %}
@@ -215,7 +216,7 @@
 
             <div style="display:flex; gap:8px;">
                 <button class="btn btn-success" type="submit" id="btn-salva" disabled>
-                    ✓ Salva
+                    ✓︎ Salva
                 </button>
                 {% if tutte %}
                 <button class="btn btn-danger btn-sm" type="button"
@@ -224,7 +225,7 @@
                     Rimuovi
                 </button>
                 {% endif %}
-                <button class="btn btn-primary" type="button" onclick="chiudiPopup()">✖</button>
+                <button class="btn btn-primary" type="button" onclick="chiudiPopup()">✕︎</button>
             </div>
         </form>
     </div>
@@ -325,7 +326,7 @@ function rimuoviAula() {
     const form = document.getElementById('form-rimuovi');
     document.getElementById('rimuovi-classe').value = classe;
     // Cerca l'id corretto tramite fetch o redirect
-    window.location.href = '{{ url_for("aule.lista") }}?rimuovi=' + encodeURIComponent(classe);
+    window.location.href = '{{ url_for("aule.lista", anno=anno) }}&rimuovi=' + encodeURIComponent(classe);
 }
 
 // Listener delegato sui bottoni assegna/modifica

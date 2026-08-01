@@ -12,6 +12,7 @@ from flask import render_template, request, redirect, url_for, flash
 from models import db
 from models.recupero import RecuperoDocente, RecuperoGruppo, RecuperoLezione, RecuperoAlunno, RecuperoVincolo
 from models.docente import Docente
+from models.orario_docente import classi_attive as _classi_attive
 from datetime import date, timedelta
 from routes.recupero_costanti import (
     ANNO, DATA_INIZIO, DATA_FINE, TIPO_PROVA_LABEL,
@@ -238,7 +239,7 @@ def gruppi():
                 return rd
         return None
 
-    # Mappa (materia_upper, cognome_upper) → lista gruppi creati
+    # Mappa (materia_upper, cognome_upper) →︎ lista gruppi creati
     gruppi_per_proposta = {}
     for g in gruppi_list:
         cogn_g = (g.docente_rec.docente.cognome.upper()
@@ -354,471 +355,33 @@ def gruppi():
 # ── CALENDARIO ────────────────────────────────────────────────────────
 @recupero_bp.route('/recupero/calendario', methods=['GET', 'POST'])
 def calendario():
-    from datetime import timedelta
+    from modules.recupero_giugno_calendario import (
+        azione_aggiungi, azione_modifica, azione_elimina,
+        azione_elimina_giorno, azione_elimina_tutto, azione_completa_bozza,
+        costruisci_dati_calendario,
+    )
+
     if request.method == 'POST':
         azione = request.form.get('azione')
-
-        def _t(s):
-            try: h,m = map(int,s.split(':')); return h*60+m
-            except: return 0
-
-        def _controlla_conflitti(id_gruppo, data_d, ora_inizio, ora_fine, escludi_lid=None):
-            """Restituisce lista di messaggi di conflitto (vuota = nessun conflitto)."""
-            ini_m = _t(ora_inizio)
-            fin_m = _t(ora_fine)
-            g     = RecuperoGruppo.query.get(id_gruppo)
-            if not g: return []
-            errori = []
-
-            tutti_gruppi = (RecuperoGruppo.query
-                .join(RecuperoDocente)
-                .filter(RecuperoDocente.anno_scol == ANNO,
-                        RecuperoGruppo.periodo_codice == 'corsi_giugno')
-                .all())
-
-            for ag in tutti_gruppi:
-                lezioni_ag = [l for l in RecuperoLezione.query.filter_by(
-                    id_gruppo=ag.id, data=data_d).all()
-                    if l.id != escludi_lid]
-
-                for ll in lezioni_ag:
-                    sovrappone = _t(ll.ora_inizio) < fin_m and _t(ll.ora_fine) > ini_m
-                    if not sovrappone:
-                        continue
-
-                    # Conflitto docente: stesso id_rec_docente
-                    if ag.id != id_gruppo and ag.id_rec_docente == g.id_rec_docente:
-                        doc = g.docente
-                        errori.append(
-                            f'👨‍🏫 Docente {doc.cognome if doc else "?"} già impegnato '
-                            f'{ll.ora_inizio}–{ll.ora_fine} ({ag.materia[:20]})')
-
-                    # Conflitto alunni: solo su chi ha effettivamente aderito a entrambi
-                    if ag.id != id_gruppo:
-                        alunni_g  = {(a.cognome,a.nome,a.classe) for a in g.alunni}
-                        alunni_ag = {(a.cognome,a.nome,a.classe) for a in ag.alunni}
-                        comuni = alunni_g & alunni_ag
-                        if comuni:
-                            nomi = ', '.join(f'{a[0]} {a[1]}' for a in list(comuni)[:3])
-                            errori.append(
-                                f'👨‍🎓 {len(comuni)} alunni in conflitto con {ag.materia[:20]} '
-                                f'{ll.ora_inizio}–{ll.ora_fine}: {nomi}'
-                                + ('...' if len(comuni)>3 else ''))
-            return errori
-
-        if azione == 'aggiungi':
-            id_gruppo  = int(request.form['id_gruppo'])
-            data_str   = request.form.get('data', '')
-            ora_inizio = request.form.get('ora_inizio', '')
-            ora_fine   = request.form.get('ora_fine', '')
-            aula       = request.form.get('aula', '').strip() or None
-            note       = request.form.get('note', '').strip() or None
-
-            g = RecuperoGruppo.query.get_or_404(id_gruppo)
-
-            # Verifica limite ore per gruppo (configurabile)
-            max_ore = g.max_ore or 10
-            if g.ore_pianificate >= max_ore:
-                flash(f'Gruppo {g.materia} ha già raggiunto le {max_ore} ore massime.', 'warning')
-                return redirect(url_for('recupero.calendario'))
-
-            # Verifica max 2h in un giorno per questo gruppo
-            lezioni_giorno = [l for l in g.lezioni
-                              if l.data == date.fromisoformat(data_str)]
-            ore_giorno = sum(l.durata_ore for l in lezioni_giorno)
-            try:
-                h1, m1 = map(int, ora_inizio.split(':'))
-                h2, m2 = map(int, ora_fine.split(':'))
-                durata = (h2 * 60 + m2 - h1 * 60 - m1) / 60
-            except Exception:
-                durata = 0
-
-            max_ore_giorno = g.max_ore_giorno or 2
-            if ore_giorno + durata > max_ore_giorno:
-                flash(f'Massimo {max_ore_giorno} ore al giorno per gruppo.', 'warning')
-                return redirect(url_for('recupero.calendario'))
-
-            data_d  = date.fromisoformat(data_str)
-            errori  = _controlla_conflitti(id_gruppo, data_d, ora_inizio, ora_fine)
-            if errori:
-                flash('⚠ Lezione NON salvata — ' + ' | '.join(errori[:3]), 'danger')
-                return redirect(url_for('recupero.calendario'))
-
-            db.session.add(RecuperoLezione(
-                id_gruppo=id_gruppo,
-                data=data_d,
-                ora_inizio=ora_inizio,
-                ora_fine=ora_fine,
-                aula=aula,
-                note=note,
-            ))
-            db.session.commit()
-            flash('Lezione aggiunta.', 'success')
-
-        elif azione == 'modifica':
-            lid          = int(request.form['id'])
-            l            = RecuperoLezione.query.get_or_404(lid)
-            nuova_data   = date.fromisoformat(request.form['data'])
-            nuova_ini    = request.form.get('ora_inizio', l.ora_inizio)
-            nuova_fin    = request.form.get('ora_fine',   l.ora_fine)
-            # Controlla conflitti escludendo la lezione stessa
-            errori = _controlla_conflitti(l.id_gruppo, nuova_data, nuova_ini, nuova_fin,
-                                          escludi_lid=lid)
-            if errori:
-                flash('⚠ Modifica NON salvata — ' + ' | '.join(errori[:3]), 'danger')
-                return redirect(url_for('recupero.calendario'))
-            l.data       = nuova_data
-            l.ora_inizio = nuova_ini
-            l.ora_fine   = nuova_fin
-            l.aula       = request.form.get('aula','').strip() or None
-            l.note       = request.form.get('note','').strip() or None
-            db.session.commit()
-            flash('Lezione aggiornata.', 'success')
-
-        elif azione == 'elimina':
-            lid = int(request.form['id'])
-            l   = RecuperoLezione.query.get_or_404(lid)
-            db.session.delete(l)
-            db.session.commit()
-            flash('Lezione eliminata.', 'warning')
-
-        elif azione == 'elimina_giorno':
-            from datetime import date as _date
-            data_str = request.form.get('data','')
-            if data_str:
-                data_d = _date.fromisoformat(data_str)
-                gruppi_ids = [g.id for g in RecuperoGruppo.query
-                    .join(RecuperoDocente)
-                    .filter(RecuperoDocente.anno_scol == ANNO,
-                            RecuperoGruppo.periodo_codice == 'corsi_giugno').all()]
-                n = RecuperoLezione.query.filter(
-                    RecuperoLezione.id_gruppo.in_(gruppi_ids),
-                    RecuperoLezione.data == data_d
-                ).delete(synchronize_session=False)
-                db.session.commit()
-                flash(f'Eliminate {n} lezioni del {data_d.strftime("%d/%m/%Y")}.', 'warning')
-
-        elif azione == 'elimina_tutto':
-            # Solo i gruppi dei corsi di giugno: non toccare le prove di agosto
-            gruppi_ids = [g.id for g in RecuperoGruppo.query
-                .join(RecuperoDocente)
-                .filter(RecuperoDocente.anno_scol == ANNO,
-                        RecuperoGruppo.periodo_codice == 'corsi_giugno').all()]
-            n = RecuperoLezione.query.filter(
-                RecuperoLezione.id_gruppo.in_(gruppi_ids)
-            ).delete(synchronize_session=False)
-            db.session.commit()
-            flash(f'Calendario azzerato: {n} lezioni eliminate.', 'warning')
-
-        elif azione == 'completa_bozza':
-            # Genera lezioni solo per i gruppi (di giugno) che non ne hanno ancora
-            from datetime import timedelta
-            gruppi_incompleti = [g for g in (RecuperoGruppo.query
-                .join(RecuperoDocente)
-                .filter(RecuperoDocente.anno_scol == ANNO,
-                        RecuperoGruppo.periodo_codice == 'corsi_giugno')
-                .all()) if len(g.lezioni) == 0]
-
-            if not gruppi_incompleti:
-                flash('Tutti i gruppi hanno già lezioni pianificate.', 'info')
-                return redirect(url_for('recupero.calendario'))
-
-            date_disp = []
-            cur = DATA_INIZIO
-            while cur <= DATA_FINE:
-                if cur.weekday() < 5:
-                    date_disp.append(cur)
-                cur += timedelta(days=1)
-
-            def _t(s):
-                try: h,m = map(int,s.split(':')); return h*60+m
-                except: return 0
-            def _sovrappone(d, ini, fin, occupied):
-                ini_m, fin_m = _t(ini), _t(fin)
-                for od, oi, of in occupied:
-                    if od == d and oi < fin_m and of > ini_m:
-                        return True
-                return False
-
-            # Carica slot già occupati da alunni E docenti (solo gruppi di giugno)
-            slot_alunni  = {}
-            slot_docente2 = {}
-            for g in RecuperoGruppo.query.join(RecuperoDocente).filter(
-                    RecuperoDocente.anno_scol == ANNO,
-                    RecuperoGruppo.periodo_codice == 'corsi_giugno').all():
-                for l in g.lezioni:
-                    for al in g.alunni:
-                        key = (al.cognome, al.nome, al.classe)
-                        slot_alunni.setdefault(key, set()).add(
-                            (l.data, _t(l.ora_inizio), _t(l.ora_fine)))
-                    # Traccia fine ultima lezione del docente
-                    doc_id = g.id_rec_docente
-                    fine = _t(l.ora_fine)
-                    prev = slot_docente2.get(doc_id, {}).get(l.data, 0)
-                    slot_docente2.setdefault(doc_id, {})[l.data] = max(prev, fine)
-
-            def _priorita_c(g):
-                vincoli = g.docente_rec.vincoli if g.docente_rec else []
-                ore_disp = 0.0
-                for data in date_disp:
-                    wd = data.weekday()
-                    for v in vincoli:
-                        if v.data_inizio and data < v.data_inizio: continue
-                        if v.data_fine   and data > v.data_fine:   continue
-                        if v.giorno is not None and v.giorno != wd: continue
-                        try:
-                            h1,m1 = map(int,v.ora_inizio.split(':'))
-                            h2,m2 = map(int,v.ora_fine.split(':'))
-                            ore_disp += (h2*60+m2 - h1*60-m1) / 60
-                        except Exception:
-                            pass
-                if not vincoli: ore_disp = 999
-                return (1.0/(ore_disp+1))*3 + (len(g.alunni)/50.0)*2 + (len(vincoli)/20.0)
-
-            gruppi_incompleti = sorted(gruppi_incompleti, key=_priorita_c, reverse=True)
-
-            inserite = 0
-            saltati  = []
-            for g in gruppi_incompleti:
-                vincoli_doc = g.docente_rec.vincoli
-                ha_vincoli  = bool(vincoli_doc)
-
-                def _slot_per_data_c(data):
-                    wd = data.weekday()
-                    if not ha_vincoli:
-                        return [('08:00','13:00')]
-                    classi_g = {x.strip().upper() for x in g.classi.split(',')}
-                    slots = []
-                    for v in vincoli_doc:
-                        if v.data_inizio and data < v.data_inizio: continue
-                        if v.data_fine   and data > v.data_fine:   continue
-                        if v.giorno is not None and v.giorno != wd: continue
-                        if v.classi_vincolo:
-                            cv = {x.strip().upper() for x in v.classi_vincolo.split(',')}
-                            if not classi_g.intersection(cv): continue
-                        slots.append((v.ora_inizio, v.ora_fine))
-                    return slots or []
-
-                max_ore_tot  = g.max_ore or 10
-                max_ore_g    = g.max_ore_giorno or 2
-                ore_pian     = 0
-                ore_per_data = {}
-                alunni_g     = g.alunni
-
-                for data in date_disp:
-                    if ore_pian >= max_ore_tot: break
-                    ore_ok = _slot_per_data_c(data)
-                    if not ore_ok: continue
-                    ore_oggi = ore_per_data.get(data, 0)
-                    if ore_oggi >= max_ore_g: continue
-
-                    for fascia_ini, fascia_fin in ore_ok:
-                        durata_h = min(
-                            (_t(fascia_fin) - _t(fascia_ini)) / 60,
-                            max_ore_g - ore_oggi,
-                            max_ore_tot - ore_pian, 2)
-                        if durata_h <= 0: continue
-                        fin_m = _t(fascia_ini) + int(durata_h * 60)
-                        ini_s = fascia_ini
-                        fin_s = f'{fin_m//60:02d}:{fin_m%60:02d}'
-
-                        # Ora inizio: dopo l'ultima lezione del docente
-                        doc_id2 = g.id_rec_docente
-                        fine_doc2 = slot_docente2.get(doc_id2, {}).get(data, _t(fascia_ini))
-                        ini_m2 = fine_doc2 + 30 if fine_doc2 > _t(fascia_ini) else _t(fascia_ini)
-                        fin_max2 = _t(fascia_fin)
-                        dur_m2 = int(durata_h * 60)
-                        if ini_m2 + dur_m2 > fin_max2:
-                            continue
-                        ini_s = f'{ini_m2 // 60:02d}:{ini_m2 % 60:02d}'
-                        fin_s = f'{(ini_m2 + dur_m2) // 60:02d}:{(ini_m2 + dur_m2) % 60:02d}'
-
-                        conflitto = any(
-                            _sovrappone(data, ini_s, fin_s,
-                                        slot_alunni.get((al.cognome, al.nome, al.classe), set()))
-                            for al in alunni_g)
-                        if conflitto: continue
-
-                        db.session.add(RecuperoLezione(
-                            id_gruppo=g.id, data=data,
-                            ora_inizio=ini_s, ora_fine=fin_s))
-                        ore_pian += durata_h
-                        ore_per_data[data] = ore_per_data.get(data, 0) + durata_h
-                        inserite += 1
-                        for al in alunni_g:
-                            key = (al.cognome, al.nome, al.classe)
-                            slot_alunni.setdefault(key, set()).add(
-                                (data, ini_m2, ini_m2 + dur_m2))
-                        slot_docente2.setdefault(doc_id2, {})[data] = ini_m2 + dur_m2
-                        break
-
-                if ore_pian == 0:
-                    saltati.append(g)
-
-            db.session.commit()
-            msg = f'Completamento: {inserite} lezioni aggiunte per {len(gruppi_incompleti)-len(saltati)} gruppi.'
-            if saltati:
-                msg += f' ⚠ {len(saltati)} gruppi ancora senza slot: ' +                        ', '.join(g.materia[:15] for g in saltati)
-            flash(msg, 'success' if not saltati else 'warning')
-
+        handlers = {
+            'aggiungi':       lambda: azione_aggiungi(request.form),
+            'modifica':       lambda: azione_modifica(request.form),
+            'elimina':        lambda: azione_elimina(request.form),
+            'elimina_giorno': lambda: azione_elimina_giorno(request.form),
+            'elimina_tutto':  lambda: azione_elimina_tutto(),
+            'completa_bozza': lambda: azione_completa_bozza(),
+        }
+        handler = handlers.get(azione)
+        if handler:
+            risultato = handler()
+            flash(risultato['msg'], risultato['cat'])
         return redirect(url_for('recupero.calendario'))
 
-    # Genera lista date lavorative 18/6-1/7
-    date_disponibili = []
-    cur = DATA_INIZIO
-    while cur <= DATA_FINE:
-        if cur.weekday() < 5:  # lun-ven
-            date_disponibili.append(cur)
-        cur += timedelta(days=1)
-
-    gruppi_list = (RecuperoGruppo.query
-                   .join(RecuperoDocente)
-                   .filter(RecuperoDocente.anno_scol == ANNO,
-                           RecuperoGruppo.periodo_codice == 'corsi_giugno')
-                   .order_by(RecuperoGruppo.materia)
-                   .all())
-
-    # Sincronizza alunni da staging (aderenti) per ogni gruppo — sync differenziale
-    from models.recupero import RecuperoImport
-    _FAMIGLIE_SYNC = [
-        {'LATINO', 'LINGUA LATINA', 'LINGUA E CULTURA LATINA'},
-        {'ITALIANO', 'LINGUA E LETTERATURA ITALIANA', 'LINGUA E CULTURA ITALIANA'},
-        {'MATEMATICA', 'MATEMATICA CON INFORMATICA', 'MATEMATICA E COMPLEMENTI DI MATEMATICA'},
-        {'INFORMATICA', 'TECNOLOGIE INFORMATICHE'},
-        {'STORIA', 'STORIA E GEOGRAFIA'},
-        {'FISICA', 'SCIENZE INTEGRATE (FISICA)'},
-        {'INGLESE', 'LINGUA INGLESE', 'LINGUA E CULTURA STRANIERA (INGLESE)'},
-        {'TEDESCO', 'LINGUA TEDESCA', 'LINGUA E CULTURA STRANIERA TEDESCO'},
-    ]
-    def _match_sync(m1, m2):
-        m1u,m2u = m1.strip().upper(),m2.strip().upper()
-        if m1u==m2u: return True
-        for f in _FAMIGLIE_SYNC:
-            fs={x.upper() for x in f}
-            if m1u in fs and m2u in fs: return True
-        return False
-
-    imports_all = RecuperoImport.query.filter_by(anno_scol=ANNO).all()
-
-    # Indice staging: (cognome, nome, classe, materia_norm) → stato_adesione
-    staging_idx = {}
-    for imp in imports_all:
-        for f in _FAMIGLIE_SYNC:
-            fs = {x.upper() for x in f}
-            if imp.materia_norm and imp.materia_norm.upper() in fs:
-                # Memorizza per ogni variante della famiglia
-                for variante in fs:
-                    staging_idx[(imp.cognome, imp.nome, imp.classe.upper(), variante)] = imp.stato_adesione
-                break
-        # Salva anche con la materia esatta
-        staging_idx[(imp.cognome, imp.nome, imp.classe.upper(), (imp.materia_norm or '').upper())] = imp.stato_adesione
-
-    for g in gruppi_list:
-        classi_g = {cl.strip().upper() for cl in g.classi.split(',')}
-
-        # 1. Aggiungi nuovi aderenti
-        for imp in imports_all:
-            if imp.classe.upper() not in classi_g: continue
-            if not _match_sync(g.materia, imp.materia_norm or ''): continue
-            if imp.stato_adesione not in ('aderisce', 'sconosciuto'): continue
-            exists = RecuperoAlunno.query.filter_by(
-                id_gruppo=g.id, cognome=imp.cognome,
-                nome=imp.nome, classe=imp.classe).first()
-            if not exists:
-                db.session.add(RecuperoAlunno(
-                    id_gruppo=g.id, classe=imp.classe,
-                    cognome=imp.cognome, nome=imp.nome,
-                    codice_fisc=imp.codice_fisc, email=imp.email))
-
-        # 2. Rimuovi chi ha cambiato stato a non_aderisce o studio_ind
-        for al in list(g.alunni):
-            # Cerca lo stato attuale nello staging
-            mat_up = g.materia.upper()
-            stato = staging_idx.get((al.cognome, al.nome, al.classe.upper(), mat_up))
-            if stato is None:
-                # Prova con le famiglie
-                for f in _FAMIGLIE_SYNC:
-                    fs = {x.upper() for x in f}
-                    if mat_up in fs:
-                        for variante in fs:
-                            stato = staging_idx.get((al.cognome, al.nome, al.classe.upper(), variante))
-                            if stato: break
-                        break
-            if stato in ('non_aderisce', 'studio_ind'):
-                db.session.delete(al)
-
-    db.session.commit()
-
-    # Organizza lezioni per data
-    lezioni_per_data = {}
-    for g in gruppi_list:
-        for l in g.lezioni:
-            lezioni_per_data.setdefault(l.data, []).append((l, g))
-
-    # ── Calcolo conflitti ──────────────────────────────────────────────
-    def _t2(s):
-        try: h,m = map(int,s.split(':')); return h*60+m
-        except: return 0
-
-    conflitti = []  # lista di dict con tipo, descrizione, lezioni coinvolte
-
-    # Raggruppa tutte le lezioni per data
-    for data, coppie in lezioni_per_data.items():
-        # Conflitto docente: stesso docente in fasce sovrapposte
-        doc_lezioni = {}
-        for l,g in coppie:
-            doc_id = g.id_rec_docente
-            doc_lezioni.setdefault(doc_id, []).append((l,g))
-        for doc_id, ll in doc_lezioni.items():
-            for i in range(len(ll)):
-                for j in range(i+1, len(ll)):
-                    l1,g1 = ll[i]; l2,g2 = ll[j]
-                    if _t2(l1.ora_inizio) < _t2(l2.ora_fine) and _t2(l2.ora_inizio) < _t2(l1.ora_fine):
-                        doc = g1.docente
-                        conflitti.append({
-                            'tipo': 'docente',
-                            'data': data,
-                            'msg': f'{doc.cognome if doc else "?"} ha due lezioni sovrapposte: '
-                                   f'{g1.materia[:20]} {l1.ora_inizio}-{l1.ora_fine} / '
-                                   f'{g2.materia[:20]} {l2.ora_inizio}-{l2.ora_fine}',
-                            'ids': [l1.id, l2.id],
-                        })
-
-        # Conflitto alunni: controlla sia alunni espliciti che classi in comune
-        for i in range(len(coppie)):
-            for j in range(i+1, len(coppie)):
-                l1,g1 = coppie[i]; l2,g2 = coppie[j]
-                if g1.id == g2.id: continue
-                sovrappone = _t2(l1.ora_inizio) < _t2(l2.ora_fine) and _t2(l2.ora_inizio) < _t2(l1.ora_fine)
-                if not sovrappone: continue
-
-                # Metodo 1: alunni espliciti in comune
-                al1 = {(a.cognome,a.nome,a.classe) for a in g1.alunni}
-                al2 = {(a.cognome,a.nome,a.classe) for a in g2.alunni}
-                comuni = al1 & al2
-                if comuni:
-                    nomi = ', '.join(f'{a[0]} {a[1]}' for a in list(comuni)[:2])
-                    conflitti.append({
-                        'tipo': 'alunno',
-                        'data': data,
-                        'msg': f'{nomi} in due lezioni: {g1.materia[:15]} {l1.ora_inizio}-{l1.ora_fine} / {g2.materia[:15]} {l2.ora_inizio}-{l2.ora_fine}',
-                        'ids': [l1.id, l2.id],
-                    })
-
-
-    # Set di id lezioni con conflitti (per evidenziare nel template)
-    conflitti_ids = set()
-    for cf in conflitti:
-        for lid in cf['ids']:
-            conflitti_ids.add(lid)
-
-    return render_template('recupero/calendario.html',
-        gruppi=gruppi_list,
-        date_disponibili=date_disponibili,
-        lezioni_per_data=lezioni_per_data,
-        conflitti=conflitti,
-        conflitti_ids=conflitti_ids,
-    )
+    # Tutto il calcolo (date disponibili, sync alunni da staging, conflitti)
+    # è in modules/recupero_giugno_calendario.py: la route si limita a
+    # chiamarlo e a passare il risultato al template.
+    dati = costruisci_dati_calendario()
+    return render_template('recupero/calendario.html', **dati)
 
 
 
@@ -846,7 +409,7 @@ def vincoli():
             d_fin = _date.fromisoformat(d_fin_s) if d_fin_s else None
 
             if not giorni:
-                # Nessun giorno selezionato → vincolo solo su date (tutti i gg)
+                # Nessun giorno selezionato →︎ vincolo solo su date (tutti i gg)
                 giorni = [None]
 
             # classi_vincolo può arrivare come checkbox multipli o testo libero
@@ -919,7 +482,7 @@ def vincoli():
                    .join(Docente).order_by(Docente.cognome).all())
     GIORNI_NOMI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì']
 
-    # Mappa id_recdoc → classi con debiti nelle materie che il docente può coprire
+    # Mappa id_recdoc →︎ classi con debiti nelle materie che il docente può coprire
     from models.recupero import RecuperoImport
     from collections import defaultdict
 
@@ -939,7 +502,7 @@ def vincoli():
                  .with_entities(RecuperoImport.classe, RecuperoImport.materia_norm)
                  .distinct().all())
 
-        # Sinonimi: materia breve/DB → varianti presenti nel registro elettronico
+        # Sinonimi: materia breve/DB →︎ varianti presenti nel registro elettronico
         # Aggiornati sulle materie effettive del file importato
         _SINONIMI = {
             # Italiano
@@ -1139,7 +702,7 @@ def alunni():
             # Leggi la formattazione (colori/barrato) con openpyxl
             wb = load_workbook(io.BytesIO(file_bytes))
             ws = wb.active
-            # Mappa riga_excel → stato_adesione
+            # Mappa riga_excel →︎ stato_adesione
             stati_per_riga = {}
             for i, row in enumerate(ws.iter_rows(min_row=2), start=2):
                 cell = row[1]  # colonna B = cognome
@@ -1209,10 +772,10 @@ def alunni():
             db.session.commit()
             flash(
                 f'Importati {sum(inseriti.values())} alunni — '
-                f'✓ {inseriti["aderisce"]} aderiscono, '
-                f'📚 {inseriti["studio_ind"]} studio individuale, '
-                f'❓ {inseriti["non_risposto"]} non hanno risposto, '
-                f'✗ {inseriti["non_aderisce"]} non aderiscono.',
+                f'✓︎ {inseriti["aderisce"]} aderiscono, '
+                f'▥︎ {inseriti["studio_ind"]} studio individuale, '
+                f'? {inseriti["non_risposto"]} non hanno risposto, '
+                f'✕︎ {inseriti["non_aderisce"]} non aderiscono.',
                 'success'
             )
 
@@ -1261,7 +824,8 @@ def alunni():
 
     return render_template('recupero/alunni.html',
         per_materia=per_materia, tot=tot, conteggi=conteggi,
-        parse_tipo_prova=_parse_tipo_prova, TIPO_PROVA_LABEL=TIPO_PROVA_LABEL)
+        parse_tipo_prova=_parse_tipo_prova, TIPO_PROVA_LABEL=TIPO_PROVA_LABEL,
+        classi_attive=_classi_attive())
 
 
 # ── GENERA BOZZA CALENDARIO ───────────────────────────────────────────
@@ -1307,7 +871,7 @@ def genera_bozza():
         cur += timedelta(days=1)
 
     # Slot già occupati per alunno: {(cf o nome_classe): set di (data, ora_ini, ora_fine)}
-    slot_alunni = {}  # chiave: (cognome, nome, classe) → set di (data, ini_min, fin_min)
+    slot_alunni = {}  # chiave: (cognome, nome, classe) →︎ set di (data, ini_min, fin_min)
 
     def _t(s):
         try:
@@ -1350,14 +914,14 @@ def genera_bozza():
                 except Exception:
                     pass
         if not vincoli:
-            # Nessun vincolo = massima disponibilità → bassa priorità
+            # Nessun vincolo = massima disponibilità →︎ bassa priorità
             ore_disp_totali = 999
             giorni_disp = set(date_disp)
 
         n_alunni   = len(g.alunni)
         n_vincoli  = len(vincoli)
 
-        # Score: meno ore disponibili → score alto; più alunni → score alto
+        # Score: meno ore disponibili →︎ score alto; più alunni →︎ score alto
         # Usiamo inverso delle ore disponibili normalizzato
         score_ore      = 1.0 / (ore_disp_totali + 1)    # alto se poche ore
         score_alunni   = n_alunni / 50.0                  # normalizzato su 50
@@ -1481,7 +1045,7 @@ def genera_bozza():
 
                 break  # già gestito sotto
             else:
-                # Nessuna fascia andata a buon fine per questa data → continua
+                # Nessuna fascia andata a buon fine per questa data →︎ continua
                 pass
 
         if ore_pian == 0:
@@ -1492,7 +1056,7 @@ def genera_bozza():
     msg = f'Bozza generata: {inserite} lezioni inserite.'
     if saltati:
         nomi = ', '.join(f'{g.materia[:20]} ({g.docente.cognome if g.docente else "?"})' for g in saltati)
-        msg += f' ⚠ {len(saltati)} gruppi senza slot: {nomi}.'
+        msg += f' ⚠︎ {len(saltati)} gruppi senza slot: {nomi}.'
     flash(msg, 'success' if not saltati else 'warning')
     return redirect(url_for('recupero.calendario'))
 

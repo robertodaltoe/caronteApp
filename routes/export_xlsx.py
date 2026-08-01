@@ -311,82 +311,370 @@ def _export_p8(anno):
     return wb
 
 
-# ══ PASSO 9 — Assegnazioni classi ═══════════════════════════════════
+# ══ PASSO 9 — Assegnazioni classi (stile "ASSEGNAZIONI CLASSI" ufficiale) ══
+#
+# Replica lo stile del file di riferimento fornito dall'utente:
+# - un foglio "organico compless." con TUTTE le classi di concorso,
+#   colonna RICHIESTA (somma ore) e colonna titolari (docenti assegnati)
+# - un foglio per ogni area disciplinare (stessa griglia classi, senza
+#   RICHIESTA/titolari), stessi nomi/ordine delle aree già usati altrove
+# - colonne raggruppate per indirizzo con gli stessi colori del file
+#   originale; solo le classi ATTIVE vengono incluse
+# - aggiunta la colonna POT (ore di potenziamento) subito dopo la colonna
+#   nome-materia, non presente nel file originale ma richiesta esplicitamente
+
+GRUPPI_INDIRIZZO_P9 = [
+    {'label': 'AFM-RIM',     'indirizzi': ['AFM', 'RIM'], 'color': 'CCECFF'},
+    {'label': 'CAT',         'indirizzi': ['CAT'],        'color': 'FFFFCC'},
+    {'label': 'LSU',         'indirizzi': ['LSU'],        'color': 'FFCC99'},
+    {'label': 'LSC',         'indirizzi': ['LSC'],        'color': 'CCCCCC'},
+    {'label': 'LINGUISTICO', 'indirizzi': ['LLI'],        'color': 'CCFFCC'},
+    {'label': 'SPORTIVO',    'indirizzi': ['LSP'],        'color': 'FFCCFF'},
+]
+POT_COLOR_P9 = 'E5D4F5'
+
+
+def _p9_anno_corto(anno):
+    try:
+        a1, a2 = anno.split('-')
+        return f'{a1}/{a2[-2:]}'
+    except Exception:
+        return anno
+
+
+def _p9_classi_gruppi(anno):
+    """[(gruppo, [label_classe,...]), ...] con solo classi ATTIVE per l'anno."""
+    from models.piano_studi import ClasseSezione
+    out = []
+    for gruppo in GRUPPI_INDIRIZZO_P9:
+        secs = (ClasseSezione.query
+                .filter(ClasseSezione.anno_scol == anno,
+                        ClasseSezione.indirizzo.in_(gruppo['indirizzi']),
+                        ClasseSezione.attiva == True)
+                .all())
+        ordine_ind = {ind: i for i, ind in enumerate(gruppo['indirizzi'])}
+        secs.sort(key=lambda s: (ordine_ind.get(s.indirizzo, 99), s.anno_corso, s.sezione))
+        labels = [f'{s.anno_corso}{s.sezione} {s.indirizzo}' for s in secs]
+        out.append((gruppo, labels))
+    return out
+
+
+def _p9_scrivi_intestazione(ws, anno, gruppi_classi, con_richiesta, start_row=1):
+    """
+    Scrive due righe di intestazione a partire da start_row (titolo anno,
+    gruppi indirizzo colorati, nomi classi, colonna POT). Ritorna:
+    label_col, label_color, ultima_classe_col, col_pot, col_richiesta,
+    col_titolari.
+    """
+    thin = Side(style='thin', color='FF000000')
+    box  = Border(left=thin, right=thin, top=thin, bottom=thin)
+    r1, r2 = start_row, start_row + 1
+
+    ws.cell(r1, 1, f'AS {_p9_anno_corto(anno)}').font = Font(bold=True, size=18, name='Calibri')
+
+    col = 2
+    col_pot = col
+    for rr in (r1, r2):
+        c = ws.cell(rr, col_pot, 'POT' if rr == r1 else 'ore pot.')
+        c.font = Font(bold=True, size=8, name='Calibri')
+        c.fill = PatternFill('solid', fgColor=POT_COLOR_P9)
+        c.alignment = Alignment(horizontal='center')
+        c.border = box
+    col += 1
+
+    label_col = {}
+    label_color = {}
+    for gruppo, labels in gruppi_classi:
+        if not labels:
+            continue
+        start = col
+        for lbl in labels:
+            c = ws.cell(r2, col, lbl)
+            c.font = Font(bold=True, size=8, name='Calibri')
+            c.fill = PatternFill('solid', fgColor=gruppo['color'])
+            c.alignment = Alignment(horizontal='center')
+            c.border = box
+            label_col[lbl] = col
+            label_color[lbl] = gruppo['color']
+            col += 1
+        end = col - 1
+        h = ws.cell(r1, start, gruppo['label'])
+        h.font = Font(bold=True, size=8, name='Calibri')
+        h.fill = PatternFill('solid', fgColor=gruppo['color'])
+        h.alignment = Alignment(horizontal='center')
+        h.border = box
+        if end > start:
+            ws.merge_cells(start_row=r1, start_column=start, end_row=r1, end_column=end)
+    ultima_classe_col = col - 1
+
+    col_richiesta = col_titolari = None
+    if con_richiesta:
+        col_richiesta = col
+        ws.cell(r1, col, 'RICHIESTA').font = Font(bold=True, size=8, name='Calibri')
+        col += 1
+        col_titolari = col
+        ws.cell(r1, col, 'titolari').font = Font(bold=True, size=8, name='Calibri')
+
+    if start_row == 1:
+        ws.freeze_panes = ws.cell(3, col_pot).coordinate
+    return label_col, label_color, ultima_classe_col, col_pot, col_richiesta, col_titolari
+
+
+def _p9_scrivi_intestazione2(ws, start_row, anno, gruppi_classi):
+    """Seconda intestazione (griglia assegnazioni), stessa struttura, più in basso."""
+    return _p9_scrivi_intestazione(ws, anno, gruppi_classi, con_richiesta=False,
+                                    start_row=start_row)
+
+
+def _p9_scrivi_blocco_cc(ws, r, anno, cc, label_col, label_color, ultima_classe_col,
+                          col_pot, col_richiesta, col_titolari):
+    """Scrive il blocco di una classe di concorso: titolo + una riga per materia."""
+    from models.piano_studi import PianoStudi, ClasseSezione
+    from models.assegnazione import CattedraPotenziamento, AssegnazioneDocente
+    from collections import OrderedDict
+    from openpyxl.utils import get_column_letter as gcl
+
+    thin = Side(style='thin', color='FF000000')
+    box  = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    materie = OrderedDict()  # nome_materia -> {label_classe: ore}
+    for p in PianoStudi.query.filter_by(anno_scol=anno, id_classe_concorso=cc.id,
+                                          compresenza=False).all():
+        secs = ClasseSezione.query.filter_by(anno_scol=anno, indirizzo=p.indirizzo,
+                                              anno_corso=p.anno_corso, attiva=True).all()
+        for s in secs:
+            lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
+            if lbl not in label_col:
+                continue
+            materie.setdefault(p.nome_materia_locale, {})
+            materie[p.nome_materia_locale][lbl] = (
+                materie[p.nome_materia_locale].get(lbl, 0) + p.ore_settimanali)
+
+    pot = CattedraPotenziamento.query.filter_by(anno_scol=anno, id_classe_concorso=cc.id).first()
+    if not materie and not pot:
+        return r  # nessun dato per questa CC nell'anno: salta il blocco
+
+    nome_cc = f'{cc.codice} {cc.nome}'.upper()
+    c1 = ws.cell(r, 1, nome_cc)
+    c1.font = Font(bold=True, size=10, name='Calibri')
+    c1.border = box
+    if ultima_classe_col >= 2:
+        c2 = ws.cell(r, 2, nome_cc)
+        c2.font = Font(bold=True, size=10, name='Calibri')
+        c2.border = box
+        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=ultima_classe_col)
+    r += 1
+
+    if pot:
+        ws.cell(r, 1, 'Potenziamento').font = Font(size=8, name='Calibri')
+        ws.cell(r, 1).border = box
+        pcell = ws.cell(r, col_pot, pot.ore)
+        pcell.font = Font(bold=True, size=8, name='Calibri', color='FF000000')
+        pcell.fill = PatternFill('solid', fgColor=POT_COLOR_P9)
+        pcell.alignment = Alignment(horizontal='center')
+        pcell.border = box
+        for lbl, col in label_col.items():
+            e = ws.cell(r, col, '-')
+            e.font = Font(size=8, name='Calibri')
+            e.fill = PatternFill('solid', fgColor=label_color[lbl])
+            e.alignment = Alignment(horizontal='center')
+            e.border = box
+        r += 1
+
+    riga_start_materie = r
+    for nome_mat, ore_per_classe in materie.items():
+        ws.cell(r, 1, nome_mat).font = Font(size=8, name='Calibri')
+        ws.cell(r, 1).border = box
+        pc = ws.cell(r, col_pot, '-')
+        pc.font = Font(size=8, name='Calibri')
+        pc.fill = PatternFill('solid', fgColor=POT_COLOR_P9)
+        pc.alignment = Alignment(horizontal='center')
+        pc.border = box
+        for lbl, col in label_col.items():
+            ore = ore_per_classe.get(lbl)
+            cell = ws.cell(r, col, ore if ore else '-')
+            cell.font = Font(bold=True, size=8, name='Calibri',
+                              color='FF000000')
+            cell.fill = PatternFill('solid', fgColor=label_color[lbl])
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = box
+        r += 1
+    riga_end_materie = r - 1
+    if riga_end_materie < riga_start_materie:
+        riga_end_materie = riga_start_materie
+
+    if col_richiesta and materie:
+        col_last = gcl(ultima_classe_col)
+        formula = f'=SUM(B{riga_start_materie}:{col_last}{riga_end_materie})'
+        rc = ws.cell(riga_end_materie, col_richiesta, formula)
+        rc.font = Font(size=8, name='Calibri')
+
+    if col_titolari:
+        assegnazioni = AssegnazioneDocente.query.filter_by(
+            anno_scol=anno, id_classe_concorso=cc.id).all()
+        riga_max = max(riga_end_materie, riga_start_materie)
+        for i, a in enumerate(assegnazioni):
+            rr = riga_start_materie + i
+            if rr > riga_max:
+                break  # blocco pieno: evita di scrivere sopra il blocco successivo
+            nome = a.display_name
+            ore_doc = a.docente.ore_max_effettive if a.docente else ''
+            tc = ws.cell(rr, col_titolari, f'{nome} {ore_doc}'.strip())
+            tc.font = Font(size=8, name='Calibri')
+
+    return r + 1
+
+
+def _p9_scrivi_blocco_cc_assegnazioni(ws, r, anno, cc, label_col, label_color,
+                                        ultima_classe_col, col_pot):
+    """
+    Seconda griglia (sotto quella di RICHIESTA): una riga per DOCENTE con le
+    ore effettivamente assegnate per classe, invece che una riga per materia.
+    Aggiunge una riga 'ORE RESIDUE' quando un docente non copre l'intero
+    monte ore contrattuale, per segnalare la necessità di un supplente.
+    """
+    from models.assegnazione import AssegnazioneDocente
+
+    thin = Side(style='thin', color='FF000000')
+    box  = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    assegnazioni = AssegnazioneDocente.query.filter_by(
+        anno_scol=anno, id_classe_concorso=cc.id).all()
+    if not assegnazioni:
+        return r
+
+    nome_cc = f'{cc.codice} {cc.nome}'.upper()
+    c1 = ws.cell(r, 1, nome_cc)
+    c1.font = Font(bold=True, size=10, name='Calibri')
+    c1.border = box
+    if ultima_classe_col >= 2:
+        c2 = ws.cell(r, 2, nome_cc)
+        c2.font = Font(bold=True, size=10, name='Calibri')
+        c2.border = box
+        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=ultima_classe_col)
+    r += 1
+
+    supplente_n = 0
+    for a in assegnazioni:
+        ore_cl = {}
+        pot_ore = 0
+        for ac in a.classi:
+            if ac.indirizzo == 'POT':
+                pot_ore += ac.ore
+                continue
+            lbl = ac.label_classe
+            ore_cl[lbl] = ore_cl.get(lbl, 0) + ac.ore
+
+        max_ore = a.docente.ore_max_effettive if a.docente else None
+        nome = a.display_name
+        etichetta = f'{nome} {int(max_ore)} ore' if max_ore else nome
+        ws.cell(r, 1, etichetta).font = Font(size=8, name='Calibri')
+        ws.cell(r, 1).border = box
+
+        pc = ws.cell(r, col_pot, pot_ore if pot_ore else '-')
+        pc.font = Font(bold=True, size=8, name='Calibri', color='FF000000')
+        pc.fill = PatternFill('solid', fgColor=POT_COLOR_P9)
+        pc.alignment = Alignment(horizontal='center')
+        pc.border = box
+
+        for lbl, col in label_col.items():
+            ore = ore_cl.get(lbl)
+            cell = ws.cell(r, col, ore if ore else '-')
+            cell.font = Font(bold=True, size=8, name='Calibri', color='FF000000')
+            cell.fill = PatternFill('solid', fgColor=label_color[lbl])
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = box
+        r += 1
+
+        if max_ore:
+            residuo = max_ore - sum(ore_cl.values()) - pot_ore
+            if residuo > 0:
+                supplente_n += 1
+                rc = ws.cell(r, 1, f'ORE RESIDUE {residuo:g} - SUPPLENTE {supplente_n}')
+                rc.font = Font(size=8, name='Calibri', bold=True, color='FFDC2626')
+                rc.border = box
+                for lbl, col in label_col.items():
+                    e = ws.cell(r, col, '-')
+                    e.font = Font(size=8, name='Calibri')
+                    e.fill = PatternFill('solid', fgColor=label_color[lbl])
+                    e.alignment = Alignment(horizontal='center')
+                    e.border = box
+                epc = ws.cell(r, col_pot, '-')
+                epc.fill = PatternFill('solid', fgColor=POT_COLOR_P9)
+                epc.border = box
+                r += 1
+
+    return r + 1
+
+
+def _p9_imposta_colonne(ws, col_pot, ultima_classe_col):
+    ws.column_dimensions['A'].width = 35.14
+    ws.column_dimensions[get_column_letter(col_pot)].width = 7
+    for c in range(col_pot + 1, ultima_classe_col + 1):
+        ws.column_dimensions[get_column_letter(c)].width = 5.3
+    ws.sheet_view.showGridLines = False
+
+
 def _export_p9(anno):
-    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
-    from models.classe_concorso import ClasseConcorso
     from routes.assegnazioni import AREE
+    from models.classe_concorso import ClasseConcorso
     wb = _wb()
+    gruppi_classi = _p9_classi_gruppi(anno)
 
+    # ── Foglio principale: tutte le CC, con RICHIESTA + titolari ──────
+    ws_main = wb.create_sheet('organico compless.')
+    label_col, label_color, ultima_col, col_pot, col_ric, col_tit = \
+        _p9_scrivi_intestazione(ws_main, anno, gruppi_classi, con_richiesta=True)
+    r = 3
     for area in AREE:
-        ws = wb.create_sheet(area['nome'][:31].replace('/', '-').replace('*','').replace('?',''))
-        r = _title(ws, f'Assegnazioni — {area["nome"]}', anno)
-
         for codice in area['cc']:
-            from models.classe_concorso import ClasseConcorso as CC2
-            cc = CC2.query.filter_by(codice=codice).first()
+            cc = ClasseConcorso.query.filter_by(codice=codice).first()
             if not cc:
                 continue
-            assegnazioni = AssegnazioneDocente.query.filter_by(
-                anno_scol=anno, id_classe_concorso=cc.id).all()
-            if not assegnazioni:
+            r = _p9_scrivi_blocco_cc(ws_main, r, anno, cc, label_col, label_color,
+                                       ultima_col, col_pot, col_ric, col_tit)
+
+    # ── Seconda griglia: assegnazione per docente (sotto, stessa struttura) ──
+    r += 1
+    label_col2, label_color2, _, col_pot2, _, _ = \
+        _p9_scrivi_intestazione2(ws_main, r, anno, gruppi_classi)
+    r += 2
+    for area in AREE:
+        for codice in area['cc']:
+            cc = ClasseConcorso.query.filter_by(codice=codice).first()
+            if not cc:
                 continue
+            r = _p9_scrivi_blocco_cc_assegnazioni(ws_main, r, anno, cc, label_col2,
+                                                    label_color2, ultima_col, col_pot2)
+    _p9_imposta_colonne(ws_main, col_pot, ultima_col)
 
-            # Classi con ore per questa CC
-            from models.piano_studi import PianoStudi, ClasseSezione
-            classi = []
-            for p in PianoStudi.query.filter_by(anno_scol=anno, id_classe_concorso=cc.id,
-                                                  compresenza=False).all():
-                for s in ClasseSezione.query.filter_by(
-                        anno_scol=anno, indirizzo=p.indirizzo,
-                        anno_corso=p.anno_corso, attiva=True).all():
-                    lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
-                    if lbl not in classi:
-                        classi.append(lbl)
-            classi = sorted(classi)
-            if not classi:
+    # ── Un foglio per area disciplinare (senza RICHIESTA/titolari) ────
+    for area in AREE:
+        nome_foglio = area['nome'][:31].replace('/', '-').replace('*', '').replace('?', '')
+        ws = wb.create_sheet(nome_foglio)
+        label_col, label_color, ultima_col, col_pot, _, _ = \
+            _p9_scrivi_intestazione(ws, anno, gruppi_classi, con_richiesta=False)
+        r = 3
+        for codice in area['cc']:
+            cc = ClasseConcorso.query.filter_by(codice=codice).first()
+            if not cc:
                 continue
+            r = _p9_scrivi_blocco_cc(ws, r, anno, cc, label_col, label_color,
+                                       ultima_col, col_pot, None, None)
 
-            # Header CC
-            ws.cell(r, 1, f'{cc.codice} — {cc.nome}').font = Font(
-                bold=True, color='FFFFFF', name='Arial', size=10)
-            ws.cell(r, 1).fill = PatternFill('solid', fgColor=BLU)
-            ws.merge_cells(start_row=r, start_column=1,
-                            end_row=r, end_column=2+len(classi)+2)
-            r += 1
-            r = _hdr(ws, r, ['Docente', 'Tipo'] + classi + ['Tot.', 'Max'])
+        r += 1
+        label_col2, label_color2, _, col_pot2, _, _ = \
+            _p9_scrivi_intestazione2(ws, r, anno, gruppi_classi)
+        r += 2
+        for codice in area['cc']:
+            cc = ClasseConcorso.query.filter_by(codice=codice).first()
+            if not cc:
+                continue
+            r = _p9_scrivi_blocco_cc_assegnazioni(ws, r, anno, cc, label_col2,
+                                                    label_color2, ultima_col, col_pot2)
+        _p9_imposta_colonne(ws, col_pot, ultima_col)
 
-            # Piano studi
-            piano = {c: 0 for c in classi}
-            for p in PianoStudi.query.filter_by(anno_scol=anno, id_classe_concorso=cc.id,
-                                                  compresenza=False).all():
-                for s in ClasseSezione.query.filter_by(
-                        anno_scol=anno, indirizzo=p.indirizzo,
-                        anno_corso=p.anno_corso, attiva=True).all():
-                    lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
-                    if lbl in piano:
-                        piano[lbl] += p.ore_settimanali
-            r = _row(ws, r, ['Piano studi', ''] +
-                     [piano.get(c, '') for c in classi] +
-                     [sum(piano.values()), ''], bg=GRIG, bold=True)
 
-            # Docenti
-            for a in assegnazioni:
-                ore_cl = {}
-                for ac in a.classi:
-                    lbl = ac.label_classe
-                    ore_cl[lbl] = ore_cl.get(lbl, 0) + ac.ore
-                tot = sum(ore_cl.values())
-                max_ore = a.docente.ore_max_effettive if a.docente else '—'
-                nome = a.display_name
-                r = _row(ws, r, [nome, a.tipo or ''] +
-                         [ore_cl.get(c, '') for c in classi] + [tot, max_ore])
-            r += 1
-
-        ws.column_dimensions['A'].width = 22
-        ws.column_dimensions['B'].width = 10
-        for i in range(30):
-            ws.column_dimensions[get_column_letter(3+i)].width = 9
     return wb
 
 
@@ -416,30 +704,37 @@ def _export_p10(anno):
 
 
 # ══ EXPORT CLASSE — docenti + materie + incarichi ═══════════════════
-def _export_classe(anno, label_classe):
+#
+# _export_classe() (un file per una classe) e _aggiungi_foglio_classe()
+# (un foglio per classe dentro il file "tutte le classi") disegnavano
+# esattamente la stessa tabella con una piccola duplicazione di codice.
+# Consolidato in _riempi_foglio_classe(), che riempie un foglio già
+# creato: le due funzioni pubbliche ora si limitano a creare il workbook
+# (o il foglio) e a delegarle il contenuto.
+def _riempi_foglio_classe(ws, anno, label_classe):
     """
-    Per una classe (es. '1A AFM'): elenco docenti con materie e incarichi.
+    Riempie il foglio ws con lo schema di una classe (es. '1A AFM'):
+    docenti assegnati con materie/ore e incarichi di classe.
+    Ritorna False (foglio lasciato vuoto) se label_classe non è nel
+    formato atteso "<anno><sezione> <indirizzo>".
     """
     import re
     m = re.match(r'(\d+)([AB]?)\s+(.+)', label_classe)
     if not m:
-        from flask import abort
-        abort(400)
+        return False
     anno_corso = int(m.group(1))
     sezione    = m.group(2) or 'A'
     indirizzo  = m.group(3).strip()
 
-    from models.piano_studi import PianoStudi, ClasseSezione
     from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
-    from models.incarico import IncaricaDocente, TipoIncarico
+    from models.incarico import IncaricaDocente
     from models.materia import Materia
+    from collections import defaultdict
 
-    wb = _wb()
-    ws = wb.create_sheet(f'{anno_corso}{sezione} {indirizzo}')
     ws.column_dimensions['A'].width = 22
     ws.column_dimensions['B'].width = 35
     ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 22
+    ws.column_dimensions['D'].width = 24
 
     r = _title(ws, f'Classe {anno_corso}{sezione} {indirizzo}', anno)
     r = _hdr(ws, r, ['Docente', 'Materia', 'Ore', 'Incarico nella classe'])
@@ -451,7 +746,6 @@ def _export_classe(anno, label_classe):
         AssegnazioneDocente.anno_scol == anno).all()
 
     # Raggruppa per docente
-    from collections import defaultdict
     doc_map = defaultdict(list)
     for ac in assegnazioni_classe:
         a = ac.assegnazione
@@ -459,7 +753,8 @@ def _export_classe(anno, label_classe):
         nome_mat = (mat.nome_breve or mat.nome) if mat else (a.tipo if a.tipo else '—')
         doc_map[a].append((nome_mat, ac.ore))
 
-    # Incarichi per questa classe
+    # Incarichi per questa classe (interrogati una sola volta, riusati
+    # sia per la mappa id_docente->incarico sia per la sezione dedicata)
     incarichi_classe = IncaricaDocente.query.filter_by(
         anno_scol=anno,
         indirizzo=indirizzo,
@@ -490,6 +785,17 @@ def _export_classe(anno, label_classe):
             r = _row(ws, r, [inc.tipo.nome,
                               f'{inc.docente.cognome} {inc.docente.nome}', '', ''])
     _border_all(ws, 4, r-1, 1, 4)
+    return True
+
+
+def _export_classe(anno, label_classe):
+    """Per una classe (es. '1A AFM'): file a sé stante con docenti/materie/incarichi."""
+    wb = _wb()
+    sheet_name = label_classe[:31].replace('/', '-')
+    ws = wb.create_sheet(sheet_name)
+    if not _riempi_foglio_classe(ws, anno, label_classe):
+        from flask import abort
+        abort(400)
     return wb
 
 
@@ -532,76 +838,10 @@ def export_classe(label):
 # ══ EXPORT TUTTE LE CLASSI in un unico file ══════════════════════════
 
 def _aggiungi_foglio_classe(wb, anno, label_classe):
-    """Aggiunge un foglio classe al workbook esistente."""
-    import re
-    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
-    from models.incarico import IncaricaDocente
-    from models.materia import Materia
-    from collections import defaultdict
-
-    m = re.match(r'(\d+)([AB]?)\s+(.+)', label_classe)
-    if not m:
-        return
-    anno_corso = int(m.group(1))
-    sezione    = m.group(2) or 'A'
-    indirizzo  = m.group(3).strip()
-
+    """Aggiunge un foglio classe al workbook esistente (usato da 'tutte le classi')."""
     sheet_name = label_classe[:31].replace('/', '-')
     ws = wb.create_sheet(sheet_name)
-    ws.column_dimensions['A'].width = 22
-    ws.column_dimensions['B'].width = 35
-    ws.column_dimensions['C'].width = 8
-    ws.column_dimensions['D'].width = 25
-
-    r = _title(ws, f'Classe {anno_corso}{sezione} {indirizzo}', anno)
-    r = _hdr(ws, r, ['Docente', 'Materia', 'Ore', 'Incarico nella classe'])
-
-    assegnazioni_classe = (AssegnazioneClasse.query
-        .filter_by(indirizzo=indirizzo, anno_corso=anno_corso, sezione=sezione)
-        .join(AssegnazioneDocente,
-              AssegnazioneClasse.id_assegnazione == AssegnazioneDocente.id)
-        .filter(AssegnazioneDocente.anno_scol == anno).all())
-
-    doc_map = defaultdict(list)
-    for ac in assegnazioni_classe:
-        a = ac.assegnazione
-        mat = Materia.query.get(ac.id_materia) if ac.id_materia else None
-        nome_mat = (mat.nome_breve or mat.nome) if mat else '—'
-        doc_map[a].append((nome_mat, ac.ore))
-
-    incarichi_map = {
-        inc.id_docente: inc.tipo.nome
-        for inc in IncaricaDocente.query.filter_by(
-            anno_scol=anno, indirizzo=indirizzo,
-            anno_corso=anno_corso, sezione=sezione).all()
-    }
-
-    if doc_map:
-        for a, materie_ore in sorted(
-                doc_map.items(),
-                key=lambda x: x[0].docente.cognome if x[0].docente else 'zzz'):
-            incarico = incarichi_map.get(a.id_docente, '')
-            for i, (mat, ore) in enumerate(materie_ore):
-                r = _row(ws, r, [a.display_name if i == 0 else '',
-                                  mat, ore,
-                                  incarico if i == 0 else ''])
-    else:
-        ws.cell(r, 1, 'Nessuna assegnazione presente.').font = \
-            Font(italic=True, color='9CA3AF', name='Arial')
-        r += 1
-
-    if incarichi_map:
-        r += 1
-        ws.cell(r, 1, 'Incarichi di classe').font = \
-            Font(bold=True, color=BLU, name='Arial', size=10)
-        r += 1
-        r = _hdr(ws, r, ['Tipo incarico', 'Docente', '', ''], color='374151')
-        for inc in IncaricaDocente.query.filter_by(
-                anno_scol=anno, indirizzo=indirizzo,
-                anno_corso=anno_corso, sezione=sezione).all():
-            r = _row(ws, r, [inc.tipo.nome,
-                              f'{inc.docente.cognome} {inc.docente.nome}', '', ''])
-    _border_all(ws, 4, r-1, 1, 4)
+    _riempi_foglio_classe(ws, anno, label_classe)
 
 
 @export_bp.route('/export/tutte-classi')

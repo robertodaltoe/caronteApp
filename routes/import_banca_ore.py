@@ -126,8 +126,8 @@ def index():
         doppioni=doppioni,
         non_trovati=sorted(non_trovati),
         tipi=[
-            ('supplenza_recupero', '♻ Supplenze svolte'),
-            ('permesso_orario',    '📋 Permessi orari'),
-            ('civica',             '📚 Ed. Civica libero'),
+            ('supplenza_recupero', '↻︎ Supplenze svolte'),
+            ('permesso_orario',    '▤︎ Permessi orari'),
+            ('civica',             '▥︎ Ed. Civica libero'),
         ],
     )

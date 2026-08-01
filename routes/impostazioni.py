@@ -49,6 +49,7 @@ def sospensioni():
             tipo = request.form.get('tipo', 'festività_nazionale')
             if ini and desc:
                 from models import db
+                from routes.auth import log as auth_log
                 db.session.add(SospensioneDidattica(
                     data_inizio = date.fromisoformat(ini),
                     data_fine   = date.fromisoformat(fin),
@@ -56,18 +57,23 @@ def sospensioni():
                     tipo        = tipo,
                 ))
                 db.session.commit()
+                auth_log('crea_sospensione', f'{desc} ({ini}–{fin})')
                 flash('Sospensione aggiunta.', 'success')
 
         elif azione == 'elimina':
             from models import db
+            from routes.auth import log as auth_log
             sid = int(request.form.get('id', 0))
             s = SospensioneDidattica.query.get_or_404(sid)
+            _desc = f'{s.descrizione} ({s.data_inizio.isoformat()}–{s.data_fine.isoformat()})'
             db.session.delete(s)
             db.session.commit()
+            auth_log('elimina_sospensione', _desc)
             flash('Sospensione eliminata.', 'warning')
 
         elif azione == 'modifica':
             from models import db
+            from routes.auth import log as auth_log
             sid  = int(request.form.get('id', 0))
             s    = SospensioneDidattica.query.get_or_404(sid)
             ini  = request.form.get('data_inizio', '').strip()
@@ -80,14 +86,28 @@ def sospensioni():
                 s.descrizione = desc
                 s.tipo        = tipo
                 db.session.commit()
+                auth_log('modifica_sospensione', f'{desc} ({ini}–{fin})')
                 flash('Sospensione aggiornata.', 'success')
 
         return redirect(url_for('impostazioni.sospensioni'))
 
     sospensioni = SospensioneDidattica.query.order_by(
         SospensioneDidattica.data_inizio).all()
+
+    # Avviso: se nessuna sospensione copre l'anno scolastico corrente,
+    # probabilmente l'elenco non è ancora stato aggiornato per il nuovo
+    # anno (il seed iniziale viene eseguito una sola volta e non si ripete
+    # automaticamente ogni settembre).
+    from config_anno import get_anno_corrente, intervallo_anno_scolastico
+    anno_corrente = get_anno_corrente()
+    inizio_anno, fine_anno = intervallo_anno_scolastico(anno_corrente)
+    n_anno_corrente = SospensioneDidattica.query.filter(
+        SospensioneDidattica.data_fine >= inizio_anno,
+        SospensioneDidattica.data_inizio <= fine_anno).count()
+
     return render_template('impostazioni/sospensioni.html',
-        sospensioni=sospensioni, tipi=TIPI_SOSPENSIONE, oggi=date.today())
+        sospensioni=sospensioni, tipi=TIPI_SOSPENSIONE, oggi=date.today(),
+        anno_corrente=anno_corrente, n_anno_corrente=n_anno_corrente)
 
 
 @impostazioni_bp.route('/impostazioni/periodi', methods=['GET', 'POST'])
@@ -105,10 +125,10 @@ def periodi():
     # si aggiunge un nuovo modulo che usa un periodo, basta aggiungere una
     # riga qui, senza toccare il modello.
     CODICI_NOTI = {
-        'corsi_giugno':      ('📚 Corsi di recupero (giugno-luglio)', 'Recupero'),
-        'prove_agosto':      ('📝 Prove di recupero (agosto)', 'Recupero'),
-        'colloqui_rientro':  ('🌍 Colloqui di rientro dall\'estero', 'Rientro'),
-        'esami_integrativi': ('🎓 Esami integrativi (passaggi e trasferimenti)', 'Da definire'),
+        'corsi_giugno':      ('▥︎ Corsi di recupero (giugno-luglio)', 'Recupero'),
+        'prove_agosto':      ('✎︎ Prove di recupero (agosto)', 'Recupero'),
+        'colloqui_rientro':  ('⊕︎ Colloqui di rientro dall\'estero', 'Rientro'),
+        'esami_integrativi': ('△︎ Esami integrativi (passaggi e trasferimenti)', 'Da definire'),
     }
 
     if request.method == 'POST':
@@ -179,18 +199,46 @@ def anno_scolastico():
     return redirect(url_for('impostazione_anno.index'))
 
 
-@impostazioni_bp.route('/impostazioni/dati-istituto')
+@impostazioni_bp.route('/impostazioni/dati-istituto', methods=['GET', 'POST'])
 def dati_istituto():
-    return render_template('impostazioni/stub.html',
-        titolo='Dati istituto', emoji='🏫',
-        desc='Dati istituto e costo ora supplenza — prossimamente.')
+    from flask import request, flash, redirect, url_for
+    from config_istituto import get_dati_istituto, set_dati_istituto, DEFAULTS
 
+    if request.method == 'POST':
+        nuovi = {}
+        errori = []
+        for chiave, default in DEFAULTS.items():
+            grezzo = request.form.get(chiave, '').strip()
+            if grezzo == '':
+                errori.append(chiave)
+                continue
+            if isinstance(default, float):
+                try:
+                    nuovi[chiave] = float(grezzo.replace(',', '.'))
+                except ValueError:
+                    errori.append(chiave)
+            elif isinstance(default, int):
+                try:
+                    nuovi[chiave] = int(grezzo)
+                except ValueError:
+                    errori.append(chiave)
+            else:
+                nuovi[chiave] = grezzo
+        if errori:
+            flash(f'Valori non validi per: {", ".join(errori)}. Nessuna modifica salvata.', 'danger')
+        else:
+            precedenti = get_dati_istituto()
+            cambiati = [f'{k}: {precedenti.get(k)} →︎ {v}' for k, v in nuovi.items()
+                        if precedenti.get(k) != v]
+            set_dati_istituto(nuovi)
+            if cambiati:
+                from routes.auth import log as auth_log
+                auth_log('modifica_dati_istituto', '; '.join(cambiati))
+            flash('Dati istituto aggiornati.', 'success')
+        return redirect(url_for('impostazioni.dati_istituto'))
 
-@impostazioni_bp.route('/impostazioni/cambio-anno')
-def cambio_anno():
-    return render_template('impostazioni/stub.html',
-        titolo='Cambio anno scolastico', emoji='🔄',
-        desc='Wizard di fine/inizio anno scolastico — prossimamente.')
+    return render_template('impostazioni/dati_istituto.html',
+        dati=get_dati_istituto())
 
 
 @impostazioni_bp.route('/impostazioni/backup')

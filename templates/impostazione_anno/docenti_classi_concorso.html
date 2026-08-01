@@ -2,9 +2,9 @@
 {% block title %}Docenti e classi di concorso{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p8', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">🏷️ Docenti ↔ Classi di concorso — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p8', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">◆︎️ Docenti ↔︎ Classi di concorso — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('impostazione_anno.docenti_classi_concorso', anno=a) }}"
@@ -18,13 +18,13 @@
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
     Per ogni docente, aggiungi una o più classi di concorso (abilitazioni) dal select — un
     docente può essere abilitato su più classi e ricevere ore da entrambe. È un dato stabile,
-    non legato all'anno scolastico. La prima aggiunta diventa la classe "principale" ⭐.
+    non legato all'anno scolastico. La prima aggiunta diventa la classe "principale" ★︎.
     Modificando le abilitazioni di un docente, le sue materie già assegnate vengono azzerate,
     perché potrebbero non essere più ammesse.
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px;">
-    <input type="text" id="filtro-docenti" placeholder="🔎 Filtra per cognome..."
+    <input type="text" id="filtro-docenti" placeholder="⌕︎ Filtra per cognome..."
            style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:.86rem;"
            oninput="filtraDocenti(this.value)">
 </div>
@@ -47,8 +47,8 @@
                      color:{{ '#1e40af' if ab.principale else '#374151' }};
                      border:1px solid {{ '#93c5fd' if ab.principale else '#d1d5db' }};">
             <input type="hidden" name="cc_docente_{{ d.id }}" value="{{ ab.id_classe_concorso }}">
-            {% if ab.principale %}⭐{% endif %} {{ ab.classe_concorso.codice }}
-            <span onclick="rimuoviBadge(this)" style="cursor:pointer; color:#9ca3af; font-weight:900;" title="Rimuovi">✕</span>
+            {% if ab.principale %}★︎{% endif %} {{ ab.classe_concorso.codice }}
+            <span onclick="rimuoviBadge(this)" style="cursor:pointer; color:#9ca3af; font-weight:900;" title="Rimuovi">✕︎</span>
         </span>
         {% endfor %}
     </div>
@@ -63,7 +63,7 @@
 </div>
 {% endfor %}
 
-<button type="submit" class="btn btn-success btn-sm" style="margin-top:10px;">💾 Salva tutte le abilitazioni</button>
+<button type="submit" class="btn btn-success btn-sm" style="margin-top:10px;">▤︎ Salva tutte le abilitazioni</button>
 </form>
 
 <script>
@@ -93,8 +93,8 @@ function aggiungiBadge(idDocente, select) {
         'border-radius:7px;font-size:.78rem;font-weight:700;' +
         (principale ? 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;'
                     : 'background:#f3f4f6;color:#374151;border:1px solid #d1d5db;');
-    span.innerHTML = (principale ? '⭐ ' : '') + codice +
-        ' <span onclick="rimuoviBadge(this)" style="cursor:pointer;color:#9ca3af;font-weight:900;" title="Rimuovi">✕</span>' +
+    span.innerHTML = (principale ? '★︎ ' : '') + codice +
+        ' <span onclick="rimuoviBadge(this)" style="cursor:pointer;color:#9ca3af;font-weight:900;" title="Rimuovi">✕︎</span>' +
         '<input type="hidden" name="cc_docente_' + idDocente + '" value="' + ccId + '">';
     box.appendChild(span);
     select.value = '';
@@ -111,24 +111,24 @@ function rimuoviBadge(xEl) {
         prima.style.background = '#dbeafe';
         prima.style.color = '#1e40af';
         prima.style.borderColor = '#93c5fd';
-        if (!prima.textContent.includes('⭐')) {
-            prima.innerHTML = '⭐ ' + prima.innerHTML;
+        if (!prima.textContent.includes('★︎')) {
+            prima.innerHTML = '★︎ ' + prima.innerHTML;
         }
     }
 }
 </script>
 
-{# ── CONFRONTO TI ↔ ORGANICO USR ─────────────────────────────── #}
+{# ── CONFRONTO TI ↔︎ ORGANICO USR ─────────────────────────────── #}
 <div style="margin-top:28px;">
     <h2 style="font-size:1rem; font-weight:700; color:#7c3aed; margin-bottom:10px;">
-        🔍 Verifica: TI collegati ↔ DOC Organico USR — {{ anno }}
+        ⌕︎ Verifica: TI collegati ↔︎ DOC Organico USR — {{ anno }}
     </h2>
     <div style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;
          padding:8px 12px; background:#f5f3ff; border-radius:6px; border-left:3px solid #7c3aed;">
         <strong>TI collegati</strong> = docenti TI assegnati a questa CC qui sopra &nbsp;|&nbsp;
         <strong>DOC USR</strong> = titolari nel bollettino organico di diritto
         (inclusi AP uscenti e aspettative) &nbsp;|&nbsp;
-        ✅ allineati &nbsp; ⚠️ scarto di 1 &nbsp; ❌ scarto &gt; 1
+        ✓︎ allineati &nbsp; ⚠︎️ scarto di 1 &nbsp; ✕︎ scarto &gt; 1
     </div>
     <div class="card" style="padding:0; overflow-x:auto;">
     <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
@@ -156,7 +156,7 @@ function rimuoviBadge(xEl) {
                 {{ '+' if r.scarto > 0 else '' }}{{ r.scarto if r.scarto != 0 else '—' }}
             </td>
             <td style="padding:8px 8px; text-align:center; font-size:1rem;">
-                {% if r.semaforo == 'verde' %}✅{% elif r.semaforo == 'giallo' %}⚠️{% else %}❌{% endif %}
+                {% if r.semaforo == 'verde' %}✓︎{% elif r.semaforo == 'giallo' %}⚠︎️{% else %}✕︎{% endif %}
             </td>
         </tr>
         {% endfor %}

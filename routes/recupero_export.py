@@ -14,6 +14,13 @@ from routes.recupero_costanti import ANNO, ANNO_AGO, PERIODO_AGO
 from routes.recupero import recupero_bp
 
 
+def _nome_istituto():
+    """Nome istituto configurabile (Impostazioni > Dati istituto), invece
+    di ripetere la stringa a mano in ogni foglio Excel generato qui."""
+    from config_istituto import get_dati_istituto
+    return get_dati_istituto()['nome_istituto']
+
+
 # ── EXPORT XLSX ───────────────────────────────────────────────────────
 @recupero_bp.route('/recupero/export-xlsx')
 def export_xlsx():
@@ -60,7 +67,7 @@ def export_xlsx():
     wsF.title = 'Famiglie'
 
     wsF.append([])
-    wsF['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    wsF['A1'] = _nome_istituto()
     wsF['A1'].font = Font(bold=True, size=13)
     wsF['A2'] = f'CALENDARIO CORSI DI RECUPERO — A.S. {ANNO}'
     wsF['A2'].font = Font(bold=True, size=11)
@@ -119,14 +126,14 @@ def export_xlsx():
     # ── FOGLIO DOCENTI ────────────────────────────────────────────────
     wsD = wb.create_sheet('Docenti')
 
-    wsD['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    wsD['A1'] = _nome_istituto()
     wsD['A1'].font = Font(bold=True, size=13)
     wsD['A2'] = f'CALENDARIO CORSI DI RECUPERO — A.S. {ANNO} — USO INTERNO'
     wsD['A2'].font = Font(bold=True, size=11, color='dc2626')
     wsD.append([])
     wsD.append([])
 
-    # Indice staging: (cognome, nome, classe, materia_norm) → stato_adesione
+    # Indice staging: (cognome, nome, classe, materia_norm) →︎ stato_adesione
     from models.recupero import RecuperoImport
     _FAM_EXP = [
         {'LATINO', 'LINGUA LATINA', 'LINGUA E CULTURA LATINA'},
@@ -150,11 +157,11 @@ def export_xlsx():
     imports_all_exp = RecuperoImport.query.filter_by(anno_scol=ANNO).all()
 
     STATO_LABEL = {
-        'aderisce':     '✓ aderisce',
-        'sconosciuto':  '✓ aderisce',
-        'non_risposto': '❓ non risposto',
-        'non_aderisce': '✗ non aderisce',
-        'studio_ind':   '📚 studio ind.',
+        'aderisce':     '✓︎ aderisce',
+        'sconosciuto':  '✓︎ aderisce',
+        'non_risposto': '? non risposto',
+        'non_aderisce': '✕︎ non aderisce',
+        'studio_ind':   '▥︎ studio ind.',
     }
     STATO_COLOR = {
         'aderisce':     '166534',  # verde scuro
@@ -282,7 +289,7 @@ def export_xlsx():
 
     if lezioni_per_data:
         wsG = wb.create_sheet('Giornate')
-        wsG['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+        wsG['A1'] = _nome_istituto()
         wsG['A1'].font = Font(bold=True, size=13)
         wsG['A2'] = f'CALENDARIO GIORNALIERO — CORSI DI RECUPERO — A.S. {ANNO}'
         wsG['A2'].font = Font(bold=True, size=11)
@@ -352,7 +359,7 @@ def export_xlsx():
     # Una riga per docente+materia, con ore totali per materia e per docente.
     # Ogni sessione (data+orario+docente) è contata una sola volta.
     wsR = wb.create_sheet('Riepilogo Ore')
-    wsR['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    wsR['A1'] = _nome_istituto()
     wsR['A1'].font = Font(bold=True, size=13)
     wsR['A2'] = f'RIEPILOGO ORE CORSI DI RECUPERO — A.S. {ANNO}'
     wsR['A2'].font = Font(bold=True, size=11)
@@ -470,9 +477,9 @@ def _genera_scheda_docente_xlsx(docente, gruppi_docente, anno_scol):
         return False
 
     STATO_LABEL = {
-        'aderisce':'✓ aderisce', 'sconosciuto':'✓ aderisce',
-        'non_risposto':'❓ non risposto', 'non_aderisce':'✗ non aderisce',
-        'studio_ind':'📚 studio ind.',
+        'aderisce':'✓︎ aderisce', 'sconosciuto':'✓︎ aderisce',
+        'non_risposto':'? non risposto', 'non_aderisce':'✕︎ non aderisce',
+        'studio_ind':'▥︎ studio ind.',
     }
     STATO_FILL = {
         'aderisce':'C6E0B4', 'sconosciuto':'C6E0B4',
@@ -505,7 +512,7 @@ def _genera_scheda_docente_xlsx(docente, gruppi_docente, anno_scol):
     nome_doc = f'{docente.cognome} {docente.nome or ""}'.strip()
 
     ws.merge_cells('A1:H1')
-    ws['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    ws['A1'] = _nome_istituto()
     ws['A1'].font = BOLD_W; ws['A1'].fill = BLU_FILL; ws['A1'].alignment = CENTER
 
     ws.merge_cells('A2:H2')
@@ -599,7 +606,7 @@ def _genera_scheda_docente_xlsx(docente, gruppi_docente, anno_scol):
     ws[f'A{row}'] = 'Legenda:'
     ws[f'A{row}'].font = Font(bold=True, size=9)
     row += 1
-    legenda = [('A','✓ aderisce','C6E0B4'), ('B','❓ non risposto','FFE699'), ('C','✗ non aderisce','F4B6B6')]
+    legenda = [('A','✓︎ aderisce','C6E0B4'), ('B','? non risposto','FFE699'), ('C','✕︎ non aderisce','F4B6B6')]
     for col, label, color in legenda:
         cell = ws[f'{col}{row}']
         cell.value = label
@@ -698,7 +705,7 @@ def _genera_scheda_coppia_agosto_xlsx(somministratore, assistente, gruppi_coppia
     nome_assist = f'{assistente.cognome} {assistente.nome or ""}'.strip() if assistente else '—'
 
     ws.merge_cells('A1:G1')
-    ws['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    ws['A1'] = _nome_istituto()
     ws['A1'].font = BOLD_W; ws['A1'].fill = BLU_FILL; ws['A1'].alignment = CENTER
 
     ws.merge_cells('A2:G2')
@@ -881,7 +888,7 @@ def agosto_export_xlsx():
     ws_doc = wb.create_sheet('Docenti')
 
     def sheet_header(ws, interno=False):
-        ws['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+        ws['A1'] = _nome_istituto()
         ws['A1'].font = Font(bold=True, size=13)
         ws['A2'] = f'CALENDARIO PROVE DI RECUPERO — A.S. {ANNO_AGO}'
         ws['A2'].font = Font(bold=True, size=11,

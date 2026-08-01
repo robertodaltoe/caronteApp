@@ -23,6 +23,9 @@ def get_ore_ist_docente(id_docente, anno=None):
         anno_ini = date(int(anno[:4]), 9, 1)
         anno_fin = date(int(anno[:4]) + 1, 8, 31)
 
+    from config_istituto import get_dati_istituto
+    limite = get_dati_istituto()['ore_ist_limite']
+
     try:
         presenze = (AttivitaIstPresenza.query
                     .join(AttivitaIst,
@@ -33,7 +36,7 @@ def get_ore_ist_docente(id_docente, anno=None):
                             AttivitaIst.data <= anno_fin)
                     .all())
     except Exception:
-        return {'A': 0.0, 'B': 0.0, 'limite': 40}
+        return {'A': 0.0, 'B': 0.0, 'limite': limite}
 
     ore_a = round(sum(p.ore_effettive for p in presenze
                       if TIPI_ATTIVITA.get(p.attivita.tipo, {}).get('bucket') == 'A'), 1)
@@ -43,7 +46,7 @@ def get_ore_ist_docente(id_docente, anno=None):
     # Dettaglio per il prospetto: lista presenze ordinate per data
     dettaglio = sorted(presenze, key=lambda p: p.attivita.data)
 
-    return {'A': ore_a, 'B': ore_b, 'limite': 40, 'dettaglio': dettaglio}
+    return {'A': ore_a, 'B': ore_b, 'limite': limite, 'dettaglio': dettaglio}
 
 report_bp = Blueprint('report', __name__)
 
@@ -56,16 +59,27 @@ TIPI_CIVICA    = ('civica', 'ed_civica')
 TIPI_PAGAMENTO = ('supplenza_pagamento',)
 
 
-def get_saldi_docente(id_docente):
+def get_saldi_docente(id_docente, anno_scol=None):
     """
-    Calcola saldi per un docente separando effettivo (<=oggi) e previsto (>oggi).
+    Calcola saldi per un docente nell'anno scolastico indicato (default:
+    l'anno corrente), separando effettivo (<=oggi) e previsto (>oggi).
     Ritorna dict con chiavi:
       supplenze, permessi, civica, pagamento  — tutto (effettivo + previsto)
       sup_svolte, perm_svolte, civ_svolte     — solo fino a oggi
       sup_prev, perm_prev, civ_prev           — solo future
+
+    NB: il saldo è sempre limitato a un singolo anno scolastico (colonna
+    anno_scol) — non è più un totale cumulativo su tutta la storia del
+    docente. Per consultare un anno diverso da quello corrente, passare
+    esplicitamente anno_scol.
     """
+    from config_anno import get_anno_corrente
+    if anno_scol is None:
+        anno_scol = get_anno_corrente()
+
     oggi = date.today()
-    movimenti = MovimentoBancaOre.query.filter_by(id_docente=id_docente).all()
+    movimenti = MovimentoBancaOre.query.filter_by(
+        id_docente=id_docente, anno_scol=anno_scol).all()
 
     def somma(movs, tipi, abs_val=False):
         vals = [abs(m.minuti) if abs_val else m.minuti
@@ -93,13 +107,18 @@ def get_saldi_docente(id_docente):
     }
 
 
-def get_storico_settimanale(id_docente):
+def get_storico_settimanale(id_docente, anno_scol=None):
     """
-    Raggruppa i movimenti per settimana (data).
+    Raggruppa i movimenti per settimana (data), limitati all'anno
+    scolastico indicato (default: quello corrente).
     Ritorna lista di dict ordinata per data.
     """
+    from config_anno import get_anno_corrente
+    if anno_scol is None:
+        anno_scol = get_anno_corrente()
+
     movimenti = (MovimentoBancaOre.query
-                 .filter_by(id_docente=id_docente)
+                 .filter_by(id_docente=id_docente, anno_scol=anno_scol)
                  .order_by(MovimentoBancaOre.data)
                  .all())
 
@@ -124,12 +143,201 @@ def get_storico_settimanale(id_docente):
     return [{'data': d, **v} for d, v in sorted(per_data.items())]
 
 
-# ── INDICE REPORT ────────────────────────────────────────────
+# ── SCADENZA 3 MESI (accordo sindacale: ore da recuperare/richiedere) ──
+def _lotti_aperti_docente(id_docente, anno_scol, oggi=None):
+    """
+    Da accordo sindacale, ogni singola ora a debito (da recuperare) o a
+    credito (da richiedere — pagamento o recupero) ha una propria scadenza
+    di 3 mesi dalla data in cui è maturata — non il saldo complessivo del
+    docente. Esempio: un'ora di permesso presa il 31/01 scade il 30/04;
+    un'altra presa il 4/02 scade il 4/05, indipendentemente l'una dall'altra.
+
+    Per calcolarlo servono lotti distinti per data, abbinati in ordine FIFO
+    quando arrivano movimenti di segno opposto che li compensano (es. una
+    supplenza svolta compensa, a partire dal permesso più vecchio ancora
+    aperto, il debito accumulato con i permessi). Non un semplice saldo
+    cumulato: due movimenti dello stesso segno (es. due permessi) NON si
+    compensano fra loro e restano due lotti distinti, ciascuno con la
+    propria scadenza.
+
+    Ritorna la lista dei lotti ancora aperti (non ancora compensati) per il
+    docente, con: data_apertura, minuti (con segno: negativo=debito,
+    positivo=credito), scadenza (data_apertura + 3 mesi di calendario),
+    scaduto (bool).
+    """
+    from dateutil.relativedelta import relativedelta
+    from collections import deque
+
+    if oggi is None:
+        oggi = date.today()
+
+    from config_istituto import get_dati_istituto
+    mesi_scadenza = get_dati_istituto()['scadenza_saldo_mesi']
+
+    movs = (MovimentoBancaOre.query
+            .filter_by(id_docente=id_docente, anno_scol=anno_scol)
+            .filter(MovimentoBancaOre.data <= oggi)
+            .order_by(MovimentoBancaOre.data, MovimentoBancaOre.id)
+            .all())
+
+    lotti = deque()  # ciascun elemento: [data_apertura, minuti_residui_con_segno]
+    for m in movs:
+        resto = m.minuti
+        if resto == 0:
+            continue
+        # Compensa FIFO con i lotti più vecchi di segno opposto
+        while resto != 0 and lotti and (lotti[0][1] > 0) != (resto > 0):
+            piu_vecchio = lotti[0]
+            if abs(piu_vecchio[1]) <= abs(resto):
+                resto += piu_vecchio[1]
+                lotti.popleft()
+            else:
+                piu_vecchio[1] += resto
+                resto = 0
+        if resto != 0:
+            lotti.append([m.data, resto])
+
+    risultati = []
+    for data_apertura, minuti in lotti:
+        scadenza = data_apertura + relativedelta(months=mesi_scadenza)
+        risultati.append({
+            'data_apertura': data_apertura,
+            'minuti': minuti,
+            'ore': abs(minuti) // 60,
+            'tipo': 'credito' if minuti > 0 else 'debito',
+            'scadenza': scadenza,
+            'scaduto': oggi > scadenza,
+        })
+    return risultati
+
+
+def _scadenza_saldi(docenti, anno_scol):
+    """
+    Applica `_lotti_aperti_docente` a tutti i docenti e restituisce, per
+    ciascuno con almeno un lotto scaduto, l'elenco dei lotti scaduti.
+    Indicatore pensato per informare (non bloccare): segnale di
+    qualità/puntualità nella gestione della banca ore per il DS, non un
+    blocco operativo.
+    """
+    oggi = date.today()
+    risultati = []
+    for d in docenti:
+        lotti = _lotti_aperti_docente(d.id, anno_scol, oggi=oggi)
+        scaduti = [l for l in lotti if l['scaduto']]
+        if not scaduti:
+            continue
+        scaduti.sort(key=lambda l: l['data_apertura'])
+        risultati.append({
+            'docente': d,
+            'lotti_scaduti': scaduti,
+            'n_scaduti': len(scaduti),
+            'piu_vecchio': scaduti[0]['data_apertura'],
+            'eta_giorni_piu_vecchio': (oggi - scaduti[0]['data_apertura']).days,
+        })
+    return risultati
+
+
+# ── CRUSCOTTO DI MONITORAGGIO (hub /report) ──────────────────
+def _dati_cruscotto(docenti, saldi, costo_ora):
+    """
+    Calcola i dati del cruscotto semplificato: numeri di sintesi, docenti
+    in credito/debito estremo, andamento assenze/supplenze del mese,
+    alert su soglie (ore istituzionali vicine al limite, supplenze
+    scoperte nei prossimi giorni). Riusa i saldi già calcolati da index()
+    invece di ricalcolarli.
+    """
+    from datetime import timedelta
+
+    oggi = date.today()
+
+    tot_credito = tot_debito = 0
+    critici = []   # netto <= -5h → debito rilevante
+    alti    = []   # netto >= 8h  → credito rilevante
+    for d in docenti:
+        s = saldi.get(d.id, {})
+        netto = s.get('netto_eff', 0)
+        if netto > 0:
+            tot_credito += netto
+        elif netto < 0:
+            tot_debito += netto
+        if netto <= -5:
+            critici.append({'docente': d, 'saldo': netto})
+        if netto >= 8:
+            alti.append({'docente': d, 'saldo': netto})
+    critici.sort(key=lambda x: x['saldo'])
+    alti.sort(key=lambda x: -x['saldo'])
+
+    # Andamento assenze/supplenze: mese corrente (fino a oggi) vs stesso
+    # periodo del mese precedente, per un confronto omogeneo.
+    primo_mese = oggi.replace(day=1)
+    if primo_mese.month == 1:
+        primo_mese_prec = primo_mese.replace(year=primo_mese.year - 1, month=12)
+    else:
+        primo_mese_prec = primo_mese.replace(month=primo_mese.month - 1)
+    giorni_trascorsi = (oggi - primo_mese).days
+    fine_confronto_prec = primo_mese_prec + timedelta(days=giorni_trascorsi)
+
+    n_assenze_mese = Assenza.query.filter(
+        Assenza.data >= primo_mese, Assenza.data <= oggi).count()
+    n_assenze_mese_prec = Assenza.query.filter(
+        Assenza.data >= primo_mese_prec, Assenza.data <= fine_confronto_prec).count()
+
+    n_supplenze_mese = Supplenza.query.filter(
+        Supplenza.data >= primo_mese, Supplenza.data <= oggi,
+        Supplenza.stato == 'assegnata').count()
+    n_supplenze_mese_prec = Supplenza.query.filter(
+        Supplenza.data >= primo_mese_prec, Supplenza.data <= fine_confronto_prec,
+        Supplenza.stato == 'assegnata').count()
+
+    # Alert soglie: supplenze scoperte nei prossimi 7 giorni + docenti
+    # vicini al limite ore istituzionali CCNL art.44 (soglia 32h su 40h).
+    supplenze_scoperte_7gg = Supplenza.query.filter(
+        Supplenza.stato == 'scoperta',
+        Supplenza.data >= oggi,
+        Supplenza.data <= oggi + timedelta(days=7)).count()
+
+    from config_istituto import get_dati_istituto as _get_dati_istituto_soglia
+    soglia_alert_ist = _get_dati_istituto_soglia()['ore_ist_soglia_alert']
+    alert_ore_ist = []
+    for d in docenti:
+        oi = get_ore_ist_docente(d.id)
+        if oi.get('A', 0) >= soglia_alert_ist or oi.get('B', 0) >= soglia_alert_ist:
+            alert_ore_ist.append({'docente': d, 'A': oi.get('A', 0), 'B': oi.get('B', 0)})
+    alert_ore_ist.sort(key=lambda x: -max(x['A'], x['B']))
+
+    # Scadenza 3 mesi (accordo sindacale) — informativo, non bloccante.
+    # Ogni voce riguarda un docente con almeno un'ora (lotto) scaduta;
+    # 'n_scaduti' è il numero di lotti/ore scadute per quel docente,
+    # 'eta_giorni_piu_vecchio' l'età del lotto scaduto più vecchio.
+    from config_anno import get_anno_corrente
+    scadenze_oltre_termine = sorted(
+        _scadenza_saldi(docenti, get_anno_corrente()),
+        key=lambda x: -x['eta_giorni_piu_vecchio'])
+
+    return {
+        'tot_credito': tot_credito, 'tot_debito': tot_debito,
+        'costo_stimato_credito': tot_credito * costo_ora,
+        'n_docenti': len(docenti),
+        'critici': critici, 'alti': alti,
+        'n_assenze_mese': n_assenze_mese, 'n_assenze_mese_prec': n_assenze_mese_prec,
+        'n_supplenze_mese': n_supplenze_mese, 'n_supplenze_mese_prec': n_supplenze_mese_prec,
+        'supplenze_scoperte_7gg': supplenze_scoperte_7gg,
+        'alert_ore_ist': alert_ore_ist,
+        'scadenze_oltre_termine': scadenze_oltre_termine,
+        'oggi': oggi,
+    }
+
+
+# ── INDICE REPORT — HUB con tab (Cruscotto / Dirigente / Docenti / Segreteria) ──
 @report_bp.route('/report')
 def index():
+    tab = request.args.get('tab', 'cruscotto')
+    if tab not in ('cruscotto', 'dirigente', 'docenti', 'segreteria'):
+        tab = 'cruscotto'
+
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
 
-    # Calcola saldi per tutti
+    # Calcola saldi per tutti (serve sia al tab Docenti sia al Cruscotto)
     saldi = {}
     for d in docenti:
         s = get_saldi_docente(d.id)
@@ -144,8 +352,9 @@ def index():
             'netto_prev': lordo_prev,
         }
 
-    # Costo ora supplenza (configurabile — default 29.08€ lordi)
-    COSTO_ORA = 29.08
+    # Costo ora supplenza — configurabile in Impostazioni > Dati istituto
+    from config_istituto import get_costo_ora
+    COSTO_ORA = get_costo_ora()
 
     # Ore istituzionali per tutti (solo ruoli interni)
     from flask import session as _sess2
@@ -155,11 +364,17 @@ def index():
         for d in docenti:
             ore_ist_idx[d.id] = get_ore_ist_docente(d.id)
 
+    cruscotto = None
+    if tab == 'cruscotto':
+        cruscotto = _dati_cruscotto(docenti, saldi, COSTO_ORA)
+
     return render_template('report/index.html',
+        tab=tab,
         docenti=docenti, saldi=saldi, oggi=date.today(),
         costo_ora=COSTO_ORA,
         ore_ist_idx=ore_ist_idx,
-        ruolo_utente=ruolo_idx)
+        ruolo_utente=ruolo_idx,
+        cruscotto=cruscotto)
 
 
 # ── REPORT SINGOLO DOCENTE ───────────────────────────────────
@@ -234,17 +449,27 @@ def singolo(id):
 # ── REPORT SINGOLO — EXPORT PDF ──────────────────────────────
 @report_bp.route('/report/docente/<int:id>/pdf')
 def singolo_pdf(id):
-    """Genera PDF del report singolo via WeasyPrint o fallback HTML."""
+    """Genera PDF del report singolo via WeasyPrint o fallback HTML.
+    Rispetta l'anno scolastico passato in query string (?anno=AAAA-AAAA),
+    così l'export scaricato da una vista archivio riflette l'anno che si
+    sta consultando invece di tornare sempre all'anno corrente."""
+    from config_anno import get_anno_corrente
+    anno_corrente = get_anno_corrente()
+    anno = request.args.get('anno', anno_corrente)
+
     d = Docente.query.get_or_404(id)
-    saldi   = get_saldi_docente(id)
-    storico = get_storico_settimanale(id)
+    saldi   = get_saldi_docente(id, anno_scol=anno)
+    storico = get_storico_settimanale(id, anno_scol=anno)
 
     saldo_lordo     = saldi['supplenze'] - saldi['permessi'] - saldi['civica']
     saldo_netto     = saldo_lordo - saldi['pagamento']
 
+    from config_anno import intervallo_anno_scolastico
+    _inizio_anno, _fine_anno = intervallo_anno_scolastico(anno)
     supplenze = (Supplenza.query
                  .filter_by(id_sostituto=id)
                  .filter(Supplenza.stato == 'assegnata')
+                 .filter(Supplenza.data >= _inizio_anno, Supplenza.data <= _fine_anno)
                  .order_by(Supplenza.data)
                  .all())
 
@@ -252,9 +477,10 @@ def singolo_pdf(id):
         docente=d, saldi=saldi,
         saldo_lordo=saldo_lordo, saldo_netto=saldo_netto,
         storico=storico, supplenze=supplenze,
-        oggi=date.today(),
+        oggi=date.today(), anno=anno, anno_corrente=anno_corrente,
     )
 
+    suffisso_anno = '' if anno == anno_corrente else f'_{anno}'
     try:
         from weasyprint import HTML
         pdf_bytes = HTML(string=html_content).write_pdf()
@@ -262,7 +488,7 @@ def singolo_pdf(id):
             io.BytesIO(pdf_bytes),
             mimetype='application/pdf',
             as_attachment=True,
-            download_name=f'report_{d.cognome}_{date.today().isoformat()}.pdf'
+            download_name=f'report_{d.cognome}{suffisso_anno}_{date.today().isoformat()}.pdf'
         )
     except ImportError:
         # WeasyPrint non installato — ritorna HTML con print CSS
@@ -272,25 +498,35 @@ def singolo_pdf(id):
 # ── REPORT SINGOLO — EXPORT XLSX ────────────────────────────
 @report_bp.route('/report/docente/<int:id>/xlsx')
 def singolo_xlsx(id):
+    """Come singolo_pdf: rispetta ?anno= per esportare l'anno archiviato
+    che si sta consultando, invece di tornare sempre all'anno corrente."""
     from modules.xlsx_report import _build_xlsx_singolo
+    from config_anno import get_anno_corrente
+    anno_corrente = get_anno_corrente()
+    anno = request.args.get('anno', anno_corrente)
+
     d        = Docente.query.get_or_404(id)
-    saldi    = get_saldi_docente(id)
-    storico  = get_storico_settimanale(id)
+    saldi    = get_saldi_docente(id, anno_scol=anno)
+    storico  = get_storico_settimanale(id, anno_scol=anno)
     saldo_lordo = saldi['supplenze'] - saldi['permessi'] - saldi['civica']
     netto    = saldo_lordo - saldi['pagamento']
     effettivo= netto
+    from config_anno import intervallo_anno_scolastico
+    _inizio_anno, _fine_anno = intervallo_anno_scolastico(anno)
     supplenze= (Supplenza.query.filter_by(id_sostituto=id)
                 .filter(Supplenza.stato=='assegnata')
+                .filter(Supplenza.data >= _inizio_anno, Supplenza.data <= _fine_anno)
                 .order_by(Supplenza.data).all())
 
     wb = _build_xlsx_singolo(d, saldi, storico, supplenze, netto, effettivo, date.today())
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
+    suffisso_anno = '' if anno == anno_corrente else f'_{anno}'
     return send_file(buf,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f'DOC_{d.cognome}_{date.today().isoformat()}.xlsx'
+        download_name=f'DOC_{d.cognome}{suffisso_anno}_{date.today().isoformat()}.xlsx'
     )
 
 
@@ -329,8 +565,10 @@ def globale_xlsx():
     ws_idx = wb.active
     ws_idx.title = "Indice"
 
+    from config_istituto import get_dati_istituto as _get_dati_istituto_xlsx
+    _nome_ist_xlsx = _get_dati_istituto_xlsx()['nome_istituto']
     ws_idx.merge_cells("A1:H1")
-    ws_idx["A1"].value = f"BANCA ORE DOCENTI — IIS Da Vinci Chiavenna — {date.today().strftime('%d/%m/%Y')}"
+    ws_idx["A1"].value = f"BANCA ORE DOCENTI — {_nome_ist_xlsx} — {date.today().strftime('%d/%m/%Y')}"
     ws_idx["A1"].font  = Font(bold=True, size=14, color="1F3864")
     ws_idx.row_dimensions[1].height = 28
 
@@ -534,7 +772,15 @@ def esporta_tutti_pdf():
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     oggi_str = date.today().isoformat()
 
+    # Docenti con lo stesso cognome (es. due omonimi) devono avere nomi di
+    # file distinti nello ZIP, altrimenti uno dei due PDF viene perso
+    # silenziosamente all'estrazione (bug reale osservato: Ghezzi,
+    # Tramontana, Valena sono ciascuno in coppia in questo istituto).
+    from collections import Counter
+    conteggio_cognomi = Counter(d.cognome for d in docenti)
+
     zip_buf = io.BytesIO()
+    nomi_usati = set()
     with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for d in docenti:
             try:
@@ -554,11 +800,22 @@ def esporta_tutti_pdf():
                     oggi=date.today(),
                 )
                 pdf_bytes = HTML(string=html_content).write_pdf()
-                fname = f'DOC_{d.cognome}.pdf'
+                if conteggio_cognomi[d.cognome] > 1:
+                    # Cognome duplicato: aggiungi l'iniziale del nome per
+                    # distinguere i file nello ZIP.
+                    iniziale = f'_{d.nome[0]}' if d.nome else f'_id{d.id}'
+                    fname = f'DOC_{d.cognome}{iniziale}.pdf'
+                else:
+                    fname = f'DOC_{d.cognome}.pdf'
+                if fname in nomi_usati:
+                    # Ulteriore fallback di sicurezza, in caso anche
+                    # cognome+iniziale coincidano.
+                    fname = f'DOC_{d.cognome}_id{d.id}.pdf'
+                nomi_usati.add(fname)
                 zf.writestr(fname, pdf_bytes)
             except Exception as e:
                 # Aggiungi file di errore invece di fallire tutto
-                zf.writestr(f'ERRORE_{d.cognome}.txt', str(e))
+                zf.writestr(f'ERRORE_{d.cognome}_id{d.id}.txt', str(e))
 
     zip_buf.seek(0)
     return send_file(
@@ -710,12 +967,15 @@ def ottimizzazione_simulazioni():
             cur += timedelta(days=1)
     date_sim_ordered = sorted(date_sim_set)
 
-    # Saldi effettivi attuali per tutti i docenti
+    # Saldi effettivi attuali per tutti i docenti (solo anno scolastico corrente)
+    from config_anno import get_anno_corrente
+    anno_corrente = get_anno_corrente()
     docenti_attivi = Docente.query.filter_by(attivo=True).all()
     saldi_att = {}
     for d in docenti_attivi:
         movs = MovimentoBancaOre.query.filter(
             MovimentoBancaOre.id_docente == d.id,
+            MovimentoBancaOre.anno_scol == anno_corrente,
             MovimentoBancaOre.data <= oggi
         ).all()
         sup  = sum(m.minuti for m in movs if m.tipo == 'supplenza_recupero') // 60
@@ -751,19 +1011,11 @@ def ottimizzazione_simulazioni():
         for d in (a.data_inizio,) if a.data_inizio >= oggi
     ))
 
-    # Saldi effettivi per tutti i docenti attivi
-    docenti_attivi = Docente.query.filter_by(attivo=True).all()
-    saldi = {}
-    for d in docenti_attivi:
-        movs = MovimentoBancaOre.query.filter(
-            MovimentoBancaOre.id_docente == d.id,
-            MovimentoBancaOre.data <= oggi
-        ).all()
-        sup  = sum(m.minuti for m in movs if m.tipo == 'supplenza_recupero') // 60
-        perm = sum(abs(m.minuti) for m in movs if m.tipo in ('permesso_orario','permesso')) // 60
-        civ  = sum(abs(m.minuti) for m in movs if m.tipo in ('civica','ed_civica')) // 60
-        pag  = sum(abs(m.minuti) for m in movs if m.tipo == 'supplenza_pagamento') // 60
-        saldi[d.id] = sup - perm - civ - pag
+    # (Nota: qui prima c'era un secondo calcolo di "saldi" per tutti i
+    # docenti, duplicato rispetto a saldi_att/saldi_proj sopra e privo del
+    # filtro anno_scol — verificato che non veniva mai effettivamente
+    # utilizzato più sotto (il sort usa saldi_proj), quindi rimosso come
+    # codice morto invece di essere anche lui corretto per anno.)
 
     # Per ogni giorno di simulazione, calcola il prospetto
     prospetto = {}
@@ -886,139 +1138,42 @@ def ottimizzazione_simulazioni():
 
 
 # ── PIANIFICAZIONE PERMESSI ──────────────────────────────────
-@report_bp.route('/report/pianifica-permessi')
+@report_bp.route('/report/pianifica-permessi', methods=['GET', 'POST'])
 def pianifica_permessi():
-    from models.orario_docente import OrarioDocente
-    from models.assenza import Assenza
-    from models.indisponibilita import Indisponibilita
-    from collections import defaultdict
-    from datetime import timedelta
+    from config_anno import get_anno_corrente
+    from config_calendario import set_data_fine_lezioni, set_ore_ultimo_giorno
+    from modules.pianificazione_permessi import calcola_pianificazione
+    anno_corrente = get_anno_corrente()
 
-    oggi = date.today()
-    fine_anno = date(2026, 6, 6)
+    # Configurazione (via form nella pagina stessa, invece di date hardcoded
+    # nel codice) — per anno scolastico, così va aggiornata una volta sola
+    # ogni settembre invece di essere dimenticata nel codice. I giorni non
+    # didattici (ponti, sospensioni) non hanno più un elenco proprio qui:
+    # vengono presi direttamente da Impostazioni > Sospensioni didattiche,
+    # così c'è un solo posto dove inserirli invece di due elenchi separati
+    # da tenere allineati a mano.
+    if request.method == 'POST':
+        try:
+            data_fine_form = date.fromisoformat(request.form.get('data_fine_lezioni', ''))
+            set_data_fine_lezioni(anno_corrente, data_fine_form)
+            ore_ultimo_form = request.form.get('ore_ultimo_giorno', '').strip()
+            set_ore_ultimo_giorno(anno_corrente, int(ore_ultimo_form) if ore_ultimo_form else None)
+            flash(f'Calendario per {anno_corrente} aggiornato.', 'success')
+        except ValueError:
+            flash('Data non valida (formato atteso: AAAA-MM-GG).', 'danger')
+        return redirect(url_for('report.pianifica_permessi'))
 
-    # Saldi proiettati
-    saldi_eff_raw = db.session.query(
-        MovimentoBancaOre.id_docente,
-        db.func.sum(MovimentoBancaOre.minuti)
-    ).filter(MovimentoBancaOre.data <= oggi).group_by(MovimentoBancaOre.id_docente).all()
-    saldi_prev_raw = db.session.query(
-        MovimentoBancaOre.id_docente,
-        db.func.sum(MovimentoBancaOre.minuti)
-    ).filter(MovimentoBancaOre.data > oggi).group_by(MovimentoBancaOre.id_docente).all()
-
-    saldi_eff  = {r[0]: (r[1] or 0)//60 for r in saldi_eff_raw}
-    saldi_prev = {r[0]: (r[1] or 0)//60 for r in saldi_prev_raw}
-
-    GIORNI_NOMI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
-
-    # Date future lavorative (esclusi festivi 1-2 giugno)
-    FESTIVI = {date(2026,6,1), date(2026,6,2)}
-    date_future = []
-    cur = oggi + timedelta(days=1)
-    while cur <= fine_anno:
-        if cur.weekday() < 6 and cur not in FESTIVI:
-            date_future.append(cur)
-        cur += timedelta(days=1)
-
-    # Assenze e indisponibilità future per docente+data (cache)
-    ass_future = defaultdict(set)   # doc_id -> set di date con assenza
-    for a in Assenza.query.filter(Assenza.data > oggi).all():
-        ass_future[a.id_docente].add(a.data)
-    indisp_future = defaultdict(lambda: defaultdict(set))  # doc_id -> data -> set ore
-    for i in Indisponibilita.query.filter(Indisponibilita.data > oggi).all():
-        indisp_future[i.id_docente][i.data].add(i.ora)
-    # Supplenze già assegnate come sostituto — bloccano l'ora
-    for s in Supplenza.query.filter(
-        Supplenza.data > oggi,
-        Supplenza.stato == 'assegnata',
-        Supplenza.id_sostituto != None
-    ).all():
-        indisp_future[s.id_sostituto][s.data].add(s.ora)
-
-    risultati = []
-    for doc in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all():
-        sal_eff  = saldi_eff.get(doc.id, 0)
-        sal_prev = saldi_prev.get(doc.id, 0)
-        sal_fin  = sal_eff + sal_prev
-        if sal_fin < 1:
-            continue
-
-        # Orario per giorno — tutte le ore di servizio (lezione + potenziamento)
-        orario = defaultdict(list)
-        for s in OrarioDocente.query.filter_by(id_docente=doc.id).all():
-            if (s.tipo_ora in ('lezione','potenziamento')
-                    and s.classe not in ('---','-x-','',None)):
-                orario[s.giorno].append(s.ora)
-
-        opzioni = []
-        for data in date_future:
-            giorno = data.weekday()
-            ore_base = sorted(set(orario.get(giorno, [])))
-            if not ore_base:
-                continue
-            # Già totalmente assente quel giorno (assenza manuale)?
-            if data in ass_future[doc.id]:
-                continue
-            # Ore bloccate = indisponibilità (simulazioni, BIM, ecc.)
-            # In quelle ore NON può chiedere permesso
-            ore_bloccate = indisp_future[doc.id].get(data, set())
-            # Il 6 giugno le lezioni finiscono dopo la 3ª ora
-            ora_max_giorno = 3 if data == date(2026, 6, 6) else 9
-            # Ore richiedibili = ore di servizio NON bloccate e nei limiti della giornata
-            ore_permesso = [o for o in ore_base
-                            if o not in ore_bloccate and o <= ora_max_giorno]
-            if not ore_permesso:
-                continue
-
-            # Sequenza finale consecutiva (per liberare fine giornata)
-            seq_fine = [ore_permesso[-1]]
-            for i in range(len(ore_permesso)-2, -1, -1):
-                if ore_permesso[i] == ore_permesso[i+1] - 1:
-                    seq_fine.insert(0, ore_permesso[i])
-                else:
-                    break
-
-            # Sequenza iniziale consecutiva
-            seq_inizio = [ore_permesso[0]]
-            for i in range(1, len(ore_permesso)):
-                if ore_permesso[i] == ore_permesso[i-1] + 1:
-                    seq_inizio.append(ore_permesso[i])
-                else:
-                    break
-
-            # "Valore" dell'opzione: quante ore usa vs quante ne libera
-            # Fine giornata: usa N ore di permesso, libera la coda
-            # Inizio giornata: usa N ore, libera la testa
-            opzioni.append({
-                'data':          data,
-                'giorno_nome':   GIORNI_NOMI[giorno],
-                'ore_totali':    [o for o in ore_base if o <= ora_max_giorno],
-                'ore_permesso':  ore_permesso,
-                'ore_bloccate':  [o for o in ore_bloccate if o <= ora_max_giorno],
-                'fine': {
-                    'da': seq_fine[0], 'a': seq_fine[-1], 'n': len(seq_fine),
-                    'label': f'{seq_fine[0]}ª–{seq_fine[-1]}ª' if len(seq_fine)>1 else f'{seq_fine[0]}ª'
-                },
-                'inizio': {
-                    'da': seq_inizio[0], 'a': seq_inizio[-1], 'n': len(seq_inizio),
-                    'label': f'{seq_inizio[0]}ª–{seq_inizio[-1]}ª' if len(seq_inizio)>1 else f'{seq_inizio[0]}ª'
-                },
-            })
-
-        if opzioni:
-            risultati.append({
-                'doc':      doc,
-                'sal_fin':  sal_fin,
-                'sal_eff':  sal_eff,
-                'sal_prev': sal_prev,
-                'opzioni':  opzioni,
-            })
-
-    risultati.sort(key=lambda x: -x['sal_fin'])
+    # Il calcolo (chi può chiedere un permesso, quando, quante ore) è
+    # interamente in modules/pianificazione_permessi.py: la route si
+    # limita a chiamarlo e a passare il risultato al template.
+    calc = calcola_pianificazione(anno_corrente)
 
     return render_template('report/pianifica_permessi.html',
-        risultati=risultati, oggi=oggi)
+        risultati=calc['risultati'], oggi=calc['oggi'],
+        anno_corrente=anno_corrente,
+        data_fine_lezioni=calc['fine_anno'],
+        n_festivi_extra=calc['n_festivi_extra'],
+        ore_ultimo_giorno=calc['ore_ultimo_giorno'])
 
 
 # ── STORICO PROSPETTI ────────────────────────────────────────
@@ -1116,6 +1271,30 @@ def dirigente():
     casi_critici.sort(key=lambda x: x['saldo'])
     crediti_alti.sort(key=lambda x: -x['saldo'])
 
+    # Indicatore di qualità: tasso di puntualità nel saldare la banca ore
+    # entro 3 mesi, come da accordo sindacale. Calcolato sulle singole ore
+    # (lotti) a debito/credito ancora aperte, ciascuna con la propria
+    # scadenza individuale di 3 mesi dalla data di maturazione — non sul
+    # saldo complessivo del docente. Indicatore informativo per il
+    # Dirigente, non blocca nessuna operazione.
+    from config_anno import get_anno_corrente
+    anno_corrente_dirig = get_anno_corrente()
+    n_lotti_aperti = 0
+    n_lotti_scaduti = 0
+    for d in docenti:
+        lotti = _lotti_aperti_docente(d.id, anno_corrente_dirig)
+        n_lotti_aperti += len(lotti)
+        n_lotti_scaduti += sum(1 for l in lotti if l['scaduto'])
+    if n_lotti_aperti > 0:
+        tasso_puntualita = round((n_lotti_aperti - n_lotti_scaduti) / n_lotti_aperti * 100)
+    else:
+        tasso_puntualita = 100
+    n_saldi_aperti  = n_lotti_aperti
+    n_oltre_termine = n_lotti_scaduti
+
+    from config_istituto import get_costo_ora
+    costo_ora_dirigente = get_costo_ora()
+
     return render_template('report/dirigente.html',
         n_docenti    = len(docenti),
         equilibrio   = equilibrio,
@@ -1130,6 +1309,10 @@ def dirigente():
         tot_pagamento= tot_pagamento,
         casi_critici = casi_critici,
         crediti_alti = crediti_alti,
+        n_saldi_aperti   = n_saldi_aperti,
+        n_oltre_termine  = n_oltre_termine,
+        tasso_puntualita = tasso_puntualita,
+        costo_ora        = costo_ora_dirigente,
         oggi         = date.today(),
     )
 

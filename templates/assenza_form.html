@@ -58,7 +58,7 @@
         <label>Durata</label>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="durata-btn attivo" onclick="setDurata('singolo', this)">📅 Un giorno</button>
-            <button type="button" class="durata-btn" onclick="setDurata('range', this)">📆 Più giorni</button>
+            <button type="button" class="durata-btn" onclick="setDurata('range', this)">📅 Più giorni</button>
             <button type="button" class="durata-btn" onclick="setDurata('periodico', this)">🔁 Periodico</button>
         </div>
     </div>
@@ -138,7 +138,7 @@
     <div id="sez-ist-orario" style="display:none; margin-top:10px; padding:12px 14px;
          background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">
         <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:8px;">
-            🏛 Permesso per attività istituzionale (orario assoluto)
+            🏫 Permesso per attività istituzionale (orario assoluto)
         </div>
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div>
@@ -216,7 +216,7 @@
         <div id="alert-sospensione" style="background:#fff7ed; border:1px solid #fed7aa;
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
             <div style="font-size:.85rem; font-weight:700; color:#92400e;">
-                ⚠ Giorno di sospensione didattica
+                ⚠️ Giorno di sospensione didattica
             </div>
             <div style="font-size:.8rem; color:#78350f; margin-top:3px;">
                 {{ sospensione_oggi }} — le supplenze in classe non verranno generate,
@@ -230,7 +230,7 @@
         <div id="alert-ist" style="background:#eff6ff; border:1px solid #bfdbfe;
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
             <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:6px;">
-                🏛 Attività istituzionali in programma questo giorno:
+                🏫 Attività istituzionali in programma questo giorno:
             </div>
             {% for ev in eventi_ist_giorno %}
             <div style="font-size:.8rem; color:#1e3a5f; margin-bottom:3px;">
@@ -322,12 +322,15 @@
                 </span>
             </label>
             <textarea name="note_interne" rows="2"
-                      placeholder="Es. certificato medico, protocollo...">{{ assenza.note_interne or '' if assenza }}</textarea>
+                      placeholder="Es. numero protocollo, riferimento pratica...">{{ assenza.note_interne or '' if assenza }}</textarea>
+            <div style="font-size:.72rem; color:#92400e; margin-top:4px;">
+                ⚠︎ Non riportare qui diagnosi, prognosi o altri dettagli clinici — solo riferimenti amministrativi (es. numero di protocollo).
+            </div>
         </div>
     </div>
 
     <div style="display:flex; gap:10px;">
-        <button class="btn btn-success" type="submit">✓ Registra</button>
+        <button class="btn btn-success" type="submit">✅ Registra</button>
         <a href="{{ url_for('dashboard.index', data=data_sel) }}" class="btn btn-primary">Annulla</a>
     </div>
 
@@ -403,7 +406,7 @@ function setTipo(tipo, btn) {
     // Info box
     const info = TIPI_INFO[tipo] || {};
     const box  = document.getElementById('info-tipo');
-    box.innerHTML = (info.banca ? '📊 ' : 'ℹ️ ') + (info.txt || '');
+    box.innerHTML = (info.banca ? '💰 ' : 'ℹ️ ') + (info.txt || '');
     box.style.background   = info.banca ? 'var(--giallo-bg)' : 'var(--blu-light)';
     box.style.borderColor  = info.banca ? '#e0a800'          : 'var(--blu-med)';
     box.style.color        = info.banca ? 'var(--giallo)'    : 'var(--blu)';
@@ -433,7 +436,7 @@ function calcolaDurataIst() {
         if (tot > 0) {
             div.textContent = `${Math.floor(tot/60)}h ${tot%60>0 ? tot%60+'m' : ''}`.trim();
             div.style.color = tot > 120 ? '#dc2626' : '#1e40af';
-            if (tot > 120) div.textContent += ' ⚠ supera 2h CCNL';
+            if (tot > 120) div.textContent += ' ⚠️ supera 2h CCNL';
         } else {
             div.textContent = '';
         }
@@ -449,7 +452,7 @@ function toggleOra(chip) {
     if (chip.classList.contains('fuori-orario')) return;
     const ora = chip.dataset.ora;
     if (ora === '0') {
-        // "Tutta" selezionato → deseleziona le singole
+        // "Tutta" selezionato →︎ deseleziona le singole
         const eraSel = chip.classList.contains('sel');
         document.querySelectorAll('.ora-chip:not([data-ora=\"0\"])').forEach(c => c.classList.remove('sel'));
         chip.classList.toggle('sel', !eraSel);
@@ -471,7 +474,7 @@ function aggiornaHiddenOre() {
             div.innerHTML += `<input type=\"hidden\" name=\"ore_scelte\" value=\"${o}\">`;
         });
     }
-    // se tutta o nessuna → nessun hidden → backend usa ora_inizio/ora_fine full
+    // se tutta o nessuna →︎ nessun hidden →︎ backend usa ora_inizio/ora_fine full
 }
 
 // ── ORARIO DOCENTE ────────────────────────────────────────────
@@ -531,11 +534,11 @@ function aggiornaAlert() {
     if (rim <= 0) {
         box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
             'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;margin-top:8px;';
-        box.innerHTML = `⛔ <strong>Limite raggiunto</strong> — ${l.nota}. Usati: ${usati}/${l.n} ${l.u}.`;
+        box.innerHTML = `🚫 <strong>Limite raggiunto</strong> — ${l.nota}. Usati: ${usati}/${l.n} ${l.u}.`;
     } else if (rim === 1) {
         box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
             'background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin-top:8px;';
-        box.innerHTML = `⚠ <strong>Quasi al limite</strong> — rimane 1 ${l.u.slice(0,-1)}. ${l.nota}.`;
+        box.innerHTML = `⚠️ <strong>Quasi al limite</strong> — rimane 1 ${l.u.slice(0,-1)}. ${l.nota}.`;
     } else { box.style.display = 'none'; }
 }
 
@@ -579,7 +582,7 @@ function aggiungiSlotScambio() {
     div.className = 'scambio-slot';
     div.style.cssText = 'border:1px solid #e5eaf0;border-radius:8px;padding:10px 14px;margin-bottom:8px;';
     div.innerHTML = cont.querySelector('.scambio-slot').innerHTML;
-    div.innerHTML += '<button type="button" onclick="this.closest(\'.scambio-slot\').remove()" style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:.8rem;margin-top:6px;">✕ Rimuovi</button>';
+    div.innerHTML += '<button type="button" onclick="this.closest(\'.scambio-slot\').remove()" style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:.8rem;margin-top:6px;">🗑 Rimuovi</button>';
     // Reset valori
     div.querySelectorAll('input[type=date]').forEach(i => i.value = '');
     div.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
@@ -604,7 +607,7 @@ function verificaSospensione(dataStr) {
     if (motivo) {
         box.style.background = '#fff7ed';
         box.style.border = '1px solid #fed7aa';
-        box.innerHTML = '<strong style="color:#92400e;">⚠ Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
+        box.innerHTML = '<strong style="color:#92400e;">⚠️ Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
         box.style.display = 'block';
         document.querySelector('#form-assenza button[type=submit]').disabled = false;
         document.querySelector('#form-assenza button[type=submit]').style.opacity = '1';

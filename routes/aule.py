@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db
 from models.aula import Aula, SEDI, AULE_LIST
 from models.aula_override import AulaOverride
+from models.aula_mappa_coords import SEZIONI
 from models.supplenza import Supplenza
 from models.orario_docente import OrarioDocente
 from models.piano_studi import ClasseSezione
@@ -47,8 +48,7 @@ def lista():
     # Rimozione rapida
     rimuovi = request.args.get('rimuovi')
     if rimuovi:
-        a = Aula.query.filter_by(anno_scol=anno,
-                                  classe=rimuovi.upper()).first()
+        a = Aula.query.filter_by(anno_scol=anno, classe=rimuovi.upper()).first()
         if a:
             db.session.delete(a)
             db.session.commit()
@@ -77,6 +77,9 @@ def salva():
         flash('Classe, aula e sede sono obbligatori.', 'error')
         return redirect(url_for('aule.lista', anno=anno))
 
+    # Ogni classe può avere un'aula diversa per ogni anno scolastico
+    # (vincolo UNIQUE su anno_scol+classe): cerchiamo/aggiorniamo la riga
+    # specifica di quell'anno, senza toccare le assegnazioni di altri anni.
     a = Aula.query.filter_by(anno_scol=anno, classe=classe).first()
     if a:
         a.aula = aula
@@ -101,9 +104,12 @@ def copia_anno():
     sorgenti = Aula.query.filter_by(anno_scol=anno_da).all()
     n_copiate = n_saltate = 0
     for s in sorgenti:
-        esiste = Aula.query.filter_by(anno_scol=anno_a,
-                                       classe=s.classe).first()
-        if esiste:
+        # Ogni anno ha le sue righe indipendenti (vincolo UNIQUE su
+        # anno_scol+classe): se la classe ha già un'aula assegnata per
+        # l'anno di destinazione la saltiamo, altrimenti creiamo una nuova
+        # riga per quell'anno senza toccare le altre.
+        esistente = Aula.query.filter_by(anno_scol=anno_a, classe=s.classe).first()
+        if esistente:
             n_saltate += 1
         else:
             db.session.add(Aula(anno_scol=anno_a, classe=s.classe,
@@ -157,3 +163,81 @@ def override(id_supplenza):
         supplenza=s, aula_std=aula_std, override=ov,
         sedi=SEDI, aule_list=AULE_LIST,
         next=request.args.get('next', ''))
+
+
+@aule_bp.route('/aule/mappa')
+def mappa():
+    """
+    Piantina interattiva, divisa in più sezioni (una per piano/edificio,
+    ciascuna con la propria immagine). Mostra le zone cliccabili con le
+    classi assegnate; supporta due modalità (query string 'modo'):
+    'visualizza' (sola lettura) e 'assegna' (permette di scegliere la
+    classe da assegnare a un'aula direttamente dalla mappa).
+    """
+    anno = request.args.get('anno', get_anno_corrente())
+    modo = request.args.get('modo', 'visualizza')
+
+    aule_anno = Aula.query.filter_by(anno_scol=anno).all()
+    occupazione = {}
+    for a in aule_anno:
+        occupazione.setdefault(a.aula, []).append(a.classe)
+
+    classi_anno = _classi_per_anno(anno)
+    classi_assegnate = {a.classe for a in aule_anno}
+    classi_libere = [c for c in classi_anno if c not in classi_assegnate]
+
+    anni_disponibili = _anni_disponibili()
+
+    # Elenco completo di tutte le aule (numero + sede), ordinato numericamente
+    # (es. 1,2,...,8,8A,8B,8C,9,10,...) per la tabella riepilogativa
+    import re
+    def _chiave_ordinamento(num):
+        m = re.match(r'(\d+)([A-Za-z]*)', num)
+        return (int(m.group(1)), m.group(2))
+
+    tutte_aule = []
+    for sez in SEZIONI.values():
+        for num, box in sez['aule'].items():
+            tutte_aule.append({'numero': num, 'sede': sez['sede']})
+    tutte_aule.sort(key=lambda a: _chiave_ordinamento(a['numero']))
+
+    return render_template('aule/mappa.html',
+        anno=anno, modo=modo, sezioni=SEZIONI,
+        occupazione=occupazione, tutte_aule=tutte_aule,
+        classi_libere=classi_libere, anni_disponibili=anni_disponibili)
+
+
+@aule_bp.route('/aule/mappa/assegna', methods=['POST'])
+def mappa_assegna():
+    """Assegna (o riassegna) un'aula a una classe dalla mappa interattiva."""
+    anno   = request.form.get('anno_scol', get_anno_corrente())
+    aula   = request.form.get('aula', '').strip()
+    classe = request.form.get('classe', '').strip().upper()
+    sede   = request.form.get('sede', '').strip()
+
+    if not aula or not classe or not sede:
+        return jsonify({'ok': False, 'errore': 'Dati mancanti.'}), 400
+
+    # Ogni classe può avere un'aula diversa per ogni anno scolastico
+    # (vincolo UNIQUE su anno_scol+classe): cerchiamo/aggiorniamo la riga
+    # specifica di quell'anno, senza toccare le assegnazioni di altri anni.
+    a = Aula.query.filter_by(anno_scol=anno, classe=classe).first()
+    if a:
+        a.aula = aula
+        a.sede = sede
+    else:
+        db.session.add(Aula(anno_scol=anno, classe=classe, aula=aula, sede=sede))
+    db.session.commit()
+    return jsonify({'ok': True, 'aula': aula, 'classe': classe, 'sede': sede})
+
+
+@aule_bp.route('/aule/mappa/libera', methods=['POST'])
+def mappa_libera():
+    """Rimuove l'assegnazione aula per una classe, per l'anno indicato (dalla mappa)."""
+    anno   = request.form.get('anno_scol', get_anno_corrente())
+    classe = request.form.get('classe', '').strip().upper()
+    a = Aula.query.filter_by(anno_scol=anno, classe=classe).first()
+    if a:
+        db.session.delete(a)
+        db.session.commit()
+    return jsonify({'ok': True, 'classe': classe})

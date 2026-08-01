@@ -2,15 +2,15 @@
 {% block title %}Piano di studi{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p2', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📚 Piano di studi — {{ indirizzo }} {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p2', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Piano di studi — {{ indirizzo }} {{ anno }}</h1>
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #7c3aed;">
     Ore settimanali per classe di concorso, materia e anno di corso.
     Ogni cella ha il select CC indipendente per le materie con più classi concorrenti.
-    Il badge <span style="background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:5px; font-size:.78rem; font-weight:700;">⚠️ atipica</span>
+    Il badge <span style="background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:5px; font-size:.78rem; font-weight:700;">⚠︎️ atipica</span>
     appare solo se la scelta diverge dal default normativo.
     Puoi aggiungere o eliminare materie con i controlli in fondo a ogni blocco.
 </div>
@@ -80,7 +80,7 @@
                                       border-radius:5px; background:#f0f0ff; user-select:none;
                                       color:#6366f1; font-weight:600;"
                                onclick="selezionaTutti(this)">
-                            ✓ tutti
+                            ✓︎ tutti
                         </label>
                     </div>
                 </div>
@@ -114,7 +114,7 @@
                 </button>
             </form>
             <div style="font-size:.74rem; color:var(--grigio); margin-top:8px;">
-                💡 Dopo aver aggiunto la prima riga, usa il pulsante
+                ✦︎ Dopo aver aggiunto la prima riga, usa il pulsante
                 <strong>＋ Aggiungi materia</strong> dentro il blocco CC appena creato
                 per completare tutti gli anni di corso.
             </div>
@@ -204,13 +204,20 @@
                     {% for mat in gruppo.materie %}
                     {% set prima_riga = mat.prima_riga %}
                     {% set sigla_mat = prima_riga.materia.nome_breve or prima_riga.materia.sigla if prima_riga.id_materia and prima_riga.materia else '' %}
-                    <div style="display:flex; align-items:center; gap:4px;
+                    <div style="display:flex; flex-direction:column; gap:1px;
                                 {{ 'margin-top:6px; padding-top:6px; border-top:1px solid #e0e7ff;' if not loop.first else '' }}">
-                        <span style="font-size:.65rem; font-weight:700; color:#6366f1; min-width:28px;">{{ sigla_mat }}</span>
-                        <input type="text" name="nome_{{ prima_riga.id }}" value="{{ mat.nome }}"
-                               data-autosave="nome_piano:{{ prima_riga.id }}"
-                               style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
-                                      padding:3px 6px; font-size:.8rem; background:#fafafa;">
+                        <span style="font-size:.6rem; font-weight:700; color:#6366f1;">{{ sigla_mat }}</span>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <input type="text" name="nome_{{ prima_riga.id }}" value="{{ mat.nome }}"
+                                   data-autosave="nome_piano:{{ prima_riga.id }}"
+                                   style="flex:1; border:1px solid #e5e7eb; border-radius:4px;
+                                          padding:2px 6px; font-size:.8rem; background:#fafafa;">
+                            <button type="button"
+                                    onclick="eliminaRighe({{ mat.righe | map(attribute='id') | list }})"
+                                    style="background:none; border:none; cursor:pointer; color:#dc2626;
+                                           font-size:.72rem; padding:2px 4px; flex-shrink:0;"
+                                    title="Elimina solo {{ mat.nome }}">✕︎</button>
+                        </div>
                     </div>
                     {% endfor %}
                 </td>
@@ -223,7 +230,7 @@
                     {% set sigla_mat = prima_riga.materia.nome_breve or prima_riga.materia.sigla if prima_riga.id_materia and prima_riga.materia else '' %}
                     <div style="{{ 'margin-top:6px; padding-top:6px; border-top:1px solid #e0e7ff;' if not loop.first else '' }}
                                 display:flex; flex-direction:column; align-items:center; gap:1px;">
-                        <span style="font-size:.6rem; font-weight:700; color:#6366f1;">{{ sigla_mat }}</span>
+                        <span style="font-size:.6rem; font-weight:700; color:{{ '#6366f1' if riga else '#c7d2fe' }};">{{ sigla_mat }}</span>
                         {% if riga %}
                         <input type="number" name="ore_{{ riga.id }}" value="{{ riga.ore_settimanali }}"
                                data-autosave="ore_piano:{{ riga.id }}"
@@ -231,19 +238,22 @@
                                style="width:40px; text-align:center; border:1px solid #d1d5db;
                                       border-radius:4px; padding:2px 3px; font-size:.8rem;">
                         {% else %}
-                        <span style="color:#e2e8f0; font-size:.8rem;">—</span>
+                        <span style="color:#9ca3af; font-size:.78rem;">—</span>
                         {% endif %}
                     </div>
                     {% endfor %}
                 </td>
                 {% endfor %}
-                {# Azione elimina — per la prima materia del gruppo #}
+                {# Azione elimina — rimuove TUTTE le materie del gruppo (l'intera CC) #}
                 <td style="padding:4px; border:1px solid #e5e7eb; text-align:center; vertical-align:top;">
-                    {% set prima_mat = gruppo.materie[0] %}
+                    {% set tutti_ids = [] %}
+                    {% for mat in gruppo.materie %}
+                        {% for r in mat.righe %}{% set _ = tutti_ids.append(r.id) %}{% endfor %}
+                    {% endfor %}
                     <button type="button"
-                            onclick="eliminaRighe({{ prima_mat.righe | map(attribute='id') | list }})"
-                            style="background:none; border:none; cursor:pointer; color:#dc2626; font-size:.8rem;"
-                            title="Elimina questa materia">🗑</button>
+                            onclick="eliminaRighe({{ tutti_ids }}, {{ (gruppo.materie|length) }})"
+                            style="background:none; border:none; cursor:pointer; color:#dc2626; font-size:.9rem;"
+                            title="Elimina TUTTE le {{ gruppo.materie|length }} materie di {{ cc_cod }} da questo piano studi">✕︎</button>
                 </td>
             </tr>
             {% else %}
@@ -295,7 +305,7 @@
                                 {% endfor %}
                             </select>
                             {% if riga.atipica %}
-                            <span title="Atipicità: CC diversa dal default normativo" style="font-size:.7rem;">⚠️</span>
+                            <span title="Atipicità: CC diversa dal default normativo" style="font-size:.7rem;">⚠︎️</span>
                             {% endif %}
                         </div>
                         {% endif %}
@@ -320,13 +330,13 @@
                             <div style="display:inline-flex; align-items:center; gap:3px;
                                         background:#fef3c7; border:1px solid #fde68a;
                                         border-radius:4px; padding:1px 5px; font-size:.68rem;">
-                                <span style="font-weight:700;">{{ ov.sezione }}</span>→
+                                <span style="font-weight:700;">{{ ov.sezione }}</span>→︎
                                 <span style="color:#92400e; font-weight:700;">{{ ov.cc_override.codice }}</span>
                                 <form method="post" action="{{ url_for('impostazione_anno.piano_studi_override_elimina', ov_id=ov.id) }}"
                                       style="display:inline; margin:0; padding:0;">
                                     <button type="submit" style="background:none; border:none; cursor:pointer;
                                             color:#dc2626; font-size:.65rem; padding:0; line-height:1;"
-                                            title="Rimuovi override sezione {{ ov.sezione }}">✕</button>
+                                            title="Rimuovi override sezione {{ ov.sezione }}">✕︎</button>
                                 </form>
                             </div>
                             {% endfor %}
@@ -348,7 +358,7 @@
                                   action="{{ url_for('impostazione_anno.piano_studi_override_salva') }}">
                                 <input type="hidden" name="id_piano_studi" value="{{ riga.id }}">
                                 <div style="font-weight:700; color:#0369a1; margin-bottom:6px; font-size:.76rem;">
-                                    ⚙️ Override sezione — {{ riga.classe_concorso.codice }}
+                                    ⚙︎️ Override sezione — {{ riga.classe_concorso.codice }}
                                 </div>
                                 <div style="display:flex; gap:4px; margin-bottom:4px;">
                                     <div>
@@ -403,7 +413,7 @@
                             onclick="eliminaRighe({{ righe_mat | map(attribute='id') | list }})"
                             title="Elimina questa materia dal piano studi"
                             style="background:none; border:none; cursor:pointer; font-size:.9rem; color:#dc2626;">
-                        🗑
+                        ✕︎
                     </button>
                 </td>
             </tr>
@@ -441,7 +451,7 @@
                                           border-radius:5px; background:#f8f7ff; user-select:none;
                                           color:#6366f1; font-weight:600;"
                                    onclick="selezionaTutti(this)">
-                                ✓ tutti
+                                ✓︎ tutti
                             </label>
                         </div>
                     </div>
@@ -480,19 +490,32 @@
 <div id="delete-forms"></div>
 
 <script>
-function eliminaRighe(ids) {
-    if (!confirm('Eliminare questa materia dal piano studi? Tutte le righe di questo anno/CC verranno rimosse.')) return;
-    // Elimina una riga alla volta: la prima, le altre vengono trascinate
-    // Per semplicità eliminiamo solo la prima riga del gruppo e la route
-    // gestisce la singola riga; l'utente può eliminare le altre anno per anno.
-    // Qui inviamo tutte le righe in sequenza.
+function eliminaRighe(ids, nMaterie) {
+    var msg = (nMaterie && nMaterie > 1)
+        ? 'Eliminare tutte le ' + nMaterie + ' materie di questo gruppo dal piano studi? Tutte le righe di questo anno/CC verranno rimosse.'
+        : 'Eliminare questa materia dal piano studi? Tutte le righe di questo anno/CC verranno rimosse.';
+    if (!confirm(msg)) return;
+    // Un solo form con tutti gli id, un solo submit: evita il bug per cui
+    // il submit di un form interrompe la navigazione prima che i successivi
+    // form.submit() in coda possano eseguire (solo il primo veniva inviato).
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/impostazione-anno/piano-studi/elimina-multi';
+    var csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    csrfInput.value = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    form.appendChild(csrfInput);
     ids.forEach(function(id) {
-        var form = document.createElement('form');
-        form.method = 'post';
-        form.action = '/impostazione-anno/piano-studi/elimina/' + id;
-        document.getElementById('delete-forms').appendChild(form);
-        form.submit();
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'ids[]';
+        inp.value = id;
+        form.appendChild(inp);
     });
+    document.getElementById('delete-forms').appendChild(form);
+    form.submit();
 }
 </script>
 {% block extra_script %}
@@ -504,8 +527,8 @@ function selezionaTutti(labelEl) {
     const checks = (form || document).querySelectorAll('input[type="checkbox"][name="anni_corso[]"]');
     const tuttiChecked = Array.from(checks).every(c => c.checked);
     checks.forEach(c => c.checked = !tuttiChecked);
-    labelEl.textContent = tuttiChecked ? '✓ tutti' : '✗ nessuno';
-    setTimeout(() => labelEl.textContent = '✓ tutti', 1500);
+    labelEl.textContent = tuttiChecked ? '✓︎ tutti' : '✕︎ nessuno';
+    setTimeout(() => labelEl.textContent = '✓︎ tutti', 1500);
 }
 
 function toggleOverride(id) {

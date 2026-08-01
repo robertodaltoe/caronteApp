@@ -2,8 +2,8 @@
 {% block title %}Docenti disponibili - Prove agosto{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">← Prove agosto</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">👨‍🏫 Docenti disponibili per le prove di agosto</h1>
+    <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">←︎ Prove agosto</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎▨︎ Docenti disponibili per le prove di agosto</h1>
 </div>
 
 <div class="card" style="padding:14px 18px; margin-bottom:16px; border-left:4px solid var(--blu);">
@@ -24,15 +24,15 @@
 <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
     <div class="card" style="text-align:center; padding:14px; background:#dcfce7;">
         <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ n_completamente_liberi }}</div>
-        <div style="font-size:.78rem; color:#166534;">✓ Completamente liberi</div>
+        <div style="font-size:.78rem; color:#166534;">✓︎ Completamente liberi</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:#fef9c3;">
         <div style="font-size:1.8rem; font-weight:800; color:#92400e;">{{ n_con_assenze }}</div>
-        <div style="font-size:.78rem; color:#92400e;">⚠ Con alcune assenze</div>
+        <div style="font-size:.78rem; color:#92400e;">⚠︎ Con alcune assenze</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:#fee2e2;">
         <div style="font-size:1.8rem; font-weight:800; color:#dc2626;">{{ n_non_disponibili }}</div>
-        <div style="font-size:.78rem; color:#dc2626;">✗ Non disponibili (assenti tutto il periodo)</div>
+        <div style="font-size:.78rem; color:#dc2626;">✕︎ Non disponibili (assenti tutto il periodo)</div>
     </div>
 </div>
 
@@ -70,13 +70,13 @@
             <td style="text-align:center;">
                 {% if r.completamente_assente %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fee2e2; color:#dc2626;">✗ non disp.</span>
+                             background:#fee2e2; color:#dc2626;">✕︎ non disp.</span>
                 {% elif r.completamente_libero %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#dcfce7; color:#166534;">✓ libero</span>
+                             background:#dcfce7; color:#166534;">✓︎ libero</span>
                 {% else %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fef9c3; color:#92400e;">⚠ parziale</span>
+                             background:#fef9c3; color:#92400e;">⚠︎ parziale</span>
                 {% endif %}
             </td>
         </tr>

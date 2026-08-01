@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Dati istituto{% endblock %}
+
+{% block extra_style %}
+<style>
+.form-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:18px; }
+.form-field label { display:block; font-size:.8rem; font-weight:600; color:var(--grigio); margin-bottom:4px; }
+.form-field input { width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.9rem; }
+.form-field .hint { font-size:.74rem; color:var(--grigio); margin-top:4px; }
+.sez-h { font-size:.95rem; font-weight:700; color:var(--blu); margin:22px 0 10px; }
+.sez-h:first-child { margin-top:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▨︎ Dati istituto</h1>
+</div>
+
+<div class="card">
+    <p style="color:var(--grigio); font-size:.83rem; margin-bottom:16px;">
+        Questi dati sono usati in più punti dell'app (report, export, pagine pubbliche) — modificandoli qui
+        si aggiornano ovunque, senza dover intervenire nel codice.
+    </p>
+    <form method="post">
+
+        <div class="sez-h">Dati anagrafici</div>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Nome istituto</label>
+                <input type="text" name="nome_istituto" value="{{ dati.nome_istituto }}" required>
+            </div>
+            <div class="form-field">
+                <label>Indirizzo</label>
+                <input type="text" name="indirizzo_istituto" value="{{ dati.indirizzo_istituto }}" required>
+            </div>
+        </div>
+
+        <div class="sez-h">Parametri economici</div>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Costo orario supplenza (€)</label>
+                <input type="number" step="0.01" min="0" name="costo_ora_supplenza"
+                       value="{{ dati.costo_ora_supplenza }}" required>
+                <div class="hint">Usato per le stime di costo in Report e Banca Ore.</div>
+            </div>
+        </div>
+
+        <div class="sez-h">Soglie CCNL art.44 (ore istituzionali)</div>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Limite ore (bucket A/B)</label>
+                <input type="number" step="1" min="1" name="ore_ist_limite"
+                       value="{{ dati.ore_ist_limite }}" required>
+            </div>
+            <div class="form-field">
+                <label>Soglia di attenzione (alert cruscotto)</label>
+                <input type="number" step="1" min="1" name="ore_ist_soglia_alert"
+                       value="{{ dati.ore_ist_soglia_alert }}" required>
+                <div class="hint">Sotto questo valore nessun alert nel cruscotto Report.</div>
+            </div>
+        </div>
+
+        <div class="sez-h">Accordo sindacale — scadenza saldo banca ore</div>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Mesi entro cui saldare (per singola ora)</label>
+                <input type="number" step="1" min="1" name="scadenza_saldo_mesi"
+                       value="{{ dati.scadenza_saldo_mesi }}" required>
+                <div class="hint">Ogni ora a debito/credito ha questa scadenza dalla data in cui matura.</div>
+            </div>
+        </div>
+
+        <div style="margin-top:24px;">
+            <button type="submit" class="btn btn-primary">Salva</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

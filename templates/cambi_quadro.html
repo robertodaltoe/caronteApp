@@ -22,6 +22,10 @@
     <a href="{{ url_for('cambi.nuovo') }}" class="btn btn-success">+ Nuovo cambio</a>
 </div>
 
+<datalist id="classi-restituzione-list">
+    {% for c in classi_attive %}<option value="{{ c }}">{% endfor %}
+</datalist>
+
 <!-- SCAMBI APERTI -->
 {% if aperti %}
 <div class="card" style="margin-bottom:20px; border-left:4px solid #f59e0b;">
@@ -59,7 +63,7 @@
                 {% if sc.data_restituzione_prevista %}
                     {% if sc.restituzione_in_ritardo %}
                         <span class="badge badge-ritardo">
-                            ⚠ {{ sc.data_restituzione_prevista.strftime('%d/%m') }} SCADUTA
+                            ⚠︎ {{ sc.data_restituzione_prevista.strftime('%d/%m') }} SCADUTA
                         </span>
                     {% else %}
                         {{ sc.data_restituzione_prevista.strftime('%d/%m/%Y') }}
@@ -77,7 +81,7 @@
                 <!-- Form restituzione inline -->
                 <button class="btn btn-success btn-sm"
                     onclick="document.getElementById('rest-{{ sc.id }}').style.display='block';this.style.display='none'">
-                    ✓ Restituito
+                    ✓︎ Restituito
                 </button>
                 <div id="rest-{{ sc.id }}" style="display:none; margin-top:6px;">
                     <form method="post" action="{{ url_for('cambi.segna_restituito', id=sc.id) }}">
@@ -94,6 +98,7 @@
                             </select>
                             <input type="text" name="classe_restituzione"
                                 placeholder="Classe" maxlength="10"
+                                list="classi-restituzione-list" autocomplete="off"
                                 style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px;
                                        font-size:.82rem; width:80px; text-transform:uppercase;">
                             <button class="btn btn-success btn-sm" type="submit">Salva</button>
@@ -101,11 +106,11 @@
                     </form>
                 </div>
                 <a href="{{ url_for('cambi.modifica', id=sc.id, next=request.url) }}"
-                   class="btn btn-primary btn-sm" style="margin-left:4px;">✏️</a>
+                   class="btn btn-primary btn-sm" style="margin-left:4px;">✎︎️</a>
                 <form method="post" action="{{ url_for('cambi.annulla', id=sc.id) }}"
                       onsubmit="return confirm('Annullare questo scambio?')"
                       style="display:inline; margin-left:4px;">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                 </form>
             </td>
         </tr>
@@ -122,7 +127,7 @@
 <!-- STORICO CHIUSI -->
 {% if chiusi %}
 <div class="card">
-    <h2>📋 Storico scambi (ultimi 30)</h2>
+    <h2>▤︎ Storico scambi (ultimi 30)</h2>
     <table>
         <thead>
             <tr>

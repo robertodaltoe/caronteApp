@@ -1,4 +1,5 @@
 from models import db
+from datetime import datetime
 
 class Docente(db.Model):
     __tablename__ = 'docenti'
@@ -8,6 +9,11 @@ class Docente(db.Model):
     nome          = db.Column(db.String(80),  nullable=False)
     nome_display  = db.Column(db.String(80))   # es. "FERRARI M."
     materia       = db.Column(db.String(120))   # campo legacy testuale, vedi id_classe_concorso
+    # Usato come "versione" per il controllo di concorrenza ottimistico
+    # nel form di modifica (vedi routes/docenti.py::modifica): se due
+    # persone aprono la scheda dello stesso docente, chi salva per
+    # secondo viene avvisato invece di sovrascrivere in silenzio.
+    modificato_il = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Classe di concorso ufficiale del docente (es. A026 - Matematica).
     # Sostituisce gradualmente il campo libero 'materia' qui sopra.
     id_classe_concorso = db.Column(db.Integer, db.ForeignKey('classi_concorso.id'), nullable=True)

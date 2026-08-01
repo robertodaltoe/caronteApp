@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Dati personali — {{ docente.cognome }} {{ docente.nome or '' }}</title>
+<style>
+    @page { size: A4; margin: 2cm 1.6cm; }
+    body { font-family: "Open Sans", Arial, sans-serif; font-size: 10.5px; color: #1f2937; }
+    h1 { font-size: 18px; color: #7a1c17; margin-bottom: 2px; }
+    h2 { font-size: 13px; color: #7a1c17; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; margin-top: 22px; }
+    .sub { color: #6b7280; font-size: 10px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 6px; }
+    th, td { border: 1px solid #e5e7eb; padding: 4px 6px; text-align: left; font-size: 9.5px; }
+    th { background: #f3f4f6; font-weight: 700; }
+    .vuoto { color: #9ca3af; font-style: italic; font-size: 9.5px; }
+    .intro { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; padding: 8px 12px; font-size: 9.5px; margin-bottom: 14px; }
+    .footer { margin-top: 26px; color: #9ca3af; font-size: 8.5px; }
+</style>
+</head>
+<body>
+
+<h1>Esportazione dati personali</h1>
+<div class="sub">
+    {{ docente.cognome }} {{ docente.nome or '' }} — generato il {{ oggi.strftime('%d/%m/%Y') }}
+    per riscontro a richiesta di accesso ai dati personali (art. 15 GDPR)
+</div>
+
+<div class="intro">
+    Questo documento riepiloga tutti i dati personali riferiti a
+    {{ docente.cognome }} {{ docente.nome or '' }} presenti in CaronteApp,
+    il sistema di gestione supplenze, orario, assenze e variazioni orario
+    dell'istituto. Non sono incluse informazioni relative ad altri
+    docenti se non nella misura in cui compaiono in relazione a un dato
+    di {{ docente.cognome }} (es. supplenze coperte per conto di un
+    collega).
+</div>
+
+<h2>1. Dati anagrafici e di servizio</h2>
+<table>
+    <tr><th style="width:220px;">Campo</th><th>Valore</th></tr>
+    <tr><td>Cognome e nome</td><td>{{ docente.cognome }} {{ docente.nome or '' }}</td></tr>
+    <tr><td>Nominativo display</td><td>{{ docente.nome_display or '—' }}</td></tr>
+    <tr><td>Email</td><td>{{ docente.email or '—' }}</td></tr>
+    <tr><td>Ruolo didattico</td><td>{{ docente.ruolo or '—' }}</td></tr>
+    <tr><td>Materia / classe di concorso</td><td>{{ docente.materia or (docente.classe_concorso.codice if docente.classe_concorso else '—') }}</td></tr>
+    <tr><td>Tipo contratto</td><td>{{ docente.tipo_contratto or '—' }}</td></tr>
+    <tr><td>Ore di contratto</td><td>{{ docente.ore_contratto or '—' }}</td></tr>
+    <tr><td>Part-time</td><td>{{ 'Sì (' ~ (docente.ore_contratto_pt or '?') ~ ' ore)' if docente.part_time else 'No' }}</td></tr>
+    <tr><td>Altra scuola di servizio</td><td>{{ docente.altra_scuola or '—' }}</td></tr>
+    <tr><td>Orario colloqui</td><td>{{ docente.colloqui_label or '—' }}</td></tr>
+    <tr><td>Note anagrafiche</td><td>{{ docente.note or '—' }}</td></tr>
+    <tr><td>Stato</td><td>{{ 'Attivo' if docente.attivo else 'Non attivo' }}</td></tr>
+</table>
+
+<h2>2. Orario delle lezioni</h2>
+{% if orario_lezione %}
+<table>
+    <tr><th>Giorno</th><th>Ora</th><th>Classe</th><th>Materia</th><th>Tipo</th></tr>
+    {% for o in orario_lezione %}
+    <tr><td>{{ o.giorno_nome }}</td><td>{{ o.ora }}ª</td><td>{{ o.classe or '—' }}</td><td>{{ o.materia or '—' }}</td><td>{{ o.tipo_ora or '—' }}</td></tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+{% if orario_sostegno %}
+<h2>2bis. Orario di sostegno</h2>
+<table>
+    <tr><th>Giorno</th><th>Ora</th><th>Classe</th><th>Note</th></tr>
+    {% for o in orario_sostegno %}
+    <tr><td>{{ o.giorno_nome }}</td><td>{{ o.ora }}ª</td><td>{{ o.classe }}</td><td>{{ o.note or '—' }}</td></tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+<h2>3. Assenze</h2>
+{% if assenze %}
+<table>
+    <tr><th>Data</th><th>Ore</th><th>Motivo</th><th>Note interne</th></tr>
+    {% for a in assenze %}
+    <tr>
+        <td>{{ a.data.strftime('%d/%m/%Y') }}</td>
+        <td>{{ a.ora_inizio }}ª–{{ a.ora_fine }}ª</td>
+        <td>{{ label_assenza.get(a.motivo, a.motivo) }}</td>
+        <td>{{ a.note_interne or '—' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<h2>4. Supplenze</h2>
+<p style="font-size:9.5px; font-weight:700; margin-bottom:2px;">Come docente assente (sostituito da un collega):</p>
+{% if supplenze_come_assente %}
+<table>
+    <tr><th>Data</th><th>Ora</th><th>Classe</th><th>Sostituto</th><th>Stato</th></tr>
+    {% for s in supplenze_come_assente %}
+    <tr><td>{{ s.data.strftime('%d/%m/%Y') }}</td><td>{{ s.ora }}ª</td><td>{{ s.classe or '—' }}</td>
+        <td>{{ (s.sostituto_obj.cognome ~ ' ' ~ (s.sostituto_obj.nome or '')) if s.sostituto_obj else '—' }}</td>
+        <td>{{ s.stato }}</td></tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<p style="font-size:9.5px; font-weight:700; margin-bottom:2px; margin-top:10px;">Come docente sostituto (supplenze effettuate):</p>
+{% if supplenze_come_sostituto %}
+<table>
+    <tr><th>Data</th><th>Ora</th><th>Classe</th><th>Docente sostituito</th><th>Tipo</th></tr>
+    {% for s in supplenze_come_sostituto %}
+    <tr><td>{{ s.data.strftime('%d/%m/%Y') }}</td><td>{{ s.ora }}ª</td><td>{{ s.classe or '—' }}</td>
+        <td>{{ (s.assente_obj.cognome ~ ' ' ~ (s.assente_obj.nome or '')) if s.assente_obj else '—' }}</td>
+        <td>{{ s.tipo }}</td></tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<h2>5. Banca ore — movimenti</h2>
+{% if movimenti_banca_ore %}
+<table>
+    <tr><th>Data</th><th>Minuti</th><th>Tipo</th><th>Descrizione</th></tr>
+    {% for m in movimenti_banca_ore %}
+    <tr><td>{{ m.data.strftime('%d/%m/%Y') }}</td><td>{{ '+' if m.minuti >= 0 else '' }}{{ m.minuti }}</td><td>{{ m.tipo }}</td><td>{{ m.descrizione or '—' }}</td></tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<h2>6. Indisponibilità dichiarate</h2>
+{% if indisponibilita %}
+<table>
+    <tr><th>Data</th><th>Ora</th><th>Motivo</th><th>Note</th></tr>
+    {% for i in indisponibilita %}
+    <tr><td>{{ i.data.strftime('%d/%m/%Y') }}</td><td>{{ i.ora ~ 'ª' if i.ora else 'Tutta la giornata' }}</td><td>{{ i.motivo }}</td><td>{{ i.note or '—' }}</td></tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<h2>7. Assegnazioni cattedre e classi</h2>
+{% if assegnazioni %}
+<table>
+    <tr><th>Anno scolastico</th><th>Classe di concorso</th><th>Tipo</th><th>Ore per classe</th></tr>
+    {% for a in assegnazioni %}
+    <tr>
+        <td>{{ a.anno_scol }}</td>
+        <td>{{ a.classe_concorso.codice if a.classe_concorso else '—' }}</td>
+        <td>{{ a.tipo }}</td>
+        <td>
+            {% if a.classi_ore %}
+                {% for c in a.classi_ore %}{{ c.indirizzo }}{% if c.anno_corso %} {{ c.anno_corso }}{{ c.sezione }}{% endif %}: {{ c.ore }}h{% if not loop.last %}, {% endif %}{% endfor %}
+            {% else %}—{% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<h2>8. Eccezioni orario colloqui</h2>
+{% if colloqui_eccezioni %}
+<table>
+    <tr><th>Dal</th><th>Al</th><th>Note</th></tr>
+    {% for c in colloqui_eccezioni %}
+    <tr><td>{{ c.data.strftime('%d/%m/%Y') }}</td><td>{{ c.data_fine.strftime('%d/%m/%Y') if c.data_fine else '—' }}</td><td>{{ c.note or '—' }}</td></tr>
+    {% endfor %}
+</table>
+{% else %}<div class="vuoto">Nessun dato.</div>{% endif %}
+
+<div class="footer">
+    Documento generato automaticamente da CaronteApp — IIS "Leonardo da Vinci", Chiavenna.
+    L'esportazione è stata registrata nel log di sicurezza dell'applicazione.
+</div>
+
+</body>
+</html>

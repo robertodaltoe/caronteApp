@@ -80,7 +80,7 @@ def leggi_movimenti_file(path):
             if not cognome or not str(cognome).strip():
                 continue
             # Salta righe non-dati (navigazione, ecc.)
-            if str(cognome).startswith('📋') or str(cognome).startswith('📊'):
+            if str(cognome).startswith('▤︎') or str(cognome).startswith('▲︎'):
                 continue
             cognome = str(cognome).strip()
 

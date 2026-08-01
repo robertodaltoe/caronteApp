@@ -2,9 +2,9 @@
 {% block title %}Calcolo organico{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p5', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">🧮 Calcolo organico — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p5', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">⊞︎ Calcolo organico — {{ anno }}</h1>
 </div>
 
 <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px;">
@@ -26,18 +26,18 @@
 <div id="banner-verifica" style="display:none; padding:10px 14px; margin-bottom:14px;
      font-size:.82rem; border-radius:8px; border-left:4px solid #dc2626;
      background:#fef2f2; color:#7f1d1d;">
-    <strong>⚠ Anomalie rilevate nel piano studi:</strong>
+    <strong>⚠︎ Anomalie rilevate nel piano studi:</strong>
     <ul id="lista-anomalie" style="margin:4px 0 0 16px; padding:0;"></ul>
 </div>
 <div id="banner-ok" style="display:none; padding:8px 14px; margin-bottom:14px;
      font-size:.82rem; border-radius:8px; border-left:4px solid #16a34a;
      background:#f0fdf4; color:#14532d;">
-    ✓ Piano studi verificato: tutte le ore sono correttamente assegnate a una classe di concorso.
+    ✓︎ Piano studi verificato: tutte le ore sono correttamente assegnate a una classe di concorso.
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #0891b2;">
-    Il calcolo automatico applica la regola generale: ≥ 18 ore → <strong>COI</strong>,
-    8-17 ore → <strong>COE</strong>, 1-7 ore → <strong>residue</strong>.
+    Il calcolo automatico applica la regola generale: ≥ 18 ore →︎ <strong>COI</strong>,
+    8-17 ore →︎ <strong>COE</strong>, 1-7 ore →︎ <strong>residue</strong>.
     Puoi sovrascrivere il tipo per i casi eccezionali e confermare riga per riga.
     Al primo bollettino USR userai questa tabella come base per verificare la risposta.
 </div>
@@ -52,10 +52,10 @@
     <form method="post" style="margin-left:auto; display:flex; gap:6px;">
         <input type="hidden" name="anno_scol" value="{{ anno }}">
         <button name="azione" value="ricalcola" class="btn btn-sm" style="background:#e5e7eb; color:#374151;">
-            🔄 Ricalcola
+            ↻︎ Ricalcola
         </button>
         <button name="azione" value="conferma_tutto" class="btn btn-success btn-sm">
-            ✅ Conferma tutto
+            ✓︎ Conferma tutto
         </button>
     </form>
 </div>
@@ -73,7 +73,7 @@
                     <th style="text-align:center;">Tipo calcolato</th>
                     <th style="text-align:center;">Tipo confermato</th>
                     <th>Note eccezione</th>
-                    <th style="text-align:center;">✅</th>
+                    <th style="text-align:center;">✓︎</th>
                 </tr>
             </thead>
             <tbody>
@@ -119,7 +119,7 @@
             </tbody>
         </table>
     </div>
-    <button type="submit" class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.78rem;">↩ Salva tutto manualmente (fallback)</button>
+    <button type="submit" class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.78rem;">↩︎ Salva tutto manualmente (fallback)</button>
 </form>
 {% block extra_script %}
 <script src="{{ url_for('static', filename='js/impostazione_autosave.js') }}"></script>

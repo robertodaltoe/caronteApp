@@ -45,14 +45,57 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.3rem; color:var(--blu);">🗓 Pianificazione permessi orari</h1>
+        <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Pianificazione permessi orari</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Docenti con credito proiettato — giorni in cui conviene proporre il permesso per liberare la fine o l'inizio della giornata
         </p>
     </div>
-    <a href="{{ url_for('report.index') }}" class="btn btn-primary">← Report</a>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary">←︎ Report</a>
 </div>
 
+{% if data_fine_lezioni is not none or risultati is none %}
+<!-- CALENDARIO ANNO SCOLASTICO -->
+<div class="card" style="margin-bottom:18px;">
+    <h2 style="display:flex; justify-content:space-between; align-items:center;">
+        ▦︎ Calendario {{ anno_corrente }}
+        {% if risultati is not none %}
+        <a href="#" onclick="document.getElementById('form-calendario').style.display='block'; this.style.display='none'; return false;"
+           style="font-size:.8rem; font-weight:400;">Modifica</a>
+        {% endif %}
+    </h2>
+    {% if risultati is none %}
+    <p style="color:var(--grigio); font-size:.85rem;">
+        Calendario non ancora configurato per l'anno scolastico <strong>{{ anno_corrente }}</strong>.
+        Serve impostarlo una volta a inizio anno per calcolare correttamente le date disponibili.
+    </p>
+    {% endif %}
+    <form method="post" id="form-calendario" style="{% if risultati is not none %}display:none;{% endif %} display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-top:8px;">
+        <div>
+            <label style="font-size:.78rem; color:var(--grigio); display:block;">Ultimo giorno di lezione</label>
+            <input type="date" name="data_fine_lezioni" required
+                   value="{{ data_fine_lezioni.isoformat() if data_fine_lezioni else '' }}"
+                   style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:.78rem; color:var(--grigio); display:block;">Ore max ultimo giorno (vuoto = orario pieno)</label>
+            <input type="number" name="ore_ultimo_giorno" min="1" max="9"
+                   value="{{ ore_ultimo_giorno if ore_ultimo_giorno is not none else '' }}"
+                   style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; width:100px;">
+        </div>
+        <button type="submit" class="btn btn-primary">Salva</button>
+    </form>
+    {% if risultati is not none %}
+    <p style="color:var(--grigio); font-size:.78rem; margin-top:10px;">
+        Ponti e sospensioni ({{ n_festivi_extra }} giorno/i esclusi tra oggi e fine lezioni) si gestiscono in
+        <a href="{{ url_for('impostazioni.sospensioni') }}">Impostazioni →︎ Sospensioni didattiche</a>,
+        non più qui: un solo elenco condiviso invece di doverlo inserire due volte.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if risultati is none %}
+{% else %}
 <!-- FILTRI -->
 <div class="filtro-bar card" style="padding:12px 16px;">
     <label>Mostra solo credito ≥</label>
@@ -109,7 +152,7 @@
             <span class="doc-saldo">
                 eff. {% if r.sal_eff > 0 %}+{% endif %}{{ r.sal_eff }}h
                 {% if r.sal_prev != 0 %}
-                → proj. +{{ r.sal_fin }}h
+                →︎ proj. +{{ r.sal_fin }}h
                 {% endif %}
             </span>
             <span style="font-size:.9rem;">▾</span>
@@ -122,8 +165,8 @@
                     <th style="width:110px;">Data</th>
                     <th style="width:80px;">Giorno</th>
                     <th>Orario del giorno</th>
-                    <th class="col-fine">Fine giornata 🌅</th>
-                    <th class="col-inizio">Inizio giornata 🌄</th>
+                    <th class="col-fine">Fine giornata </th>
+                    <th class="col-inizio">Inizio giornata ◷︎</th>
                 </tr>
             </thead>
             <tbody>
@@ -163,6 +206,7 @@
     </div>
 </div>
 {% endfor %}
+{% endif %}
 
 {% endblock %}
 

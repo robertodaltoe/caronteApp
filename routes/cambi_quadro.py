@@ -3,18 +3,19 @@ from models import db
 from models.scambio_ore import ScambioOre
 from models.supplenza import Supplenza
 from models.docente import Docente
+from models.orario_docente import classi_attive as _classi_attive
 from datetime import date
 
 cambi_bp = Blueprint('cambi', __name__)
 
 TIPI_SCAMBIO = [
-    ('scambio',               '🔄 Scambio ore tra docenti'),
-    ('ferie_concordate',      '🌴 Ferie / permesso concordato'),
-    ('ferie_concordate',      '🌴 Ferie / permesso concordato'),
-    ('sorveglianza',          '📝 Sorveglianza prove'),
-    ('simulazione',           '📋 Simulazione esame'),
-    ('attivita_alternativa',  '🏛 Attività alternativa (INVALSI, commissioni)'),
-    ('altro',                 '📌 Altro'),
+    ('scambio',               '↻︎ Scambio ore tra docenti'),
+    ('ferie_concordate',      ' Ferie / permesso concordato'),
+    ('ferie_concordate',      ' Ferie / permesso concordato'),
+    ('sorveglianza',          '✎︎ Sorveglianza prove'),
+    ('simulazione',           '▤︎ Simulazione esame'),
+    ('attivita_alternativa',  '▨︎ Attività alternativa (INVALSI, commissioni)'),
+    ('altro',                 '◆︎ Altro'),
 ]
 
 @cambi_bp.route('/cambi-quadro')
@@ -28,7 +29,8 @@ def lista():
         .order_by(ScambioOre.data_cessione.desc()).limit(30).all()
 
     return render_template('cambi_quadro.html',
-        aperti=aperti, chiusi=chiusi, oggi=oggi)
+        aperti=aperti, chiusi=chiusi, oggi=oggi,
+        classi_attive=_classi_attive())
 
 @cambi_bp.route('/cambi-quadro/nuovo', methods=['GET', 'POST'])
 def nuovo():
@@ -75,7 +77,7 @@ def nuovo():
             db.session.add(sc)
             db.session.flush()
 
-            # Se ferie/permesso concordato → docente indisponibile tutta la giornata
+            # Se ferie/permesso concordato →︎ docente indisponibile tutta la giornata
             if tipo_comune == 'ferie_concordate':
                 from models.indisponibilita import Indisponibilita
                 gia = Indisponibilita.query.filter_by(

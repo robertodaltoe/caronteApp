@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% block title %}Banca Ore {{ docente.cognome }}{% endblock %}
+
+{% block extra_style %}
+<style>
+.saldo-row { display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+.saldo-panel { background:white; border-radius:10px; box-shadow:var(--shadow);
+    padding:18px 22px; flex:1; min-width:280px; }
+.saldo-panel-title { font-size:.72rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:.5px; color:var(--grigio); margin-bottom:14px;
+    display:flex; align-items:center; gap:6px; }
+.saldo-items { display:flex; gap:0; align-items:stretch; }
+.saldo-item { flex:1; text-align:center; padding:4px 8px;
+    border-right:1px solid #e5eaf0; }
+.saldo-item:last-child { border-right:none; }
+.saldo-item .val { font-size:1.7rem; font-weight:800; line-height:1.1; }
+.saldo-item .lbl { font-size:.68rem; font-weight:600; color:var(--grigio);
+    text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
+.saldo-effettivo { flex:0 0 auto; min-width:130px; border-left:2px solid #e5eaf0;
+    padding-left:16px; position:relative; }
+.saldo-effettivo::before { content:''; position:absolute; top:0; left:-2px;
+    width:2px; height:100%; }
+.saldo-effettivo-verde::before { background:var(--verde); }
+.saldo-effettivo-rosso::before { background:var(--rosso); }
+.saldo-effettivo-grigio::before { background:#e5e7eb; }
+.saldo-effettivo .val { font-size:2.2rem; }
+.saldo-previsto-empty { color:var(--grigio); font-size:.88rem; font-style:italic;
+    padding:20px; text-align:center; }
+.val-verde { color:var(--verde); }
+.val-rosso { color:var(--rosso); }
+.val-giallo { color:#d97706; }
+.val-grigio { color:var(--grigio); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <a href="{{ url_for('banca_ore.index', anno=anno) }}"
+           style="color:var(--grigio); font-size:.85rem; text-decoration:none;">
+            ←︎ Banca Ore
+        </a>
+        <h1 style="font-size:1.5rem; color:var(--blu); font-weight:800; margin-top:4px;">
+            {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}
+            {% if anno != anno_corrente %}
+            <span class="saldo-pill pill-giallo" style="font-size:.7rem; vertical-align:middle;">▧︎ {{ anno }}</span>
+            {% endif %}
+        </h1>
+        <p style="color:var(--grigio); font-size:.85rem;">
+            {% if docente.materia %}{{ docente.materia }} · {% endif %}
+            {{ docente.ore_contratto }}h/sett
+            {% if docente.tipo_contratto %} · {{ docente.tipo_contratto }}{% endif %}
+        </p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:flex-end;">
+        <div>
+            <label style="font-size:.7rem; color:var(--grigio); display:block;">Anno scolastico</label>
+            <select onchange="location.href='{{ url_for('banca_ore.singolo', id=docente.id) }}?anno='+this.value"
+                    style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                {% for a in anni_disponibili %}
+                <option value="{{ a }}" {% if a == anno %}selected{% endif %}>
+                    {{ a }}{% if a == anno_corrente %} (corrente){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="{{ url_for('report.singolo_pdf', id=docente.id, anno=anno) }}"
+           class="btn btn-sm" style="background:#6b7280;color:white;">
+            ⎙︎ Stampa / PDF
+        </a>
+        <a href="{{ url_for('report.singolo_xlsx', id=docente.id, anno=anno) }}"
+           class="btn btn-sm btn-success">
+            ▲︎ XLSX
+        </a>
+        <span style="color:var(--grigio); font-size:.8rem; align-self:center;">
+            Aggiornato: {{ oggi.strftime('%d/%m/%Y') }}
+        </span>
+    </div>
+</div>
+
+{% if anno != anno_corrente %}
+<div class="card" style="border-left:4px solid #d97706; background:#fffbeb; margin-bottom:16px; padding:14px 20px;">
+    ▧︎ <strong>Archivio {{ anno }}</strong> — dati storici, non modificabili.
+</div>
+{% endif %}
+
+<!-- TESTATA SALDI — EFFETTIVO | PREVISTO -->
+<div class="saldo-row">
+
+    <div class="saldo-panel">
+        <div class="saldo-panel-title">
+            <span style="color:var(--verde);">✓︎</span>
+            EFFETTIVO — ORE GIÀ SVOLTE (FINO A OGGI)
+        </div>
+        <div class="saldo-items">
+            <div class="saldo-item">
+                <div class="val val-verde">+{{ saldi.supplenze }}h</div>
+                <div class="lbl">Supplenze</div>
+            </div>
+            <div class="saldo-item">
+                <div class="val val-rosso">-{{ saldi.permessi + saldi.civica }}h</div>
+                <div class="lbl">Recupero</div>
+            </div>
+            {% if saldi.pagamento > 0 %}
+            <div class="saldo-item">
+                <div class="val val-giallo">{{ saldi.pagamento }}h</div>
+                <div class="lbl">Pagamento</div>
+            </div>
+            {% endif %}
+            <div class="saldo-item saldo-effettivo
+                {% if saldo_netto > 0 %}saldo-effettivo-verde{% elif saldo_netto < 0 %}saldo-effettivo-rosso{% else %}saldo-effettivo-grigio{% endif %}">
+                <div class="val {% if saldo_netto > 0 %}val-verde{% elif saldo_netto < 0 %}val-rosso{% else %}val-grigio{% endif %}">
+                    {% if saldo_netto > 0 %}+{% endif %}{{ saldo_netto }}h
+                </div>
+                <div class="lbl">Saldo effettivo</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="saldo-panel">
+        <div class="saldo-panel-title">
+            <span style="color:var(--grigio);">◷︎</span>
+            PREVISTO — ORE ASSEGNATE NON ANCORA SVOLTE
+        </div>
+        {% if saldo_lordo_prev != 0 %}
+        <div class="saldo-items">
+            <div class="saldo-item">
+                <div class="val {% if saldo_lordo_prev > 0 %}val-verde{% else %}val-rosso{% endif %}">
+                    {% if saldo_lordo_prev > 0 %}+{% endif %}{{ saldo_lordo_prev }}h
+                </div>
+                <div class="lbl">Saldo previsto</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="saldo-previsto-empty">Nessuna ora futura assegnata</div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- CONTATORE ORE CCNL ART.44 — solo ds/dsga/segreteria -->
+{% if ore_ist and ruolo_utente in ('ds','dsga','segreteria') %}
+<div class="card" style="margin-bottom:20px; border-left:4px solid #7c3aed;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <h2 style="font-size:1rem; font-weight:700; color:#7c3aed; margin:0;">
+            ▨︎ Attività Istituzionali — CCNL art.44
+        </h2>
+        <span style="font-size:.72rem; background:#f5f3ff; color:#7c3aed;
+            border:1px solid #c4b5fd; border-radius:4px; padding:1px 7px; font-weight:700;">
+            Solo uso interno
+        </span>
+    </div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        {% set perc_a = ((ore_ist.A / ore_ist.limite) * 100) | round | int %}
+        {% set perc_b = ((ore_ist.B / ore_ist.limite) * 100) | round | int %}
+
+        <div style="flex:1; min-width:220px; background:#f8fafc; border-radius:8px; padding:14px 16px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span style="font-size:.8rem; font-weight:700; color:#1e40af;">
+                    Bucket A — Collegio, famiglie, formazione
+                </span>
+                <span style="font-size:.9rem; font-weight:800;
+                    color:{% if ore_ist.A >= ore_ist.limite %}#dc2626{% elif ore_ist.A >= ore_ist.limite * 0.8 %}#d97706{% else %}#1e40af{% endif %}">
+                    {{ ore_ist.A }}h / {{ ore_ist.limite }}h
+                </span>
+            </div>
+            <div style="background:#e0e7ff; border-radius:6px; height:10px; overflow:hidden;">
+                <div style="height:100%; width:{{ [perc_a, 100]|min }}%;
+                    background:{% if perc_a >= 100 %}#dc2626{% elif perc_a >= 80 %}#d97706{% else %}#3b82f6{% endif %};
+                    border-radius:6px; transition:width .3s;"></div>
+            </div>
+            <div style="font-size:.72rem; color:var(--grigio); margin-top:4px;">
+                {% if ore_ist.A >= ore_ist.limite %}
+                ⊘︎ Limite raggiunto
+                {% elif ore_ist.A >= ore_ist.limite * 0.8 %}
+                ⚠︎ Rimangono {{ (ore_ist.limite - ore_ist.A) | round(1) }}h
+                {% else %}
+                Rimangono {{ (ore_ist.limite - ore_ist.A) | round(1) }}h
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="flex:1; min-width:220px; background:#f8fafc; border-radius:8px; padding:14px 16px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span style="font-size:.8rem; font-weight:700; color:#166534;">
+                    Bucket B — Consigli, dipartimenti, GLO
+                </span>
+                <span style="font-size:.9rem; font-weight:800;
+                    color:{% if ore_ist.B >= ore_ist.limite %}#dc2626{% elif ore_ist.B >= ore_ist.limite * 0.8 %}#d97706{% else %}#166534{% endif %}">
+                    {{ ore_ist.B }}h / {{ ore_ist.limite }}h
+                </span>
+            </div>
+            <div style="background:#dcfce7; border-radius:6px; height:10px; overflow:hidden;">
+                <div style="height:100%; width:{{ [perc_b, 100]|min }}%;
+                    background:{% if perc_b >= 100 %}#dc2626{% elif perc_b >= 80 %}#d97706{% else %}#16a34a{% endif %};
+                    border-radius:6px; transition:width .3s;"></div>
+            </div>
+            <div style="font-size:.72rem; color:var(--grigio); margin-top:4px;">
+                {% if ore_ist.B >= ore_ist.limite %}
+                ⊘︎ Limite raggiunto
+                {% elif ore_ist.B >= ore_ist.limite * 0.8 %}
+                ⚠︎ Rimangono {{ (ore_ist.limite - ore_ist.B) | round(1) }}h
+                {% else %}
+                Rimangono {{ (ore_ist.limite - ore_ist.B) | round(1) }}h
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div style="margin-top:10px; font-size:.75rem; color:var(--grigio);">
+        Solo ore con presenza registrata. Scrutini esclusi dal conteggio (atto dovuto).
+        <a href="{{ url_for('attivita_ist.lista') }}" style="color:#7c3aed; margin-left:8px;">→︎ Gestisci attività</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ORARIO SETTIMANALE -->
+{% if orario %}
+<div class="card" style="margin-bottom:20px;">
+    <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:14px;">
+        ▦︎ Orario settimanale
+    </h2>
+    <div style="overflow-x:auto;">
+    <table style="min-width:500px;">
+        <thead>
+            <tr>
+                <th style="width:50px; text-align:center;">Ora</th>
+                {% for g in giorni_usati %}
+                <th style="text-align:center;">{{ giorni_nomi[g] }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for ora in ore_list %}
+        <tr>
+            <td style="text-align:center; font-weight:700; color:var(--grigio);">{{ ora }}ª</td>
+            {% for g in giorni_usati %}
+            {% set slot = orario.get(g, {}).get(ora) %}
+            <td style="text-align:center; padding:6px 8px;">
+                {% if slot and slot.classe %}
+                <div style="font-weight:700; font-size:.9rem;">{{ slot.classe }}</div>
+                {% if slot.materia %}
+                <div style="font-size:.75rem; color:var(--grigio);">{{ slot.materia }}</div>
+                {% endif %}
+                {% if slot.tipo_ora and slot.tipo_ora != 'lezione' %}
+                <div style="font-size:.7rem; color:#7c3aed;">{{ slot.tipo_ora }}</div>
+                {% endif %}
+                {% else %}
+                <span style="color:#e5e7eb;">—</span>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+{% if storico %}
+<div class="card">
+    <h2>▦︎ Storico movimenti</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th style="text-align:center; background:#1a4a2a;">+ Supplenze</th>
+                <th style="text-align:center; background:#5c1a1a;">- Permessi</th>
+                <th style="text-align:center; background:#5c1a1a;">- Ed. Civica</th>
+                <th style="text-align:center; background:#5c3a00;">€ Pagamento</th>
+                <th style="text-align:center;">Delta</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for riga in storico %}
+        {% set delta = riga.supplenze - riga.permessi - riga.civica - riga.pagamento %}
+        <tr>
+            <td>{{ riga.data.strftime('%d/%m/%Y') if riga.data else '—' }}</td>
+            <td style="text-align:center;">
+                {% if riga.supplenze > 0 %}
+                <span style="color:var(--verde); font-weight:700;">+{{ riga.supplenze }}h</span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="text-align:center;">
+                {% if riga.permessi > 0 %}
+                <span style="color:var(--rosso); font-weight:700;">-{{ riga.permessi }}h</span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="text-align:center;">
+                {% if riga.civica > 0 %}
+                <span style="color:var(--rosso); font-weight:700;">-{{ riga.civica }}h</span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="text-align:center;">
+                {% if riga.pagamento > 0 %}
+                <span style="color:var(--giallo); font-weight:700;">{{ riga.pagamento }}h</span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="text-align:center; font-weight:700;
+                color:{% if delta > 0 %}var(--verde){% elif delta < 0 %}var(--rosso){% else %}var(--grigio){% endif %}">
+                {% if delta > 0 %}+{% endif %}{{ delta }}h
+            </td>
+        </tr>
+        {% endfor %}
+        <tr style="background:var(--blu-light); font-weight:700;">
+            <td>TOTALE</td>
+            <td style="text-align:center; color:var(--verde);">+{{ saldi.supplenze }}h</td>
+            <td style="text-align:center; color:var(--rosso);">-{{ saldi.permessi }}h</td>
+            <td style="text-align:center; color:var(--rosso);">-{{ saldi.civica }}h</td>
+            <td style="text-align:center; color:var(--giallo);">
+                {% if saldi.pagamento > 0 %}{{ saldi.pagamento }}h{% else %}—{% endif %}
+            </td>
+            <td style="text-align:center;
+                color:{% if saldo_netto > 0 %}var(--verde){% elif saldo_netto < 0 %}var(--rosso){% else %}var(--grigio){% endif %}">
+                {% if saldo_netto > 0 %}+{% endif %}{{ saldo_netto }}h
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if supplenze %}
+<div class="card">
+    <h2>▤︎ Supplenze svolte (dettaglio)</h2>
+    <table>
+        <thead>
+            <tr><th>Data</th><th>Ora</th><th>Classe</th><th>Tipo</th></tr>
+        </thead>
+        <tbody>
+        {% for s in supplenze %}
+        <tr>
+            <td>{{ s.data.strftime('%d/%m/%Y') }}</td>
+            <td>{{ s.ora }}ª</td>
+            <td><strong>{{ s.classe }}</strong></td>
+            <td>
+                {% set tb = {'recupero':'badge-giallo','pagamento':'badge-rosso',
+                    'completamento':'badge-grigio','potenziamento':'badge-verde'} %}
+                <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}">{{ s.tipo }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

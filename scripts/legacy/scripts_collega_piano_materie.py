@@ -9,6 +9,11 @@ Logica:
   3. Crea le materie mancanti e le collega alla CC giusta.
   4. Aggiorna PianoStudi.id_materia per tutte le righe.
 """
+import sys, os
+# Percorso della cartella radice del progetto (questo script vive in
+# scripts/legacy/, due livelli sotto la radice dove sta app.py).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from app import create_app
 from models import db
 from models.materia import Materia

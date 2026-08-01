@@ -43,8 +43,8 @@
 <body>
 <div class="card">
     <div class="logo">
-        <h1>📋 SupplenzeApp</h1>
-        <p>IIS "Leonardo da Vinci" — Chiavenna</p>
+        <h1>▤︎ SupplenzeApp</h1>
+        <p>{{ nome_istituto }}</p>
     </div>
 
     {% if error %}
@@ -52,6 +52,7 @@
     {% endif %}
 
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ next }}">
         <div class="form-group">
             <label for="username">Username</label>

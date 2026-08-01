@@ -3,7 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+    // Protezione CSRF: aggiunge automaticamente il token a tutti i form POST
+    // e alle richieste fetch di scrittura, senza dover modificare ogni form
+    // dei template. Va inserito PRIMA di ogni altro script della pagina,
+    // perché sostituisce window.fetch: gli script successivi che chiamano
+    // fetch(...) useranno comunque questa versione, perché "fetch" viene
+    // risolto al momento della chiamata, non al momento della definizione.
+    (function() {
+        function getCsrfToken() {
+            var m = document.querySelector('meta[name="csrf-token"]');
+            return m ? m.getAttribute('content') : '';
+        }
+
+        function iniettaToken(form) {
+            if (!form || form.querySelector('input[name="csrf_token"]')) return;
+            var metodo = (form.getAttribute('method') || 'get').toLowerCase();
+            if (metodo !== 'post') return;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'csrf_token';
+            input.value = getCsrfToken();
+            form.appendChild(input);
+        }
+
+        // Iniezione al caricamento pagina: copre anche i form inviati con
+        // form.submit() diretto (che non genera l'evento "submit").
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form').forEach(iniettaToken);
+        });
+
+        // Fallback per eventuali form aggiunti dinamicamente dopo il load.
+        document.addEventListener('submit', function(e) {
+            if (e.target instanceof HTMLFormElement) iniettaToken(e.target);
+        }, true);
+
+        // Richieste fetch (AJAX) di scrittura: aggiunge l'header CSRF.
+        var fetchOriginale = window.fetch;
+        window.fetch = function(input, init) {
+            init = init || {};
+            var metodo = (init.method || 'GET').toUpperCase();
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(metodo) !== -1) {
+                var token = getCsrfToken();
+                if (init.headers instanceof Headers) {
+                    if (!init.headers.has('X-CSRFToken')) init.headers.set('X-CSRFToken', token);
+                } else {
+                    init.headers = init.headers || {};
+                    var giaPresente = Object.keys(init.headers).some(function(k) {
+                        return k.toLowerCase() === 'x-csrftoken';
+                    });
+                    if (!giaPresente) init.headers['X-CSRFToken'] = token;
+                }
+            }
+            return fetchOriginale.call(this, input, init);
+        };
+    })();
+    </script>
     <title>{% block title %}Supplenze{% endblock %} — IIS Da Vinci</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/brand/favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
@@ -11,9 +69,10 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --font:      'Open Sans', 'Segoe UI', Arial, sans-serif;
-            --blu:       #1a3a5c;
-            --blu-med:   #2d5f8a;
-            --blu-light: #e8f0f7;
+            --font-brand: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+            --blu:       #7a1c17;
+            --blu-med:   #a5241f;
+            --blu-light: #f3e5e2;
             --verde:     #1a7a4a;
             --verde-bg:  #d4f0e0;
             --rosso:     #b91c1c;
@@ -22,11 +81,13 @@
             --giallo-bg: #fff3cd;
             --viola:     #6d28d9;
             --viola-bg:  #ede9fe;
+            --bronzo:    #8a5a12;
+            --bronzo-bg: #f3e4c8;
             --grigio:    #6b7280;
-            --bg:        #f0f4f8;
-            --white:     #ffffff;
+            --bg:        #f7f4ef;
+            --white:     #fffdfa;
             --radius:    8px;
-            --shadow:    0 2px 8px rgba(0,0,0,.10);
+            --shadow:    0 2px 8px rgba(90,20,15,.10);
         }
         body {
             font-family: var(--font);
@@ -36,32 +97,105 @@
             color: #1e2939;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            position: relative;
+        }
+        /* Watermark identitario: l'uomo vitruviano del logo d'istituto, fisso
+           e molto tenue dietro a tutte le pagine. position:fixed sul body
+           (non su un elemento con overflow) cosi' resta ancorato al viewport
+           durante lo scroll, senza interferire con la leggibilita' di
+           tabelle e testo (nessun elemento interattivo sopra di esso, z-index
+           negativo e pointer-events:none per sicurezza). */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background-image: url('{{ url_for('static', filename='img/brand/vitruviano-watermark.png') }}');
+            background-repeat: no-repeat;
+            background-position: center 58%;
+            background-size: min(62vw, 780px) auto;
+            opacity: .10;
         }
         :focus-visible { outline: 3px solid var(--blu-med); outline-offset: 2px; }
 
         /* NAV */
         nav {
             background: var(--blu);
-            padding: 0 24px;
+            padding: 0 18px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            height: 56px;
+            gap: 2px;
+            height: 68px;
             box-shadow: 0 2px 6px rgba(0,0,0,.25);
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
         nav .brand {
-            color: white; font-weight: 700; font-size: 1rem;
-            margin-right: auto; letter-spacing: .2px;
+            display: flex; flex-direction: row; align-items: center; gap: 11px;
+            line-height: 1.15; white-space: nowrap;
+            padding-right: 16px; margin-right: 8px;
+            border-right: 1px solid rgba(255,255,255,.15);
+        }
+        nav .brand img {
+            height: 46px; width: 46px; display: block; object-fit: contain;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
+        }
+        nav .brand .brand-testi {
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        nav .brand .brand-nome {
+            color: white; font-weight: 700; font-size: 1.08rem; letter-spacing: .2px;
+            font-family: var(--font-brand);
+        }
+        nav .brand .brand-datetime {
+            color: rgba(255,255,255,.55); font-size: .74rem; font-weight: 500;
+            margin-top: 2px;
         }
         nav a {
             color: rgba(255,255,255,.82); text-decoration: none;
-            padding: 6px 12px; border-radius: 6px;
-            font-size: .88rem; font-weight: 500; transition: background .15s;
+            padding: 8px 12px; border-radius: 6px; white-space: nowrap;
+            font-size: .93rem; font-weight: 500; transition: background .15s;
         }
         nav a:hover, nav a.active { background: rgba(255,255,255,.15); color: white; }
-        nav a.nav-cambi { color: #c4b5fd; }
-        nav a.nav-cambi:hover { background: rgba(196,181,253,.15); color: #ddd6fe; }
+        nav a.nav-cta {
+            color: white; font-weight: 700; background: rgba(220,38,38,.35);
+        }
+        nav a.nav-cta:hover { background: rgba(220,38,38,.55); }
+        nav .nav-spacer { flex: 1 1 auto; }
+        nav .nav-search {
+            display: inline-flex; margin: 0 4px;
+        }
+        nav .nav-search input {
+            padding: 7px 12px; border-radius: 6px; border: none;
+            font-size: .88rem; width: 118px; background: rgba(255,255,255,.12);
+            color: white;
+        }
+        nav .nav-search input::placeholder { color: rgba(255,255,255,.6); }
+        nav .nav-search input:focus {
+            outline: none; background: white; color: #1e2939; width: 150px;
+        }
+        nav .nav-user {
+            color: rgba(255,255,255,.55); font-size: .85rem; white-space: nowrap;
+            padding: 0 4px;
+        }
+        /* Icone di navigazione: glifi tipografici (non emoji a colori) che
+           ereditano il colore del testo del link — restano eleganti e
+           coerenti con la palette del brand invece di introdurre colori
+           estranei (giallo/verde/blu delle emoji standard). */
+        nav .nav-ic {
+            display: inline-block; width: 1.1em; text-align: center;
+            opacity: .85; font-weight: 400;
+            font-variant-emoji: text; font-style: normal;
+        }
+        .nav-avatar {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 24px; height: 24px; border-radius: 50%;
+            background: rgba(255,255,255,.18); color: white;
+            font-size: .78rem; font-weight: 700; vertical-align: middle;
+            margin-right: 3px;
+        }
 
         /* CONTAINER */
         .container { max-width: 1280px; margin: 0 auto; padding: 28px 20px; }
@@ -82,7 +216,8 @@
             box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
         }
         .card h2 {
-            font-size: 1.1rem; font-weight: 700; color: var(--blu);
+            font-family: var(--font-brand);
+            font-size: 1.35rem; font-weight: 700; color: var(--blu);
             margin-bottom: 16px; border-bottom: 2px solid var(--blu-light);
             padding-bottom: 10px;
         }
@@ -107,7 +242,7 @@
         .badge-giallo { background: var(--giallo-bg); color: var(--giallo); }
         .badge-grigio { background: #e5e7eb;           color: var(--grigio); }
         .badge-viola  { background: var(--viola-bg);  color: var(--viola); }
-        .badge-blu    { background: #dbeafe;              color: #1e40af; }
+        .badge-blu    { background: var(--bronzo-bg);      color: var(--bronzo); }
 
         /* BUTTONS */
         .btn {
@@ -148,11 +283,17 @@
         .stat-box.viola .num { color: var(--viola); }
     .nav-dropdown { position:relative; display:inline-block; }
 .nav-dropdown > a { cursor:pointer; }
-.nav-drop-menu { display:none; position:absolute; top:100%; left:0; z-index:9999;
-    background:#1e3a5f; border-radius:0 0 8px 8px; min-width:220px;
+.nav-dropdown > a::after { content:' ▾'; font-size:.7em; opacity:.7; font-variant-emoji: text; }
+/* position:fixed (non absolute) apposta: la nav ha overflow-x:auto, che per
+   spec CSS forza anche il clipping verticale (overflow-y passa da visible
+   ad auto) — un menu absolute verrebbe tagliato via subito. Con fixed il
+   menu esce dal contesto di scroll della nav; la posizione (top/left) viene
+   calcolata via JS al click, vedi extra_script in fondo al file. */
+.nav-drop-menu { display:none; position:fixed; z-index:9999;
+    background:#5c1512; border-radius:8px; min-width:210px;
     box-shadow:0 4px 16px rgba(0,0,0,.3); padding:4px 0; }
-.nav-drop-menu a { display:block; padding:8px 16px; color:rgba(255,255,255,.9);
-    font-size:.84rem; text-decoration:none; white-space:nowrap; }
+.nav-drop-menu a { display:block; padding:9px 16px; color:rgba(255,255,255,.9);
+    font-size:.9rem; text-decoration:none; white-space:nowrap; border-radius:0; }
 .nav-drop-menu a:hover { background:rgba(255,255,255,.1); }
 .nav-dropdown.open .nav-drop-menu { display:block; }
 </style>
@@ -161,26 +302,65 @@
 <body>
 
 <nav>
-    <span class="brand">📋 Supplenze — IIS Da Vinci</span>
-    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
-    <a href="{{ url_for('assenze.nuova') }}" style="color:#fca5a5; font-weight:700;">📋 Assenze</a>
-    <a href="{{ url_for('attivita.lista') }}">📁 Fuori sede</a>
-    <a href="{{ url_for('attivita_ist.lista') }}">🏛 Att. Ist.</a>
-    <a href="{{ url_for('impostazioni.index') }}">⚙ Impostazioni</a>
-    <a href="{{ url_for('sync.orario_globale') }}">📅 Vista orario</a>
-    <a href="{{ url_for('report.index') }}">📊 Report</a>
-    <a href="{{ url_for('att_differite.index') }}">📚 Att. Differite</a>
-    <a href="{{ url_for('display.display') }}" target="_blank">📺 Display</a>
-    {% if g.utente is defined and g.utente.ruolo == 'ds' %}
-{# Utenti → spostato in Impostazioni #}
-    {% endif %}
-    <a href="{{ url_for('auth.cambia_pin') }}" style="color:rgba(255,255,255,.5); font-size:.82rem;">🔒 PIN</a>
-    {% if g.utente is defined %}
-    <span style="color:rgba(255,255,255,.35); font-size:.75rem;">
-        {{ g.utente.nome }} · {{ g.utente.ruolo_label }}
+    <span class="brand">
+        <img src="{{ url_for('static', filename='img/brand/caronte-icon.png') }}" alt="">
+        <span class="brand-testi">
+            <span class="brand-nome">CaronteApp — Da Vinci Chiavenna</span>
+            <span class="brand-datetime" id="nav-datetime"></span>
+        </span>
     </span>
+
+    <a href="{{ url_for('dashboard.index') }}"><span class="nav-ic">⌂&#xFE0E;</span> Dashboard</a>
+    <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">&#x270E;&#xFE0E;</span> Registra assenza</a>
+
+    <div class="nav-dropdown">
+        <a><span class="nav-ic">▤&#xFE0E;</span> Attività</a>
+        <div class="nav-drop-menu">
+            <a href="{{ url_for('attivita.lista') }}"><span class="nav-ic">↗︎&#xFE0E;</span> Attività fuori aula</a>
+            <a href="{{ url_for('attivita_ist.lista') }}"><span class="nav-ic">▥&#xFE0E;</span> Attività istituzionali</a>
+            <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">◷&#xFE0E;</span> Attività differite</a>
+        </div>
+    </div>
+
+    <a href="{{ url_for('banca_ore.index') }}"><span class="nav-ic">€</span> Banca Ore</a>
+    <a href="{{ url_for('report.index') }}"><span class="nav-ic">▲&#xFE0E;</span> Report</a>
+    <div class="nav-dropdown">
+        <a><span class="nav-ic">▦&#xFE0E;</span> Orario</a>
+        <div class="nav-drop-menu">
+            <a href="{{ url_for('sync.orario_globale') }}"><span class="nav-ic">▦&#xFE0E;</span> Orario globale</a>
+            <a href="{{ url_for('orario_sostegno.index') }}"><span class="nav-ic">◐&#xFE0E;</span> Orario sostegno</a>
+        </div>
+    </div>
+    <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">⧉&#xFE0E;</span> Display</a>
+
+    <a href="{{ url_for('impostazioni.index') }}"><span class="nav-ic">&#x2699;&#xFE0E;</span> Impostazioni</a>
+
+    <span class="nav-spacer"></span>
+
+    {% if g.utente is defined %}
+    <form action="{{ url_for('ricerca.index') }}" method="get" class="nav-search">
+        <input type="text" name="q" placeholder="Cerca...">
+    </form>
     {% endif %}
-    <a href="{{ url_for('auth.logout') }}" style="color:rgba(255,255,255,.5); font-size:.82rem;">Esci</a>
+
+    <div class="nav-dropdown">
+        <a>
+            {% if g.utente is defined %}
+            <span class="nav-avatar">{{ g.utente.nome[0]|upper }}</span> {{ g.utente.nome }}
+            {% else %}
+            <span class="nav-avatar">?</span>
+            {% endif %}
+        </a>
+        <div class="nav-drop-menu nav-drop-right">
+            {% if g.utente is defined %}
+            <span style="display:block; padding:6px 16px; color:rgba(255,255,255,.5); font-size:.72rem;">
+                {{ g.utente.ruolo_label }}
+            </span>
+            {% endif %}
+            <a href="{{ url_for('auth.cambia_pin') }}"><span class="nav-ic">&#x26BF;&#xFE0E;</span> Cambia PIN</a>
+            <a href="{{ url_for('auth.logout') }}"><span class="nav-ic">⎋&#xFE0E;</span> Esci</a>
+        </div>
+    </div>
 </nav>
 
 <div class="container">
@@ -191,6 +371,61 @@
     {% endwith %}
     {% block content %}{% endblock %}
 </div>
+
+<script>
+// Menu a tendina della navbar (Attività / Orario / utente): click per
+// aprire/chiudere. Posizione calcolata via JS (position:fixed) perché la
+// nav ha overflow-x:auto e taglierebbe via un menu posizionato in modo
+// relativo/absolute rispetto alla nav stessa.
+(function() {
+    // Data e ora corrente sotto il nome dell'app in navbar, aggiornata al minuto.
+    var GIORNI = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+    var elDatetime = document.getElementById('nav-datetime');
+    function aggiornaOrologio() {
+        if (!elDatetime) return;
+        var now = new Date();
+        var giorno = GIORNI[now.getDay()];
+        var data = now.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'});
+        var ora  = now.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+        elDatetime.textContent = giorno.charAt(0).toUpperCase() + giorno.slice(1) + ' ' + data + ' · ' + ora;
+    }
+    aggiornaOrologio();
+    setInterval(aggiornaOrologio, 30000);
+
+    function chiudiTutti() {
+        document.querySelectorAll('.nav-dropdown.open').forEach(function(d) {
+            d.classList.remove('open');
+        });
+    }
+    document.querySelectorAll('.nav-dropdown > a').forEach(function(trigger) {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var dropdown = trigger.parentElement;
+            var giaAperto = dropdown.classList.contains('open');
+            chiudiTutti();
+            if (giaAperto) return;
+            var menu = dropdown.querySelector('.nav-drop-menu');
+            var rect = trigger.getBoundingClientRect();
+            menu.style.top = rect.bottom + 'px';
+            if (menu.classList.contains('nav-drop-right')) {
+                menu.style.left = '';
+                menu.style.right = (window.innerWidth - rect.right) + 'px';
+            } else {
+                menu.style.right = '';
+                menu.style.left = rect.left + 'px';
+            }
+            dropdown.classList.add('open');
+        });
+    });
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.nav-dropdown')) chiudiTutti();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') chiudiTutti();
+    });
+})();
+</script>
 
 {% block extra_script %}{% endblock %}
 <style>
@@ -203,8 +438,8 @@ th.sortable-col:hover {
     background: rgba(255,255,255,.07);
     color: #93c5fd;
 }
-th.sort-asc::after  { content: ' ↑'; opacity: .9; font-size: .8em; }
-th.sort-desc::after { content: ' ↓'; opacity: .9; font-size: .8em; }
+th.sort-asc::after  { content: ' ↑︎'; opacity: .9; font-size: .8em; }
+th.sort-desc::after { content: ' ↓︎'; opacity: .9; font-size: .8em; }
 table thead th { vertical-align: middle; }
         table { table-layout: auto; width: 100%; }
         table td, table th { overflow: hidden; text-overflow: ellipsis; }

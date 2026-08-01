@@ -76,24 +76,9 @@ def genera_effetti(attivita):
                             # 1. per l'attività corrente stessa (es. BIM: i suoi acc. non lasciano
                             #    supplenze nelle classi del BIM)
                             # 2. per un'altra attività attiva in quel giorno
-                            from models.attivita_fuori_aula import AttivitaFuoriAula as _AFA2
-                            from models.attivita_accompagnatore import AttivitaAccompagnatore as _AAC
-                            # Check 1: classe nelle classi_att dell'attività corrente
-                            _classe_fuori = s.classe in classi_att
-                            # Check 2: classe fuori per altra attività
-                            if not _classe_fuori:
-                                for _af in _AFA2.query.filter(
-                                        _AFA2.data_inizio<=data, _AFA2.data_fine>=data,
-                                        _AFA2.stato=='attiva', _AFA2.id!=attivita.id).all():
-                                    if s.classe not in _af.classi_list: continue
-                                    if _AAC.query.filter_by(id_attivita=_af.id).count() > 0:
-                                        if _AAC.query.filter_by(id_attivita=_af.id, data=data).first():
-                                            _classe_fuori = True; break
-                                    elif not _af.ora_inizio:
-                                        _classe_fuori = True; break
-                                    elif _af.ora_inizio <= s.ora <= _af.ora_fine:
-                                        _classe_fuori = True; break
-                            if _classe_fuori: continue
+                            from modules.attivita_effetti import classe_e_gia_fuori_aula
+                            if classe_e_gia_fuori_aula(s.classe, classi_att, data, attivita.id, s.ora):
+                                continue
                             # Compresenza: salta se c'è un compagno presente
                             from modules.compresenze import ha_compagno_presente as _hcp
                             if _hcp(doc.id, giorno, s.ora, s.classe, data):
@@ -147,26 +132,11 @@ def genera_effetti(attivita):
                                                              ora=ora,classe=slot_ora.classe).first():
                                 # Classe fuori aula: o è nelle classi_att dell'attività
                                 # corrente, o è in un'altra attività attiva quel giorno
-                                from models.attivita_fuori_aula import AttivitaFuoriAula as _AFA2
-                                _classe_fuori = slot_ora.classe in classi_att
-                                _att_fsl = [] if _classe_fuori else _AFA2.query.filter(
-                                    _AFA2.data_inizio<=data, _AFA2.data_fine>=data,
-                                    _AFA2.stato=='attiva', _AFA2.id!=attivita.id
-                                ).all()
-                                for _af in _att_fsl:
-                                    if slot_ora.classe not in _af.classi_list: continue
-                                    from models.attivita_accompagnatore import AttivitaAccompagnatore as _AAC
-                                    if _AAC.query.filter_by(id_attivita=_af.id).count() > 0:
-                                        if _AAC.query.filter_by(id_attivita=_af.id, data=data).first():
-                                            _classe_fuori = True; break
-                                    elif not _af.ora_inizio:
-                                        _classe_fuori = True; break
-                                    elif _af.ora_inizio <= ora <= _af.ora_fine:
-                                        _classe_fuori = True; break
-                                if _classe_fuori:
+                                from modules.attivita_effetti import classe_e_gia_fuori_aula
+                                if classe_e_gia_fuori_aula(slot_ora.classe, classi_att, data, attivita.id, ora):
                                     continue
                                 # Gruppo rimanente: la classe è gestita dai docenti dell'attività
-                                # → non generare supplenza scoperta
+                                # →︎ non generare supplenza scoperta
                                 if IS_GRUPPO_R:
                                     continue
                                 # Compresenza: salta se c'è un compagno presente
@@ -208,10 +178,9 @@ def genera_effetti(attivita):
                 if not ore_credito:
                     continue
                 n_ore = len(ore_credito)
-                marker = (f'Sorveglianza {attivita.tipo_label} '
-                          f'{attivita.descrizione or ""} '
-                          f'ore {slot.ore_json} '
-                          f'[{attivita.id}] ({slot.data.isoformat()})').strip()
+                from modules.attivita_effetti import marker_sorveglianza
+                marker = marker_sorveglianza(attivita.tipo_label, attivita.descrizione,
+                                              slot.ore_json, attivita.id, slot.data)
                 if not MovimentoBancaOre.query.filter_by(
                         id_docente=slot.id_docente, data=slot.data,
                         descrizione=marker).first():
@@ -241,10 +210,9 @@ def genera_effetti(attivita):
                         continue
                     n_ore = len(ore_credito)
                     ore_str = ','.join(str(o) for o in ore_credito)
-                    marker = (f'Sorveglianza {attivita.tipo_label} '
-                              f'{attivita.descrizione or ""} '
-                              f'ore {ore_str} '
-                              f'[{attivita.id}] ({data.isoformat()})').strip()
+                    from modules.attivita_effetti import marker_sorveglianza
+                    marker = marker_sorveglianza(attivita.tipo_label, attivita.descrizione,
+                                                  ore_str, attivita.id, data)
                     if not MovimentoBancaOre.query.filter_by(id_docente=doc.id,data=data,
                                                               descrizione=marker).first():
                         db.session.add(MovimentoBancaOre(id_docente=doc.id,data=data,

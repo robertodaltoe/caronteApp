@@ -13,16 +13,16 @@ BUCKET_B  = 'B'   # max 40h: CdC, dipartimenti, GLO
 BUCKET_NO = None  # fuori conteggio: scrutini, esami
 
 TIPI_ATTIVITA = {
-    'collegio':           {'label': 'Collegio docenti',          'bucket': BUCKET_A,  'emoji': '🏛'},
-    'consiglio_classe':   {'label': 'Consiglio di classe',       'bucket': BUCKET_B,  'emoji': '👥'},
-    'dipartimento':       {'label': 'Riunione dipartimento',     'bucket': BUCKET_B,  'emoji': '📚'},
-    'riunione_materia':   {'label': 'Riunione per materia',      'bucket': BUCKET_B,  'emoji': '📖'},
-    'glo':                {'label': 'GLO',                       'bucket': BUCKET_B,  'emoji': '♿'},
-    'incontro_famiglie':  {'label': 'Incontro scuola-famiglia',  'bucket': BUCKET_A,  'emoji': '👨‍👩‍👧'},
-    'scrutinio':          {'label': 'Scrutinio',                 'bucket': BUCKET_NO, 'emoji': '📝'},
-    'formazione':         {'label': 'Formazione',                'bucket': BUCKET_A,  'emoji': '🎓'},
-    'riunione_referenti': {'label': 'Riunione referenti dip.',   'bucket': BUCKET_B,  'emoji': '🔖'},
-    'altro':              {'label': 'Altro',                     'bucket': BUCKET_A,  'emoji': '📌'},
+    'collegio':           {'label': 'Collegio docenti',          'bucket': BUCKET_A,  'emoji': '▨︎'},
+    'consiglio_classe':   {'label': 'Consiglio di classe',       'bucket': BUCKET_B,  'emoji': '◍︎'},
+    'dipartimento':       {'label': 'Riunione dipartimento',     'bucket': BUCKET_B,  'emoji': '▥︎'},
+    'riunione_materia':   {'label': 'Riunione per materia',      'bucket': BUCKET_B,  'emoji': '▥︎'},
+    'glo':                {'label': 'GLO',                       'bucket': BUCKET_B,  'emoji': '◍︎'},
+    'incontro_famiglie':  {'label': 'Incontro scuola-famiglia',  'bucket': BUCKET_A,  'emoji': '◍◍◍'},
+    'scrutinio':          {'label': 'Scrutinio',                 'bucket': BUCKET_NO, 'emoji': '✎︎'},
+    'formazione':         {'label': 'Formazione',                'bucket': BUCKET_A,  'emoji': '△︎'},
+    'riunione_referenti': {'label': 'Riunione referenti dip.',   'bucket': BUCKET_B,  'emoji': '◆︎'},
+    'altro':              {'label': 'Altro',                     'bucket': BUCKET_A,  'emoji': '◆︎'},
 }
 
 LIMITE_BUCKET = 40  # ore annue per bucket A e B
@@ -67,7 +67,7 @@ class AttivitaIst(db.Model):
 
     @property
     def tipo_emoji(self):
-        return TIPI_ATTIVITA.get(self.tipo, {}).get('emoji', '📌')
+        return TIPI_ATTIVITA.get(self.tipo, {}).get('emoji', '◆︎')
 
     @property
     def durata_ore(self):
@@ -119,7 +119,7 @@ class AttivitaIstPresenza(db.Model):
     # presente | assente | giustificato
     stato       = db.Column(db.String(20), default='presente')
     note        = db.Column(db.String(200), nullable=True)
-    # Se assente per assenza già registrata nel sistema → link automatico
+    # Se assente per assenza già registrata nel sistema →︎ link automatico
     id_assenza_collegata = db.Column(db.Integer,
                                      db.ForeignKey('assenze.id'), nullable=True)
     # Presenza parziale: ore effettive di partecipazione (None = intera durata evento)

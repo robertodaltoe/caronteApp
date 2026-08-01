@@ -1,5 +1,5 @@
 """
-Modulo assegnazione nominativa classi → docenti.
+Modulo assegnazione nominativa classi →︎ docenti.
 Vista per area disciplinare, identica alla struttura del file ASSEGNAZIONI CLASSI.
 """
 from flask import (Blueprint, render_template, request,
@@ -58,8 +58,8 @@ AREE = [
 
 TIPO_DISPLAY = {
     'titolare':    'TI',
-    'coe_entrata': 'COE ←',
-    'coe_uscita':  'COE →',
+    'coe_entrata': 'COE ←︎',
+    'coe_uscita':  'COE →︎',
     'supplente':   'Supp.',
     'part_time':   'PT',
     'eccedenza':   '+ore',
@@ -519,6 +519,14 @@ def aggiorna_ore(asgn_id):
     from models.piano_studi import PianoStudi
     ac_rows = AssegnazioneClasse.query.filter_by(id_assegnazione=asgn_id).all()
     for ac_row in ac_rows:
+        # Il potenziamento (indirizzo fittizio 'POT') non è nel piano di
+        # studi — non ha senso confrontarlo con PianoStudi (darebbe sempre
+        # "0 ore previste" e quindi un falso avviso ad ogni inserimento).
+        # Il suo budget è invece CattedraPotenziamento.ore, controllato
+        # separatamente più sotto.
+        if ac_row.indirizzo == 'POT':
+            continue
+
         # Ore totali previste per questa CC in questa classe
         ps_all = PianoStudi.query.filter_by(
             anno_scol=asgn.anno_scol,
@@ -629,10 +637,10 @@ def api_verifica():
             max_ore = doc.ore_max_effettive
             if tot > max_ore:
                 avvisi.append({'livello': 'error',
-                               'msg': f'⚠ {tot}h / {max_ore}h — supera il massimo'})
+                               'msg': f'⚠︎ {tot}h / {max_ore}h — supera il massimo'})
             elif tot == max_ore:
                 avvisi.append({'livello': 'ok',
-                               'msg': f'✓ Cattedra completa: {tot}h / {max_ore}h'})
+                               'msg': f'✓︎ Cattedra completa: {tot}h / {max_ore}h'})
             else:
                 avvisi.append({'livello': 'info',
                                'msg': f'{tot}h / {max_ore}h — mancano {max_ore - tot}h'})

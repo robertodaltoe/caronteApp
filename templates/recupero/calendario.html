@@ -2,13 +2,13 @@
 {% block title %}Calendario Recupero{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">← Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📅 Calendario lezioni di recupero</h1>
+    <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">←︎ Recupero</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Calendario lezioni di recupero</h1>
     <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('recupero.export_xlsx') }}" class="btn btn-sm"
-           style="background:#166534; color:white;">📊 Scarica XLSX</a>
+           style="background:#166534; color:white;">▲︎ Scarica XLSX</a>
         <a href="{{ url_for('recupero.export_schede_docenti') }}" class="btn btn-sm"
-           style="background:#7c3aed; color:white;">📦 Schede docenti (ZIP)</a>
+           style="background:#7c3aed; color:white;">▧︎ Schede docenti (ZIP)</a>
     </div>
 </div>
 
@@ -20,7 +20,7 @@
           onsubmit="return document.getElementById('chk-conferma').checked || (alert('Seleziona la casella di conferma') || false)">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#0369a1; font-size:.9rem;">🤖 Genera bozza automatica</strong>
+                <strong style="color:#0369a1; font-size:.9rem;">⚙︎ Genera bozza automatica</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Distribuisce le lezioni rispettando disponibilità docenti e senza sovrapposizioni per gli alunni.
                     <strong style="color:#dc2626;">Sovrascrive tutte le lezioni esistenti.</strong>
@@ -32,7 +32,7 @@
                     Confermo
                 </label>
                 <button type="submit" class="btn btn-sm" style="background:#0369a1; color:white; white-space:nowrap;">
-                    🤖 Genera bozza
+                    ⚙︎ Genera bozza
                 </button>
             </div>
         </div>
@@ -45,7 +45,7 @@
         <input type="hidden" name="azione" value="completa_bozza">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#166534; font-size:.9rem;">🧩 Completa bozza</strong>
+                <strong style="color:#166534; font-size:.9rem;">◐︎ Completa bozza</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Aggiunge lezioni solo ai gruppi ancora senza data — non tocca quelle già
                     pianificate, automaticamente o a mano.
@@ -53,7 +53,7 @@
             </div>
             <button type="submit" class="btn btn-sm" style="background:#166534; color:white;
                     white-space:nowrap; margin-left:auto; flex-shrink:0;">
-                🧩 Completa
+                ◐︎ Completa
             </button>
         </div>
     </form>
@@ -66,14 +66,14 @@
         <input type="hidden" name="azione" value="elimina_tutto">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#dc2626; font-size:.9rem;">🗑 Azzera tutto il calendario</strong>
+                <strong style="color:#dc2626; font-size:.9rem;">✕︎ Azzera tutto il calendario</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Elimina tutte le lezioni pianificate (gruppi e docenti restano intatti).
                 </div>
             </div>
             <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white;
                     white-space:nowrap; margin-left:auto; flex-shrink:0;">
-                🗑 Azzera tutto
+                ✕︎ Azzera tutto
             </button>
         </div>
     </form>
@@ -83,13 +83,13 @@
 {% if conflitti %}
 <div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid #dc2626; background:#fff5f5;">
     <div style="font-size:.9rem; font-weight:700; color:#dc2626; margin-bottom:8px;">
-        ⚠ {{ conflitti|length }} conflitt{{ 'o' if conflitti|length==1 else 'i' }} rilevat{{ 'o' if conflitti|length==1 else 'i' }}
+        ⚠︎ {{ conflitti|length }} conflitt{{ 'o' if conflitti|length==1 else 'i' }} rilevat{{ 'o' if conflitti|length==1 else 'i' }}
     </div>
     {% for cf in conflitti %}
     <div style="font-size:.8rem; margin-bottom:4px; display:flex; gap:8px; align-items:flex-start;">
         <span style="flex-shrink:0; font-size:.7rem; padding:1px 6px; border-radius:4px; font-weight:700;
                      background:{% if cf.tipo=='docente' %}#fef3c7; color:#92400e{% else %}#fee2e2; color:#dc2626{% endif %};">
-            {{ '👨‍🏫 docente' if cf.tipo=='docente' else '👨‍🎓 alunno' }}
+            {{ '◍︎▨︎ docente' if cf.tipo=='docente' else '◍︎△︎ alunno' }}
         </span>
         <span style="color:#374151;">
             <strong>{{ cf.data.strftime('%d/%m') }}</strong> — {{ cf.msg }}
@@ -168,7 +168,7 @@
             <button type="submit"
                     style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);
                            color:white;border-radius:5px;padding:2px 8px;font-size:.74rem;cursor:pointer;">
-                🗑 Elimina giornata
+                ✕︎ Elimina giornata
             </button>
         </form>
     </div>
@@ -181,7 +181,7 @@
                 <th>Classi</th>
                 <th style="width:70px; text-align:center;">Alunni</th>
                 <th style="width:60px;">Aula</th>
-                <th style="width:50px; text-align:center;">✖</th>
+                <th style="width:50px; text-align:center;">✕︎</th>
             </tr>
         </thead>
         <tbody>
@@ -201,11 +201,11 @@
             <td style="text-align:center; display:flex; gap:3px; justify-content:center;">
                 <button type="button" onclick="toggleEditLezione({{ l.id }})"
                         style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
-                               border-radius:5px;padding:2px 6px;font-size:.76rem;cursor:pointer;">✏️</button>
+                               border-radius:5px;padding:2px 6px;font-size:.76rem;cursor:pointer;">✎︎️</button>
                 <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ l.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                 </form>
             </td>
         </tr>
@@ -234,9 +234,9 @@
                         <input type="text" name="aula" value="{{ l.aula or '' }}"
                                style="width:60px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.8rem;">
                     </div>
-                    <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0;">💾</button>
+                    <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0;">▤︎</button>
                     <button type="button" onclick="toggleEditLezione({{ l.id }})"
-                            class="btn btn-sm" style="flex-shrink:0;background:#fee2e2;color:#dc2626;">✕</button>
+                            class="btn btn-sm" style="flex-shrink:0;background:#fee2e2;color:#dc2626;">✕︎</button>
                 </form>
             </td>
         </tr>

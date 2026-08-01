@@ -16,7 +16,7 @@ MOTIVI = [
     ('progetto',   '📐 Progetto / attività'),
     ('gara',       '🏆 Gara sportiva'),
     ('formazione', '🎓 Formazione'),
-    ('riunione',   '📋 Riunione / commissione'),
+    ('riunione',   '🏫 Riunione / commissione'),
     ('altro',      '📌 Altro'),
 ]
 

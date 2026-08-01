@@ -18,10 +18,10 @@ PERIODO_AGO  = 'prove_agosto'
 CONTRATTI_OK = ('TI', 'TD_annuale')  # solo tempo indeterminato + tempo determinato annuale
 
 TIPO_PROVA_LABEL = {
-    'scritto':       '✏️ Scritto',
-    'orale':         '🗣 Orale',
-    'pratico':       '🔧 Pratico',
-    'scritto_orale': '✏️🗣 Scritto + Orale',
+    'scritto':       '✎︎️ Scritto',
+    'orale':         '⚑︎ Orale',
+    'pratico':       '⚙︎ Pratico',
+    'scritto_orale': '✎︎️⚑︎ Scritto + Orale',
 }
 
 

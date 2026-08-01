@@ -3,7 +3,7 @@ from models import db
 from models.supplenza import Supplenza
 from models.docente import Docente
 from models.movimento_banca_ore import MovimentoBancaOre
-from models.orario_docente import OrarioDocente
+from models.orario_docente import OrarioDocente, classi_attive as _classi_attive
 from models.attivita_fuori_aula import AttivitaFuoriAula, AttivitaClasse
 from models.assenza import Assenza
 from models.indisponibilita import Indisponibilita
@@ -73,7 +73,8 @@ def nuova():
     data_str = request.args.get('data', oggi.isoformat())
     docenti  = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     return render_template('supplenza_form.html',
-        docenti=docenti, data_sel=data_str, ore=ORA_LABEL)
+        docenti=docenti, data_sel=data_str, ore=ORA_LABEL,
+        classi_attive=_classi_attive())
 
 
 # ── ASSEGNA SOSTITUTO (form inline dashboard) ─────────────────
@@ -85,6 +86,15 @@ def assegna(id):
 
     if not id_sost:
         flash('Seleziona un sostituto.', 'warning')
+        return redirect(url_for('dashboard.index', data=s.data.isoformat()))
+
+    from concorrenza import versione_cambiata
+    if versione_cambiata(s.modificato_il, request.form.get('versione')):
+        flash(
+            f'⚠︎ Questa supplenza (cl.{s.classe or "-"}, ora {s.ora}) è stata '
+            f'modificata da un altro utente nel frattempo — probabilmente già '
+            f'assegnata o cambiata da qualcun altro. Ricarica la pagina per '
+            f'vedere lo stato aggiornato prima di riprovare.', 'error')
         return redirect(url_for('dashboard.index', data=s.data.isoformat()))
 
     # Rimuovi vecchio movimento se c'era già un sostituto
@@ -101,6 +111,9 @@ def assegna(id):
 
     db.session.commit()
     docente = Docente.query.get(int(id_sost))
+    from routes.auth import log as auth_log
+    auth_log('assegna_supplenza',
+        f'{docente.cognome} — {tipo} ({s.data.strftime("%d/%m/%Y")} ora {s.ora} cl.{s.classe or "-"})')
     flash(f'Assegnato: {docente.cognome} — {tipo}.', 'success')
     return redirect(url_for('dashboard.index', data=s.data.isoformat()))
 
@@ -109,9 +122,22 @@ def assegna(id):
 @supplenze_bp.route('/supplenze/<int:id>/annulla', methods=['POST'])
 def annulla(id):
     s = Supplenza.query.get_or_404(id)
+
+    from concorrenza import versione_cambiata
+    if versione_cambiata(s.modificato_il, request.form.get('versione')):
+        flash(
+            f'⚠︎ Questa supplenza (cl.{s.classe or "-"}, ora {s.ora}) è stata '
+            f'modificata da un altro utente nel frattempo. Ricarica la pagina '
+            f'per vedere lo stato aggiornato prima di annullarla.', 'error')
+        return redirect(url_for('dashboard.index', data=s.data.isoformat()))
+
     s.stato = 'annullata'
     MovimentoBancaOre.query.filter_by(id_supplenza=s.id).delete()
     db.session.commit()
+    from routes.auth import log as auth_log
+    sostituto = Docente.query.get(s.id_sostituto) if s.id_sostituto else None
+    auth_log('annulla_supplenza',
+        f'{sostituto.cognome if sostituto else "—"} ({s.data.strftime("%d/%m/%Y")} ora {s.ora} cl.{s.classe or "-"})')
     flash('Supplenza annullata.', 'warning')
     return redirect(url_for('dashboard.index', data=s.data.isoformat()))
 
@@ -139,48 +165,20 @@ def api_suggerimenti():
 
     # ── Docenti esclusi ──────────────────────────────────────
     from models.indisponibilita_ricorrente import IndisponibilitaRicorrente
+    from modules.suggerimenti_supplenza import (
+        docenti_esclusi, docenti_occupati_stessa_ora, ha_ora_adiacente,
+        calcola_saldi_docenti, formatta_saldo_label_proiettato,
+    )
 
-    # Tutte le assenze del giorno per questo docente
-    assenze_giorno = Assenza.query.filter_by(data=data_sel).all()
-
-    # 1a. Assenti per TUTTO il giorno (malattia, permesso giornaliero, ecc.)
-    #     → motivo non è permesso_orario, oppure coprono tutte le ore
-    #     In pratica: se l'assenza non ha ora_inizio/fine definite, o copre un arco
-    #     molto ampio → escludi da tutte le ore
-    assenti_tutto_giorno_ids = set()
-    assenti_ora_ids = set()
-    for a in assenze_giorno:
-        # Assenza senza range orario = tutto il giorno
-        if a.ora_inizio is None or a.ora_fine is None:
-            assenti_tutto_giorno_ids.add(a.id_docente)
-        # Assenza che copre tutto il giorno (range 1-9 o simile)
-        elif a.ora_inizio <= 1 and a.ora_fine >= 8:
-            assenti_tutto_giorno_ids.add(a.id_docente)
-        elif a.ora_inizio <= ora <= a.ora_fine:
-            # Permesso orario: copre solo alcune ore
-            assenti_ora_ids.add(a.id_docente)
+    # 1. Assenti (tutto il giorno o solo quell'ora) e indisponibili puntuali
+    assenti_tutto_giorno_ids, assenti_ora_ids, indisp_ids = \
+        docenti_esclusi(data_sel, ora, giorno)
     assenti_ids = assenti_tutto_giorno_ids | assenti_ora_ids
 
-    # 2. Già assegnati come sostituto nella stessa ora
-    sups_stessa_ora = (Supplenza.query
-        .filter_by(data=data_sel, ora=ora)
-        .filter(Supplenza.stato.in_(['assegnata', 'scoperta']))
-        .filter(Supplenza.id_sostituto.isnot(None))
-        .all())
-    # Chi copre POTENZIAMENTO è occupato in quell'ora MA resta visibile
-    # nel gruppo potenziamento (non impegnato su una classe vera)
-    occupati_ids     = {s.id_sostituto for s in sups_stessa_ora
-                        if s.tipo != 'potenziamento'}
-    occupati_pot_ids = {s.id_sostituto for s in sups_stessa_ora
-                        if s.tipo == 'potenziamento'}
-    # 3. Indisponibili in quella specifica ora — singole
-    indisp_ids = {
-        i.id_docente for i in
-        Indisponibilita.query.filter_by(data=data_sel)
-        .filter(
-            db.or_(Indisponibilita.ora.is_(None), Indisponibilita.ora == ora)
-        ).all()
-    }
+    # 2. Già assegnati come sostituto nella stessa ora (chi copre
+    #    potenziamento resta comunque visibile nel gruppo potenziamento)
+    occupati_ids, occupati_pot_ids = docenti_occupati_stessa_ora(data_sel, ora)
+
     # 4. Indisponibili — ricorrenti (colloqui fissi dalla scheda docente)
     indisp_ids |= {
         ir.id_docente for ir in
@@ -215,28 +213,14 @@ def api_suggerimenti():
     esclusi = assenti_ids | occupati_ids | indisp_ids
 
     # ── Saldo banca ore per docente — effettivo e previsto ──
-    oggi_q = date.today()
-    # Effettivo: movimenti <= oggi
-    saldi_eff_raw = db.session.query(
-        MovimentoBancaOre.id_docente,
-        func.sum(MovimentoBancaOre.minuti).label('totale')
-    ).filter(MovimentoBancaOre.data <= oggi_q
-    ).group_by(MovimentoBancaOre.id_docente).all()
-    saldi_eff = {r.id_docente: r.totale or 0 for r in saldi_eff_raw}
-
-    # Previsto: movimenti > oggi
-    saldi_prev_raw = db.session.query(
-        MovimentoBancaOre.id_docente,
-        func.sum(MovimentoBancaOre.minuti).label('totale')
-    ).filter(MovimentoBancaOre.data > oggi_q
-    ).group_by(MovimentoBancaOre.id_docente).all()
-    saldi_prev = {r.id_docente: r.totale or 0 for r in saldi_prev_raw}
-
-    # Totale per ordinamento
-    saldi = {doc_id: saldi_eff.get(doc_id, 0) for doc_id in
-             set(list(saldi_eff.keys()) + list(saldi_prev.keys()))}
-    for doc_id in saldi_prev:
-        saldi.setdefault(doc_id, 0)
+    # Scoped all'anno scolastico corrente (stessa convenzione usata in
+    # routes/report.py::get_saldi_docente): prima qui mancava del tutto il
+    # filtro per anno_scol, quindi il suggerimento ordinava i docenti in
+    # base al debito/credito cumulato su TUTTI gli anni scolastici mai
+    # registrati, non solo quello in corso.
+    from config_anno import get_anno_corrente
+    anno_corrente = get_anno_corrente()
+    saldi_eff, saldi_prev, saldi = calcola_saldi_docenti(anno_corrente)
 
     # ── Tutti i docenti attivi non esclusi ───────────────────
     tutti = {
@@ -246,7 +230,13 @@ def api_suggerimenti():
     }
 
     # ── Slot orario di tutti i docenti in quel giorno ────────
-    slots_giorno = OrarioDocente.query.filter_by(giorno=giorno).all()
+    # Include anche l'orario di sostegno (tabella separata, vedi
+    # models/orario_sostegno.py): un docente di sostegno impegnato in
+    # un'ora viene classificato come "in compresenza" esattamente come
+    # un ITP, invece di risultare erroneamente libero.
+    from models.orario_sostegno import slots_come_orario_docente
+    slots_giorno = list(OrarioDocente.query.filter_by(giorno=giorno).all()) \
+        + slots_come_orario_docente(giorno)
 
     # Mappa id_docente -> lista slot del giorno
     slots_per_doc = {}
@@ -273,10 +263,7 @@ def api_suggerimenti():
 
         saldo_eff  = saldi_eff.get(doc_id, 0)
         saldo_prev = saldi_prev.get(doc_id, 0)
-        saldo_tot  = saldo_eff + saldo_prev
-        saldo_label = _fmt_saldo(saldo_eff)
-        if saldo_prev != 0:
-            saldo_label += f' → {_fmt_saldo(saldo_tot)}'
+        saldo_label = formatta_saldo_label_proiettato(saldo_eff, saldo_prev)
 
         # Verifica compresenza con l'assente
         # Un docente è in compresenza reale solo se:
@@ -322,8 +309,11 @@ def api_suggerimenti():
 
         # Badge visivo per tipo disponibilità
         badge_tipo = None
-        if doc.ruolo == 'itp' if hasattr(doc,'ruolo') else False:
+        ruolo_doc = getattr(doc, 'ruolo', None)
+        if ruolo_doc == 'itp':
             badge_tipo = {'label': 'ITP', 'color': '#7c3aed', 'bg': '#f5f3ff'}
+        elif ruolo_doc == 'sostegno':
+            badge_tipo = {'label': 'SOS', 'color': '#0d9488', 'bg': '#f0fdfa'}
         # Multi-sede: verifica se la supplenza è in un giorno fuori presenza
         giorni_pres = getattr(doc, 'giorni_presenza_list', [])
         multi_sede  = getattr(doc, 'multi_sede', False)
@@ -361,11 +351,11 @@ def api_suggerimenti():
                 from modules.compresenze import compagni_presenti as _cp
                 compagni_pres = _cp(doc_id, giorno, ora, slot_ora.classe, data_sel)
                 if not compagni_pres:
-                    # Compagno assente/indisponibile (BIM, FSL…) → il docente è
+                    # Compagno assente/indisponibile (BIM, FSL…) →︎ il docente è
                     # effettivamente LIBERO in quell'ora (la compresenza non è attiva)
-                    # → trattalo come libero con ora adiacente
+                    # →︎ trattalo come libero con ora adiacente
                     ore_occupate = {s.ora for s in slots}
-                    ha_adiacente = (ora - 1) in ore_occupate or (ora + 1) in ore_occupate
+                    ha_adiacente = ha_ora_adiacente(ore_occupate, ora)
                     if ha_adiacente:
                         entry['dettaglio'] = f'Libero — compresenza inattiva ({slot_ora.classe})'
                         gruppo_adj.append(entry)
@@ -376,11 +366,11 @@ def api_suggerimenti():
                     entry['dettaglio'] = f'Compresenza {slot_ora.classe}'
                     entry['docente_classe'] = docente_della_classe
                     gruppo_comp.append(entry)
-            # Se ha lezione propria → non disponibile (già in classe)
+            # Se ha lezione propria →︎ non disponibile (già in classe)
         else:
             # Libero in quell'ora — controlla adiacenza
             ore_occupate = {s.ora for s in slots}
-            ha_adiacente = (ora - 1) in ore_occupate or (ora + 1) in ore_occupate
+            ha_adiacente = ha_ora_adiacente(ore_occupate, ora)
             ha_giorno    = len(ore_occupate) > 0
 
             if ha_giorno and ha_adiacente:
@@ -389,14 +379,14 @@ def api_suggerimenti():
             elif ha_giorno:
                 entry['dettaglio'] = 'Libero (no ora adiacente)'
                 gruppo_liberi.append(entry)
-            # Se non ha nessuna ora nel giorno → non è in servizio → escluso
+            # Se non ha nessuna ora nel giorno →︎ non è in servizio →︎ escluso
 
     # Ordina ogni gruppo per saldo crescente (più debito = priorità)
     for g in [gruppo_pot, gruppo_comp, gruppo_adj, gruppo_liberi]:
         g.sort(key=lambda x: x['saldo_min'])
 
     # ── Mappa orario completo (tutti i giorni) per il badge "sua classe" ──
-    slots_tutti_giorni = OrarioDocente.query.all()
+    slots_tutti_giorni = list(OrarioDocente.query.all()) + slots_come_orario_docente()
     slots_per_doc_full = {}
     for s in slots_tutti_giorni:
         slots_per_doc_full.setdefault(s.id_docente, []).append(s)
@@ -471,9 +461,8 @@ def api_suggerimenti():
                     'nome':    doc.nome or '',
                     'materia': doc.materia or '',
                     'saldo_min':   saldi_eff.get(doc_id, 0),
-                    'saldo_label': _fmt_saldo(saldi_eff.get(doc_id,0)) +
-                                   (f' → {_fmt_saldo(saldi_eff.get(doc_id,0)+saldi_prev.get(doc_id,0))}'
-                                    if saldi_prev.get(doc_id,0) != 0 else ''),
+                    'saldo_label': formatta_saldo_label_proiettato(
+                                       saldi_eff.get(doc_id, 0), saldi_prev.get(doc_id, 0)),
                     'dettaglio': f'Classe fuori aula ({slot_ora.classe})',
                     'docente_classe': bool(classe_sup) and any(
                         s.classe == classe_sup
@@ -484,24 +473,24 @@ def api_suggerimenti():
 
     gruppi = []
     if gruppo_fuori_aula:
-        gruppi.append({'label': '🏫 Liberi (classe fuori aula)', 'key': 'fuori',
+        gruppi.append({'label': '▨︎ Liberi (classe fuori aula)', 'key': 'fuori',
                        'note': 'Tipo supplenza consigliato: C — Completamento, non conta per recupero',
                        'docenti': gruppo_fuori_aula})
     if gruppo_pot:
-        gruppi.append({'label': '🟡 Potenziamento', 'key': 'pot',
+        gruppi.append({'label': '◆ Potenziamento', 'key': 'pot',
                        'tipo_chiave': 'potenziamento',
                        'note': 'Tipo supplenza: P — Potenziamento',
                        'docenti': gruppo_pot})
     if gruppo_comp:
-        gruppi.append({'label': '🔵 Compresenza disponibile', 'key': 'comp',
+        gruppi.append({'label': '◈ Compresenza disponibile', 'key': 'comp',
                        'note': 'Tipo supplenza consigliato: C — completamento orario',
                        'docenti': gruppo_comp})
     if gruppo_adj:
-        gruppi.append({'label': '🟢 Liberi (ora adiacente)', 'key': 'adj',
+        gruppi.append({'label': '● Liberi (ora adiacente)', 'key': 'adj',
                        'note': 'Tipo consigliato: R — conta come recupero',
                        'docenti': gruppo_adj})
     if gruppo_liberi:
-        gruppi.append({'label': '⚪ Liberi (ora non adiacente)', 'key': 'lib',
+        gruppi.append({'label': '○ Liberi (ora non adiacente)', 'key': 'lib',
                        'note': 'Verificare disponibilità',
                        'docenti': gruppo_liberi})
 
@@ -523,6 +512,11 @@ def cambia_tipo(id):
     if not nuovo_tipo:
         return jsonify({'ok': False}), 400
 
+    from concorrenza import versione_cambiata
+    if versione_cambiata(s.modificato_il, data_in.get('versione')):
+        return jsonify({'ok': False,
+            'errore': 'Modificata da un altro utente nel frattempo. Ricarica la pagina.'}), 409
+
     vecchio_tipo = s.tipo
 
     # Aggiorna movimento banca ore se cambia tra recupero e altro
@@ -533,6 +527,9 @@ def cambia_tipo(id):
 
     s.tipo = nuovo_tipo
     db.session.commit()
+    from routes.auth import log as auth_log
+    auth_log('cambia_tipo_supplenza',
+        f'{vecchio_tipo} →︎ {nuovo_tipo} ({s.data.strftime("%d/%m/%Y")} ora {s.ora} cl.{s.classe or "-"})')
     return jsonify({'ok': True})
 
 
@@ -567,6 +564,17 @@ def modifica(id):
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
 
     if request.method == 'POST':
+        from concorrenza import versione_cambiata
+        if versione_cambiata(s.modificato_il, request.form.get('versione')):
+            flash(
+                '⚠︎ Questa supplenza è stata modificata da un altro utente '
+                'nel frattempo. Ricontrolla i dati aggiornati qui sotto '
+                'prima di salvare di nuovo.', 'error')
+            return render_template('modifica_supplenza.html',
+                supplenza=s, docenti=docenti, ore=ORA_LABEL,
+                next=request.form.get('next', ''),
+                classi_attive=_classi_attive())
+
         s.data         = date.fromisoformat(request.form['data'])
         s.ora          = int(request.form['ora'])
         s.classe       = request.form['classe'].strip().upper()
@@ -589,6 +597,9 @@ def modifica(id):
             s.tipo = tipo_nuovo
 
         db.session.commit()
+        from routes.auth import log as auth_log
+        auth_log('modifica_supplenza',
+            f'{s.data.strftime("%d/%m/%Y")} ora {s.ora} cl.{s.classe or "-"} — {s.tipo}')
         flash('Supplenza aggiornata.', 'success')
         next_url = request.form.get('next') or url_for('dashboard.index', data=s.data.isoformat())
         return redirect(next_url)
@@ -596,4 +607,5 @@ def modifica(id):
     return render_template('modifica_supplenza.html',
         supplenza=s, docenti=docenti,
         ore=ORA_LABEL,
-        next=request.args.get('next', ''))
+        next=request.args.get('next', ''),
+        classi_attive=_classi_attive())

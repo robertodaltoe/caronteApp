@@ -5,13 +5,24 @@ Uso: python3 sync_db.py [scarica|carica|stato|lock-off] [--forza]
 Ad ogni 'carica' viene salvata su Drive anche una copia storica
 timestampata in CaronteApp/storico_db/, mantenendo solo le ultime
 MAX_BACKUP versioni (le più vecchie vengono eliminate automaticamente).
+
+Il database contiene dati personali dei docenti (inclusi, nel campo
+motivo delle assenze, dati particolari ex art. 9 GDPR come "malattia").
+Per questo motivo, dalla revisione del report GDPR di agosto 2026, il
+file caricato/scaricato da Google Drive viene sempre cifrato con lo
+stesso meccanismo del backup locale (modules/backup_cifrato.py, Fernet
+AES-128+HMAC-SHA256) — su Drive non transita più il database in chiaro.
 """
 import os, sys, shutil, json, platform
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from modules.backup_cifrato import cifra_file, decifra_file
+
 DRIVE_SUBFOLDER  = "CaronteApp"
-DRIVE_DB_NAME    = "database.db"
+DRIVE_DB_NAME     = "database.db.enc"   # file cifrato condiviso su Drive
+DRIVE_DB_NAME_OLD = "database.db"       # nome legacy (in chiaro, pre-agosto 2026)
 DRIVE_LOCK_NAME  = "caronte.lock"
 STORICO_SUBDIR   = "storico_db"
 MAX_BACKUP       = 10
@@ -73,16 +84,16 @@ def set_lock(c, attivo):
     elif lk.exists(): lk.unlink()
 
 def salva_storico(c, db):
-    """Copia il DB locale nello storico con nome timestampato e applica la rotazione a MAX_BACKUP file."""
+    """Copia il DB locale nello storico, CIFRATO, con nome timestampato e applica la rotazione a MAX_BACKUP file."""
     s = cartella_storico(c)
     ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     macchina = platform.node().replace(" ", "_")
-    nome_backup = f"database_{ts_str}_{macchina}.db"
+    nome_backup = f"database_{ts_str}_{macchina}.db.enc"
     dest = s / nome_backup
-    shutil.copy2(db, dest)
+    cifra_file(str(db), str(dest))
 
     # Rotazione: mantieni solo le MAX_BACKUP versioni più recenti
-    backups = sorted(s.glob("database_*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    backups = sorted(s.glob("database_*.db.enc"), key=lambda p: p.stat().st_mtime, reverse=True)
     rimossi = 0
     for vecchio in backups[MAX_BACKUP:]:
         vecchio.unlink()
@@ -94,8 +105,32 @@ def scarica(db, forzato=False):
     c = cartella_drive()
     if not c: print("  Google Drive non trovato."); return False
     db_drive = c/DRIVE_DB_NAME
-    if not db_drive.exists(): print("  Nessun DB su Drive."); return False
-    print(f"  Drive:  {_fmt(_ts(db_drive))}  ({db_drive.stat().st_size//1024} KB)")
+    db_drive_old = c/DRIVE_DB_NAME_OLD
+
+    if not db_drive.exists() and not db_drive_old.exists():
+        print("  Nessun DB su Drive."); return False
+
+    # Migrazione: solo il vecchio file in chiaro presente su Drive.
+    # Lo si usa una volta come sorgente, poi il prossimo 'carica' da
+    # questa macchina lo sostituirà con la versione cifrata.
+    if not db_drive.exists() and db_drive_old.exists():
+        print("  Trovato solo il vecchio database.db in chiaro su Drive (formato pre-cifratura).")
+        print(f"  Drive (legacy, non cifrato):  {_fmt(_ts(db_drive_old))}  ({db_drive_old.stat().st_size//1024} KB)")
+        print(f"  Locale: {_fmt(_ts(db))}")
+        lk = lock_info(c)
+        if lk and not forzato:
+            print(f"  ATTENZIONE: in uso da {lk.get('macchina')} dal {str(lk.get('dal',''))[:19]}")
+            if input("  Procedere? (s/N): ").strip().lower() != "s":
+                print("  Annullato."); return False
+        if _ts(db_drive_old) > _ts(db) or forzato:
+            if Path(db).exists(): shutil.copy2(db, str(db)+".bak")
+            shutil.copy2(db_drive_old, db)
+        set_lock(c, True)
+        print("  DB pronto (da formato legacy) - lock attivato")
+        print("  Esegui 'carica' per pubblicare la versione cifrata e rimuovere quella in chiaro.")
+        return True
+
+    print(f"  Drive:  {_fmt(_ts(db_drive))}  ({db_drive.stat().st_size//1024} KB, cifrato)")
     print(f"  Locale: {_fmt(_ts(db))}")
     lk = lock_info(c)
     if lk and not forzato:
@@ -104,7 +139,7 @@ def scarica(db, forzato=False):
             print("  Annullato."); return False
     if _ts(db_drive) > _ts(db) or forzato:
         if Path(db).exists(): shutil.copy2(db, str(db)+".bak")
-        shutil.copy2(db_drive, db)
+        decifra_file(str(db_drive), str(db))
     set_lock(c, True)
     print("  DB pronto - lock attivato"); return True
 
@@ -113,14 +148,22 @@ def carica(db):
     if not c: print("  Google Drive non trovato."); return False
     if not Path(db).exists(): print("  DB locale non trovato."); return False
 
-    shutil.copy2(db, c/DRIVE_DB_NAME)
+    cifra_file(str(db), str(c/DRIVE_DB_NAME))
+
+    # Ripulisci il vecchio file in chiaro, se presente (migrazione da
+    # formato pre-cifratura): non deve restare un doppione non cifrato
+    # su Drive dopo che la versione cifrata è stata pubblicata.
+    db_drive_old = c/DRIVE_DB_NAME_OLD
+    if db_drive_old.exists():
+        db_drive_old.unlink()
+        print("  Rimosso il vecchio database.db in chiaro da Drive (migrazione a formato cifrato completata).")
 
     nome_backup, n_storico = salva_storico(c, db)
     set_lock(c, False)
 
-    print(f"  DB caricato ({Path(db).stat().st_size//1024} KB) - lock rimosso")
+    print(f"  DB caricato e cifrato ({Path(db).stat().st_size//1024} KB) - lock rimosso")
     print(f"  Percorso: {c/DRIVE_DB_NAME}")
-    print(f"  Storico  : {nome_backup}  ({n_storico}/{MAX_BACKUP} versioni conservate)")
+    print(f"  Storico  : {nome_backup}  ({n_storico}/{MAX_BACKUP} versioni conservate, cifrate)")
     return True
 
 def lista_storico():
@@ -129,11 +172,11 @@ def lista_storico():
     s = c / STORICO_SUBDIR
     if not s.exists():
         print("  Nessuno storico presente."); return
-    backups = sorted(s.glob("database_*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    backups = sorted(s.glob("database_*.db.enc"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not backups:
         print("  Nessuna versione storica presente."); return
     print("="*55)
-    print(f"  Storico database ({len(backups)}/{MAX_BACKUP} versioni)")
+    print(f"  Storico database ({len(backups)}/{MAX_BACKUP} versioni, cifrate)")
     print("="*55)
     for p in backups:
         print(f"  {_fmt(p.stat().st_mtime)}  —  {p.name}  ({p.stat().st_size//1024} KB)")
@@ -150,12 +193,18 @@ def stato():
     if c:
         print(f"  Drive    : {c}")
         dbd = c/DRIVE_DB_NAME
-        print(f"  DB Drive : {_fmt(_ts(dbd))}" + (f"  ({dbd.stat().st_size//1024} KB)" if dbd.exists() else ""))
+        dbd_old = c/DRIVE_DB_NAME_OLD
+        if dbd.exists():
+            print(f"  DB Drive : {_fmt(_ts(dbd))}  ({dbd.stat().st_size//1024} KB, cifrato)")
+        elif dbd_old.exists():
+            print(f"  DB Drive : {_fmt(_ts(dbd_old))}  ({dbd_old.stat().st_size//1024} KB, LEGACY NON CIFRATO — esegui 'carica' per migrare)")
+        else:
+            print("  DB Drive : non presente")
         lk = lock_info(c)
         print(f"  Lock     : {'IN USO da ' + lk.get('macchina','?') if lk else 'libero'}")
         s = c / STORICO_SUBDIR
-        n_backup = len(list(s.glob("database_*.db"))) if s.exists() else 0
-        print(f"  Storico  : {n_backup}/{MAX_BACKUP} versioni conservate")
+        n_backup = len(list(s.glob("database_*.db.enc"))) if s.exists() else 0
+        print(f"  Storico  : {n_backup}/{MAX_BACKUP} versioni conservate (cifrate)")
     else:
         print("  Drive    : NON TROVATO")
         print("  Imposta CARONTE_DRIVE_PATH oppure installa Google Drive for Desktop")

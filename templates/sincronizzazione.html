@@ -16,7 +16,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">🔄 Sincronizzazione orario</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">↻︎ Sincronizzazione orario</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Aggiorna l'orario docenti senza perdere dati storici
         </p>
@@ -25,19 +25,19 @@
 
 <!-- STATO ATTUALE -->
 <div class="card" style="margin-bottom:20px;">
-    <h2>📊 Stato orario attuale</h2>
+    <h2>▲︎ Stato orario attuale</h2>
     <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
-        <span class="stat-mini">📅 {{ slot_count }} slot totali</span>
-        <span class="stat-mini">👥 {{ doc_con_orario }} docenti con orario</span>
+        <span class="stat-mini">▦︎ {{ slot_count }} slot totali</span>
+        <span class="stat-mini">◍︎ {{ doc_con_orario }} docenti con orario</span>
         <span class="stat-mini">
-            📂 File: <strong>{{ file_corrente or 'nessun file trovato' }}</strong>
+            ▧︎ File: <strong>{{ file_corrente or 'nessun file trovato' }}</strong>
         </span>
     </div>
 </div>
 
 <!-- AGGIORNA ORARIO -->
 <div class="card" style="margin-bottom:20px;">
-    <h2>⬆ Aggiorna orario</h2>
+    <h2>⇧︎ Aggiorna orario</h2>
     <p style="color:var(--grigio); font-size:.88rem; margin-bottom:16px;">
         Carica un nuovo file Excel oppure usa quello già presente in <code>data/</code>.
         Le supplenze e la banca ore esistenti non vengono toccate.
@@ -52,7 +52,7 @@
             </div>
             <button class="btn btn-success" type="submit"
                     onclick="return confirm('Aggiornare l\'orario? L\'operazione sovrascrive tutti gli slot orario.')">
-                🔄 Aggiorna orario
+                ↻︎ Aggiorna orario
             </button>
         </div>
         <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
@@ -64,10 +64,10 @@
 
 <!-- ALIAS DOCENTI -->
 <div class="card" style="margin-bottom:20px;">
-    <h2>🔗 Alias docenti</h2>
+    <h2>◈︎ Alias docenti</h2>
     <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
         Se il nome nel file Excel non corrisponde esattamente al database,
-        crea un alias. Es. "MONTEMANARO" → MONTEMARANO.
+        crea un alias. Es. "MONTEMANARO" →︎ MONTEMARANO.
     </p>
 
     <!-- Form nuovo alias -->
@@ -97,13 +97,13 @@
     {% if alias %}
     <table>
         <thead>
-            <tr><th>Nome nel file</th><th>→</th><th>Docente database</th><th></th></tr>
+            <tr><th>Nome nel file</th><th>→︎</th><th>Docente database</th><th></th></tr>
         </thead>
         <tbody>
         {% for a in alias %}
         <tr>
             <td><code>{{ a.nome_file }}</code></td>
-            <td style="color:var(--grigio);">→</td>
+            <td style="color:var(--grigio);">→︎</td>
             <td>
                 <strong>{{ a.docente.cognome }}</strong>
                 {% if a.docente.nome %} {{ a.docente.nome }}{% endif %}
@@ -113,7 +113,7 @@
                       action="{{ url_for('sync.elimina_alias', id=a.id) }}"
                       onsubmit="return confirm('Eliminare questo alias?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                 </form>
             </td>
         </tr>
@@ -131,7 +131,7 @@
 <!-- LOG IMPORTAZIONI -->
 {% if logs %}
 <div class="card">
-    <h2>📋 Storico importazioni (ultime 10)</h2>
+    <h2>▤︎ Storico importazioni (ultime 10)</h2>
     <table>
         <thead>
             <tr><th>Data/ora</th><th>File</th><th>Slot</th>
@@ -153,18 +153,18 @@
             <td>
                 {% set nr = log.non_riconosciuti | from_json if log.non_riconosciuti else [] %}
                 {% if nr %}
-                    <span class="badge badge-giallo">⚠ {{ nr | join(', ') }}</span>
+                    <span class="badge badge-giallo">⚠︎ {{ nr | join(', ') }}</span>
                 {% else %}
                     <span style="color:var(--grigio);">—</span>
                 {% endif %}
             </td>
             <td>
                 {% if log.esito == 'ok' %}
-                    <span class="badge badge-verde">✓ OK</span>
+                    <span class="badge badge-verde">✓︎ OK</span>
                 {% elif log.esito == 'warning' %}
-                    <span class="badge badge-giallo">⚠ Warning</span>
+                    <span class="badge badge-giallo">⚠︎ Warning</span>
                 {% else %}
-                    <span class="badge badge-rosso">✗ Errore</span>
+                    <span class="badge badge-rosso">✕︎ Errore</span>
                 {% endif %}
             </td>
         </tr>

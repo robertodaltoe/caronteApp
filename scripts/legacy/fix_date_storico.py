@@ -8,7 +8,9 @@ Eseguire una sola volta con venv attivo:
     python fix_date_storico.py
 """
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Percorso della cartella radice del progetto (questo script vive in
+# scripts/legacy/, due livelli sotto la radice dove sta app.py).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app import create_app
 from models import db

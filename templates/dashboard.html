@@ -76,16 +76,16 @@
         <a href="{{ url_for('assenze.nuova', data=data_sel.isoformat()) }}"
            class="btn btn-sm btn-viola">+ Assenza</a>
         <a href="{{ url_for('indisponibilita.nuova', data=data_sel.isoformat()) }}"
-           class="btn btn-sm" style="background:#0369a1; color:white;">⛔ Indisponibilità</a>
+           class="btn btn-sm" style="background:#0369a1; color:white;">⊘︎ Indisponibilità</a>
         <a href="{{ url_for('supplenze.nuova', data=data_sel.isoformat()) }}"
            class="btn btn-success btn-sm">+ Supplenza</a>
         <a href="{{ url_for('display.display', data=data_sel.isoformat()) }}"
            target="_blank" class="btn btn-sm" style="background:#1e3a5c; color:white;">
-            📺 Display {{ data_sel.strftime('%d/%m') }}
+            ⧉︎ Display {{ data_sel.strftime('%d/%m') }}
         </a>
         <a href="{{ url_for('report.prospetto_web', data_str=data_sel.isoformat()) }}"
            class="btn btn-sm" style="background:#166534; color:white;">
-            📋 Prospetto
+            ▤︎ Prospetto
         </a>
     </div>
 </div>
@@ -121,7 +121,7 @@
 
 <!-- SUPPLENZE — PRIMO BOX -->
 <div class="card">
-    <h2>📋 Registro supplenze</h2>
+    <h2>▤︎ Registro supplenze</h2>
     {% if supplenze %}
     <table style="table-layout:fixed; width:100%;">
         <thead>
@@ -146,6 +146,7 @@
                 {% if s.stato == 'scoperta' %}
                 <form method="post" action="{{ url_for('supplenze.assegna', id=s.id) }}"
                       id="form-assegna-{{ s.id }}">
+                    <input type="hidden" name="versione" value="{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}">
                     <div class="assegna-inline">
                         <select name="id_sostituto" id="sel-sost-{{ s.id }}" required
                                 style="width:100%; max-width:160px;">
@@ -156,7 +157,7 @@
                         </select>
                         <select name="tipo" id="sel-tipo-{{ s.id }}" style="width:100%; max-width:120px;">
                             <option value="">— tipo —</option>
-                            <option value="recupero">♻ Recupero</option>
+                            <option value="recupero">↻︎ Recupero</option>
                             <option value="pagamento">€ Pagamento</option>
                             <option value="scambio">SO Scambio ore</option>
                             <option value="completamento">C Completamento</option>
@@ -164,12 +165,12 @@
                             <option value="disposizione">D Disposizione</option>
                         </select>
                         <div class="btn-row">
-                        <button class="btn btn-success btn-sm" type="submit">✓</button>
+                        <button class="btn btn-success btn-sm" type="submit">✓︎</button>
                         <button type="button" class="btn-suggerisci"
                             onclick="apriSuggerimenti({{ s.id }}, {{ s.ora }},
                                 {{ s.id_assente or 'null' }}, '{{ data_sel.isoformat() }}',
                                 '{{ s.classe }}')">
-                            💡
+                            ✦︎
                         </button>
                         </div>
                     </div>
@@ -182,7 +183,7 @@
             </td>
             <td>
                 {% if s.stato == 'non_assegnabile' %}
-                    <span class="badge badge-viola">🚫 N/A</span>
+                    <span class="badge badge-viola">⊘︎ N/A</span>
                 {% elif s.stato == 'assegnata' %}
                     {% set tb = {'recupero':'badge-giallo','pagamento':'badge-rosso',
                         'completamento':'badge-grigio','potenziamento':'badge-verde',
@@ -192,10 +193,10 @@
                         'disposizione':'N/D','scambio':'SO'} %}
                     <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}"
                           style="cursor:pointer;" title="Click per cambiare tipo"
-                          onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this)">
-                        {{ lbl.get(s.tipo, s.tipo)|upper }} ✏
+                          onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this, '{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}')">
+                        {{ lbl.get(s.tipo, s.tipo)|upper }} ✎︎
                     </span>
-                    <span class="badge badge-verde" style="margin-left:2px;">✓</span>
+                    <span class="badge badge-verde" style="margin-left:2px;">✓︎</span>
                 {% elif s.stato == 'scoperta' %}
                     {% set tb = {'recupero':'badge-giallo','pagamento':'badge-rosso',
                         'completamento':'badge-grigio','potenziamento':'badge-verde',
@@ -205,10 +206,10 @@
                         'disposizione':'N/D','scambio':'SO'} %}
                     <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}"
                           style="cursor:pointer;" title="Click per cambiare tipo"
-                          onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this)">
-                        {{ lbl.get(s.tipo, s.tipo)|upper }} ✏
+                          onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this, '{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}')">
+                        {{ lbl.get(s.tipo, s.tipo)|upper }} ✎︎
                     </span>
-                    <span class="badge badge-rosso" style="margin-left:2px;">⚠</span>
+                    <span class="badge badge-rosso" style="margin-left:2px;">⚠︎</span>
                 {% else %}
                     <span class="badge badge-grigio">Annullata</span>
                 {% endif %}
@@ -220,13 +221,14 @@
                 {% if s.stato not in ('annullata',) %}
                 <div style="display:flex; gap:4px; white-space:nowrap; justify-content:center; flex-wrap:wrap;">
                     <a href="{{ url_for('supplenze.modifica', id=s.id, next=request.url) }}"
-                       class="btn btn-primary btn-sm">✏️</a>
+                       class="btn btn-primary btn-sm">✎︎️</a>
                     <a href="{{ url_for('aule.override', id_supplenza=s.id, next=request.url) }}"
                        class="btn btn-sm" style="background:#0369a1; color:white;"
-                       title="Cambia aula per questa supplenza">🏫</a>
+                       title="Cambia aula per questa supplenza">▨︎</a>
                     <form method="post" action="{{ url_for('supplenze.annulla', id=s.id) }}"
                           onsubmit="return confirm('Annullare?')" style="display:inline;">
-                        <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                        <input type="hidden" name="versione" value="{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}">
+                        <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                     </form>
                 </div>
                 {% endif %}
@@ -249,9 +251,9 @@
 {% if eventi_ist %}
 <div class="card" style="margin-bottom:16px; border-left:4px solid #7c3aed;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-        <h2 style="margin:0;">🏛 Attività istituzionali</h2>
+        <h2 style="margin:0;">▨︎ Attività istituzionali</h2>
         <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm"
-           style="background:#f5f3ff; color:#7c3aed; font-size:.78rem;">Vai al modulo →</a>
+           style="background:#f5f3ff; color:#7c3aed; font-size:.78rem;">Vai al modulo →︎</a>
     </div>
     <table style="table-layout:fixed; width:100%;">
         <thead>
@@ -296,8 +298,8 @@
             <td style="text-align:center;">
                 {% if ev.presenze %}
                 <span style="font-size:.78rem;">
-                    <span style="color:#16a34a; font-weight:700;">{{ n_pres }}✓</span>
-                    {% if n_ass %}<span style="color:#dc2626; font-weight:700; margin-left:4px;">{{ n_ass }}✗</span>{% endif %}
+                    <span style="color:#16a34a; font-weight:700;">{{ n_pres }}✓︎</span>
+                    {% if n_ass %}<span style="color:#dc2626; font-weight:700; margin-left:4px;">{{ n_ass }}✕︎</span>{% endif %}
                     {% if n_gius %}<span style="color:#d97706; font-weight:700; margin-left:4px;">{{ n_gius }}~</span>{% endif %}
                 </span>
                 {% else %}
@@ -308,12 +310,12 @@
                 <div style="display:flex; gap:3px; justify-content:center; flex-wrap:nowrap;">
                 <a href="{{ url_for('attivita_ist.presenze', id=ev.id) }}"
                    class="btn btn-sm" style="background:#7c3aed; color:white;
-                   padding:3px 6px; font-size:.72rem;" title="Presenze">✅</a>
+                   padding:3px 6px; font-size:.72rem;" title="Presenze">✓︎</a>
                 {% if ev.tipo == 'scrutinio' %}
                 <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=ev.id) }}"
                    class="btn btn-sm btn-primary"
                    style="padding:3px 6px; font-size:.72rem;"
-                   title="Sostituzioni">👥</a>
+                   title="Sostituzioni">◍︎</a>
                 {% endif %}
                 </div>
             </td>
@@ -323,7 +325,7 @@
     </table>
     {% if not eventi_ist[0].presenze %}
     <div style="margin-top:8px; font-size:.78rem; color:var(--grigio);">
-        💡 Apri le presenze per registrare chi c'era e chi era assente.
+        ✦︎ Apri le presenze per registrare chi c'era e chi era assente.
     </div>
     {% endif %}
 </div>
@@ -333,7 +335,7 @@
 <div class="card" style="margin-bottom:20px;">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
         <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
-            <h2 style="margin:0;">🔴 Docenti assenti</h2>
+            <h2 style="margin:0;">● Docenti assenti</h2>
             <span style="font-size:.78rem; color:var(--grigio);">Assenze registrate per la data selezionata — le supplenze vengono generate automaticamente</span>
         </div>
         <button type="button" onclick="toggleBox('box-assenti', this)"
@@ -371,11 +373,11 @@
                     <td>
                         <div style="display:flex;gap:4px;justify-content:center;">
                         <a href="{{ url_for('assenze.modifica', id=ns.first_id, next=request.url) }}"
-                           class="btn btn-primary btn-sm">✏️</a>
+                           class="btn btn-primary btn-sm">✎︎️</a>
                         <form method="post" action="{{ url_for('assenze.elimina', id=ns.first_id) }}"
                               onsubmit="return confirm('Eliminare assenza e supplenze collegate?')"
                               style="display:inline;">
-                            <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                            <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                         </form>
                         </div>
                     </td>
@@ -408,11 +410,11 @@
             <td>
                 <div style="display:flex;gap:4px;justify-content:center;">
                 <a href="{{ url_for('assenze.modifica', id=ns.first_id, next=request.url) }}"
-                   class="btn btn-primary btn-sm">✏️</a>
+                   class="btn btn-primary btn-sm">✎︎️</a>
                 <form method="post" action="{{ url_for('assenze.elimina', id=ns.first_id) }}"
                       onsubmit="return confirm('Eliminare assenza e supplenze collegate?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                 </form>
                 </div>
             </td>
@@ -429,7 +431,7 @@
 <div class="card" style="margin-bottom:20px; border-left:4px solid #0369a1;">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
         <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
-            <h2 style="margin:0;">⛔ Indisponibilità docenti</h2>
+            <h2 style="margin:0;">⊘︎ Indisponibilità docenti</h2>
             <span style="font-size:.78rem; color:var(--grigio);">Docenti esclusi dai suggerimenti di sostituzione — non generano supplenze</span>
         </div>
         <button type="button" onclick="toggleBox('box-indisp', this)"
@@ -455,7 +457,7 @@
                       onsubmit="return confirm('Rimuovere indisponibilità?')"
                       style="display:inline;">
                     <input type="hidden" name="ids" value="{{ i.ids | join(',') }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                 </form>
             </td>
         </tr>
@@ -469,7 +471,7 @@
 <!-- PANNELLO SUGGERIMENTI -->
 <div id="pannello-suggerimenti">
     <div class="pann-header">
-        <h3>💡 Suggerimenti sostituto</h3>
+        <h3>✦︎ Suggerimenti sostituto</h3>
         <button onclick="chiudiSuggerimenti()"
                 style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;">×</button>
     </div>
@@ -482,7 +484,7 @@
         <div style="font-size:.8rem; color:var(--grigio); margin-bottom:8px;" id="pann-info"></div>
         <button class="btn btn-success" style="width:100%;"
                 onclick="confermaSuggerimento()" id="btn-conferma" disabled>
-            ✓ Assegna selezionato
+            ✓︎ Assegna selezionato
         </button>
     </div>
 </div>
@@ -542,12 +544,12 @@ function renderSuggerimenti(data) {
             const badgeClasse = doc.docente_classe
                 ? `<span style="font-size:.68rem; background:#dbeafe; color:#1e40af;
                     border-radius:3px; padding:1px 5px; font-weight:700;
-                    margin-left:4px;">📚 sua classe</span>`
+                    margin-left:4px;">▥︎ sua classe</span>`
                 : '';
             const badgeCompresenza = doc.compresenza
                 ? `<span style="font-size:.68rem; background:#fef9c3; color:#854d0e;
                     border-radius:3px; padding:1px 5px; font-weight:700;
-                    margin-left:4px;">⚡ compresenza</span>`
+                    margin-left:4px;">⚑︎ compresenza</span>`
                 : '';
             const badgeITP = (doc.ruolo === 'itp')
                 ? `<span style="font-size:.68rem; background:#f5f3ff; color:#7c3aed;
@@ -562,7 +564,7 @@ function renderSuggerimenti(data) {
             const avvisoSede = doc.fuori_sede
                 ? `<div style="font-size:.68rem; color:#b45309; background:#fef3c7;
                     border-radius:3px; padding:1px 6px; margin-top:2px;">
-                    ⚠ oggi non in sede (${doc.altra_scuola})</div>`
+                    ⚠︎ oggi non in sede (${doc.altra_scuola})</div>`
                 : '';
             row.dataset.partnerIds = (doc.partner_ids || []).join(',');
             row.innerHTML = `<div style="flex:1;"><div class="cand-nome">${doc.cognome}${doc.nome ? ' '+doc.nome[0]+'.' : ''}${badgeClasse}${badgeCompresenza}${badgeITP}${badgePT}</div>${avvisoSede}<div class="cand-dettaglio">${doc.dettaglio}${doc.materia ? ' · '+doc.materia : ''}</div></div><span class="cand-saldo ${sc}">${doc.saldo_label}</span>`;
@@ -622,7 +624,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') chiudiSugger
 
 // ── CAMBIA TIPO INLINE ─────────────────────────────────────
 const TIPI_LISTA = [
-    {v:'recupero',     l:'♻ Recupero'},
+    {v:'recupero',     l:'↻︎ Recupero'},
     {v:'pagamento',    l:'€ Pagamento'},
     {v:'scambio',      l:'SO Scambio ore'},
     {v:'completamento',l:'C Completamento'},
@@ -632,7 +634,7 @@ const TIPI_LISTA = [
 
 let _popupTipoEl = null;
 
-function apriCambiaTipo(supplenzaId, tipoAttuale, badgeEl) {
+function apriCambiaTipo(supplenzaId, tipoAttuale, badgeEl, versione) {
     if (_popupTipoEl) _popupTipoEl.remove();
 
     const popup = document.createElement('div');
@@ -652,7 +654,7 @@ function apriCambiaTipo(supplenzaId, tipoAttuale, badgeEl) {
         btn.addEventListener('mouseleave', () => btn.style.background = t.v === tipoAttuale ? '#eff6ff' : 'white');
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            cambiaTipo(supplenzaId, t.v);
+            cambiaTipo(supplenzaId, t.v, versione);
             popup.remove();
             _popupTipoEl = null;
         });
@@ -683,13 +685,18 @@ function apriCambiaTipo(supplenzaId, tipoAttuale, badgeEl) {
     }, 10);
 }
 
-function cambiaTipo(supplenzaId, nuovoTipo) {
+function cambiaTipo(supplenzaId, nuovoTipo, versione) {
     fetch(`/supplenze/${supplenzaId}/cambia-tipo`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({tipo: nuovoTipo})
+        body: JSON.stringify({tipo: nuovoTipo, versione: versione})
     }).then(r => r.json()).then(d => {
-        if (d.ok) window.location.reload();
+        if (d.ok) {
+            window.location.reload();
+        } else if (d.errore) {
+            alert(d.errore);
+            window.location.reload();
+        }
     });
 }
 

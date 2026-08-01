@@ -40,7 +40,7 @@
     <div>
         <a href="{{ url_for('report.index') }}"
            style="color:var(--grigio); font-size:.85rem; text-decoration:none;">
-            ← Tutti i report
+            ←︎ Tutti i report
         </a>
         <h1 style="font-size:1.5rem; color:var(--blu); font-weight:800; margin-top:4px;">
             {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}
@@ -54,7 +54,7 @@
     <div style="display:flex; gap:8px;">
         <a href="{{ url_for('report.singolo_pdf', id=docente.id) }}"
            class="btn btn-sm" style="background:#6b7280;color:white;">
-            🖨 Stampa / PDF
+            ⎙︎ Stampa / PDF
         </a>
         <span style="color:var(--grigio); font-size:.8rem; align-self:center;">
             Aggiornato: {{ oggi.strftime('%d/%m/%Y') }}
@@ -68,7 +68,7 @@
     <!-- Pannello EFFETTIVO -->
     <div class="saldo-panel">
         <div class="saldo-panel-title">
-            <span style="color:var(--verde);">✅</span>
+            <span style="color:var(--verde);">✓︎</span>
             EFFETTIVO — ORE GIÀ SVOLTE (FINO A OGGI)
         </div>
         <div class="saldo-items">
@@ -100,7 +100,7 @@
     <!-- Pannello PREVISTO -->
     <div class="saldo-panel">
         <div class="saldo-panel-title">
-            <span style="color:var(--grigio);">🕐</span>
+            <span style="color:var(--grigio);">◷︎</span>
             PREVISTO — ORE ASSEGNATE NON ANCORA SVOLTE
         </div>
         {% if saldo_lordo_prev != 0 %}
@@ -125,7 +125,7 @@
 <div class="card" style="margin-bottom:20px; border-left:4px solid #7c3aed;">
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
         <h2 style="font-size:1rem; font-weight:700; color:#7c3aed; margin:0;">
-            🏛 Attività Istituzionali — CCNL art.44
+            ▨︎ Attività Istituzionali — CCNL art.44
         </h2>
         <span style="font-size:.72rem; background:#f5f3ff; color:#7c3aed;
             border:1px solid #c4b5fd; border-radius:4px; padding:1px 7px; font-weight:700;">
@@ -154,9 +154,9 @@
             </div>
             <div style="font-size:.72rem; color:var(--grigio); margin-top:4px;">
                 {% if ore_ist.A >= ore_ist.limite %}
-                ⛔ Limite raggiunto
+                ⊘︎ Limite raggiunto
                 {% elif ore_ist.A >= ore_ist.limite * 0.8 %}
-                ⚠ Rimangono {{ (ore_ist.limite - ore_ist.A) | round(1) }}h
+                ⚠︎ Rimangono {{ (ore_ist.limite - ore_ist.A) | round(1) }}h
                 {% else %}
                 Rimangono {{ (ore_ist.limite - ore_ist.A) | round(1) }}h
                 {% endif %}
@@ -181,9 +181,9 @@
             </div>
             <div style="font-size:.72rem; color:var(--grigio); margin-top:4px;">
                 {% if ore_ist.B >= ore_ist.limite %}
-                ⛔ Limite raggiunto
+                ⊘︎ Limite raggiunto
                 {% elif ore_ist.B >= ore_ist.limite * 0.8 %}
-                ⚠ Rimangono {{ (ore_ist.limite - ore_ist.B) | round(1) }}h
+                ⚠︎ Rimangono {{ (ore_ist.limite - ore_ist.B) | round(1) }}h
                 {% else %}
                 Rimangono {{ (ore_ist.limite - ore_ist.B) | round(1) }}h
                 {% endif %}
@@ -192,7 +192,7 @@
     </div>
     <div style="margin-top:10px; font-size:.75rem; color:var(--grigio);">
         Solo ore con presenza registrata. Scrutini esclusi dal conteggio (atto dovuto).
-        <a href="{{ url_for('attivita_ist.lista') }}" style="color:#7c3aed; margin-left:8px;">→ Gestisci attività</a>
+        <a href="{{ url_for('attivita_ist.lista') }}" style="color:#7c3aed; margin-left:8px;">→︎ Gestisci attività</a>
     </div>
 </div>
 {% endif %}
@@ -202,7 +202,7 @@
 {% if orario %}
 <div class="card" style="margin-bottom:20px;">
     <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:14px;">
-        📆 Orario settimanale
+        ▦︎ Orario settimanale
     </h2>
     <div style="overflow-x:auto;">
     <table style="min-width:500px;">
@@ -244,7 +244,7 @@
 
 {% if storico %}
 <div class="card">
-    <h2>📅 Storico movimenti</h2>
+    <h2>▦︎ Storico movimenti</h2>
     <table>
         <thead>
             <tr>
@@ -309,7 +309,7 @@
 <!-- SUPPLENZE DETTAGLIO -->
 {% if supplenze %}
 <div class="card">
-    <h2>📋 Supplenze svolte (dettaglio)</h2>
+    <h2>▤︎ Supplenze svolte (dettaglio)</h2>
     <table>
         <thead>
             <tr><th>Data</th><th>Ora</th><th>Classe</th><th>Tipo</th></tr>

@@ -118,11 +118,11 @@ def _export_copertura_xlsx(righe, titolo):
         return Font(bold=bold, color=color, name='Arial', size=9)
 
     STATO_CFG = {
-        'ok':           (VERDE,   VERDE_T,   '✓ ok'),
-        'no_gruppo':    (ROSSO,   ROSSO_T,   '✗ no gruppo'),
-        'non_iscritto': (ROSSO,   ROSSO_T,   '❓ non iscritto'),
-        'no_corso':     (GIALLO,  GIALLO_T,  '📚 no corso'),
-        'non_aderisce': (GRIGIO2, GRIGIO2_T, '✗ non aderisce'),
+        'ok':           (VERDE,   VERDE_T,   '✓︎ ok'),
+        'no_gruppo':    (ROSSO,   ROSSO_T,   '✕︎ no gruppo'),
+        'non_iscritto': (ROSSO,   ROSSO_T,   '? non iscritto'),
+        'no_corso':     (GIALLO,  GIALLO_T,  '▥︎ no corso'),
+        'non_aderisce': (GRIGIO2, GRIGIO2_T, '✕︎ non aderisce'),
     }
 
     # Riga titolo generale

@@ -3,8 +3,8 @@
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">🔄 Cambio Anno Scolastico</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">↻︎ Cambio Anno Scolastico</h1>
 </div>
 
 {# ── STATO ATTUALE ─────────────────────────────────────────────── #}
@@ -19,10 +19,10 @@
         <div style="font-size:1.6rem; font-weight:800; color:var(--blu);">{{ anno_prossimo }}</div>
         <div style="font-size:.78rem; margin-top:4px;">
             {% if anno_preparato %}
-            <span style="color:#16a34a; font-weight:700;">✓ Preparato</span> —
+            <span style="color:#16a34a; font-weight:700;">✓︎ Preparato</span> —
             {{ stato.classi_sezioni }} sezioni · {{ stato.piano_studi }} righe piano studi
             {% else %}
-            <span style="color:#f59e0b; font-weight:700;">⚠ Non ancora preparato</span>
+            <span style="color:#f59e0b; font-weight:700;">⚠︎ Non ancora preparato</span>
             {% endif %}
         </div>
     </div>
@@ -31,7 +31,7 @@
 {# ── OPERAZIONE A: PREPARA ─────────────────────────────────────── #}
 <div class="card" style="padding:18px 22px; margin-bottom:14px; border-left:4px solid #6366f1;">
     <div style="font-weight:800; color:#6366f1; font-size:1rem; margin-bottom:6px;">
-        📋 Operazione A — Prepara anno {{ anno_prossimo }}
+        ▤︎ Operazione A — Prepara anno {{ anno_prossimo }}
     </div>
     <div style="font-size:.82rem; color:var(--grigio); margin-bottom:14px;">
         Crea la struttura per l'anno nuovo <strong>senza toccare nulla dell'anno in corso</strong>.
@@ -46,7 +46,7 @@
     {% if anno_preparato %}
     <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:6px;
                 padding:10px 14px; font-size:.82rem; color:#166534; margin-bottom:12px;">
-        ✓ Anno {{ anno_prossimo }} già preparato
+        ✓︎ Anno {{ anno_prossimo }} già preparato
         ({{ stato.classi_sezioni }} sezioni, {{ stato.piano_studi }} righe piano studi).
         Puoi rieseguire per aggiungere eventuali sezioni mancanti — le righe già presenti
         non vengono sovrascritte.
@@ -56,7 +56,7 @@
         <input type="hidden" name="anno_nuovo" value="{{ anno_prossimo }}">
         <button type="submit" class="btn btn-sm"
                 style="background:#6366f1; color:white; padding:8px 20px;">
-            📋 {{ 'Ri-esegui' if anno_preparato else 'Prepara' }} anno {{ anno_prossimo }}
+            ▤︎ {{ 'Ri-esegui' if anno_preparato else 'Prepara' }} anno {{ anno_prossimo }}
         </button>
     </form>
 </div>
@@ -64,7 +64,7 @@
 {# ── OPERAZIONE B: ATTIVA ──────────────────────────────────────── #}
 <div class="card" style="padding:18px 22px; border-left:4px solid #dc2626;">
     <div style="font-weight:800; color:#dc2626; font-size:1rem; margin-bottom:6px;">
-        🚀 Operazione B — Attiva anno {{ anno_prossimo }}
+        ↑ Operazione B — Attiva anno {{ anno_prossimo }}
     </div>
     <div style="font-size:.82rem; color:var(--grigio); margin-bottom:10px;">
         Rende {{ anno_prossimo }} l'anno operativo corrente.
@@ -75,21 +75,21 @@
     {% if not anno_preparato %}
     <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:6px;
                 padding:10px 14px; font-size:.82rem; color:#92400e; margin-bottom:12px;">
-        ⚠ Prima devi preparare l'anno {{ anno_prossimo }} (Operazione A).
+        ⚠︎ Prima devi preparare l'anno {{ anno_prossimo }} (Operazione A).
         Poi torna qui per attivarlo.
     </div>
     {% endif %}
 
     <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px;
                 padding:14px 16px; margin-bottom:14px; font-size:.82rem;">
-        <div style="font-weight:700; color:#dc2626; margin-bottom:8px;">⚠ Cosa succede all'attivazione:</div>
+        <div style="font-weight:700; color:#dc2626; margin-bottom:8px;">⚠︎ Cosa succede all'attivazione:</div>
         <ul style="margin:0 0 0 18px; color:#374151; line-height:2;">
-            <li>Anno corrente → <strong>{{ anno_prossimo }}</strong> in tutta l'app</li>
-            <li>Orario docenti → <strong>svuotato</strong> (reimportare da Orario)</li>
-            <li>Indisponibilità → <strong>svuotate</strong> (da reimpostare)</li>
-            <li>Banca ore → <strong>storico conservato</strong>, nuovi movimenti sul nuovo anno</li>
-            <li>Assenze/Supplenze → <strong>storico conservato</strong>, filtro automatico per data</li>
-            <li>Recupero/Rientro → <strong>storico conservato</strong>, separato per anno_scol</li>
+            <li>Anno corrente →︎ <strong>{{ anno_prossimo }}</strong> in tutta l'app</li>
+            <li>Orario docenti →︎ <strong>svuotato</strong> (reimportare da Orario)</li>
+            <li>Indisponibilità →︎ <strong>svuotate</strong> (da reimpostare)</li>
+            <li>Banca ore →︎ <strong>storico conservato</strong>, nuovi movimenti sul nuovo anno</li>
+            <li>Assenze/Supplenze →︎ <strong>storico conservato</strong>, filtro automatico per data</li>
+            <li>Recupero/Rientro →︎ <strong>storico conservato</strong>, separato per anno_scol</li>
         </ul>
     </div>
 
@@ -109,7 +109,7 @@
         <button type="submit" class="btn btn-sm"
                 style="background:#dc2626; color:white; padding:8px 20px;"
                 {% if not anno_preparato %}disabled{% endif %}>
-            🚀 Attiva anno {{ anno_prossimo }}
+            ↑ Attiva anno {{ anno_prossimo }}
         </button>
     </form>
 </div>

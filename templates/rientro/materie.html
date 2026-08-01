@@ -2,8 +2,8 @@
 {% block title %}Rientro — Materie per classe{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('rientro.index') }}" class="btn btn-primary btn-sm">← Rientro</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📚 Materie per classe</h1>
+    <a href="{{ url_for('rientro.index') }}" class="btn btn-primary btn-sm">←︎ Rientro</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Materie per classe</h1>
 </div>
 
 <div class="card" style="padding:14px 18px; margin-bottom:16px;">
@@ -24,7 +24,7 @@
             <label style="font-size:.72rem; color:var(--grigio); display:block;">Materie (max 4)</label>
             <div id="box-materie" style="display:flex; flex-wrap:wrap; gap:4px; max-width:600px;"></div>
         </div>
-        <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+        <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
     </form>
 </div>
 
@@ -46,7 +46,7 @@
         <input type="hidden" name="azione" value="elimina_classe">
         <input type="hidden" name="classe" value="{{ classe }}">
         <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
-                border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">🗑 Rimuovi</button>
+                border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">✕︎ Rimuovi</button>
     </form>
 </div>
 {% endfor %}

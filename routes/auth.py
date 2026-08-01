@@ -1,12 +1,51 @@
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, session, flash, g)
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 from models import db
 from models.utente import Utente, RUOLI, PERMESSI
 from models.log_accesso import LogAccesso
 
 auth_bp = Blueprint('auth', __name__)
+
+
+# ── Rate limiting login (in memoria, per processo) ──────────────
+# Blocca temporaneamente i tentativi di login dopo troppi fallimenti
+# consecutivi sulla stessa coppia IP+username. Protezione semplice
+# contro bruteforce sul PIN, senza dipendenze esterne.
+_LOGIN_ATTEMPTS = {}          # {(ip, username): [timestamp, ...]}
+LOGIN_MAX_TENTATIVI = 5
+LOGIN_FINESTRA_SECONDI = 15 * 60   # 15 minuti
+LOGIN_BLOCCO_SECONDI = 15 * 60     # 15 minuti di blocco una volta superata la soglia
+
+
+def _login_chiave(ip, username):
+    return (ip or '?', username or '')
+
+
+def _login_bloccato(ip, username):
+    """Ritorna i secondi residui di blocco, o 0 se non bloccato."""
+    from time import time
+    chiave = _login_chiave(ip, username)
+    tentativi = _LOGIN_ATTEMPTS.get(chiave, [])
+    ora = time()
+    tentativi = [t for t in tentativi if ora - t < LOGIN_FINESTRA_SECONDI]
+    _LOGIN_ATTEMPTS[chiave] = tentativi
+    if len(tentativi) >= LOGIN_MAX_TENTATIVI:
+        residuo = LOGIN_BLOCCO_SECONDI - (ora - tentativi[-1])
+        if residuo > 0:
+            return int(residuo)
+    return 0
+
+
+def _login_registra_fallimento(ip, username):
+    from time import time
+    chiave = _login_chiave(ip, username)
+    _LOGIN_ATTEMPTS.setdefault(chiave, []).append(time())
+
+
+def _login_reset(ip, username):
+    _LOGIN_ATTEMPTS.pop(_login_chiave(ip, username), None)
 
 
 # ── Helpers ──────────────────────────────────────────────────
@@ -84,10 +123,19 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
         pin      = request.form.get('pin', '').strip()
+        ip       = request.remote_addr
+
+        residuo = _login_bloccato(ip, username)
+        if residuo:
+            minuti = max(1, residuo // 60)
+            log('login_bloccato', f'username={username}', esito='denied')
+            error = f'Troppi tentativi falliti. Riprova tra circa {minuti} minuti.'
+            return render_template('login.html', error=error, next=next_url)
 
         u = Utente.query.filter_by(username=username, attivo=True).first()
 
         if u and u.check_pin(pin):
+            _login_reset(ip, username)
             session.clear()
             session['utente_id'] = u.id
             session['ruolo']     = u.ruolo
@@ -100,6 +148,7 @@ def login():
             except Exception: pass
             return redirect(next_url)
         else:
+            _login_registra_fallimento(ip, username)
             log('login_fallito', f'username={username}', esito='denied')
             error = 'Credenziali non corrette.'
 
@@ -217,10 +266,50 @@ def cambia_pin():
 @login_required('gestione_utenti')
 def log_accessi():
     log('visualizza_log')
-    logs = (LogAccesso.query
-            .order_by(LogAccesso.timestamp.desc())
-            .limit(500).all())
-    return render_template('utenti/log.html', logs=logs)
+
+    q         = request.args.get('q', '').strip()
+    azione_f  = request.args.get('azione', '').strip()
+    username_f = request.args.get('username', '').strip()
+    data_da   = request.args.get('data_da', '').strip()
+    data_a    = request.args.get('data_a', '').strip()
+
+    query = LogAccesso.query
+    if q:
+        like = f'%{q}%'
+        query = query.filter(db.or_(
+            LogAccesso.azione.ilike(like),
+            LogAccesso.dettaglio.ilike(like),
+        ))
+    if azione_f:
+        query = query.filter(LogAccesso.azione == azione_f)
+    if username_f:
+        query = query.filter(LogAccesso.username == username_f)
+    if data_da:
+        try:
+            query = query.filter(LogAccesso.timestamp >= datetime.fromisoformat(data_da))
+        except ValueError:
+            pass
+    if data_a:
+        try:
+            # fino alla fine del giorno indicato
+            query = query.filter(LogAccesso.timestamp < datetime.fromisoformat(data_a) + timedelta(days=1))
+        except ValueError:
+            pass
+
+    logs = query.order_by(LogAccesso.timestamp.desc()).limit(300).all()
+
+    # Valori distinti per i menu a tendina dei filtri (indipendenti dal
+    # filtro corrente, calcolati sull'intera tabella).
+    azioni_disponibili = sorted({r[0] for r in
+        db.session.query(LogAccesso.azione).distinct().all() if r[0]})
+    utenti_disponibili = sorted({r[0] for r in
+        db.session.query(LogAccesso.username).distinct().all() if r[0]})
+
+    return render_template('utenti/log.html', logs=logs,
+        q=q, azione_f=azione_f, username_f=username_f,
+        data_da=data_da, data_a=data_a,
+        azioni_disponibili=azioni_disponibili,
+        utenti_disponibili=utenti_disponibili)
 
 
 @auth_bp.route('/privacy')

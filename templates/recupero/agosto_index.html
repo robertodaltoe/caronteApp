@@ -3,7 +3,7 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">📝 Organizza Sessione di Recupero — {{ anno }}</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">✎︎ Organizza Sessione di Recupero — {{ anno }}</h1>
         {% if periodo %}
         <p style="font-size:.84rem; color:var(--grigio);">
             {{ periodo.data_inizio.strftime('%d/%m/%Y') }} – {{ periodo.data_fine.strftime('%d/%m/%Y') }}
@@ -46,7 +46,7 @@
             <div style="font-weight:700; color:{{ color }};">{{ label }}</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">{{ desc }}</div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→</div>
+        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
     </a>
 </div>
 {% endmacro %}
@@ -57,19 +57,19 @@
 </div>
 
 <div style="display:flex; flex-direction:column; gap:8px;">
-    {{ step('1','var(--blu)','👨‍🏫','Verifica docenti disponibili',
+    {{ step('1','var(--blu)','◍︎▨︎','Verifica docenti disponibili',
         'recupero.agosto_docenti_disponibili',
         'Contratto TI/TD annuale/TD GS + nessuna assenza registrata nel periodo') }}
-    {{ step('2','#0369a1','🔗','Crea gruppi prova',
+    {{ step('2','#0369a1','◈︎','Crea gruppi prova',
         'recupero.agosto_gruppi',
         'Accorpa classi per materia+titolare (max 12 alunni) e scegli il sorvegliante') }}
-    {{ step('3','#166534','📅','Pianifica il calendario prove',
+    {{ step('3','#166534','▦︎','Pianifica il calendario prove',
         'recupero.agosto_calendario',
         'Bozza automatica: scritti 24–27/8, orali 28/8 · Commissario proposto automaticamente') }}
-    {{ step('4','#92400e','📊','Esporta XLSX',
+    {{ step('4','#92400e','▲︎','Esporta XLSX',
         'recupero.agosto_export_xlsx',
         'Foglio Famiglie (per giornata, senza nomi) + foglio Docenti (con tutti i nominativi)') }}
-    {{ step('5','#7c3aed','📦','Schede coppie (ZIP)',
+    {{ step('5','#7c3aed','▧︎','Schede coppie (ZIP)',
         'recupero.agosto_export_schede_coppie',
         'Un file XLSX per ogni coppia somministratore+assistente — date, durata, candidati', last=true) }}
 </div>

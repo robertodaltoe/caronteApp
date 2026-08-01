@@ -23,134 +23,179 @@
 .azione-menu { display:none; position:absolute; right:0; top:100%; z-index:9999;
     background:white; border:1px solid #e5eaf0; border-radius:8px;
     box-shadow:0 4px 16px rgba(0,0,0,.15); min-width:160px; padding:4px 0; }
-.azione-wrap { position:relative; display:inline-block; }
-/* apertura gestita da JS */
 .azione-item { display:block; padding:7px 14px; font-size:.82rem; color:var(--blu);
     text-decoration:none; white-space:nowrap; }
 .azione-item:hover { background:#f0f4ff; }
 .azione-item.danger { color:#dc2626; }
 .azione-sep { border:none; border-top:1px solid #f0f0f0; margin:3px 0; }
+
+/* Tab nav */
+.tab-nav { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #e5eaf0; flex-wrap:wrap; }
+.tab-link { padding:10px 18px; font-size:.88rem; font-weight:600; color:var(--grigio);
+    text-decoration:none; border-bottom:3px solid transparent; margin-bottom:-2px; }
+.tab-link:hover { color:var(--blu); }
+.tab-link.active { color:var(--blu); border-bottom-color:var(--blu); }
+
+/* Cruscotto */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px; }
+.kpi-box { background:white; border-radius:8px; box-shadow:var(--shadow); padding:16px 18px; }
+.kpi-box .kpi-val { font-size:1.5rem; font-weight:800; }
+.kpi-box .kpi-label { font-size:.78rem; color:var(--grigio); margin-top:2px; }
+.kpi-trend { font-size:.75rem; margin-left:6px; font-weight:600; }
+.alert-box { border-left:4px solid #d97706; background:#fffbeb; border-radius:6px;
+    padding:10px 16px; margin-bottom:10px; font-size:.85rem; }
+.alert-box.rosso { border-left-color:#dc2626; background:#fef2f2; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">📊 Report e stampe</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">▲︎ Report</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Aggiornamento: {{ oggi.strftime('%d/%m/%Y') }}
         </p>
     </div>
     <div style="display:flex; gap:10px; align-items:center;">
-        <a href="{{ url_for('email.config') }}" class="btn btn-sm btn-primary">
-            ⚙ Config email
+        <a href="{{ url_for('mail_bozze.index') }}" class="btn btn-sm" style="background:#0f7b6c; color:white;">
+            ✉︎ Prepara bozze email
         </a>
-        <form method="post" action="{{ url_for('email.invia_tutti') }}"
-              onsubmit="return confirm('Inviare il report a tutti i docenti con email?')">
-            <button class="btn btn-sm" style="background:#0f7b6c; color:white;" type="submit">
-                ✉ Invia a tutti i docenti
-            </button>
-        </form>
     </div>
 </div>
 
-<!-- REPORT GLOBALI -->
-<div class="card" style="margin-bottom:24px;">
-    <h2>Report globali</h2>
+<div class="tab-nav">
+    <a href="{{ url_for('report.index', tab='cruscotto') }}" class="tab-link {% if tab=='cruscotto' %}active{% endif %}">▲︎ Cruscotto</a>
+    <a href="{{ url_for('report.index', tab='dirigente') }}" class="tab-link {% if tab=='dirigente' %}active{% endif %}">△︎ Report Dirigente</a>
+    <a href="{{ url_for('report.index', tab='docenti') }}" class="tab-link {% if tab=='docenti' %}active{% endif %}">◍︎ Report Docenti</a>
+    <a href="{{ url_for('report.index', tab='segreteria') }}" class="tab-link {% if tab=='segreteria' %}active{% endif %}">▧︎ Report Segreteria</a>
+</div>
 
+{% if tab == 'cruscotto' %}
+{# ══════════════════ CRUSCOTTO DI MONITORAGGIO ══════════════════ #}
+<div class="kpi-grid">
+    <div class="kpi-box">
+        <div class="kpi-val" style="color:var(--verde);">+{{ cruscotto.tot_credito }}h</div>
+        <div class="kpi-label">Ore credito istituto (effettivo)</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-val" style="color:var(--rosso);">{{ cruscotto.tot_debito }}h</div>
+        <div class="kpi-label">Ore debito istituto (effettivo)</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-val">{{ '%.0f'|format(cruscotto.costo_stimato_credito) }} €</div>
+        <div class="kpi-label">Stima costo supplenze a credito</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-val">{{ cruscotto.n_supplenze_mese }}
+            {% if cruscotto.n_supplenze_mese_prec %}
+            {% set delta = cruscotto.n_supplenze_mese - cruscotto.n_supplenze_mese_prec %}
+            <span class="kpi-trend" style="color:{% if delta > 0 %}var(--rosso){% elif delta < 0 %}var(--verde){% else %}var(--grigio){% endif %};">
+                {% if delta > 0 %}▲{% elif delta < 0 %}▼{% else %}—{% endif %}{{ delta|abs }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="kpi-label">Supplenze assegnate questo mese (vs {{ cruscotto.n_supplenze_mese_prec }} mese scorso)</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-val">{{ cruscotto.n_assenze_mese }}
+            {% if cruscotto.n_assenze_mese_prec %}
+            {% set delta = cruscotto.n_assenze_mese - cruscotto.n_assenze_mese_prec %}
+            <span class="kpi-trend" style="color:{% if delta > 0 %}var(--rosso){% elif delta < 0 %}var(--verde){% else %}var(--grigio){% endif %};">
+                {% if delta > 0 %}▲{% elif delta < 0 %}▼{% else %}—{% endif %}{{ delta|abs }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="kpi-label">Assenze registrate questo mese (vs {{ cruscotto.n_assenze_mese_prec }} mese scorso)</div>
+    </div>
+</div>
+
+{% if cruscotto.supplenze_scoperte_7gg > 0 or cruscotto.alert_ore_ist or cruscotto.scadenze_oltre_termine %}
+<div class="card" style="margin-bottom:20px;">
+    <h2>⚠︎️ Alert</h2>
+    {% if cruscotto.supplenze_scoperte_7gg > 0 %}
+    <div class="alert-box rosso">
+        <strong>{{ cruscotto.supplenze_scoperte_7gg }}</strong> supplenza/e ancora <strong>scoperta/e</strong>
+        nei prossimi 7 giorni.
+    </div>
+    {% endif %}
+    {% for a in cruscotto.alert_ore_ist %}
+    <div class="alert-box">
+        <strong>{{ a.docente.cognome }}</strong> vicino al limite ore istituzionali CCNL art.44:
+        A={{ a.A }}h / B={{ a.B }}h (limite 40h)
+    </div>
+    {% endfor %}
+    {% if cruscotto.scadenze_oltre_termine %}
+    <div class="alert-box">
+        <strong>{{ cruscotto.scadenze_oltre_termine|length }}</strong> docente/i con almeno un'ora a debito/credito
+        <strong>oltre i 3 mesi</strong> dalla data in cui è maturata (da accordo sindacale — ogni ora ha una
+        propria scadenza individuale, non il saldo complessivo — indicatore informativo, non blocca nulla):
+        <ul style="margin:6px 0 0 18px; padding:0;">
+        {% for s in cruscotto.scadenze_oltre_termine %}
+            <li>{{ s.docente.cognome }}{% if s.docente.nome %} {{ s.docente.nome[0] }}.{% endif %}
+                — {{ s.n_scaduti }} ora/e scadute, la più vecchia dal {{ s.piu_vecchio.strftime('%d/%m/%Y') }}
+                ({{ s.eta_giorni_piu_vecchio }} giorni fa)</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <div class="card">
+        <h2>● Debito rilevante (≥ 5h)</h2>
+        {% if cruscotto.critici %}
+        <table>
+            {% for c in cruscotto.critici %}
+            <tr>
+                <td>{{ c.docente.cognome }}{% if c.docente.nome %} {{ c.docente.nome[0] }}.{% endif %}</td>
+                <td style="text-align:right;"><span class="saldo-pill pill-rosso">{{ c.saldo }}h</span></td>
+                <td style="text-align:right;">
+                    <a href="{{ url_for('banca_ore.singolo', id=c.docente.id) }}" class="btn btn-sm btn-primary">Dettaglio</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:var(--grigio); font-size:.85rem;">Nessun docente in debito rilevante.</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h2>● Credito rilevante (≥ 8h)</h2>
+        {% if cruscotto.alti %}
+        <table>
+            {% for a in cruscotto.alti %}
+            <tr>
+                <td>{{ a.docente.cognome }}{% if a.docente.nome %} {{ a.docente.nome[0] }}.{% endif %}</td>
+                <td style="text-align:right;"><span class="saldo-pill pill-verde">+{{ a.saldo }}h</span></td>
+                <td style="text-align:right;">
+                    <a href="{{ url_for('banca_ore.singolo', id=a.docente.id) }}" class="btn btn-sm btn-primary">Dettaglio</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:var(--grigio); font-size:.85rem;">Nessun docente in credito rilevante.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% elif tab == 'dirigente' %}
+{# ══════════════════ REPORT DIRIGENTE ══════════════════ #}
+<div class="card">
     <div class="report-card">
-        <div class="report-icon">📋</div>
-        <div class="report-info">
-            <h3>Banca Ore completa — tutti i docenti</h3>
-            <p>Un foglio per ogni docente con storico movimenti + foglio indice riassuntivo. Formato Excel.</p>
-        </div>
-        <a href="{{ url_for('report.globale_xlsx') }}" class="btn btn-success">
-            ⬇ Scarica XLSX
-        </a>
-    </div>
-
-    <div class="report-card" style="border-left:4px solid #0f7b6c;">
-        <div class="report-icon">✉</div>
-        <div class="report-info">
-            <h3>Prepara bozze email (Mail.app)</h3>
-            <p>Seleziona i docenti, scrivi oggetto e testo una volta sola. Ogni bozza si apre in Mail.app con il PDF allegato — tu la rivedi e la invii manualmente.</p>
-        </div>
-        <a href="{{ url_for('mail_bozze.index') }}"
-           class="btn btn-sm" style="background:#0f7b6c; color:white; white-space:nowrap;">
-            ✉ Apri
-        </a>
-    </div>
-
-    <div class="report-card" style="border-left:4px solid #e63946;">
-        <div class="report-icon">🗂</div>
-        <div class="report-info">
-            <h3>Esporta tutti i report PDF</h3>
-            <p>Genera un PDF per ogni docente (DOC_COGNOME.pdf) e li scarica in un unico archivio ZIP. Estratto nella cartella di tua scelta.</p>
-        </div>
-        <a href="{{ url_for('report.esporta_tutti_pdf') }}"
-           class="btn btn-sm" style="background:#e63946; color:white; white-space:nowrap;"
-           onclick="this.textContent='⏳ Generazione...'; this.style.pointerEvents='none';">
-            ⬇ Scarica tutti PDF
-        </a>
-    </div>
-
-    <div class="report-card">
-        <div class="report-icon">🗓</div>
-        <div class="report-info">
-            <h3>Pianificazione permessi orari</h3>
-            <p>Suggerisce a chi e quando proporre un permesso orario per liberare fine o inizio giornata, in base al credito proiettato.</p>
-        </div>
-        <a href="{{ url_for('report.pianifica_permessi') }}" class="btn btn-primary">Apri</a>
-    </div>
-
-    <div class="report-card">
-        <div class="report-icon">⚖️</div>
-        <div class="report-info">
-            <h3>Ottimizzazione simulazioni</h3>
-            <p>Suggerisce sostituti per saldo banca ore e creditori da liberare con permesso nei giorni di simulazione.</p>
-        </div>
-        <a href="{{ url_for('report.ottimizzazione_simulazioni') }}" class="btn btn-primary">Apri</a>
-    </div>
-
-    <div class="report-card">
-        <div class="report-icon">📤</div>
-        <div class="report-info">
-            <h3>Export banca ore → Excel</h3>
-            <p>Aggiorna il file Banca_Ore_Docenti_v3.xlsm con i dati del database — settimane e riepilogo.</p>
-        </div>
-        <a href="{{ url_for('report.export_excel') }}" class="btn btn-primary">Apri</a>
-    </div>
-
-    <div class="report-card">
-        <div class="report-icon">📥</div>
-        <div class="report-info">
-            <h3>Import banca ore da Excel</h3>
-            <p>Importa supplenze, permessi e ore civica dalle settimane del file Banca_Ore_Docenti.</p>
-        </div>
-        <a href="{{ url_for('import_banca.index') }}" class="btn btn-primary">Importa</a>
-    </div>
-
-    <div class="report-card">
-        <div class="report-icon">🖨</div>
-        <div class="report-info">
-            <h3>Storico prospetti supplenze</h3>
-            <p>Tutti i prospetti generati — scarica o elimina singoli file.</p>
-        </div>
-        <a href="{{ url_for('report.lista_prospetti') }}" class="btn btn-primary">Apri storico</a>
-    </div>
-
-    <div class="report-card">
-        <div class="report-icon">📈</div>
+        <div class="report-icon">▲︎</div>
         <div class="report-info">
             <h3>Report per il Dirigente</h3>
-            <p>Sintesi aggregata — situazione complessiva, casi critici, crediti elevati. Senza nomi individuali nei dati sensibili.</p>
+            <p>Sintesi aggregata — situazione complessiva, casi critici, crediti elevati. Senza dettaglio dei singoli movimenti.</p>
         </div>
-        <a href="{{ url_for('report.dirigente') }}" class="btn btn-primary">Apri report</a>
+        <a href="{{ url_for('report.dirigente') }}" class="btn btn-primary">Apri report completo</a>
     </div>
 </div>
 
-<!-- REPORT PER DOCENTE -->
+{% elif tab == 'docenti' %}
+{# ══════════════════ REPORT PER DOCENTE ══════════════════ #}
 <div class="card" style="padding:2px; overflow:visible;">
     <div style="padding:20px 24px 12px;">
         <h2 style="border:none; margin-bottom:4px;">Report per singolo docente</h2>
@@ -174,7 +219,7 @@
                 <th style="text-align:center;width:76px;">Previsto</th>
                 <th style="text-align:center;width:76px;">Proiett.</th>
                 <th style="text-align:center;width:40px;" title="Stato">St.</th>
-                <th style="text-align:center;width:60px;">✏️</th>
+                <th style="text-align:center;width:60px;">✎︎️</th>
             </tr>
         </thead>
         <tbody>
@@ -248,19 +293,11 @@
                 <div class="azione-wrap">
                     <button class="btn btn-sm btn-primary"
                             style="padding:3px 10px; font-size:.82rem;"
-                            >🔍</button>
+                            >⌕︎</button>
                     <div class="azione-menu">
-                        <a href="{{ url_for('report.singolo', id=d.id) }}" class="azione-item">🔍 Dettaglio</a>
-                        <a href="{{ url_for('report.singolo_xlsx', id=d.id) }}" class="azione-item">📊 Scarica XLSX</a>
-                        <a href="{{ url_for('report.singolo_pdf', id=d.id) }}" class="azione-item">📄 Scarica PDF</a>
-                        {% if d.email %}
-                        <hr class="azione-sep">
-                        <form method="post"
-                              action="{{ url_for('email.invia_singolo', id_docente=d.id) }}"
-                              onsubmit="return confirm('Inviare report a {{ d.cognome }}?')">
-                            <button type="submit" class="azione-item" style="width:100%; text-align:left; background:none; border:none; cursor:pointer;">✉ Invia per email</button>
-                        </form>
-                        {% endif %}
+                        <a href="{{ url_for('report.singolo', id=d.id) }}" class="azione-item">⌕︎ Dettaglio</a>
+                        <a href="{{ url_for('report.singolo_xlsx', id=d.id) }}" class="azione-item">▲︎ Scarica XLSX</a>
+                        <a href="{{ url_for('report.singolo_pdf', id=d.id) }}" class="azione-item">▥︎ Scarica PDF</a>
                     </div>
                 </div>
             </td>
@@ -271,13 +308,6 @@
     <!-- PIEDE CON TOTALI -->
     <div style="padding:16px 24px; background:#f8fafc; border-top:1px solid #e5eaf0;
                 display:flex; gap:24px; flex-wrap:wrap; font-size:.85rem;">
-        {% set tot_credito = saldi.values()|selectattr('netto_eff','gt',0)|map(attribute='netto_eff')|sum %}
-        {% set tot_debito  = saldi.values()|selectattr('netto_eff','lt',0)|map(attribute='netto_eff')|sum %}
-        {% set tot_prot    = namespace(val=0) %}
-        {% for d in docenti %}
-        {% set s = saldi.get(d.id, {}) %}
-        {% set tot_prot.val = tot_prot.val + s.get('netto_eff',0) + s.get('netto_prev',0) %}
-        {% endfor %}
         {% set tot_cred_prot = namespace(val=0) %}
         {% set tot_deb_prot  = namespace(val=0) %}
         {% for d in docenti %}
@@ -295,21 +325,88 @@
     </div>
 </div>
 
+{% elif tab == 'segreteria' %}
+{# ══════════════════ REPORT / STRUMENTI PER SEGRETERIA E VICEPRESIDI ══════════════════ #}
+<div class="card">
+    <h2>Report ed export per segreteria/vicepresidi</h2>
+
+    <div class="report-card">
+        <div class="report-icon">▤︎</div>
+        <div class="report-info">
+            <h3>Banca Ore completa — tutti i docenti</h3>
+            <p>Un foglio per ogni docente con storico movimenti + foglio indice riassuntivo. Formato Excel.</p>
+        </div>
+        <a href="{{ url_for('report.globale_xlsx') }}" class="btn btn-success">
+            ⇩︎ Scarica XLSX
+        </a>
+    </div>
+
+    <div class="report-card" style="border-left:4px solid #0f7b6c;">
+        <div class="report-icon">✉︎</div>
+        <div class="report-info">
+            <h3>Prepara bozze email (Mail.app)</h3>
+            <p>Seleziona i docenti, scrivi oggetto e testo una volta sola. Ogni bozza si apre in Mail.app con il PDF allegato — tu la rivedi e la invii manualmente.</p>
+        </div>
+        <a href="{{ url_for('mail_bozze.index') }}"
+           class="btn btn-sm" style="background:#0f7b6c; color:white; white-space:nowrap;">
+            ✉︎ Apri
+        </a>
+    </div>
+
+    <div class="report-card" style="border-left:4px solid #e63946;">
+        <div class="report-icon">▧︎</div>
+        <div class="report-info">
+            <h3>Esporta tutti i report PDF</h3>
+            <p>Genera un PDF per ogni docente (DOC_COGNOME.pdf) e li scarica in un unico archivio ZIP. Estratto nella cartella di tua scelta.</p>
+        </div>
+        <a href="{{ url_for('report.esporta_tutti_pdf') }}"
+           class="btn btn-sm" style="background:#e63946; color:white; white-space:nowrap;"
+           onclick="this.textContent='⏳ Generazione...'; this.style.pointerEvents='none';">
+            ⇩︎ Scarica tutti PDF
+        </a>
+    </div>
+
+    <div class="report-card">
+        <div class="report-icon">▦︎</div>
+        <div class="report-info">
+            <h3>Pianificazione permessi orari</h3>
+            <p>Suggerisce a chi e quando proporre un permesso orario per liberare fine o inizio giornata, in base al credito proiettato.</p>
+        </div>
+        <a href="{{ url_for('report.pianifica_permessi') }}" class="btn btn-primary">Apri</a>
+    </div>
+
+    <div class="report-card">
+        <div class="report-icon">⚖︎️</div>
+        <div class="report-info">
+            <h3>Ottimizzazione simulazioni</h3>
+            <p>Suggerisce sostituti per saldo banca ore e creditori da liberare con permesso nei giorni di simulazione.</p>
+        </div>
+        <a href="{{ url_for('report.ottimizzazione_simulazioni') }}" class="btn btn-primary">Apri</a>
+    </div>
+
+    <div class="report-card">
+        <div class="report-icon">⎙︎</div>
+        <div class="report-info">
+            <h3>Storico prospetti supplenze</h3>
+            <p>Tutti i prospetti generati — scarica o elimina singoli file.</p>
+        </div>
+        <a href="{{ url_for('report.lista_prospetti') }}" class="btn btn-primary">Apri storico</a>
+    </div>
+</div>
+{% endif %}
+
 <script>
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('.azione-wrap button');
     if (btn) {
         e.stopPropagation();
         const menu = btn.closest('.azione-wrap').querySelector('.azione-menu');
-        // Chiudi tutti gli altri
         document.querySelectorAll('.azione-menu').forEach(m => {
             if (m !== menu) m.style.display = 'none';
         });
-        // Toggle questo
         menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         return;
     }
-    // Click fuori → chiudi tutti
     document.querySelectorAll('.azione-menu').forEach(m => m.style.display = 'none');
 });
 </script>

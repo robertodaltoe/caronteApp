@@ -11,30 +11,32 @@
 .cc-header { padding:8px 18px; background:#f8fafc; display:flex;
     align-items:center; gap:10px; font-size:.82rem; font-weight:700; color:var(--blu); }
 .cc-budget { font-size:.72rem; font-weight:400; padding:2px 7px; border-radius:5px; }
-table.pivot { width:auto; min-width:100%; border-collapse:collapse; font-size:.78rem; table-layout:fixed; }
+table.pivot { border-collapse:collapse; font-size:.78rem; table-layout:fixed; }
 /* th generici — NON sovrascrive bg delle intestazioni colorate */
 table.pivot th { padding:5px 4px; text-align:center;
     border:1px solid #e2e8f0; font-weight:700; white-space:nowrap; font-size:.72rem; }
+table.pivot td { overflow:hidden; padding:2px 3px; }
 /* Colonne fisse — stessa larghezza in tutte le tabelle */
 table.pivot th.th-doc,
 table.pivot td.td-doc  { width:170px; min-width:170px; max-width:170px;
                           overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-                          text-align:left; padding:5px 8px; background:#f1f5f9; }
+                          text-align:left; padding:3px 8px; background:#f1f5f9; }
 table.pivot .th-tipo,
-table.pivot .td-tipo   { width:46px; min-width:46px; max-width:46px; background:#f1f5f9; }
+table.pivot .td-tipo   { width:56px; min-width:56px; max-width:56px; background:#f1f5f9;
+                          overflow:hidden; text-overflow:ellipsis; text-align:center; }
 table.pivot .th-pot,
 table.pivot .td-pot    { width:34px; min-width:34px; max-width:34px; }
-table.pivot .col-tot   { width:44px; min-width:44px; max-width:44px; }
-table.pivot .col-max   { width:44px; min-width:44px; max-width:44px; }
-table.pivot .col-azioni{ width:30px; min-width:30px; max-width:30px; }
+table.pivot .col-tot   { width:58px; min-width:58px; max-width:58px; }
+table.pivot .col-max   { width:58px; min-width:58px; max-width:58px; }
+table.pivot .col-azioni{ width:40px; min-width:40px; max-width:40px; }
 /* Colonne classi — larghezza minima, si adattano al contenuto */
 table.pivot td[data-classe],
-table.pivot th[data-classe-th] { min-width:28px; }
+table.pivot th[data-classe-th] { min-width:34px; overflow:hidden; text-overflow:clip; }
 
 table.pivot td.ore-val { font-weight:700; color:var(--blu); }
 table.pivot td.ore-zero { color:#e2e8f0; }
-table.pivot tr.tr-copertura td { font-size:.7rem; font-weight:700;
-    background:#f8fafc; border-top:2px solid #e2e8f0; }
+table.pivot tr.tr-copertura td { font-size:.66rem; font-weight:700; padding:2px 1px;
+    background:#f8fafc; border-top:2px solid #e2e8f0; white-space:nowrap; text-align:center; }
 table.pivot tr.tr-add td { background:#fafbff; }
 .badge-tipo { font-size:.65rem; padding:1px 5px; border-radius:4px;
     font-weight:700; margin-left:4px; }
@@ -46,7 +48,7 @@ table.pivot tr.tr-add td { background:#fafbff; }
 .form-add.open { display:block; }
 .verifica-ore { font-size:.75rem; padding:4px 10px; border-radius:5px;
     margin-top:6px; display:none; }
-.tbl-wrap { overflow-x:auto; }
+.tbl-wrap { overflow-x:auto; display:inline-block; max-width:100%; }
 table.pivot td.td-doc,
 table.pivot th.th-doc {
     position:sticky; left:0; z-index:2;
@@ -54,7 +56,7 @@ table.pivot th.th-doc {
     box-shadow:2px 0 4px rgba(0,0,0,.06);
 }
 table.pivot th.th-doc { background:#f1f5f9; z-index:3; color:#1e293b; font-weight:700; }
-/* Tre colonne sticky destra: 🗑 (30px) | Max (44px) | Tot (44px) */
+/* Tre colonne sticky destra: ✕︎ (30px) | Max (44px) | Tot (44px) */
 table.pivot td.td-sticky-r,
 table.pivot th.th-sticky-r {
     position:sticky; z-index:2;
@@ -63,16 +65,18 @@ table.pivot th.th-sticky-r {
     text-align:center;
 }
 table.pivot th.th-sticky-r { z-index:3; }
-/* Colonna 🗑 — più a destra, 30px */
-table.pivot .col-azioni  { right:0;    width:30px;  min-width:30px;  max-width:30px; }
+/* Colonna ✕︎ — più a destra */
+table.pivot .col-azioni  { right:0;     width:40px;  min-width:40px;  max-width:40px; }
 /* Colonna Max */
-table.pivot .col-max     { right:30px; width:44px;  min-width:44px;  max-width:44px; }
+table.pivot .col-max     { right:40px;  width:58px;  min-width:58px;  max-width:58px; }
 /* Colonna Tot */
-table.pivot .col-tot     { right:74px; width:44px;  min-width:44px;  max-width:44px; }
+table.pivot .col-tot     { right:98px;  width:58px;  min-width:58px;  max-width:58px; }
 table.pivot td.td-tipo,
 table.pivot th.th-tipo {
-    position:sticky; left:0; z-index:2;
+    position:sticky; left:170px; z-index:2;
+    box-shadow:2px 0 4px rgba(0,0,0,.06);
 }
+table.pivot th.th-tipo { z-index:3; }
 .nome-da-assegnare {
     font-size:.62rem; color:#9ca3af;
     display:block; line-height:1.2; margin-top:1px;
@@ -86,9 +90,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p9', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📋 Assegnazioni classi — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p9', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▤︎ Assegnazioni classi — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('assegnazioni.index', anno=a) }}"
@@ -163,15 +167,16 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
         </div>
 
         <div class="tbl-wrap">
-        <table class="pivot" data-cc-id="{{ cc.id }}">
+        {% set tbl_width = 170 + 56 + (34 if blk.potenziamento else 0) + (classi|length * 34) + 58 + 58 + 40 %}
+        <table class="pivot" data-cc-id="{{ cc.id }}" data-base-width="{{ tbl_width }}" style="width:{{ tbl_width }}px;">
             <colgroup>
                 <col style="width:170px;"><!-- Docente -->
-                <col style="width:46px;"> <!-- Tipo -->
+                <col style="width:56px;"> <!-- Tipo -->
                 {% if blk.potenziamento %}<col style="width:34px;">{% endif %} <!-- POT -->
-                {% for classe in classi %}<col style="width:30px;">{% endfor %} <!-- Classi -->
-                <col style="width:44px;"><!-- Tot -->
-                <col style="width:44px;"><!-- Max -->
-                <col style="width:30px;"><!-- Azioni -->
+                {% for classe in classi %}<col id="col-{{ cc.id }}-{{ classe|replace(' ','_') }}" style="width:34px;">{% endfor %} <!-- Classi -->
+                <col style="width:58px;"><!-- Tot -->
+                <col style="width:58px;"><!-- Max -->
+                <col style="width:40px;"><!-- Azioni -->
             </colgroup>
             <thead>
                 <tr>
@@ -211,7 +216,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <td class="td-doc" style="font-size:.7rem; color:var(--grigio); font-style:italic;">
                         Piano studi
                     </td>
-                    <td></td>
+                    <td class="td-tipo"></td>
                     {% if blk.potenziamento %}
                     <td style="border:1px solid #6d28d9; background:#f5f3ff;
                                text-align:center; font-size:.72rem; color:#7c3aed; font-weight:700;">
@@ -224,23 +229,23 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         'LSC':'#0e7490','LSP':'#7c3aed',
                         'LSU':'#be185d','SOS':'#6b7280'} %}
                     {% set prev_ind2 = namespace(v='') %}
+                    {% set cc_multi_classes_hdr = [] %}
+                    {% for c3 in classi %}{% if blk.multi_materia[c3] %}{% set _ = cc_multi_classes_hdr.append(c3) %}{% endif %}{% endfor %}
                     {% for classe in classi %}
                     {% set ind2 = classe.split(' ')[-1] %}
                     {% set is_first_of_ind2 = (ind2 != prev_ind2.v) %}
                     {% set prev_ind2.v = ind2 %}
                     {% set mats = blk.piano_materie[classe] %}
-                    <td style="font-size:.72rem; color:var(--grigio); font-weight:600;
-                               border:1px solid #e2e8f0; text-align:center; width:34px;
+                    <td style="font-size:.68rem; color:var(--grigio); font-weight:600;
+                               border:1px solid #e2e8f0; text-align:center; padding:2px 1px;
+                               white-space:nowrap;
                                {{ 'border-left:3px solid '~IND_COLORS2.get(ind2,'#374151')~';' if is_first_of_ind2 else '' }}
                                cursor:{{ 'pointer' if blk.multi_materia[classe] else 'default' }};"
                         {% if blk.multi_materia[classe] %}
                         title="{{ mats | map(attribute='nome') | join(' / ') }}"
-                        onclick="togglePianoMat('piano-{{ cc.id }}-{{ loop.index }}')"
+                        onclick="togglePianoMat('piano-detail-{{ cc.id }}', '{{ cc.id }}', '{{ cc_multi_classes_hdr | join('|') }}')"
                         {% endif %}>
-                        {{ blk.piano[classe] }}h
-                        {% if blk.multi_materia[classe] %}
-                        <span style="font-size:.6rem; color:#6366f1;">▾</span>
-                        {% endif %}
+                        {{ blk.piano[classe] }}{% if blk.multi_materia[classe] %}<span style="color:#6366f1;">▾</span>{% endif %}
                     </td>
                     {% endfor %}
                     <td class="td-sticky-r col-tot" style="font-size:.72rem; color:var(--grigio);">
@@ -250,27 +255,33 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <td class="td-sticky-r col-azioni"></td>
                 </tr>
             </thead>
-            {# Sub-righe dettaglio materie per il piano studi (una per classe con multi_materia) #}
-            {% for classe in classi %}
-            {% if blk.multi_materia[classe] %}
-            <tbody id="piano-{{ cc.id }}-{{ loop.index }}" style="display:none;">
+            {# Riga unica di dettaglio piano studi: mostra TUTTE le classi multi-materia
+               della CC insieme, non una riga separata per classe (evita disallineamenti
+               e permette di confrontare più classi in un colpo d'occhio) #}
+            {% set cc_multi_classes = [] %}
+            {% for classe in classi %}{% if blk.multi_materia[classe] %}{% set _ = cc_multi_classes.append(classe) %}{% endif %}{% endfor %}
+            {% if cc_multi_classes %}
+            <tbody id="piano-detail-{{ cc.id }}" style="display:none;">
                 <tr style="background:#f0f9ff;">
                     <td class="td-doc" style="font-size:.7rem; color:#0369a1;
                         font-style:italic; padding:3px 10px 3px 22px;">
-                        ↳ {{ classe }}
+                        ↳︎ dettaglio materie
                     </td>
-                    <td style="border:1px solid #e2e8f0;"></td>
-                    {% for c2 in classi %}
-                    {% if c2 == classe %}
-                    <td style="border:1px solid #e2e8f0; padding:3px 5px; vertical-align:top;">
+                    <td class="td-tipo" style="border:1px solid #e2e8f0;"></td>
+                    {% if blk.potenziamento %}
+                    <td style="border:1px solid #6d28d9; background:#f5f3ff;"></td>
+                    {% endif %}
+                    {% for classe in classi %}
+                    {% if classe in cc_multi_classes %}
+                    <td style="border:1px solid #e2e8f0; padding:3px 5px; vertical-align:top; overflow:visible;">
                         {% for mat in blk.piano_materie[classe] %}
                         <div style="font-size:.68rem; display:flex; gap:4px;
-                                    align-items:center; white-space:nowrap;">
+                                    align-items:center; white-space:normal;">
                             <span style="color:#9ca3af;">└</span>
                             <span style="color:#374151; flex:1;">
-                                {{ mat.nome | truncate(14, true, '…') }}
+                                {{ mat.nome }}
                             </span>
-                            <span style="font-weight:700; color:#0369a1;">{{ mat.ore }}h</span>
+                            <span style="font-weight:700; color:#0369a1; white-space:nowrap;">{{ mat.ore }}h</span>
                         </div>
                         {% endfor %}
                     </td>
@@ -284,7 +295,6 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 </tr>
             </tbody>
             {% endif %}
-            {% endfor %}
             <tbody id="tbody-cc-{{ cc.id }}">
             {% for a in blk.assegnazioni %}
             {% set tot = blk.tot_doc[a.id] %}
@@ -322,8 +332,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 <td class="td-tipo" style="border:1px solid #e2e8f0;"><span style="font-size:.68rem; background:#f3f4f6; padding:1px 5px; border-radius:4px;">{{ tipo_display.get(a.tipo, a.tipo) }}</span></td>
                 {% if blk.potenziamento %}
                 {% set ore_pot = blk.ore_pot_doc.get(a.id, 0) %}
-                <td class="{{ 'ore-val' if ore_pot else 'ore-zero' }}"
-                    class="td-pot" style="border:1px solid #6d28d9; cursor:pointer;
+                <td class="{{ 'ore-val' if ore_pot else 'ore-zero' }} td-pot" style="border:1px solid #6d28d9; cursor:pointer;
                            background:{{ '#f5f3ff' if ore_pot else 'white' }};
                            color:{{ '#7c3aed' if ore_pot else '#d8b4fe' }};"
                     data-asgn="{{ a.id }}" data-classe="__POT__"
@@ -376,7 +385,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% endfor %}
                 <td class="td-sticky-r col-tot"
                     {% if blk.multi_materia.values() | select | list %}
-                    onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}')"
+                    {% set multi_classes = [] %}
+                    {% for c in classi %}{% if blk.multi_materia[c] %}{% set _ = multi_classes.append(c) %}{% endif %}{% endfor %}
+                    onclick="toggleMaterie('{{ cc.id }}', '{{ a.id }}', '{{ multi_classes | join('|') }}')"
                     title="Mostra/nascondi dettaglio materie"
                     {% endif %}>
                     <span class="tot-ore" id="tot-span-{{ a.id }}">{{ tot }}h</span>
@@ -394,7 +405,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                           onsubmit="return confirm('Eliminare?')">
                         <button type="submit"
                                 style="background:none; border:none; cursor:pointer;
-                                       color:#dc2626; font-size:.8rem;">🗑</button>
+                                       color:#dc2626; font-size:.8rem;">✕︎</button>
                     </form>
                 </td>
             </tr>
@@ -406,16 +417,19 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {% for mat in blk.piano_materie[classi[0]] if classi %}
                         {# mostrato per ogni materia #}{% endfor %}
                     </td>
-                    <td style="border:1px solid #e2e8f0;"></td>
+                    <td class="td-tipo" style="border:1px solid #e2e8f0;"></td>
+                    {% if blk.potenziamento %}
+                    <td style="border:1px solid #6d28d9; background:#f5f3ff;"></td>
+                    {% endif %}
                     {% for classe in classi %}
-                    <td style="border:1px solid #e2e8f0; padding:2px 4px; vertical-align:top;">
+                    <td style="border:1px solid #e2e8f0; padding:2px 4px; vertical-align:top; overflow:visible;">
                         {% if blk.multi_materia[classe] %}
                         {% for mat in blk.piano_materie[classe] %}
-                        <div style="font-size:.7rem; white-space:nowrap; color:#374151;
+                        <div style="font-size:.7rem; white-space:normal; color:#374151;
                                     display:flex; gap:4px; align-items:center;">
                             <span style="color:#9ca3af;">└</span>
-                            <span>{{ mat.nome | truncate(12, true, '…') }}</span>
-                            <span style="font-weight:700; color:var(--blu); margin-left:auto;">
+                            <span>{{ mat.nome }}</span>
+                            <span style="font-weight:700; color:var(--blu); margin-left:auto; white-space:nowrap;">
                                 {{ blk.ore_doc_mat[a.id].get(classe, {}).get(mat.id, 0) }}h
                             </span>
                         </div>
@@ -442,9 +456,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% endif %}
                     <span class="nome-da-assegnare">max {{ d.ore_max_effettive }}h — da assegnare</span>
                 </td>
-                <td style="text-align:center; border:1px solid #e2e8f0; color:#9ca3af; font-size:.7rem;">
+                <td class="td-tipo" style="text-align:center; border:1px solid #e2e8f0; color:#9ca3af; font-size:.7rem;">
                     TI
                 </td>
+                {% if blk.potenziamento %}
+                <td style="border:1px solid #6d28d9; background:#f5f3ff; color:#d8b4fe; text-align:center;">—</td>
+                {% endif %}
                 {% set IND_COL_PRE = {
                     'AFM':'#1e40af','RIM':'#1d4ed8',
                     'CAT':'#b45309','LLI':'#15803d',
@@ -477,7 +494,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <button type="button"
                             onclick="quickAssign('{{ cc.id }}', '{{ d.id }}')"
                             style="background:none; border:1px solid #c7d2fe; border-radius:4px;
-                                   cursor:pointer; color:#6366f1; font-size:.7rem; padding:2px 6px;"
+                                   cursor:pointer; color:#6366f1; font-size:.7rem; padding:2px 4px;"
                             title="Assegna {{ d.cognome }} {{ d.nome }}">＋</button>
                 </td>
             </tr>
@@ -489,17 +506,6 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     style="font-size:.7rem; color:var(--grigio); font-style:italic;">
                     Copertura
                 </td>
-                {% for classe in classi %}
-                {% set cop  = blk.ore_per_classe[classe] %}
-                {% set prev = blk.piano[classe] %}
-                <td class="td-cop"
-                    id="cop-{{ cc.id }}-{{ classe|replace(' ','_') }}"
-                    data-prev="{{ prev }}"
-                    style="color:{{ '#16a34a' if cop == prev else ('#dc2626' if cop > prev else '#f59e0b') }};
-                            border:1px solid #e2e8f0;">
-                    {{ cop }}/{{ prev }}
-                </td>
-                {% endfor %}
                 {% if blk.potenziamento %}
                 {% set cop_pot = blk.ore_pot_totali %}
                 {% set prev_pot = blk.potenziamento.ore %}
@@ -509,6 +515,17 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {{ cop_pot }}/{{ prev_pot }}
                 </td>
                 {% endif %}
+                {% for classe in classi %}
+                {% set cop  = blk.ore_per_classe[classe] %}
+                {% set prev = blk.piano[classe] %}
+                <td class="td-cop"
+                    id="cop-{{ cc.id }}-{{ classe|replace(' ','_') }}"
+                    data-prev="{{ prev }}"
+                    style="color:{{ '#16a34a' if cop == prev else ('#dc2626' if cop > prev else '#f59e0b') }};
+                            border:1px solid #e2e8f0; text-align:center; white-space:nowrap;">
+                    {{ cop }}/{{ prev }}
+                </td>
+                {% endfor %}
                 <td class="td-sticky-r col-tot"></td>
                 <td class="td-sticky-r col-max"></td>
                 <td class="td-sticky-r col-azioni"></td>
@@ -517,13 +534,16 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             <tr style="background:#f8f9ff;">
                 <td class="td-doc" colspan="2"
                     style="font-size:.68rem; color:var(--grigio); font-style:italic; padding:4px 10px;">
-                    📥 Scheda classe
+                    ⇩︎ Scheda classe
                 </td>
+                {% if blk.potenziamento %}
+                <td style="border:1px solid #6d28d9; background:#f5f3ff;"></td>
+                {% endif %}
                 {% for classe in classi %}
                 <td style="border:1px solid #e2e8f0; text-align:center; padding:3px 4px;">
                     <a href="{{ url_for('export_xlsx.export_classe', label=classe, anno=anno) }}"
                        style="font-size:.65rem; color:#16a34a; text-decoration:none;"
-                       title="Scarica scheda {{ classe }}">📥</a>
+                       title="Scarica scheda {{ classe }}">⇩︎</a>
                 </td>
                 {% endfor %}
                 <td class="td-sticky-r col-tot"></td>
@@ -633,7 +653,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         <div id="verifica-{{ cc.id }}" class="verifica-ore"></div>
                         <button type="submit" class="btn btn-success btn-sm"
                                 style="font-size:.78rem; padding:5px 12px;">
-                            ✓ Salva
+                            ✓︎ Salva
                         </button>
                         <button type="button" class="btn btn-sm"
                                 style="background:#e5e7eb; color:#6b7280; font-size:.78rem; padding:5px 10px;"
@@ -660,7 +680,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
         <span id="pop-msg" style="font-size:.72rem; color:#16a34a;"></span>
         <button onclick="chiudiPopover()" style="background:none; border:none; cursor:pointer;
-                font-size:.8rem; color:#9ca3af;" title="Chiudi">✕</button>
+                font-size:.8rem; color:#9ca3af;" title="Chiudi">✕︎</button>
     </div>
 </div>
 
@@ -761,7 +781,7 @@ function apriPopover(td, asgnId, classe, multi, matIds, matNomi, oreAttuale) {
     _popNomi   = matNomi;
     _popCell   = td;
 
-    document.getElementById('pop-title').textContent = classe;
+    document.getElementById('pop-title').textContent = (classe === '__POT__') ? 'Potenziamento' : classe;
     const fields = document.getElementById('pop-fields');
     fields.innerHTML = '';
 
@@ -996,7 +1016,7 @@ async function salvaPopover(keepOpen = false) {
         _ricalcolaColoriTutteRighe();
     }
 
-    msg.textContent = '✓';
+    msg.textContent = '✓︎';
     msg.style.color = '#16a34a';
     if (!keepOpen) setTimeout(chiudiPopover, 600);
 }
@@ -1107,16 +1127,36 @@ function filtraArea(areaId) {
     }
 }
 
-function togglePianoMat(id) {
-    const tbody = document.getElementById(id);
-    if (!tbody) return;
-    tbody.style.display = tbody.style.display === 'none' ? 'table-row-group' : 'none';
+function _setColWidth(ccId, classe, aperta) {
+    const WIDE = 170, NARROW = 34;
+    const col = document.getElementById('col-' + ccId + '-' + classe.replace(/ /g, '_'));
+    const table = document.querySelector('table.pivot[data-cc-id="' + ccId + '"]');
+    if (!col || !table) return;
+    col.style.width = (aperta ? WIDE : NARROW) + 'px';
+    col.dataset.open = aperta ? '1' : '0';
+    const baseWidth = parseInt(table.dataset.baseWidth, 10) || 0;
+    const openCount = table.querySelectorAll('colgroup col[data-open="1"]').length;
+    table.style.width = (baseWidth + openCount * (WIDE - NARROW)) + 'px';
 }
 
-function toggleMaterie(ccId, asgnId) {
+function togglePianoMat(id, ccId, classiStr) {
+    const tbody = document.getElementById(id);
+    if (!tbody) return;
+    const apri = tbody.style.display === 'none';
+    tbody.style.display = apri ? 'table-row-group' : 'none';
+    if (ccId && classiStr) {
+        classiStr.split('|').filter(Boolean).forEach(classe => _setColWidth(ccId, classe, apri));
+    }
+}
+
+function toggleMaterie(ccId, asgnId, classiStr) {
     const row = document.getElementById('sub-' + ccId + '-' + asgnId);
     if (!row) return;
-    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    const apri = row.style.display === 'none';
+    row.style.display = apri ? 'table-row' : 'none';
+    if (classiStr) {
+        classiStr.split('|').filter(Boolean).forEach(classe => _setColWidth(ccId, classe, apri));
+    }
 }
 
 function quickAssign(ccId, docId) {
@@ -1168,7 +1208,7 @@ function verificaOre(ccId, anno) {
     document.querySelectorAll('[id^="ore-' + ccId + '-"]').forEach(inp => {
         const v = parseInt(inp.value) || 0;
         if (v > 0) {
-            // Ricava label dal name: "ore_1A AFM" → "1A AFM"
+            // Ricava label dal name: "ore_1A AFM" →︎ "1A AFM"
             classiOre[inp.name.replace('ore_', '')] = v;
         }
     });

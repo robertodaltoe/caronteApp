@@ -2,9 +2,9 @@
 {% block title %}Classi di concorso{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p1') }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">🏷️ Classi di concorso</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p1') }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">◆︎️ Classi di concorso</h1>
 </div>
 
 <div class="card" style="padding:14px 18px; margin-bottom:16px;">
@@ -34,7 +34,7 @@
             <input type="text" name="note"
                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
         </div>
-        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+        <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
     </form>
 </div>
 
@@ -71,7 +71,7 @@
                 {% endif %}
             </td>
             <td style="text-align:center;">
-                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ cc.id }})" title="Modifica">✏️</button>
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ cc.id }})" title="Modifica">✎︎️</button>
             </td>
         </tr>
         <tr id="edit-{{ cc.id }}" style="display:none; background:#f0f4ff;">
@@ -97,7 +97,7 @@
                         <input type="text" name="note" value="{{ cc.note or '' }}"
                                style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
                     </div>
-                    <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+                    <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
                     <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
                             onclick="toggleEdit({{ cc.id }})">Annulla</button>
                 </form>
@@ -106,11 +106,11 @@
                     {% if cc.attiva %}
                     <input type="hidden" name="azione" value="disattiva">
                     <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
-                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">🗑 Disattiva</button>
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">✕︎ Disattiva</button>
                     {% else %}
                     <input type="hidden" name="azione" value="riattiva">
                     <button type="submit" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;
-                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">↩ Riattiva</button>
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">↩︎ Riattiva</button>
                     {% endif %}
                 </form>
             </td>

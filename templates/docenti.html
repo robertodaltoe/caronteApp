@@ -46,11 +46,15 @@
             <span style="display:inline-block; font-size:.68rem; background:#f5f3ff;
                           color:#7c3aed; border:1px solid #c4b5fd; border-radius:4px;
                           padding:1px 6px; font-weight:700; margin-left:4px;">ITP</span>
+            {% elif d.ruolo == 'sostegno' %}
+            <span style="display:inline-block; font-size:.68rem; background:#f0fdfa;
+                          color:#0d9488; border:1px solid #5eead4; border-radius:4px;
+                          padding:1px 6px; font-weight:700; margin-left:4px;">SOSTEGNO</span>
             {% endif %}
         </td>
         <td style="white-space:nowrap;">
             {% if d.nome %}{{ d.nome }}
-            {% else %}<span style="color:#f59e0b; font-size:.8rem;">⚠</span>
+            {% else %}<span style="color:#f59e0b; font-size:.8rem;">⚠︎</span>
             {% endif %}
         </td>
         <td style="color:var(--grigio); font-size:.88rem;">{{ d.materia or '—' }}</td>
@@ -59,7 +63,7 @@
             {% if d.tipo_contratto %}
                 <span class="badge badge-grigio">{{ d.tipo_contratto }}</span>
             {% else %}
-                <span style="color:#f59e0b; font-size:.8rem;">⚠ da completare</span>
+                <span style="color:#f59e0b; font-size:.8rem;">⚠︎ da completare</span>
             {% endif %}
         </td>
         <td style="text-align:center; white-space:nowrap; font-size:.82rem; color:var(--grigio);">
@@ -87,11 +91,14 @@
             {% else %}
             <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">
             <a href="{{ url_for('docenti.modifica', id=d.id) }}"
-               class="btn btn-primary btn-sm">✏️</a>
+               class="btn btn-primary btn-sm">✎︎️</a>
+            <a href="{{ url_for('docenti.esporta_dati', id=d.id) }}"
+               class="btn btn-sm" style="background:#0d9488; color:white;"
+               title="Esporta dati personali (art.15 GDPR)">⇩︎</a>
             <form method="post" action="{{ url_for('docenti.elimina', id=d.id) }}"
                   style="display:inline;"
                   onsubmit="return confirm('Eliminare {{ d.cognome }}?')">
-                <button class="btn btn-danger btn-sm" type="submit" title="Elimina">✖</button>
+                <button class="btn btn-danger btn-sm" type="submit" title="Elimina">✕︎</button>
             </form>
             {% if g.utente is defined and g.utente.ruolo == 'ds' %}
             <form method="post" action="{{ url_for('docenti.anonimizza', id=d.id) }}"
@@ -99,7 +106,7 @@
                   onsubmit="return confirm('Anonimizzare {{ d.cognome }}? I dati anagrafici saranno rimossi, i dati operativi conservati (art.17 GDPR).')">
                 <button class="btn btn-sm" type="submit"
                         style="background:#78350f; color:white; font-size:.75rem;"
-                        title="Anonimizza (GDPR art.17)">🔒</button>
+                        title="Anonimizza (GDPR art.17)">⚿︎</button>
             </form>
             {% endif %}
             </div>

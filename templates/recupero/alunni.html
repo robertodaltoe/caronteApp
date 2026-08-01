@@ -2,15 +2,15 @@
 {% block title %}Alunni Recupero{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">← Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">👨‍🎓 Alunni con giudizio sospeso</h1>
+    <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">←︎ Recupero</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎△︎ Alunni con giudizio sospeso</h1>
     <a href="{{ url_for('recupero.copertura') }}" class="btn btn-sm"
-       style="background:#166534; color:white; margin-left:auto;">✅ Verifica copertura</a>
+       style="background:#166534; color:white; margin-left:auto;">✓︎ Verifica copertura</a>
 </div>
 
 <!-- Import XLSX -->
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">📥 Importa da registro elettronico (XLSX)</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">⇩︎ Importa da registro elettronico (XLSX)</h3>
     <form method="post" enctype="multipart/form-data"
           style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
         <input type="hidden" name="azione" value="import">
@@ -19,7 +19,7 @@
             <input type="file" name="file_xlsx" accept=".xlsx,.xls" required
                    style="padding:4px; font-size:.84rem;">
         </div>
-        <button type="submit" class="btn btn-success btn-sm">📥 Importa</button>
+        <button type="submit" class="btn btn-success btn-sm">⇩︎ Importa</button>
         <span style="font-size:.76rem; color:var(--grigio);">
             Importa tutti gli alunni con giudizio sospeso.
             I colori del file indicano lo stato di adesione (verde=aderisce, giallo=studio ind., rosso=non risposto, barrato=non aderisce).
@@ -30,20 +30,24 @@
     <form method="post" style="margin-top:10px;"
           onsubmit="return confirm('Eliminare tutti gli alunni importati?')">
         <input type="hidden" name="azione" value="elimina_tutti">
-        <button type="submit" class="btn btn-danger btn-sm">🗑 Elimina tutti e reimporta</button>
+        <button type="submit" class="btn btn-danger btn-sm">✕︎ Elimina tutti e reimporta</button>
     </form>
     {% endif %}
 </div>
 
 <!-- Aggiungi alunno manualmente -->
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">➕ Aggiungi alunno manualmente</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi alunno manualmente</h3>
     <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
         <input type="hidden" name="azione" value="aggiungi_alunno">
         <div>
             <label style="font-size:.72rem; color:var(--grigio);">Classe *</label><br>
             <input type="text" name="classe" required placeholder="es. 3ALSP"
+                   list="classi-attive-list" autocomplete="off"
                    style="width:90px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <datalist id="classi-attive-list">
+                {% for c in classi_attive %}<option value="{{ c }}">{% endfor %}
+            </datalist>
         </div>
         <div>
             <label style="font-size:.72rem; color:var(--grigio);">Cognome *</label><br>
@@ -70,10 +74,10 @@
             <select name="tipo_prova"
                     style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
                 <option value="">—</option>
-                <option value="scritto">✏️ Scritto</option>
-                <option value="orale">🗣 Orale</option>
-                <option value="pratico">🔧 Pratico</option>
-                <option value="scritto_orale">✏️🗣 Scritto + Orale</option>
+                <option value="scritto">✎︎️ Scritto</option>
+                <option value="orale">⚑︎ Orale</option>
+                <option value="pratico">⚙︎ Pratico</option>
+                <option value="scritto_orale">✎︎️⚑︎ Scritto + Orale</option>
             </select>
         </div>
         <div>
@@ -81,13 +85,13 @@
             <select name="stato_adesione"
                     style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
                 <option value="sconosciuto">— sconosciuto</option>
-                <option value="aderisce">✓ aderisce</option>
-                <option value="studio_ind">📚 studio individuale</option>
-                <option value="non_risposto">❓ non risposto</option>
-                <option value="non_aderisce">✗ non aderisce</option>
+                <option value="aderisce">✓︎ aderisce</option>
+                <option value="studio_ind">▥︎ studio individuale</option>
+                <option value="non_risposto">? non risposto</option>
+                <option value="non_aderisce">✕︎ non aderisce</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+        <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
     </form>
 </div>
 
@@ -101,19 +105,19 @@
 <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:14px;">
     <div class="card" style="text-align:center; padding:10px; background:#dcfce7;">
         <div style="font-size:1.4rem; font-weight:800; color:#166534;">{{ conteggi.aderisce }}</div>
-        <div style="font-size:.72rem; color:#166534;">✓ aderisce</div>
+        <div style="font-size:.72rem; color:#166534;">✓︎ aderisce</div>
     </div>
     <div class="card" style="text-align:center; padding:10px; background:#fef9c3;">
         <div style="font-size:1.4rem; font-weight:800; color:#92400e;">{{ conteggi.studio_ind }}</div>
-        <div style="font-size:.72rem; color:#92400e;">📚 studio ind.</div>
+        <div style="font-size:.72rem; color:#92400e;">▥︎ studio ind.</div>
     </div>
     <div class="card" style="text-align:center; padding:10px; background:#fee2e2;">
         <div style="font-size:1.4rem; font-weight:800; color:#dc2626;">{{ conteggi.non_risposto }}</div>
-        <div style="font-size:.72rem; color:#dc2626;">❓ non risposto</div>
+        <div style="font-size:.72rem; color:#dc2626;">? non risposto</div>
     </div>
     <div class="card" style="text-align:center; padding:10px; background:#f3f4f6;">
         <div style="font-size:1.4rem; font-weight:800; color:#6b7280;">{{ conteggi.non_aderisce }}</div>
-        <div style="font-size:.72rem; color:#6b7280;">✗ non aderisce</div>
+        <div style="font-size:.72rem; color:#6b7280;">✕︎ non aderisce</div>
     </div>
     <div class="card" style="text-align:center; padding:10px;">
         <div style="font-size:1.4rem; font-weight:800; color:var(--blu);">{{ tot }}</div>
@@ -123,7 +127,7 @@
 
 {% set STATO_BG    = {'aderisce':'#dcfce7','studio_ind':'#fef9c3','non_risposto':'#fee2e2','non_aderisce':'#f3f4f6','sconosciuto':'#f9fafb'} %}
 {% set STATO_COLOR = {'aderisce':'#166534','studio_ind':'#92400e','non_risposto':'#dc2626','non_aderisce':'#6b7280','sconosciuto':'#9ca3af'} %}
-{% set STATO_LABEL = {'aderisce':'✓','studio_ind':'📚','non_risposto':'❓','non_aderisce':'✗','sconosciuto':'—'} %}
+{% set STATO_LABEL = {'aderisce':'✓︎','studio_ind':'▥︎','non_risposto':'?','non_aderisce':'✕︎','sconosciuto':'—'} %}
 
 <!-- Lista per materia -->
 {% for (materia, cogn_doc, ini_doc), alunni in per_materia.items() | sort %}
@@ -183,13 +187,13 @@
                                    background:{{ STATO_BG.get(a.stato_adesione,'#f9fafb') }};
                                    color:{{ STATO_COLOR.get(a.stato_adesione,'#9ca3af') }};">
                         <option value="aderisce"     {% if a.stato_adesione=='aderisce' %}selected{% endif %}
-                                style="background:#dcfce7;color:#166534;">✓ aderisce</option>
+                                style="background:#dcfce7;color:#166534;">✓︎ aderisce</option>
                         <option value="studio_ind"   {% if a.stato_adesione=='studio_ind' %}selected{% endif %}
-                                style="background:#fef9c3;color:#92400e;">📚 studio ind.</option>
+                                style="background:#fef9c3;color:#92400e;">▥︎ studio ind.</option>
                         <option value="non_risposto" {% if a.stato_adesione=='non_risposto' %}selected{% endif %}
-                                style="background:#fee2e2;color:#dc2626;">❓ non risposto</option>
+                                style="background:#fee2e2;color:#dc2626;">? non risposto</option>
                         <option value="non_aderisce" {% if a.stato_adesione=='non_aderisce' %}selected{% endif %}
-                                style="background:#f3f4f6;color:#6b7280;">✗ non aderisce</option>
+                                style="background:#f3f4f6;color:#6b7280;">✕︎ non aderisce</option>
                         <option value="sconosciuto"  {% if a.stato_adesione=='sconosciuto' %}selected{% endif %}
                                 style="background:#f9fafb;color:#9ca3af;">— sconosciuto</option>
                     </select>
@@ -203,7 +207,7 @@
                     <button type="submit" title="Rimuovi alunno"
                             style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
                                    border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">
-                        🗑
+                        ✕︎
                     </button>
                 </form>
             </td>

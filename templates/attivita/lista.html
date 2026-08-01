@@ -4,7 +4,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">🗺 Attività fuori aula</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">⌖︎ Attività fuori aula</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Gite, progetti, FSL — generano automaticamente assenze e disponibilità
         </p>
@@ -45,7 +45,7 @@
             {% if a.gruppo_rimanente %}
             <br><span style="font-size:.72rem; color:#854d0e; font-weight:700;
                              display:inline-flex; align-items:center; gap:3px; margin-top:3px;">
-                🔀 Gruppo rimanente{% if a.id_attivita_gruppo %} → [{{ a.id_attivita_gruppo }}]{% endif %}
+                ⇄︎ Gruppo rimanente{% if a.id_attivita_gruppo %} →︎ [{{ a.id_attivita_gruppo }}]{% endif %}
             </span>
             {% endif %}
         </td>
@@ -58,7 +58,7 @@
         </td>
         <td style="font-size:.85rem;">
             {{ a.data_inizio.strftime('%d/%m/%Y') }}
-            {% if a.data_inizio != a.data_fine %} → {{ a.data_fine.strftime('%d/%m/%Y') }}{% endif %}
+            {% if a.data_inizio != a.data_fine %} →︎ {{ a.data_fine.strftime('%d/%m/%Y') }}{% endif %}
         </td>
         <td style="font-size:.82rem; color:var(--grigio);">
             {% if a.ricorrenza == 'settimanale' and a.giorni_sett %}
@@ -75,16 +75,16 @@
         <td>
             <div style="display:flex; gap:4px; justify-content:flex-end;">
                 <a href="{{ url_for('attivita.modifica', id=a.id) }}"
-                   class="btn btn-primary btn-sm">✏️</a>
+                   class="btn btn-primary btn-sm">✎︎️</a>
                 {% if a.tipo in ('fsl','progetto') %}
                 <a href="{{ url_for('attivita.calendario_fsl', id=a.id) }}"
                    class="btn btn-sm" style="background:#0369a1; color:white;"
-                   title="Calendario ore per accompagnatore">📅</a>
+                   title="Calendario ore per accompagnatore">▦︎</a>
                 {% endif %}
                 <form method="post" action="{{ url_for('attivita.annulla', id=a.id) }}"
                       onsubmit="return confirm('Annullare questa attività?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✖</button>
+                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
                 </form>
             </div>
         </td>
@@ -99,7 +99,7 @@
 {# ── IN CORSO / FUTURE ─────────────────────────────────────── #}
 {% if future %}
 <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:8px;">
-    📅 In corso e programmate
+    ▦︎ In corso e programmate
     <span style="font-size:.8rem; font-weight:400; color:var(--grigio); margin-left:6px;">
         {{ future|length }} attivit{{ 'à' if future|length == 1 else 'à' }}
     </span>
@@ -115,7 +115,7 @@
 {# ── PASSATE ───────────────────────────────────────────────── #}
 {% if passate %}
 <h2 style="font-size:1rem; font-weight:700; color:var(--grigio); margin-bottom:8px;">
-    🗂 Concluse
+    ▧︎ Concluse
     <span style="font-size:.8rem; font-weight:400; margin-left:6px;">{{ passate|length }}</span>
 </h2>
 <div style="opacity:.6;">

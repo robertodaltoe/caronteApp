@@ -38,6 +38,18 @@ def get_anno_corrente(app=None):
     return _calcola_da_calendario()
 
 
+def intervallo_anno_scolastico(anno_scol):
+    """
+    Restituisce (data_inizio, data_fine) dell'anno scolastico indicato
+    (es. '2025-2026' -> (2025-09-01, 2026-08-31)), secondo la stessa
+    convenzione usata in tutta l'app (l'anno scolastico va da settembre
+    ad agosto). Utile per filtrare per data record che non hanno una
+    colonna anno_scol propria (es. Supplenza).
+    """
+    anno_inizio = int(anno_scol[:4])
+    return date(anno_inizio, 9, 1), date(anno_inizio + 1, 8, 31)
+
+
 def set_anno_corrente(nuovo_anno):
     """
     Imposta l'anno scolastico corrente nel database.

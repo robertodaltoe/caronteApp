@@ -10,26 +10,28 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --font:       'Open Sans', 'Segoe UI', Arial, sans-serif;
-            --blu:        #0a1f35;
-            --blu-header: #0f2d4a;
-            --blu-line:   #1e5080;
+            --blu:        #29100d;
+            --blu-header: #3a1310;
+            --blu-line:   #7a1c17;
             --verde-acc:  #00c94a;
-            --rosso-acc:  #ff3333;
-            --giallo-acc: #ffe033;
+            --rosso-acc:  #ff5252;
+            --giallo-acc: #ffcf40;
             --viola-acc:  #c084fc;
-            --azzurro:    #60a5fa;
+            --azzurro:    #e8b874;
             --grigio:     rgba(255,255,255,.38);
-            --bg:         #07111e;
+            --bg:         #1a0a08;
         }
-        html, body { min-height:100%; background:var(--bg); color:white; font-family:var(--font); -webkit-font-smoothing:antialiased; }
+        html, body { min-height:100%; background:var(--bg); color:white; font-family:var(--font); -webkit-font-smoothing:antialiased; font-variant-emoji: text; }
 
         header { background:var(--blu-header); border-bottom:3px solid var(--blu-line); padding:10px 40px; min-height:76px; display:flex; align-items:center; justify-content:space-between; }
+        .header-left { display:flex; align-items:center; gap:14px; }
+        .header-left img { height:44px; width:44px; object-fit:contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
         .header-left .scuola { font-size:1.2rem; font-weight:700; }
         .header-left .sotto  { font-size:.82rem; color:var(--grigio); margin-top:3px; }
         .orologio { font-size:2.8rem; font-weight:800; letter-spacing:3px; font-variant-numeric:tabular-nums; }
         .data-it  { font-size:.85rem; color:var(--grigio); margin-top:2px; text-align:right; text-transform:capitalize; }
 
-        .banner { background:linear-gradient(90deg,#0f2d4a,#1a4a7a); padding:10px 40px; font-size:.85rem; font-weight:600; color:var(--grigio); border-bottom:1px solid rgba(255,255,255,.07); display:flex; justify-content:space-between; align-items:center; }
+        .banner { background:linear-gradient(90deg,#3a1310,#5c1512); padding:10px 40px; font-size:.85rem; font-weight:600; color:var(--grigio); border-bottom:1px solid rgba(255,255,255,.07); display:flex; justify-content:space-between; align-items:center; }
         .banner strong { color:white; }
         .nav-date { display:flex; gap:6px; align-items:center; }
         .nav-btn { padding:4px 10px; border-radius:6px; background:rgba(255,255,255,.12); color:white; text-decoration:none; font-size:.9rem; font-weight:700; }
@@ -116,8 +118,11 @@
 
 <header>
     <div class="header-left">
-        <div class="scuola">IIS "Leonardo da Vinci" — Chiavenna</div>
-        <div class="sotto">Variazioni orario giornaliero — solo informazioni di servizio</div>
+        <img src="{{ url_for('static', filename='img/brand/caronte-icon.png') }}" alt="">
+        <div>
+            <div class="scuola">{{ nome_istituto }}</div>
+            <div class="sotto">Variazioni orario giornaliero — solo informazioni di servizio</div>
+        </div>
     </div>
     <div style="display:flex; align-items:center; gap:16px;">
         {%- set GIORNI_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'] -%}
@@ -162,7 +167,7 @@
                     <div style="font-size:1.2rem; font-weight:700;">{{ ora }}ª ora</div>
                     <div class="ora-fascia">{{ orari.get(ora, '') }}</div>
                 </div>
-                <span class="adesso-label">▶ adesso</span>
+                <span class="adesso-label">&#x25B8;&#xFE0E; adesso</span>
             </div>
             <div class="box-row">
                 {% for s in sups_ora %}
@@ -179,14 +184,14 @@
                     <div class="box-materia">{{ materia }}</div>
                     {% endif %}
                     <div class="box-sost">
-                        {% if s.stato == 'non_assegnabile' %}🚫 N/A
+                        {% if s.stato == 'non_assegnabile' %}&#x2715;&#xFE0E; N/A
                         {% elif s.sostituto %}
                             {{- s.sostituto.cognome[:3] | upper -}}.{{- s.sostituto.nome[0] ~ '.' if s.sostituto.nome else '' }}
-                        {% else %}⚠ SCOPERTA{% endif %}
+                        {% else %}&#x25B2;&#xFE0E; SCOPERTA{% endif %}
                     </div>
                     {% if aula_info %}
                     <div class="box-aula {{ 'override' if aula_ov else '' }}">
-                        {% if aula_ov %}⚑ {% endif %}Aula {{ aula_info.aula }} · {{ aula_info.sede.replace(' - ', ' · ') }}
+                        {% if aula_ov %}&#x25C6;&#xFE0E; {% endif %}Aula {{ aula_info.aula }} · {{ aula_info.sede.replace(' - ', ' · ') }}
                     </div>
                     {% endif %}
                     {% if s.stato == 'assegnata' %}
@@ -209,7 +214,7 @@
             <div class="box-row" style="margin-top:-6px; padding-top:0;">
                 {% for cl in cl_questa_ora %}
                 <div class="box classe-libera" data-ora="{{ ora }}">
-                    <div class="box-cl-label">🚫 Classe libera</div>
+                    <div class="box-cl-label">&#x2715;&#xFE0E; Classe libera</div>
                     <div class="box-cl-classe">{{ cl.classe }}</div>
                     <div class="box-cl-testo">{{ cl.testo }}</div>
                     {% if cl.docente %}
@@ -226,9 +231,9 @@
             <div class="box-row" style="margin-top:-6px; padding-top:0;">
                 {% for m in mig_ora %}
                 <div class="box migrazione" data-ora="{{ ora }}">
-                    <div class="box-mig-label">🔀 Gruppo in migrazione</div>
+                    <div class="box-mig-label">&#x21C4;&#xFE0E; Gruppo in migrazione</div>
                     <div class="box-mig-classi">{{ m.classe_orig }}</div>
-                    <div class="box-mig-dest">→ {{ m.classe_dest }}</div>
+                    <div class="box-mig-dest">→︎ {{ m.classe_dest }}</div>
                     {% if m.attivita %}
                     <div class="box-mig-att">{{ m.attivita }}</div>
                     {% endif %}
@@ -240,11 +245,11 @@
         {% if not loop.last %}<hr class="divider">{% endif %}
     {% endfor %}
 {% else %}
-<div class="vuoto"><div class="icona">✅</div><p>Nessuna variazione per oggi</p></div>
+<div class="vuoto"><div class="icona">&#x2713;&#xFE0E;</div><p>Nessuna variazione per oggi</p></div>
 {% endif %}
 
 <footer>
-    <span>🔄 Aggiornamento ogni 30 secondi</span>
+    <span>&#x21BB;&#xFE0E; Aggiornamento ogni 30 secondi</span>
     <span>I motivi delle assenze non sono visibili — solo informazioni di servizio</span>
     <span id="last-update">—</span>
 </footer>

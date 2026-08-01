@@ -27,11 +27,11 @@
 
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">🏛 Attività Istituzionali</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">▨︎ Attività Istituzionali</h1>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('attivita_ist.form') }}" class="btn btn-success btn-sm">+ Nuovo evento</a>
-        <a href="{{ url_for('attivita_ist.import_piano') }}" class="btn btn-sm btn-primary">📥 Import piano</a>
-        <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm" style="background:#7c3aed;color:white;">📚 Dipartimenti/Materie</a>
+        <a href="{{ url_for('attivita_ist.import_piano') }}" class="btn btn-sm btn-primary">⇩︎ Import piano</a>
+        <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm" style="background:#7c3aed;color:white;">▥︎ Dipartimenti/Materie</a>
         
     </div>
 </div>
@@ -105,13 +105,13 @@
             <td style="text-align:center;">
                 <div class="azioni-row" style="justify-content:center;">
                     <a href="{{ url_for('attivita_ist.presenze', id=e.id) }}"
-                       class="btn btn-sm" style="background:#0369a1;color:white;padding:3px 7px;" title="Presenze">✅</a>
+                       class="btn btn-sm" style="background:#0369a1;color:white;padding:3px 7px;" title="Presenze">✓︎</a>
                     <a href="{{ url_for('attivita_ist.form', id=e.id) }}"
-                       class="btn btn-primary btn-sm" style="padding:3px 7px;" title="Modifica">✏️</a>
+                       class="btn btn-primary btn-sm" style="padding:3px 7px;" title="Modifica">✎︎️</a>
                     <form method="post" action="{{ url_for('attivita_ist.elimina', id=e.id) }}"
                           onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">
                         <button class="btn btn-danger btn-sm" type="submit"
-                                style="padding:3px 7px;">✖</button>
+                                style="padding:3px 7px;">✕︎</button>
                     </form>
                 </div>
             </td>

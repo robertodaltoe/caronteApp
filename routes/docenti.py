@@ -1,5 +1,5 @@
 from config_anno import get_anno_corrente
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from models import db
 from models.docente import Docente
 from models.materia import Materia, DocenteMateria, Dipartimento
@@ -53,6 +53,8 @@ def nuovo():
         d.nome_display = f"{d.cognome} {d.nome[0]}." if d.nome else d.cognome
         db.session.add(d)
         db.session.commit()
+        from routes.auth import log as auth_log
+        auth_log('crea_docente', f'{d.nome_completo} (ore_contratto={d.ore_contratto})')
         flash(f"Docente {d.nome_completo} aggiunto. Ora assegna la sua classe di concorso e le materie.", 'success')
         return redirect(url_for('docenti.modifica', id=d.id))
     titolari_disponibili = Docente.query.filter(
@@ -67,6 +69,14 @@ def modifica(id):
     from config_anno import get_anno_corrente
     d = Docente.query.get_or_404(id)
     if request.method == 'POST':
+        from concorrenza import versione_cambiata
+        if versione_cambiata(d.modificato_il, request.form.get('versione')):
+            flash(
+                f'⚠︎ La scheda di {d.nome_completo} è stata modificata da un '
+                f'altro utente nel frattempo. Ricarica la pagina per vedere '
+                f'i dati aggiornati prima di salvare di nuovo.', 'error')
+            return redirect(url_for('docenti.modifica', id=id))
+
         d.cognome        = request.form['cognome'].strip().upper()
         d.nome           = request.form['nome'].strip().title()
         d.ore_contratto  = int(request.form.get('ore_contratto', 18) or 0)
@@ -150,6 +160,8 @@ def modifica(id):
 
         _sync_materia_roster(d, request.form.getlist('materie_ids'), get_anno_corrente())
         db.session.commit()
+        from routes.auth import log as auth_log
+        auth_log('modifica_docente', f'{d.nome_completo}')
         flash(f"Docente {d.nome_completo} aggiornato.", 'success')
         return redirect(url_for('docenti.lista'))
 
@@ -251,7 +263,7 @@ def elimina(id):
     forza = request.form.get('forza') == '1'
     if (n_bk > 0 or n_as > 0 or n_sup > 0) and not forza:
         flash(
-            f'⚠ {nome} ha dati collegati (banca ore: {n_bk}, assenze: {n_as}, '
+            f'⚠︎ {nome} ha dati collegati (banca ore: {n_bk}, assenze: {n_as}, '
             f'supplenze: {n_sup}). Conferma l\'eliminazione definitiva.',
             'warning'
         )
@@ -260,8 +272,88 @@ def elimina(id):
     OrarioDocente.query.filter_by(id_docente=id).delete()
     db.session.delete(d)
     db.session.commit()
+    from routes.auth import log as auth_log
+    auth_log('elimina_docente',
+        f'{nome} (banca_ore:{n_bk} assenze:{n_as} supplenze:{n_sup} forzato:{forza})')
     flash(f'Docente {nome} eliminato definitivamente.', 'success')
     return redirect(url_for('docenti.lista'))
+
+
+@docenti_bp.route('/docenti/<int:id>/esporta-dati')
+def esporta_dati(id):
+    """
+    Esporta in un unico documento tutti i dati personali collegati a un
+    docente — a supporto delle richieste di accesso ex art. 15 GDPR
+    (diritto dell'interessato a ricevere copia dei propri dati).
+
+    Copre le tabelle principali che contengono dati riferiti a un
+    docente specifico: anagrafica, orario (lezione + sostegno), assenze,
+    supplenze (come assente e come sostituto), banca ore, indisponibilità,
+    assegnazioni cattedre/classi, eccezioni colloqui.
+    """
+    import io
+    from datetime import date as _date
+    from models.orario_docente import OrarioDocente
+    from models.orario_sostegno import OrarioSostegno
+    from models.assenza import Assenza, LABEL_INTERNE
+    from models.supplenza import Supplenza
+    from models.movimento_banca_ore import MovimentoBancaOre
+    from models.indisponibilita import Indisponibilita
+    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+
+    d = Docente.query.get_or_404(id)
+
+    orario_lezione = (OrarioDocente.query.filter_by(id_docente=id)
+                       .order_by(OrarioDocente.giorno, OrarioDocente.ora).all())
+    orario_sostegno = (OrarioSostegno.query.filter_by(id_docente=id)
+                        .order_by(OrarioSostegno.giorno, OrarioSostegno.ora).all())
+    assenze = (Assenza.query.filter_by(id_docente=id)
+               .order_by(Assenza.data.desc()).all())
+    supplenze_come_assente = (Supplenza.query.filter_by(id_assente=id)
+                               .order_by(Supplenza.data.desc()).all())
+    for s in supplenze_come_assente:
+        s.sostituto_obj = Docente.query.get(s.id_sostituto) if s.id_sostituto else None
+    supplenze_come_sostituto = (Supplenza.query.filter_by(id_sostituto=id)
+                                 .order_by(Supplenza.data.desc()).all())
+    for s in supplenze_come_sostituto:
+        s.assente_obj = Docente.query.get(s.id_assente) if s.id_assente else None
+    movimenti_banca_ore = (MovimentoBancaOre.query.filter_by(id_docente=id)
+                            .order_by(MovimentoBancaOre.data.desc()).all())
+    indisponibilita = (Indisponibilita.query.filter_by(id_docente=id)
+                        .order_by(Indisponibilita.data.desc()).all())
+    assegnazioni = (AssegnazioneDocente.query.filter_by(id_docente=id).all())
+    for a in assegnazioni:
+        a.classi_ore = AssegnazioneClasse.query.filter_by(id_assegnazione=a.id).all()
+    colloqui_eccezioni = (ColloquiEccezione.query.filter_by(id_docente=id)
+                           .order_by(ColloquiEccezione.data.desc()).all())
+
+    html_content = render_template('docenti/esporta_dati.html',
+        docente=d, oggi=_date.today(),
+        orario_lezione=orario_lezione, orario_sostegno=orario_sostegno,
+        assenze=assenze, label_assenza=LABEL_INTERNE,
+        supplenze_come_assente=supplenze_come_assente,
+        supplenze_come_sostituto=supplenze_come_sostituto,
+        movimenti_banca_ore=movimenti_banca_ore,
+        indisponibilita=indisponibilita,
+        assegnazioni=assegnazioni,
+        colloqui_eccezioni=colloqui_eccezioni,
+    )
+
+    from routes.auth import log as auth_log
+    auth_log('esporta_dati_docente',
+        f'{d.cognome} {d.nome or ""} (art.15 GDPR)')
+
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'dati_personali_{d.cognome}_{_date.today().isoformat()}.pdf'
+        )
+    except ImportError:
+        return html_content
 
 
 @docenti_bp.route('/docenti/eccezioni-istituto', methods=['GET', 'POST'])

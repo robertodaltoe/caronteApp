@@ -2,9 +2,9 @@
 {% block title %}Organico{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p6', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📋 Organico {{ anno }} — {{ 'di Diritto' if tipo=='diritto' else 'di Fatto' }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p6', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▤︎ Organico {{ anno }} — {{ 'di Diritto' if tipo=='diritto' else 'di Fatto' }}</h1>
 </div>
 
 <!-- Selettore anno/tipo -->
@@ -21,17 +21,17 @@
     <div style="display:flex; gap:4px;">
         <a href="{{ url_for('impostazione_anno.organico', anno=anno, tipo='diritto') }}"
            class="btn btn-sm" style="background:{{ '#0369a1' if tipo=='diritto' else '#e5eaf0' }};
-                  color:{{ 'white' if tipo=='diritto' else 'var(--blu)' }};">📐 Diritto</a>
+                  color:{{ 'white' if tipo=='diritto' else 'var(--blu)' }};">△︎ Diritto</a>
         <a href="{{ url_for('impostazione_anno.organico', anno=anno, tipo='fatto') }}"
            class="btn btn-sm" style="background:{{ '#166534' if tipo=='fatto' else '#e5eaf0' }};
-                  color:{{ 'white' if tipo=='fatto' else 'var(--blu)' }};">✅ Fatto</a>
+                  color:{{ 'white' if tipo=='fatto' else 'var(--blu)' }};">✓︎ Fatto</a>
     </div>
     {% if tipo == 'fatto' %}
     <form method="post" style="margin-left:auto;">
         <input type="hidden" name="azione" value="copia_da_diritto">
         <button type="submit" class="btn btn-sm" style="background:#7c3aed; color:white;"
                 onclick="return confirm('Copiare tutte le righe dell\'organico di diritto in quello di fatto (solo quelle non già presenti)?')">
-            📋 Inizializza da organico di diritto
+            ▤︎ Inizializza da organico di diritto
         </button>
     </form>
     {% endif %}
@@ -87,7 +87,7 @@
             <input type="number" name="ore_residue" value="0" min="0" style="width:65px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
         <div><label style="font-size:.72rem; color:var(--grigio);">Potenz.</label><br>
             <input type="number" name="n_potenziamento" value="0" min="0" style="width:60px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
-        <button type="submit" class="btn btn-success btn-sm">➕ Aggiungi</button>
+        <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
     </form>
 </div>
 
@@ -134,7 +134,7 @@
                 {{ r.n_potenziamento or '—' }}
             </td>
             <td style="text-align:center;">
-                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ r.id }})" title="Modifica">✏️</button>
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ r.id }})" title="Modifica">✎︎️</button>
             </td>
         </tr>
         <tr id="edit-{{ r.id }}" style="display:none; background:#f0f4ff;">
@@ -166,7 +166,7 @@
                         <input type="number" name="n_potenziamento" value="{{ r.n_potenziamento }}" min="0" style="width:60px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
                     <div style="flex:1; min-width:160px;"><label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
                         <input type="text" name="note" value="{{ r.note or '' }}" style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
-                    <button type="submit" class="btn btn-success btn-sm">💾 Salva</button>
+                    <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
                     <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
                             onclick="toggleEdit({{ r.id }})">Annulla</button>
                 </form>
@@ -174,7 +174,7 @@
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ r.id }}">
                     <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
-                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">🗑 Elimina riga</button>
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">✕︎ Elimina riga</button>
                 </form>
             </td>
         </tr>

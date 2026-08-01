@@ -3,12 +3,12 @@
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('incarichi.index') }}" class="btn btn-primary btn-sm">← Incarichi</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">⚙ Tipi di incarico</h1>
+    <a href="{{ url_for('incarichi.index') }}" class="btn btn-primary btn-sm">←︎ Incarichi</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">⚙︎ Tipi di incarico</h1>
 </div>
 
 <div class="card" style="padding:16px 18px; margin-bottom:16px; border-left:4px solid #7c3aed;">
-    <div style="font-weight:700; color:#7c3aed; font-size:.9rem; margin-bottom:12px;">➕ Nuova sezione (categoria)</div>
+    <div style="font-weight:700; color:#7c3aed; font-size:.9rem; margin-bottom:12px;">+ Nuova sezione (categoria)</div>
     <form method="post" action="{{ url_for('incarichi.salva_categoria') }}"
           style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
         <div style="min-width:140px;">
@@ -31,7 +31,7 @@
             <input type="number" name="ordine" value="{{ (categorie|length + 1) * 10 }}"
                    style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;">
         </div>
-        <button type="submit" class="btn btn-sm" style="background:#7c3aed; color:white;">✓ Crea sezione</button>
+        <button type="submit" class="btn btn-sm" style="background:#7c3aed; color:white;">✓︎ Crea sezione</button>
     </form>
     {# Sezioni esistenti — modifica rapida #}
     {% if categorie %}
@@ -51,7 +51,7 @@
 </div>
 
 <div class="card" style="padding:16px 18px; margin-bottom:16px; border-left:4px solid #1e40af;">
-    <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">➕ Nuovo tipo incarico</div>
+    <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">+ Nuovo tipo incarico</div>
     <form method="post" action="{{ url_for('incarichi.salva_tipo') }}"
           style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
         <div style="flex:3; min-width:180px;">
@@ -92,7 +92,7 @@
             <input type="number" name="ordine" value="50"
                    style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;">
         </div>
-        <button type="submit" class="btn btn-success btn-sm">✓ Crea</button>
+        <button type="submit" class="btn btn-success btn-sm">✓︎ Crea</button>
     </form>
 </div>
 
@@ -125,7 +125,7 @@
             </td>
             <td style="padding:6px 10px; text-align:center; color:var(--grigio);">{{ t.ordine }}</td>
             <td style="padding:6px 6px; text-align:center;">
-                <button onclick="toggleEdit('tipo-{{ t.id }}')" style="background:none; border:none; cursor:pointer; font-size:.8rem;">✏</button>
+                <button onclick="toggleEdit('tipo-{{ t.id }}')" style="background:none; border:none; cursor:pointer; font-size:.8rem;">✎︎</button>
             </td>
         </tr>
         <tr id="tipo-{{ t.id }}" style="display:none; background:#f8fafc;">
@@ -149,7 +149,7 @@
                     </select>
                     <input type="number" name="importo_default" step="0.01" value="{{ t.importo_default or '' }}" placeholder="€" style="width:70px; padding:4px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
                     <input type="number" name="ordine" value="{{ t.ordine }}" style="width:50px; padding:4px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
-                    <button type="submit" class="btn btn-success btn-sm" style="font-size:.76rem;">✓ Salva</button>
+                    <button type="submit" class="btn btn-success btn-sm" style="font-size:.76rem;">✓︎ Salva</button>
                     <button type="button" onclick="toggleEdit('tipo-{{ t.id }}')" class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.76rem;">Annulla</button>
                 </form>
             </td>

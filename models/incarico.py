@@ -14,8 +14,6 @@ class CategoriaIncarico(db.Model):
     colore = db.Column(db.String(10), default='#1e40af')
     ordine = db.Column(db.Integer, default=0)
 
-    tipi = db.relationship('TipoIncarico', back_populates='categoria_obj', lazy='dynamic')
-
     def __repr__(self):
         return f'<CategoriaIncarico {self.codice}>'
 
@@ -26,7 +24,6 @@ class TipoIncarico(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     nome            = db.Column(db.String(100), nullable=False)
     categoria       = db.Column(db.String(30), nullable=False)  # codice categoria
-    id_categoria    = db.Column(db.Integer, db.ForeignKey('categorie_incarico.id'), nullable=True)
     collegato_a     = db.Column(db.String(20), nullable=True)
     # 'classe' | 'dipartimento' | 'istituto' | NULL
     compenso_tipo   = db.Column(db.String(20), nullable=True)
@@ -35,7 +32,6 @@ class TipoIncarico(db.Model):
     attivo          = db.Column(db.Boolean, default=True)
     ordine          = db.Column(db.Integer, default=0)
 
-    categoria_obj = db.relationship('CategoriaIncarico', back_populates='tipi')
     nomine = db.relationship('IncaricaDocente', back_populates='tipo',
                              lazy='dynamic')
 

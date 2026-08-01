@@ -48,25 +48,57 @@ def _get_or_create_key():
     return Fernet(key)
 
 
+def cifra_file(src_path, dest_path):
+    """
+    Cifra un file qualsiasi (tipicamente il database) e lo scrive in
+    dest_path. Funzione generica usata sia per i backup locali sia per
+    la sincronizzazione su Google Drive (vedi sync_db.py) — stessa
+    chiave, stesso algoritmo (Fernet: AES-128-CBC + HMAC-SHA256), così
+    un file cifrato da un canale può essere decifrato dall'altro.
+    """
+    f = _get_or_create_key()
+    with open(src_path, 'rb') as src:
+        dati = src.read()
+    cifrato = f.encrypt(dati)
+    os.makedirs(os.path.dirname(dest_path) or '.', exist_ok=True)
+    with open(dest_path, 'wb') as out:
+        out.write(cifrato)
+    return dest_path
+
+
+def decifra_file(src_path, dest_path):
+    """Decifra un file .enc e lo scrive in dest_path (dati in chiaro)."""
+    f = _get_or_create_key()
+    with open(src_path, 'rb') as src:
+        cifrato = src.read()
+    dati = f.decrypt(cifrato)
+    os.makedirs(os.path.dirname(dest_path) or '.', exist_ok=True)
+    with open(dest_path, 'wb') as out:
+        out.write(dati)
+    return dest_path
+
+
+def cifra_bytes(dati):
+    """Cifra dati in memoria (bytes) e restituisce i bytes cifrati."""
+    return _get_or_create_key().encrypt(dati)
+
+
+def decifra_bytes(dati_cifrati):
+    """Decifra bytes cifrati e restituisce i dati in chiaro (bytes)."""
+    return _get_or_create_key().decrypt(dati_cifrati)
+
+
 def crea_backup_cifrato(db_path, backup_dir, suffisso=''):
     """
     Crea un backup cifrato del database.
     Restituisce il path del file .db.enc creato.
     """
     os.makedirs(backup_dir, exist_ok=True)
-    f = _get_or_create_key()
-
     timestamp = datetime.now().strftime('%Y%m%d_%H%M')
     nome = f'database_{timestamp}{suffisso}.db.enc'
     dest = os.path.join(backup_dir, nome)
 
-    with open(db_path, 'rb') as src:
-        dati = src.read()
-
-    cifrato = f.encrypt(dati)
-
-    with open(dest, 'wb') as out:
-        out.write(cifrato)
+    cifra_file(db_path, dest)
 
     # Rimuovi eventuale backup non cifrato con stesso timestamp
     vecchio = dest.replace('.db.enc', '.db')
@@ -81,13 +113,7 @@ def decifra_backup(backup_enc_path, dest_path):
     Decifra un backup .db.enc e lo salva in dest_path.
     Usare per ripristino manuale.
     """
-    f = _get_or_create_key()
-    with open(backup_enc_path, 'rb') as src:
-        cifrato = src.read()
-    dati = f.decrypt(cifrato)
-    with open(dest_path, 'wb') as out:
-        out.write(dati)
-    return dest_path
+    return decifra_file(backup_enc_path, dest_path)
 
 
 def pulisci_vecchi_backup(backup_dir, max_backup=60):

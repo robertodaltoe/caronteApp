@@ -3,7 +3,7 @@
 {% block content %}
 
 <div style="margin-bottom:6px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">👨‍🎓 Alunni con giudizio sospeso — {{ anno }}</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">◍︎△︎ Alunni con giudizio sospeso — {{ anno }}</h1>
     <p style="font-size:.84rem; color:var(--grigio);">
         Importa una sola volta il file dal registro elettronico: gli stessi dati alimentano
         sia i <strong>corsi di recupero di giugno</strong> sia le <strong>prove di agosto</strong>.
@@ -22,11 +22,11 @@
     </div>
     <div class="card" style="text-align:center; padding:12px;">
         <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ conteggi.aderisce }}</div>
-        <div style="font-size:.76rem; color:var(--grigio);">✓ Aderiscono al corso</div>
+        <div style="font-size:.76rem; color:var(--grigio);">✓︎ Aderiscono al corso</div>
     </div>
     <div class="card" style="text-align:center; padding:12px;">
         <div style="font-size:1.8rem; font-weight:800; color:#92400e;">{{ conteggi.studio_ind }}</div>
-        <div style="font-size:.76rem; color:var(--grigio);">📚 Studio individuale</div>
+        <div style="font-size:.76rem; color:var(--grigio);">▥︎ Studio individuale</div>
     </div>
 </div>
 
@@ -35,26 +35,26 @@
     <a href="{{ url_for('recupero.alunni') }}" class="card"
        style="padding:14px 18px; text-decoration:none; display:flex; align-items:center;
               gap:12px; border-left:4px solid var(--blu); flex:1; min-width:240px;">
-        <div style="font-size:1.6rem;">📥</div>
+        <div style="font-size:1.6rem;">⇩︎</div>
         <div>
             <div style="font-weight:700; color:var(--blu);">Importa / modifica alunni</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Carica il file XLSX o correggi singolarmente lo stato di adesione
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→</div>
+        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
     </a>
     <a href="{{ url_for('recupero.copertura') }}" class="card"
        style="padding:14px 18px; text-decoration:none; display:flex; align-items:center;
               gap:12px; border-left:4px solid #166534; flex:1; min-width:240px;">
-        <div style="font-size:1.6rem;">✅</div>
+        <div style="font-size:1.6rem;">✓︎</div>
         <div>
             <div style="font-weight:700; color:#166534;">Verifica copertura</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Controlla chi ha già una lezione/prova pianificata
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→</div>
+        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
     </a>
 </div>
 
@@ -68,7 +68,7 @@
     <a href="{{ url_for('recupero.giugno_index') }}" class="card"
        style="padding:24px; text-decoration:none; border-left:6px solid #0369a1;
               display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:2.2rem;">📚</div>
+        <div style="font-size:2.2rem;">▥︎</div>
         <div style="font-weight:800; font-size:1.05rem; color:#0369a1;">
             Organizza Corsi di Recupero
         </div>
@@ -77,13 +77,13 @@
             delle lezioni, genera circolari ed export per i corsi di recupero estivi.
         </div>
         <div style="margin-top:8px; color:#0369a1; font-weight:700; font-size:.84rem;">
-            Vai al percorso giugno →
+            Vai al percorso giugno →︎
         </div>
     </a>
     <a href="{{ url_for('recupero.agosto_index') }}" class="card"
        style="padding:24px; text-decoration:none; border-left:6px solid #92400e;
               display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:2.2rem;">📝</div>
+        <div style="font-size:2.2rem;">✎︎</div>
         <div style="font-weight:800; font-size:1.05rem; color:#92400e;">
             Organizza Prove di Recupero
         </div>
@@ -93,7 +93,7 @@
             pianifica il calendario.
         </div>
         <div style="margin-top:8px; color:#92400e; font-weight:700; font-size:.84rem;">
-            Vai al percorso agosto →
+            Vai al percorso agosto →︎
         </div>
     </a>
 </div>

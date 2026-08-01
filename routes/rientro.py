@@ -528,7 +528,8 @@ def export_xlsx():
     ws = wb.active
     ws.title = 'Calendario'
 
-    ws['A1'] = 'IIS "Leonardo da Vinci" — Chiavenna'
+    from config_istituto import get_dati_istituto
+    ws['A1'] = get_dati_istituto()['nome_istituto']
     ws['A1'].font = Font(bold=True, size=13)
     ws['A2'] = f'COLLOQUI DI RIENTRO DALL\'ESTERO — A.S. {ANNO}'
     ws['A2'].font = Font(bold=True, size=11)
@@ -602,7 +603,7 @@ def export_xlsx():
         ws.append([])
 
     if colloqui_senza_data:
-        row = _scrivi_header_giorno('⚠ Da calendarizzare')
+        row = _scrivi_header_giorno('⚠︎ Da calendarizzare')
         for coll, cand in sorted(colloqui_senza_data, key=lambda cc: (cc[1].classe, cc[1].cognome)):
             row = _scrivi_riga_colloquio(row, coll, cand, mostra_orario=False)
         ws.append([])

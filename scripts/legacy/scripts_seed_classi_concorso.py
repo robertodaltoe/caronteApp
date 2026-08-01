@@ -3,6 +3,11 @@ Seed una tantum: classi di concorso (IIS Leonardo da Vinci, da organico
 di diritto fornito dall'USR Sondrio per il 2026/27) + collegamento alle
 materie già esistenti nel database. Da lanciare una sola volta a mano.
 """
+import sys, os
+# Percorso della cartella radice del progetto (questo script vive in
+# scripts/legacy/, due livelli sotto la radice dove sta app.py).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from app import create_app
 from models import db
 from models.classe_concorso import ClasseConcorso, CattedraOrganico

@@ -128,7 +128,7 @@ def importa():
     if stats['non_riconosciuti']:
         nr = ', '.join(stats['non_riconosciuti'])
         flash(msg, 'warning')
-        flash(f'⚠ Docenti non riconosciuti (aggiungi alias): {nr}', 'warning')
+        flash(f'⚠︎ Docenti non riconosciuti (aggiungi alias): {nr}', 'warning')
     else:
         flash(msg, 'success')
 

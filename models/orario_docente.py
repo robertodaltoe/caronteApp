@@ -22,3 +22,17 @@ class OrarioDocente(db.Model):
 
     def __repr__(self):
         return f"<Orario {self.docente.cognome if self.docente else '?'} {self.giorno_nome} {self.ora}ª {self.classe}>"
+
+
+def classi_attive():
+    """
+    Elenco ordinato delle classi presenti nell'orario corrente (es.
+    '3A LSC'), usato per popolare i <datalist> di autocompletamento nei
+    vari form che chiedono una classe in un campo di testo libero
+    (supplenze, recupero, cambio ore, orario sostegno, ecc.), invece di
+    duplicare la query in ogni route.
+    """
+    return sorted({
+        c for (c,) in OrarioDocente.query.with_entities(OrarioDocente.classe)
+            .distinct().all() if c
+    })

@@ -2,9 +2,9 @@
 {% block title %}Docenti e materie{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">← Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p10', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">📥 Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📖 Docenti ↔ Materie — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p10', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Docenti ↔︎ Materie — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('impostazione_anno.docenti_materie', anno=a) }}"
@@ -38,14 +38,14 @@
             <strong style="color:var(--blu); font-size:.92rem;">{{ r.docente.cognome }} {{ r.docente.nome }}</strong>
             {% for ab in r.docente.abilitazioni %}
             <span style="font-size:.74rem; background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:8px; font-weight:700;">
-                {{ ab.classe_concorso.codice }}{% if ab.principale %} ★{% endif %}
+                {{ ab.classe_concorso.codice }}{% if ab.principale %} ★︎{% endif %}
             </span>
             {% endfor %}
         </div>
 
         {% if not r.materie_ammesse %}
         <div style="font-size:.78rem; color:#dc2626;">
-            ⚠ Nessuna materia collegata a questa classe di concorso —
+            ⚠︎ Nessuna materia collegata a questa classe di concorso —
             <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}">verifica i collegamenti</a>.
         </div>
         {% else %}
@@ -66,7 +66,7 @@
     {% endfor %}
 
     {% if righe_valide %}
-    <button type="submit" class="btn btn-success btn-sm" style="margin-top:8px;">💾 Salva tutte le assegnazioni</button>
+    <button type="submit" class="btn btn-success btn-sm" style="margin-top:8px;">▤︎ Salva tutte le assegnazioni</button>
     {% endif %}
 </form>
 {% endblock %}

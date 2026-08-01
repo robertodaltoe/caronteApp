@@ -214,9 +214,6 @@ class Assenza(db.Model):
     ora_inizio     = db.Column(db.Integer, default=1)
     ora_fine       = db.Column(db.Integer, default=9)
     motivo         = db.Column(db.String(50), default='malattia')
-    # Motivo interno — visibile solo a DS/DSGA (stesso valore di motivo
-    # per le categorie già private; campo separato per futura granularità)
-    motivo_interno = db.Column(db.String(200), nullable=True)
     # Flag: la classe non riceve sostituto, entra dopo / esce prima
     classe_libera  = db.Column(db.Boolean, default=False)
     note_interne   = db.Column(db.Text)

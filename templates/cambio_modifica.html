@@ -3,7 +3,7 @@
 {% block content %}
 
 <h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">
-    ✏️ Modifica cambio quadro
+    ✎︎️ Modifica cambio quadro
 </h1>
 
 <div class="card" style="max-width:620px;">
@@ -76,8 +76,8 @@
         <label>Tipo</label>
         <select name="tipo">
             {% for val, label in [
-                ('scambio',      '🔄 Scambio ore'),
-                ('recupero',     '♻ Recupero ore'),
+                ('scambio',      '↻︎ Scambio ore'),
+                ('recupero',     '↻︎ Recupero ore'),
                 ('completamento','C Completamento'),
             ] %}
             <option value="{{ val }}"
@@ -118,7 +118,11 @@
             <label>Classe restituzione</label>
             <input type="text" name="classe_restituzione"
                    value="{{ scambio.classe_restituzione or '' }}"
+                   list="classi-restituzione-list" autocomplete="off"
                    style="text-transform:uppercase;">
+            <datalist id="classi-restituzione-list">
+                {% for c in classi %}<option value="{{ c }}">{% endfor %}
+            </datalist>
         </div>
     </div>
 
@@ -137,7 +141,7 @@
     </div>
 
     <div style="display:flex; gap:10px; margin-top:8px;">
-        <button class="btn btn-success" type="submit">✓ Salva</button>
+        <button class="btn btn-success" type="submit">✓︎ Salva</button>
         <a href="{{ next or url_for('cambi.lista') }}"
            class="btn btn-primary">Annulla</a>
     </div>

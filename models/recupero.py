@@ -32,7 +32,6 @@ class RecuperoGruppo(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     id_rec_docente  = db.Column(db.Integer, db.ForeignKey('recupero_docenti.id'), nullable=False)
     materia         = db.Column(db.String(100), nullable=False)   # es. "Matematica"
-    sigla_materia   = db.Column(db.String(20), nullable=True)     # es. "MAT"
     classi          = db.Column(db.String(200), nullable=False)   # es. "2A LSC, 3A LLI"
     n_alunni        = db.Column(db.Integer, nullable=True)        # numero stimato alunni
     ore_totali      = db.Column(db.Integer, default=0)            # ore lezione già pianificate
@@ -41,11 +40,9 @@ class RecuperoGruppo(db.Model):
     # Campi per prove di agosto
     tipo_prova      = db.Column(db.String(20), nullable=True)     # 'scritto'|'orale'|'pratico'|'scritto_orale'
     durata_ore      = db.Column(db.Float, default=2.0)            # durata prova in ore
-    id_commissario  = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     id_sorvegliante = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     periodo_codice  = db.Column(db.String(20), default='corsi_giugno')  # quale periodo
 
-    commissario  = db.relationship('Docente', foreign_keys=[id_commissario])
     sorvegliante = db.relationship('Docente', foreign_keys=[id_sorvegliante])
     note            = db.Column(db.String(200), nullable=True)
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)

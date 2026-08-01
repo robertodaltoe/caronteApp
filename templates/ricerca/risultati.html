@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Ricerca{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <h1 style="font-size:1.3rem; color:var(--blu);">⌕︎ Ricerca</h1>
+        {% if q %}
+        <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
+            {{ n_totale }} risultat{{ 'o' if n_totale == 1 else 'i' }} per «{{ q }}»
+        </p>
+        {% endif %}
+    </div>
+    <form method="get" style="display:flex; gap:8px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Cerca docente, classe, descrizione..."
+               autofocus style="padding:7px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem; min-width:260px;">
+        <button type="submit" class="btn btn-primary">Cerca</button>
+    </form>
+</div>
+
+{% if not q %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Digita almeno 2 caratteri per cercare tra docenti, supplenze, assenze, movimenti banca ore e sospensioni.
+</div>
+{% elif q|length < 2 %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Digita almeno 2 caratteri.
+</div>
+{% elif n_totale == 0 %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessun risultato per «{{ q }}».
+</div>
+{% else %}
+
+{% if risultati.docenti %}
+<div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">◍︎ Docenti ({{ risultati.docenti|length }})</h3>
+    <table style="width:100%; font-size:.85rem;">
+        {% for d in risultati.docenti %}
+        <tr>
+            <td style="padding:5px 0;">
+                <a href="{{ url_for('docenti.modifica', id=d.id) }}"><strong>{{ d.cognome }} {{ d.nome }}</strong></a>
+                {% if d.materia %}<span style="color:var(--grigio); margin-left:8px;">{{ d.materia }}</span>{% endif %}
+                {% if not d.attivo %}<span style="color:#dc2626; font-size:.75rem; margin-left:8px;">(non attivo)</span>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% if risultati.supplenze %}
+<div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">↻︎ Supplenze ({{ risultati.supplenze|length }})</h3>
+    <table style="width:100%; font-size:.85rem;">
+        {% for s in risultati.supplenze %}
+        <tr>
+            <td style="padding:5px 0;">
+                <a href="{{ url_for('supplenze.modifica', id=s.id) }}">
+                    <strong>{{ s.data.strftime('%d/%m/%Y') }}</strong> ora {{ s.ora }} — cl. {{ s.classe or '—' }}
+                </a>
+                <span style="color:var(--grigio); margin-left:8px;">
+                    {% if s.assente %}assente: {{ s.assente.cognome }}{% endif %}
+                    {% if s.sostituto %} · sostituto: {{ s.sostituto.cognome }}{% endif %}
+                    · {{ s.stato }}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% if risultati.assenze %}
+<div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">▤︎ Assenze ({{ risultati.assenze|length }})</h3>
+    <table style="width:100%; font-size:.85rem;">
+        {% for a in risultati.assenze %}
+        <tr>
+            <td style="padding:5px 0;">
+                <a href="{{ url_for('assenze.modifica', id=a.id) }}">
+                    <strong>{{ a.data.strftime('%d/%m/%Y') }}</strong> — {{ a.docente.cognome }} {{ a.docente.nome }}
+                </a>
+                <span style="color:var(--grigio); margin-left:8px;">{{ cat_label(a.motivo) }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% if risultati.movimenti %}
+<div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">€ Movimenti banca ore ({{ risultati.movimenti|length }})</h3>
+    <table style="width:100%; font-size:.85rem;">
+        {% for m in risultati.movimenti %}
+        <tr>
+            <td style="padding:5px 0;">
+                <a href="{{ url_for('banca_ore.singolo', id=m.id_docente) }}">
+                    <strong>{{ m.data.strftime('%d/%m/%Y') }}</strong> — {{ m.docente.cognome }} {{ m.docente.nome }}
+                </a>
+                <span style="color:var(--grigio); margin-left:8px;">
+                    {{ '%+d'|format(m.minuti) }}min · {{ m.tipo }}
+                    {% if m.descrizione %} · {{ m.descrizione }}{% endif %}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% if risultati.sospensioni %}
+<div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">▦︎ Sospensioni didattiche ({{ risultati.sospensioni|length }})</h3>
+    <table style="width:100%; font-size:.85rem;">
+        {% for s in risultati.sospensioni %}
+        <tr>
+            <td style="padding:5px 0;">
+                <a href="{{ url_for('impostazioni.sospensioni') }}">
+                    <strong>{{ s.data_inizio.strftime('%d/%m/%Y') }}</strong>
+                    {% if not s.is_singolo %} – {{ s.data_fine.strftime('%d/%m/%Y') }}{% endif %}
+                    — {{ s.descrizione }}
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

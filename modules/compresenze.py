@@ -12,8 +12,9 @@ _cache = {}
 def get_compresenze(giorno, ora, classe):
     """
     Restituisce la lista di id_docente per (giorno, ora, classe).
-    Include titolari (lezione) E ITP (compresenza) — entrambi
-    possono tenere la classe da soli se l'altro è assente.
+    Include titolari (lezione), ITP (compresenza) e docenti di sostegno
+    (models.orario_sostegno.OrarioSostegno, tabella separata) — tutti e
+    tre possono tenere la classe da soli se gli altri sono assenti.
     """
     key = (giorno, ora, classe)
     if key not in _cache:
@@ -22,10 +23,14 @@ def get_compresenze(giorno, ora, classe):
         ).filter(
             OrarioDocente.tipo_ora.in_(['lezione', 'compresenza'])
         ).all()
+        from models.orario_sostegno import OrarioSostegno
+        slots_sostegno = OrarioSostegno.query.filter_by(
+            giorno=giorno, ora=ora, classe=classe
+        ).all()
         # Deduplica per id_docente
         seen = set()
         ids = []
-        for s in slots:
+        for s in list(slots) + list(slots_sostegno):
             if s.id_docente not in seen:
                 seen.add(s.id_docente)
                 ids.append(s.id_docente)

@@ -3,7 +3,7 @@
 
 {% block content %}
 <h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:20px;">
-    {{ '✏️ Modifica' if evento else '+ Nuovo' }} evento istituzionale
+    {{ '✎︎️ Modifica' if evento else '+ Nuovo' }} evento istituzionale
 </h1>
 
 <form method="post" id="form-ist">
@@ -82,7 +82,7 @@
 
 <!-- COLONNA DX — Partecipanti -->
 <div class="card" style="flex:1; min-width:300px; padding:20px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:8px;">👥 Partecipanti</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:8px;">◍︎ Partecipanti</h3>
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
         Il preset è calcolato automaticamente dal tipo evento. Puoi modificarlo.
     </p>
@@ -110,7 +110,7 @@
 </div>
 
 <div style="margin-top:16px; display:flex; gap:10px;">
-    <button type="submit" class="btn btn-success">✓ Salva</button>
+    <button type="submit" class="btn btn-success">✓︎ Salva</button>
     <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
 </div>
 </form>

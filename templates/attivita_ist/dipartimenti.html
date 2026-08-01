@@ -3,8 +3,8 @@
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">← Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">📚 Dipartimenti e Materie</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Dipartimenti e Materie</h1>
 </div>
 
 {% for dip in dipartimenti %}
@@ -21,7 +21,7 @@
         {% set ref = referenti[dip.id] %}
         <span style="font-size:.78rem; color:#166534; background:#f0fdf4;
                      padding:3px 10px; border-radius:6px; border:1px solid #bbf7d0;">
-            👤 Referente: <strong>{{ ref.cognome }} {{ ref.nome }}</strong>
+            ◍︎ Referente: <strong>{{ ref.cognome }} {{ ref.nome }}</strong>
         </span>
         {% else %}
         <span style="font-size:.75rem; color:#9ca3af; font-style:italic;">
@@ -30,7 +30,7 @@
         {% endif %}
         <button onclick="toggleEdit('dip-{{ dip.id }}')"
                 class="btn btn-sm btn-primary" style="font-size:.72rem; margin-left:auto;">
-            ✏ Modifica dipartimento
+            ✎︎ Modifica dipartimento
         </button>
     </div>
 
@@ -59,7 +59,7 @@
                        style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
                               font-size:.82rem; width:60px;">
             </div>
-            <button type="submit" class="btn btn-success btn-sm">✓ Salva</button>
+            <button type="submit" class="btn btn-success btn-sm">✓︎ Salva</button>
         </div>
     </form>
 
@@ -96,7 +96,7 @@
             <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                 <button onclick="toggleEdit('mat-{{ m.id }}')"
                         class="btn btn-sm btn-primary"
-                        style="font-size:.68rem; padding:2px 7px;">✏</button>
+                        style="font-size:.68rem; padding:2px 7px;">✎︎</button>
 
             </td>
         </tr>
@@ -167,7 +167,7 @@
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">
-                            ✓ Salva
+                            ✓︎ Salva
                         </button>
                         <button type="button" onclick="toggleEdit('mat-{{ m.id }}')"
                                 class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.75rem;">
@@ -191,7 +191,7 @@
                 ({{ tutte_materie | length }} ancora da assegnare)
             </span>
             {% else %}
-            <span style="font-size:.72rem; font-weight:400; color:#16a34a;">✓ tutte assegnate</span>
+            <span style="font-size:.72rem; font-weight:400; color:#16a34a;">✓︎ tutte assegnate</span>
             {% endif %}
         </summary>
         <div style="margin-top:8px; background:#f0f4f8; padding:12px 14px;
@@ -220,7 +220,7 @@
                         {% endif %}
                     </select>
                 </div>
-                <button type="submit" class="btn btn-success btn-sm">✓ Assegna</button>
+                <button type="submit" class="btn btn-success btn-sm">✓︎ Assegna</button>
             </form>
 
             {# Crea nuova materia (per casi non ancora presenti) #}
@@ -256,7 +256,7 @@
                                    style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
                                           font-size:.82rem; width:70px; text-transform:uppercase;">
                         </div>
-                        <button type="submit" class="btn btn-success btn-sm">➕ Crea</button>
+                        <button type="submit" class="btn btn-success btn-sm">+ Crea</button>
                     </div>
                 </form>
             </details>
@@ -268,7 +268,7 @@
 {# ── Nuovo dipartimento ─────────────────────────────────────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
-        ➕ Nuovo dipartimento
+        + Nuovo dipartimento
     </div>
     <form method="post" action="{{ url_for('attivita_ist.salva_dipartimento') }}"
           style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
@@ -290,7 +290,7 @@
                    style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
                           font-size:.82rem; width:60px;">
         </div>
-        <button type="submit" class="btn btn-success btn-sm">✓ Crea</button>
+        <button type="submit" class="btn btn-success btn-sm">✓︎ Crea</button>
     </form>
 </div>
 

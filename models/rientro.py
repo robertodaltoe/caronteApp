@@ -90,9 +90,8 @@ class RientroColloquio(db.Model):
     id_docente_2    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     id_docente_3    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     id_docente_4    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
-    id_membro_ds    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)  # legacy, non più usato
 
-    # Membro DS/vicario scelto da RuoloIstituzionale (sostituisce id_membro_ds)
+    # Membro DS/vicario scelto da RuoloIstituzionale
     id_ruolo_istituzionale = db.Column(db.Integer, db.ForeignKey('ruoli_istituzionali.id'), nullable=True)
 
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
@@ -102,7 +101,6 @@ class RientroColloquio(db.Model):
     docente_2    = db.relationship('Docente', foreign_keys=[id_docente_2])
     docente_3    = db.relationship('Docente', foreign_keys=[id_docente_3])
     docente_4    = db.relationship('Docente', foreign_keys=[id_docente_4])
-    membro_ds    = db.relationship('Docente', foreign_keys=[id_membro_ds])  # legacy
     ruolo_istituzionale = db.relationship('RuoloIstituzionale', foreign_keys=[id_ruolo_istituzionale])
 
     @property

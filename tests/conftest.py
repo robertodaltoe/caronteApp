@@ -42,6 +42,9 @@ def app():
                                       RecuperoPeriodo)
         from models.rientro import (RientroMateriaClasse, RientroCandidato,  # noqa
                                      RientroColloquio, RuoloIstituzionale)
+        from models.aula import Aula  # noqa
+        from models.utente import Utente  # noqa
+        from models.log_accesso import LogAccesso  # noqa
         db.create_all()
         yield app
         db.session.remove()

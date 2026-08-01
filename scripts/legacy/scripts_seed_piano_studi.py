@@ -13,6 +13,11 @@ tramite l'interfaccia.
 I laboratori ITP vengono trattati come classi di concorso a sé stanti,
 con riferimento alla CC madre solo per l'adiacenza nell'export.
 """
+import sys, os
+# Percorso della cartella radice del progetto (questo script vive in
+# scripts/legacy/, due livelli sotto la radice dove sta app.py).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from app import create_app
 from models import db
 from models.piano_studi import ClasseSezione, PianoStudi, CalcoloOrganico

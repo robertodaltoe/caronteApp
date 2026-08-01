@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Cattedre di potenziamento{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">● Cattedre di potenziamento {{ anno }}</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #7c3aed;">
+    Ore di potenziamento assegnate a ciascuna classe di concorso per l'anno scolastico.
+    Sono la base da cui il modulo Assegnazioni distribuisce le ore POT ai singoli docenti
+    (colonna viola).
+</div>
+
+<!-- Selettore anno -->
+<div class="card" style="padding:12px 16px; margin-bottom:14px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:.72rem; color:var(--grigio); display:block;">Anno scolastico</label>
+        <select onchange="cambiaFiltri()" id="sel-anno"
+                style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            {% for a in anni_esistenti %}
+            <option value="{{ a }}" {% if a == anno %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="card" style="text-align:center; padding:12px; margin-bottom:16px; max-width:260px;">
+    <div style="font-size:1.6rem; font-weight:800; color:#7c3aed;">{{ tot_ore }}</div>
+    <div style="font-size:.76rem; color:var(--grigio);">Ore di potenziamento totali</div>
+</div>
+
+<!-- Aggiungi riga -->
+<div class="card" style="padding:14px 18px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi cattedra di potenziamento</h3>
+    <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+        <div style="min-width:220px;">
+            <label style="font-size:.72rem; color:var(--grigio);">Classe di concorso *</label><br>
+            <select name="id_classe_concorso" required
+                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <option value="">— seleziona —</option>
+                {% for cc in classi_disponibili %}
+                <option value="{{ cc.id }}">{{ cc.codice }} — {{ cc.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div><label style="font-size:.72rem; color:var(--grigio);">Ore</label><br>
+            <input type="number" name="ore" value="18" min="0" style="width:65px; padding:5px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <div style="min-width:200px;"><label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+            <input type="text" name="note" style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+        <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
+    </form>
+</div>
+
+{% if not righe %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+    Nessuna cattedra di potenziamento per {{ anno }}.
+</div>
+{% endif %}
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table style="font-size:.84rem;">
+        <thead>
+            <tr>
+                <th style="width:90px;">Codice</th>
+                <th>Nome</th>
+                <th style="width:70px; text-align:center;">Ore</th>
+                <th>Note</th>
+                <th style="width:60px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in righe %}
+        <tr id="row-{{ r.id }}">
+            <td style="font-weight:700; color:#7c3aed;">{{ r.classe_concorso.codice }}</td>
+            <td>{{ r.classe_concorso.nome }}</td>
+            <td style="text-align:center; color:#7c3aed; font-weight:700;">{{ r.ore }}</td>
+            <td style="font-size:.78rem; color:var(--grigio);">{{ r.note or '—' }}</td>
+            <td style="text-align:center;">
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ r.id }})" title="Modifica">✎︎️</button>
+            </td>
+        </tr>
+        <tr id="edit-{{ r.id }}" style="display:none; background:#f5f0ff;">
+            <td colspan="5" style="padding:10px 14px;">
+                <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                    <input type="hidden" name="azione" value="modifica">
+                    <input type="hidden" name="id" value="{{ r.id }}">
+                    <div><label style="font-size:.72rem; color:var(--grigio);">Ore</label><br>
+                        <input type="number" name="ore" value="{{ r.ore }}" min="0" style="width:65px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <div style="flex:1; min-width:200px;"><label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+                        <input type="text" name="note" value="{{ r.note or '' }}" style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
+                    <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+                    <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
+                            onclick="toggleEdit({{ r.id }})">Annulla</button>
+                </form>
+                <form method="post" style="margin-top:8px;" onsubmit="return confirm('Eliminare questa cattedra di potenziamento? Le ore POT eventualmente già distribuite ai docenti nel modulo Assegnazioni NON vengono rimosse automaticamente.')">
+                    <input type="hidden" name="azione" value="elimina">
+                    <input type="hidden" name="id" value="{{ r.id }}">
+                    <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">✕︎ Elimina</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleEdit(id) {
+    const edit = document.getElementById('edit-' + id);
+    edit.style.display = edit.style.display === 'none' ? '' : 'none';
+}
+function cambiaFiltri() {
+    const anno = document.getElementById('sel-anno').value;
+    window.location.href = '{{ url_for("impostazione_anno.cattedre_potenziamento") }}?anno=' + encodeURIComponent(anno);
+}
+</script>
+{% endblock %}

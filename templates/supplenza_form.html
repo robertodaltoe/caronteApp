@@ -43,7 +43,11 @@
         <div class="form-group">
             <label>Classe *</label>
             <input type="text" name="classe" required placeholder="Es. 3A LSU"
+                   list="classi-attive-list" autocomplete="off"
                    style="text-transform:uppercase;">
+            <datalist id="classi-attive-list">
+                {% for c in classi_attive %}<option value="{{ c }}">{% endfor %}
+            </datalist>
         </div>
 
         <!-- CLASSE SCOPERTA BOX -->
@@ -51,7 +55,7 @@
                onclick="toggleClasseLibera()">
             <input type="checkbox" id="chk-classe-libera" name="classe_scoperta" value="1">
             <div>
-                <div class="cl-label">🚫 Classe scoperta — NON ASSEGNABILE</div>
+                <div class="cl-label">⊘︎ Classe scoperta — NON ASSEGNABILE</div>
                 <div class="cl-sub">
                     Ingresso posticipato, uscita anticipata o altra variazione senza sostituto.
                     La classe apparirà in viola nel display.
@@ -65,10 +69,10 @@
                 <label style="color:var(--viola);">Motivo visibile nel display *</label>
                 <select name="note_display" id="sel-nota-libera"
                         style="border-color:#c4b5fd;">
-                    <option value="INGRESSO POSTICIPATO">🕐 Ingresso posticipato</option>
-                    <option value="USCITA ANTICIPATA">🕔 Uscita anticipata</option>
-                    <option value="CLASSE SCOPERTA">🔴 Classe scoperta</option>
-                    <option value="ALTRO">📌 Altro (specifica sotto)</option>
+                    <option value="INGRESSO POSTICIPATO">◷︎ Ingresso posticipato</option>
+                    <option value="USCITA ANTICIPATA">◷︎ Uscita anticipata</option>
+                    <option value="CLASSE SCOPERTA">● Classe scoperta</option>
+                    <option value="ALTRO">◆︎ Altro (specifica sotto)</option>
                 </select>
             </div>
             <div id="nota-libera-custom" style="display:none; margin-top:8px;">
@@ -100,11 +104,11 @@
             <div class="form-group" id="row-tipo">
                 <label>Tipo supplenza</label>
                 <select name="tipo">
-                    <option value="recupero">♻ Recupero</option>
+                    <option value="recupero">↻︎ Recupero</option>
                     <option value="pagamento">€ Pagamento</option>
                     <option value="completamento">C Completamento</option>
                     <option value="potenziamento">P Potenziamento</option>
-                    <option value="non_assegnabile">🚫 Classe libera / Esce prima</option>
+                    <option value="non_assegnabile">⊘︎ Classe libera / Esce prima</option>
                     <option value="disposizione">D Disposizione</option>
                 </select>
             </div>
