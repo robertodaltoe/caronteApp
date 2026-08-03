@@ -6,6 +6,67 @@
 
 ---
 
+## Sessione 31 — Modulo Esami Integrativi (item 19)
+
+**Contesto:** l'hub "Attività Differite" aveva una terza scheda "Esami
+integrativi" (passaggi e trasferimenti di settembre) ferma da tempo come
+placeholder disattivato, senza alcun codice dietro. Su richiesta
+esplicita, costruito da zero il modulo completo.
+
+### Struttura scelta (chiarita con l'utente prima di implementare)
+A differenza di Rientro dall'estero (4 materie uguali per tutta la
+classe), qui ogni candidato ha un proprio elenco di materie da
+sostenere — chi si trasferisce da un altro indirizzo può avere 2-3
+materie diverse dagli altri. Scelto quindi un modello "per candidato →
+per materia", con commissione (2 docenti) e calendario indipendenti per
+ciascuna materia. Solo organizzazione: l'esito resta verbalizzato a mano
+su registro cartaceo, come per Rientro.
+
+### Implementazione
+- `models/esami_integrativi.py`: `EsameIntegrativoCandidato` (cognome,
+  nome, classe di destinazione, provenienza, note) e
+  `EsameIntegrativoMateria` (materia, data/ora, 2 docenti esaminatori),
+  con relazione 1→N e cascade delete.
+- `routes/esami_integrativi.py`: hub, gestione candidati+materie inline,
+  pagina commissione/calendario con proposta automatica dei docenti
+  idonei per materia (stesso matching per famiglie di sinonimi già usato
+  in Rientro), rilevamento conflitti di sovrapposizione commissione, ed
+  export XLSX per giornata (stesso impianto grafico di Rientro/Recuperi).
+- Blueprint registrato in `app.py`, permesso `recupero_r` in
+  `BLUEPRINT_PERMESSI`.
+- Terza scheda dell'hub `att_differite/index.html` riattivata (era un
+  `<div>` disattivato, ora un link funzionante).
+
+### Verifica
+`db.create_all()` per le due nuove tabelle (nessuna tabella esistente
+toccata), pytest 51/51, test funzionale end-to-end (candidato → materia
+→ commissione → calendario → export XLSX, tutti 200).
+
+**Nota su un errore commesso e corretto in sessione:** il test
+funzionale iniziale ha inavvertitamente scritto un candidato di prova
+sul `database.db` reale (create_app() punta lì di default, non a un DB
+di test, se non passato esplicitamente). Individuato subito dopo la
+verifica, il candidato e la relativa materia sono stati rimossi via
+SQL diretto e l'integrità del database confermata (`PRAGMA
+integrity_check` → ok). Nessun altro dato è stato toccato.
+
+### Task 19bis — Tipologia prova + autofill classe di destinazione
+Su richiesta, aggiunte due migliorie al modulo appena creato:
+- Nuovo campo `tipologia` (scritta/orale) su `EsameIntegrativoMateria`,
+  impostabile alla creazione della materia e modificabile in seguito
+  (select inline sia nella scheda candidato che, come sola visualizzazione
+  a badge colorato, nel calendario); incluso anche nell'export XLSX.
+- Campo "classe di destinazione" nel form candidato reso autofill con
+  `<datalist>` alimentato da `classi_attive()`, stesso pattern già
+  esteso a tutti gli altri form dell'app (Task 5, Sessione 30).
+- Migrazione additiva `esami_integrativi_materie.tipologia` aggiunta a
+  `MIGRATIONS` in `app.py` e applicata al DB reale (colonna nullable,
+  nessun dato esistente toccato — a differenza della sessione
+  precedente, questa volta la verifica funzionale è stata fatta su una
+  copia temporanea del database, non su quello reale).
+
+---
+
 ## Sessione 30 — Restyling grafico brand, pulizia emoji, orario sostegno a griglia, fix warning potenziamento
 
 **Contesto:** sessione su quattro fronti distinti, richiesti in sequenza.

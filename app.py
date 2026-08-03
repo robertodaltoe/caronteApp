@@ -90,6 +90,8 @@ def create_app():
     app.register_blueprint(recupero_bp)
     from routes.rientro import rientro_bp
     app.register_blueprint(rientro_bp)
+    from routes.esami_integrativi import esami_integrativi_bp
+    app.register_blueprint(esami_integrativi_bp)
     from routes.att_differite import att_differite_bp
     app.register_blueprint(att_differite_bp)
     from routes.ricerca import ricerca_bp
@@ -122,6 +124,7 @@ def create_app():
         'import_banca':  'banca_ore',
         'recupero':      'recupero_r',      # corsi/prove di recupero (lettura per DS, scrittura per collaboratore/segreteria/dsga)
         'rientro':       'recupero_r',      # colloqui di rientro dall'estero
+        'esami_integrativi': 'recupero_r',  # esami integrativi (passaggi/trasferimenti settembre)
         'att_differite': 'recupero_r',      # hub di selezione, nessuna azione propria
         'impostazione_anno': 'organico_r',  # classi di concorso, organico diritto/fatto
         'auth':          None,          # gestito internamente
@@ -282,6 +285,7 @@ def _auto_migrate():
         ('materie',   'id_classe_concorso',  'INTEGER',     None),
         ('banca_ore', 'anno_scol',           'VARCHAR(9)',  None),
         ('docenti',   'modificato_il',       'DATETIME',    None),
+        ('esami_integrativi_materie', 'tipologia', 'VARCHAR(10)', None),
     ]
 
     with db.engine.connect() as conn:

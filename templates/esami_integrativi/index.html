@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Esami Integrativi{% endblock %}
+{% block content %}
+<div style="margin-bottom:6px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">◷︎ Esami Integrativi — {{ anno }}</h1>
+    <p style="font-size:.84rem; color:var(--grigio);">
+        Passaggi e trasferimenti di settembre: esame nelle materie non coincidenti con il percorso
+        di provenienza. A differenza del rientro dall'estero, ogni candidato ha materie proprie,
+        ciascuna con commissione e calendario indipendenti.
+    </p>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px;">
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:var(--blu);">{{ n_candidati }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Candidati</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#7c3aed;">{{ n_materie }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Materie totali</div>
+    </div>
+    <div class="card" style="text-align:center; padding:12px;">
+        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ n_calendarizzate }}</div>
+        <div style="font-size:.76rem; color:var(--grigio);">Esami calendarizzati</div>
+    </div>
+</div>
+
+<div style="display:flex; flex-direction:column; gap:8px;">
+    <a href="{{ url_for('esami_integrativi.candidati') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
+        <div style="font-size:1.6rem;">◍︎</div>
+        <div>
+            <div style="font-weight:700; color:#7c3aed;">1. Candidati e materie</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Aggiungi gli studenti e le materie che ciascuno deve sostenere
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+    </a>
+    <a href="{{ url_for('esami_integrativi.calendario') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #166534;">
+        <div style="font-size:1.6rem;">▦︎</div>
+        <div>
+            <div style="font-weight:700; color:#166534;">2. Commissione e calendario</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Assegna i docenti esaminatori e fissa data/ora per ciascuna materia
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+    </a>
+</div>
+{% endblock %}

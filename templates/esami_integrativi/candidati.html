@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Esami Integrativi — Candidati{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('esami_integrativi.index') }}" class="btn btn-primary btn-sm">←︎ Esami Integrativi</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎ Candidati e materie</h1>
+</div>
+
+<div class="card" style="padding:14px 18px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--blu); margin-bottom:10px;">+ Aggiungi candidato</h3>
+    <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Cognome *</label><br>
+            <input type="text" name="cognome" required
+                   style="width:140px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Nome *</label><br>
+            <input type="text" name="nome" required
+                   style="width:130px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Classe di destinazione *</label><br>
+            <input type="text" name="classe_destinazione" required placeholder="es. 3A LSC"
+                   list="classi-attive-list" autocomplete="off"
+                   style="width:120px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            <datalist id="classi-attive-list">
+                {% for cl in classi_attive %}<option value="{{ cl }}">{% endfor %}
+            </datalist>
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Provenienza</label><br>
+            <input type="text" name="provenienza" placeholder="es. IIS ... / classe 3A altro indirizzo"
+                   style="width:200px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
+            <input type="text" name="note"
+                   style="width:160px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">+ Aggiungi</button>
+    </form>
+</div>
+
+{% if not candidati %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
+    Nessun candidato inserito ancora.
+</div>
+{% endif %}
+
+{% for c in candidati %}
+<div class="card" style="padding:14px 16px; margin-bottom:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <div>
+            <strong style="color:var(--blu); font-size:.95rem;">{{ c.cognome }} {{ c.nome }}</strong>
+            <span style="font-size:.78rem; background:#ede9fe; color:#7c3aed; padding:2px 8px;
+                         border-radius:8px; font-weight:700; margin-left:8px;">→ {{ c.classe_destinazione }}</span>
+            {% if c.provenienza %}
+            <span style="font-size:.78rem; color:var(--grigio); margin-left:6px;">da {{ c.provenienza }}</span>
+            {% endif %}
+            {% if c.note %}
+            <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">{{ c.note }}</div>
+            {% endif %}
+        </div>
+        <form method="post" onsubmit="return confirm('Rimuovere {{ c.cognome }} {{ c.nome }} e tutte le sue materie?')">
+            <input type="hidden" name="azione" value="elimina">
+            <input type="hidden" name="id" value="{{ c.id }}">
+            <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                    border-radius:5px;padding:3px 9px;font-size:.78rem;cursor:pointer;">✕︎ Rimuovi candidato</button>
+        </form>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        {% for m in c.materie %}
+        <span style="font-size:.78rem; background:#f3f4f6; color:#374151; padding:3px 8px 3px 10px;
+                     border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+            {{ m.materia }}
+            <form method="post" style="margin:0;">
+                <input type="hidden" name="azione" value="imposta_tipologia">
+                <input type="hidden" name="id_materia" value="{{ m.id }}">
+                <select name="tipologia" onchange="this.form.submit()"
+                        style="border:1px solid #d1d5db; border-radius:5px; font-size:.72rem;
+                               padding:1px 3px; background:white;
+                               color:{{ '#0369a1' if m.tipologia=='scritta' else ('#7c3aed' if m.tipologia=='orale' else '#9ca3af') }};">
+                    <option value="" {% if not m.tipologia %}selected{% endif %}>— tipo —</option>
+                    <option value="scritta" {% if m.tipologia=='scritta' %}selected{% endif %}>Scritta</option>
+                    <option value="orale" {% if m.tipologia=='orale' %}selected{% endif %}>Orale</option>
+                </select>
+            </form>
+            <form method="post" style="margin:0;" onsubmit="return confirm('Rimuovere la materia {{ m.materia }}?')">
+                <input type="hidden" name="azione" value="elimina_materia">
+                <input type="hidden" name="id_materia" value="{{ m.id }}">
+                <button type="submit" style="background:none; border:none; color:#dc2626;
+                        cursor:pointer; font-size:.78rem; padding:0;">✕︎</button>
+            </form>
+        </span>
+        {% else %}
+        <span style="font-size:.78rem; color:#dc2626;">⚠︎ Nessuna materia impostata</span>
+        {% endfor %}
+    </div>
+
+    <form method="post" style="display:flex; gap:6px; align-items:center;">
+        <input type="hidden" name="azione" value="aggiungi_materia">
+        <input type="hidden" name="id_candidato" value="{{ c.id }}">
+        <input type="text" name="materia" required placeholder="Aggiungi materia..." list="materie-list"
+               style="width:200px; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.8rem;">
+        <select name="tipologia" style="padding:4px 6px; border:1px solid #d1d5db; border-radius:6px; font-size:.8rem;">
+            <option value="">— tipo —</option>
+            <option value="scritta">Scritta</option>
+            <option value="orale">Orale</option>
+        </select>
+        <button type="submit" class="btn btn-sm" style="background:#7c3aed; color:white;">+ Materia</button>
+    </form>
+</div>
+{% endfor %}
+
+<datalist id="materie-list">
+    {% for m in materie_disponibili %}<option value="{{ m }}">{% endfor %}
+</datalist>
+{% endblock %}
