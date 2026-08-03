@@ -335,6 +335,27 @@ def _migra_vincolo_aule():
         if not row or not row[0]:
             return  # tabella non ancora creata, nulla da migrare
 
+        # Copie del database molto vecchie (precedenti anche all'introduzione
+        # della colonna anno_scol su 'aule') possono arrivare qui senza quella
+        # colonna — la aggiunge prima di procedere, così il resto della
+        # migrazione (che presuppone la colonna presente) non fallisce con
+        # "no such column: anno_scol". Le righe esistenti ricevono l'anno
+        # scolastico corrente come valore di partenza (da correggere a mano
+        # se in realtà appartenevano a un anno diverso).
+        cols = [r[1] for r in conn.execute(text("PRAGMA table_info(aule)"))]
+        if 'anno_scol' not in cols:
+            from config_anno import get_anno_corrente
+            anno_default = get_anno_corrente()
+            conn.execute(text(
+                f"ALTER TABLE aule ADD COLUMN anno_scol VARCHAR(9) NOT NULL DEFAULT '{anno_default}'"
+            ))
+            conn.commit()
+            print(f"Migrazione: aggiunta colonna 'anno_scol' a 'aule' "
+                  f"(valore di partenza per le righe esistenti: '{anno_default}').")
+            row = conn.execute(text(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='aule'"
+            )).fetchone()
+
         sql_tabella = row[0]
         # Se il vincolo combinato è già presente, non c'è nulla da fare.
         if 'UNIQUE (anno_scol, classe)' in sql_tabella or \

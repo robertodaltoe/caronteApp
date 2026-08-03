@@ -65,6 +65,29 @@ Su richiesta, aggiunte due migliorie al modulo appena creato:
   precedente, questa volta la verifica funzionale è stata fatta su una
   copia temporanea del database, non su quello reale).
 
+### Task 19ter — Fix crash _migra_vincolo_aule() su schema molto vecchio
+Su un altro Mac ("ministudio"), il download del DB da Drive ha riportato
+una tabella `aule` priva della colonna `anno_scol` — schema più vecchio
+di quanto previsto — mandando in crash `_migra_vincolo_aule()` con
+`no such column: anno_scol` durante l'INSERT della migrazione del
+vincolo. Nessun dato perso (l'eccezione ha interrotto la funzione prima
+del DROP TABLE, quindi SQLite ha annullato tutto in automatico), ma
+l'app non partiva.
+
+Corretto `_migra_vincolo_aule()` in `app.py`: ora verifica prima se la
+colonna `anno_scol` esiste su `aule` e, se manca, la aggiunge (con
+l'anno scolastico corrente come valore di partenza per le righe
+esistenti) prima di procedere con la correzione del vincolo UNIQUE.
+Verificato ricreando lo schema vecchio su una copia di prova: nessun
+crash, colonna aggiunta, tutte le righe preservate. Pytest 51/51, DB
+reale verificato intatto (invariato, dato che lì la colonna era già
+presente).
+
+**Nota per la prossima sessione:** il traceback di ministudio mostrava
+il crash a un numero di riga diverso da quello attuale in `app.py` —
+quel Mac gira su una copia del codice non aggiornata. Il fix va
+distribuito anche lì (non solo il database) prima del prossimo avvio.
+
 ---
 
 ## Sessione 30 — Restyling grafico brand, pulizia emoji, orario sostegno a griglia, fix warning potenziamento
