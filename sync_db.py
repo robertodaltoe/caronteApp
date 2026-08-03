@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from modules.backup_cifrato import cifra_file, decifra_file
+from cryptography.fernet import InvalidToken
 
 DRIVE_SUBFOLDER  = "CaronteApp"
 DRIVE_DB_NAME     = "database.db.enc"   # file cifrato condiviso su Drive
@@ -138,8 +139,27 @@ def scarica(db, forzato=False):
         if input("  Procedere? (s/N): ").strip().lower() != "s":
             print("  Annullato."); return False
     if _ts(db_drive) > _ts(db) or forzato:
+        try:
+            decifra_file(str(db_drive), str(db) + ".scaricato_tmp")
+        except InvalidToken:
+            # Non incolonnare mai un file locale non decifrabile sopra il
+            # database esistente: la chiave di cifratura (data/backup/.backup_key)
+            # non corrisponde a quella usata per cifrare il file su Drive —
+            # tipicamente perché questa macchina ha generato la propria chiave
+            # invece di ricevere quella condivisa dalle altre macchine che
+            # usano questo Drive. Si prosegue con il DB locale esistente
+            # (se presente) e si segnala l'errore con exit code diverso da 0,
+            # così lo script di avvio può interrompersi invece di ripartire
+            # con dati vecchi e poi ricaricarli su Drive sovrascrivendo la
+            # cronologia buona.
+            print("  ERRORE: impossibile decifrare il DB da Drive.")
+            print("  La chiave di cifratura locale (data/backup/.backup_key) non è la stessa")
+            print("  usata per cifrare il file su Drive. Copia il file .backup_key (e .backup_salt)")
+            print("  dalla macchina che ha creato il backup dentro data/backup/ su questa macchina,")
+            print("  poi riprova. NON procedere: il DB locale potrebbe essere superato.")
+            return None
         if Path(db).exists(): shutil.copy2(db, str(db)+".bak")
-        decifra_file(str(db_drive), str(db))
+        shutil.move(str(db) + ".scaricato_tmp", str(db))
     set_lock(c, True)
     print("  DB pronto - lock attivato"); return True
 
@@ -216,7 +236,12 @@ if __name__ == "__main__":
     base = Path(__file__).parent
     db = base/"database.db"
     forzato = "--forza" in sys.argv
-    if cmd == "scarica": print("Scarico DB da Drive..."); scarica(db, forzato)
+    if cmd == "scarica":
+        print("Scarico DB da Drive...")
+        esito = scarica(db, forzato)
+        # esito: True = ok, False = niente da fare/annullato (non bloccante),
+        # None = errore di decifratura (bloccante: chiave sbagliata)
+        sys.exit(1 if esito is None else 0)
     elif cmd == "carica": print("Carico DB su Drive..."); carica(db)
     elif cmd == "stato": stato()
     elif cmd == "storico": lista_storico()

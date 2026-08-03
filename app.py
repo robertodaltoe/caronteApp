@@ -364,6 +364,12 @@ def _migra_vincolo_aule():
 
         # Migrazione: ricrea la tabella con il vincolo corretto (pattern
         # standard SQLite per modificare un vincolo su tabella esistente).
+        # DROP IF EXISTS difensivo: se un tentativo precedente si è
+        # interrotto a metà (es. errore durante l'INSERT), può restare
+        # una 'aule_new' vuota da un run passato — altrimenti la CREATE
+        # TABLE fallirebbe con "aule_new already exists" senza mai
+        # arrivare a completare la migrazione.
+        conn.execute(text("DROP TABLE IF EXISTS aule_new"))
         conn.execute(text("""
             CREATE TABLE aule_new (
                 id INTEGER NOT NULL,

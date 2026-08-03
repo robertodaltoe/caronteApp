@@ -4,6 +4,37 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+### Task 19quinquies — Ripristino database da backup cifrato manuale
+Roberto ha caricato un backup cifrato del proprio Mac
+(`database_20260803_105809_MacBook-Pro-di-Roberto-DT.local.db.enc`,
+storico delle 10:58 di stamattina) chiedendo di ripristinarlo come DB
+valido, presumibilmente per superare lo stato incerto lasciato dagli
+incidenti di ministudio (Task 19quater).
+
+Prima di sovrascrivere: decifrato con la chiave locale, verificato
+`PRAGMA integrity_check` (ok), confrontato riga per riga con il DB
+reale allora attivo. Unica differenza reale: il backup mancava di 2
+righe in `assegnazioni_docenti` (cattedre 2026-2027 per i docenti id
+102 e id 1, tipo TI, inserite oggi alle 10:34-10:35) e della relativa
+riga di log — nonostante il backup sia datato 10:58, non le conteneva
+(causa non determinata da qui, forse una scrittura su disco non ancora
+fluita al momento dello snapshot). Segnalato esplicitamente a Roberto,
+che ha confermato di voler procedere comunque.
+
+Eseguito: backup di sicurezza dello stato precedente
+(`data/backup/database_20260803_2151_prima-ripristino-20260803.db.enc`),
+poi sostituito `database.db` con la versione ripristinata. Verificato:
+integrity check ok, `create_app()` senza eccezioni, pytest 51/51.
+
+**Nota per la prossima sessione:** le 2 assegnazioni cattedra
+2026-2027 (docente id 102/classe concorso 2, docente id 1/classe
+concorso 11, tipo TI) andranno reinserite a mano se erano corrette —
+non sono più presenti dopo questo ripristino. Il ripristino è stato
+fatto solo in locale su questa macchina: non è stato ripubblicato su
+Google Drive (va fatto con `sync_db.py carica` quando si è sicuri
+dello stato, specialmente dopo aver sistemato la chiave di cifratura
+condivisa con ministudio, Task 46).
+
 ---
 
 ## Sessione 31 — Modulo Esami Integrativi (item 19)
@@ -87,6 +118,57 @@ presente).
 il crash a un numero di riga diverso da quello attuale in `app.py` —
 quel Mac gira su una copia del codice non aggiornata. Il fix va
 distribuito anche lì (non solo il database) prima del prossimo avvio.
+
+### Task 19quater — Due problemi emersi dopo il `git pull` su ministudio
+Dopo l'aggiornamento del codice, il primo avvio su ministudio ha
+mostrato due problemi distinti, entrambi diagnosticati e corretti:
+
+**1) Chiave di cifratura non condivisa tra le macchine (bloccante).**
+Lo scarico del DB da Drive è fallito con `cryptography.fernet.InvalidToken`.
+Causa: la chiave Fernet (`data/backup/.backup_key`) è generata localmente
+alla prima esecuzione su ogni macchina (`_get_or_create_key()` in
+`modules/backup_cifrato.py`) e non viene mai distribuita — per design,
+dato che è un segreto e non va messa su git. Il Mac "ministudio" ha
+quindi una chiave diversa da quella con cui il file su Drive è stato
+cifrato, e non può decifrarlo. Il vero problema è che lo script
+proseguiva comunque silenziosamente: `sync_db.py scarica` non
+intercettava l'eccezione, `avvia_caronte.sh` non controllava l'esito e
+avviava l'app con il DB locale superato, poi allo spegnimento lo
+ricaricava su Drive sovrascrivendo la cronologia buona con dati
+vecchi/sbagliati — rischio concreto di perdita progressiva dei backup
+buoni nella rotazione a 10 versioni.
+
+Corretto:
+- `sync_db.py::scarica()` ora intercetta `InvalidToken`, stampa
+  un messaggio esplicito (serve copiare `.backup_key`/`.backup_salt`
+  dalla macchina che ha il DB buono), e NON tocca il DB locale.
+- Il blocco `__main__` esce con `sys.exit(1)` in questo caso specifico
+  (prima usciva sempre con successo).
+- `avvia_caronte.sh` controlla l'esito di `sync_db.py scarica`: se fallisce,
+  interrompe l'avvio prima di lanciare Flask e non esegue mai il `carica`
+  finale.
+- Aggiunta anche una seconda protezione: se Flask termina da solo con
+  errore (crash, come il caso aule_new sotto) invece che per CTRL+C,
+  lo script salta il ricaricamento automatico su Drive e avvisa
+  l'utente, invece di pubblicare uno stato di migrazione a metà.
+- **Azione richiesta all'utente** (non automatizzabile da qui): copiare
+  il file `data/backup/.backup_key` (l'unico che conta per la cifratura;
+  `.backup_salt` è solo un marcatore, non è realmente usato) dal Mac
+  con il DB buono a ministudio, via canale diretto (AirDrop/USB), prima
+  di rilanciare `avvia_caronte.sh` lì.
+
+**2) `aule_new` residua da un crash precedente.**
+Il crash della sera prima (Task 19ter) aveva lasciato una tabella
+`aule_new` vuota nel DB locale — la CREATE TABLE era andata a buon fine
+prima che l'INSERT fallisse, e non essendo mai stata droppata è rimasta
+lì. Il tentativo successivo di `_migra_vincolo_aule()` falliva quindi
+con "table aule_new already exists". Aggiunta una `DROP TABLE IF EXISTS
+aule_new` difensiva subito prima della CREATE TABLE, così un run
+interrotto a metà non blocca più i tentativi successivi.
+
+Verificato: pytest 51/51, simulazione dello scenario chiave-sbagliata
+(exit code 1, nessuna scrittura sul DB locale), DB reale invariato
+(`PRAGMA integrity_check` → ok, 39 righe in aule).
 
 ---
 
