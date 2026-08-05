@@ -126,6 +126,33 @@ ambiente (stesso tipo di blocco di scrittura sul mount già visto per
 modifiche sono comunque scritte correttamente sui file reali; commit e
 push restano da fare da Roberto direttamente dal proprio terminale.
 
+**Secondo aggiornamento — quarto bug, dal collaudo con risoluzione
+"tieni versione locale"**: scegliendo "tieni versione locale" il
+contenuto della riga non viene toccato (per design — è la scelta di
+NON applicare la proposta remota). Ma il controllo che evita i
+duplicati cercava solo conflitti "non risolti" con quella chiave: al
+giro successivo il contenuto locale/remoto era ancora diverso (perché
+nessuno dei due lati era effettivamente cambiato), quindi ne veniva
+creato uno NUOVO invece di riconoscere che era la stessa proposta già
+rifiutata — un ciclo infinito, riprodotto e confermato sul database
+reale (Alaimo: 4 righe in `sync_conflitti`, due già "risolte come
+locale" a un minuto di distanza l'una dall'altra). Corretto: prima di
+creare un nuovo conflitto, si controlla se l'ultima risoluzione
+"locale" per quella stessa chiave riguardava ESATTAMENTE lo stesso
+valore remoto — se sì, non richiede di nuovo; se il valore remoto è
+nel frattempo cambiato davvero, il conflitto (genuino) torna a comparire.
+Verificato con un test a 4 giri su copie isolate: 1) conflitto rilevato,
+2) risolto come locale, 3) giro successivo — non ricompare, 4) valore
+remoto cambiato di proposito — ricompare correttamente.
+
+Nota collaterale (non un bug di questo meccanismo, ma un suo effetto
+collaterale): la doppia assenza di Alaimo del 6/8 (Task precedente,
+lasciata volutamente intoccata da Roberto) ha due righe con la stessa
+chiave logica nello STESSO database — questo genera un conflitto
+"fantasma" ricorrente finché quella duplicazione non viene sistemata a
+mano; con la correzione sopra, però, resta un'unica voce che non si
+moltiplica più ad ogni giro.
+
 ---
 
 ### Task 45 — Merge manuale macmini → macbookpro (Assegnazioni 2026-2027)

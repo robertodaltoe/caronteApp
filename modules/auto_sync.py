@@ -198,16 +198,39 @@ def _merge_additivo(db, tmp_remoto_path):
                         esistente.dati_remoti = json.dumps(r_remota, default=str)
                         esistente.aggiornato_il = datetime.utcnow()
                         conflitti_aggiornati += 1
-                    else:
-                        db.session.add(SyncConflitto(
-                            tabella=tabella,
-                            chiave_logica=chiave_json,
-                            descrizione=cfg['label'](r_remota),
-                            campi_diversi=json.dumps(diversi),
-                            dati_locali=json.dumps(locale, default=str),
-                            dati_remoti=json.dumps(r_remota, default=str),
-                        ))
-                        conflitti_nuovi += 1
+                        continue
+
+                    # Scegliendo "tieni versione locale" il contenuto non
+                    # cambia: resta diverso da quello remoto anche dopo la
+                    # risoluzione. Senza questo controllo, il giro
+                    # successivo lo vedrebbe di nuovo diverso e ne
+                    # creerebbe uno NUOVO (nessun conflitto "non risolto"
+                    # con questa chiave) — un ciclo infinito. Se la stessa
+                    # identica proposta remota era già stata rifiutata in
+                    # passato, non richiederla di nuovo; se invece il
+                    # valore remoto è cambiato da allora, è un conflitto
+                    # genuinamente nuovo e va segnalato.
+                    gia_deciso = (SyncConflitto.query
+                                  .filter_by(tabella=tabella, chiave_logica=chiave_json,
+                                             risolto=True, scelta='locale')
+                                  .order_by(SyncConflitto.risolto_il.desc())
+                                  .first())
+                    if gia_deciso:
+                        remoto_deciso = json.loads(gia_deciso.dati_remoti or '{}')
+                        campi_decisi = set(json.loads(gia_deciso.campi_diversi or '[]'))
+                        if (campi_decisi == set(diversi) and
+                                all(remoto_deciso.get(c) == r_remota.get(c) for c in diversi)):
+                            continue  # stessa proposta già rifiutata: non richiedere di nuovo
+
+                    db.session.add(SyncConflitto(
+                        tabella=tabella,
+                        chiave_logica=chiave_json,
+                        descrizione=cfg['label'](r_remota),
+                        campi_diversi=json.dumps(diversi),
+                        dati_locali=json.dumps(locale, default=str),
+                        dati_remoti=json.dumps(r_remota, default=str),
+                    ))
+                    conflitti_nuovi += 1
 
         db.session.commit()
     except Exception:
