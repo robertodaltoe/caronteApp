@@ -275,7 +275,7 @@ def create_app():
         except Exception:
             return {'n_conflitti_sync': 0}
 
-    # Sync automatico additivo in background (ogni 60s, solo su
+    # Sync automatico additivo in background (ogni 30s, solo su
     # 'assenze'/'supplenze' — vedi modules/auto_sync.py e DEVLOG Task 46).
     # Guardia contro il doppio avvio: con use_reloader=True (sempre attivo
     # in questa app, vedi fondo file) Werkzeug esegue create_app() due
@@ -290,7 +290,7 @@ def create_app():
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         from modules.auto_sync import avvia_thread_autosync
         avvia_thread_autosync(app)
-        print('[auto_sync] thread avviato — primo giro tra ~10s, poi ogni 60s.', flush=True)
+        print('[auto_sync] thread avviato — primo giro tra ~10s, poi ogni 30s.', flush=True)
 
     return app
 

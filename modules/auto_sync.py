@@ -1,7 +1,7 @@
 """
 Sync automatico "additivo" in background.
 
-Mentre l'app è aperta e funzionante, ogni INTERVALLO_SECONDI (60s di
+Mentre l'app è aperta e funzionante, ogni INTERVALLO_SECONDI (30s di
 default) un thread in background:
 
 1. scarica (senza toccare il lock manuale di sync_db.py) il database
@@ -52,7 +52,7 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-INTERVALLO_SECONDI = 60
+INTERVALLO_SECONDI = 30
 AUTOSYNC_LOCK_NAME = 'caronte_autosync.lock'
 AUTOSYNC_LOCK_MAX_ETA_SEC = 180  # oltre questa età il lock si considera abbandonato (crash) e si ignora
 
