@@ -28,6 +28,49 @@ Verificato: pytest 51/51, simulazione diretta di un token CSRF non
 valido su `/login` → redirect 302 pulito a `/login` invece
 dell'eccezione grezza.
 
+### Task 45 — Merge manuale macmini → macbookpro (Assegnazioni 2026-2027)
+
+Roberto aveva modificato le Assegnazioni sul macmini e l'organico di
+fatto sul macbook pro, in parallelo, senza sincronizzare tra una
+modifica e l'altra: `sync_db.py` (Google Drive) non fa merge
+automatico, solo check-out/check-in manuale, quindi le due basi dati
+erano divergenti. Deciso con Roberto di unire (non scegliere una
+macchina vincente): tenere l'organico di fatto del macbook pro e le
+Assegnazioni del macmini.
+
+Copiato `database_macmini.db` nella cartella condivisa e confrontato
+riga per riga `assegnazioni_docenti`/`assegnazioni_classi` per
+l'a.s. 2026-2027 tra i due file (tabelle di riferimento
+`classi_concorso`/`materie` verificate identiche, quindi id
+direttamente comparabili). Risultato:
+- 14 assegnazioni presenti solo sul macmini → aggiunte al macbook pro
+  (con le relative ore per classe), tra cui Ghezzi Angelo su IRC
+  (id_docente remappato da 95 a 43, l'id già unificato in precedenza).
+- 1 riga sospetta esclusa: B-17/Abramini 5h — verificato che Abramini
+  è di ruolo su A-26 Matematica, non su un laboratorio meccanico:
+  stesso tipo di errore di inserimento già corretto in passato per
+  Agrò. Segnalata a Roberto e confermata come errore da non importare.
+- 3 conflitti (stessa CC+docente, ore diverse tra le due macchine:
+  Paolini, Bosisio, Agrò su A-11) risolti tenendo la versione del
+  macmini su indicazione esplicita di Roberto.
+
+Eseguita prima una copia di sicurezza cifrata di `database.db`
+(`modules.backup_cifrato.crea_backup_cifrato`). Nota tecnica: il primo
+tentativo di scrittura diretta sul file nella cartella montata ha dato
+"disk I/O error" a causa di un file di journal SQLite residuo che il
+mount non permetteva di rimuovere (Operation not permitted); risolto
+lavorando su una copia locale, poi scritto il risultato finale sul
+file di destinazione con `open()+os.fsync()` invece di un semplice
+`cp`. Verificato dopo il merge: `PRAGMA integrity_check` ok, nessuna
+riga orfana in `assegnazioni_classi`, nessuna FK non valida, la vecchia
+riga errata B-17/Agrò (già rimossa in una sessione precedente) resta
+assente, totale assegnazioni 2026-2027 passato da 14 a 28.
+
+Rimane da fare (esplicitamente rimandato da Roberto a dopo il merge):
+decidere un meccanismo di salvaguardia per evitare che le due macchine
+divergano di nuovo (es. banner di stato sync, blocco se il lock è
+tenuto da un'altra macchina).
+
 ---
 
 ### Task 44 — CC "solo compresenza" (B-02, B-03, B-12, B-14, B-16,
