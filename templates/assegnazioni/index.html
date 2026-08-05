@@ -402,10 +402,10 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 </td>
                 <td class="td-sticky-r col-azioni" style="white-space:nowrap;">
                     {% if not a.docente %}
-                    <button type="button" title="Nomina un docente al posto del placeholder"
-                            onclick="document.getElementById('nomina-{{ a.id }}').style.display='flex'; this.style.display='none';"
+                    <button type="button" title="Nomina un docente reale al posto di questo placeholder"
+                            onclick="apriNomina({{ a.id }}, {{ a.nome_placeholder|tojson }})"
                             style="background:none; border:none; cursor:pointer;
-                                   color:#3730a3; font-size:.8rem;">☺︎</button>
+                                   color:#3730a3; font-size:.85rem;">⇄︎</button>
                     {% endif %}
                     <form method="post"
                           action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
@@ -417,31 +417,6 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </form>
                 </td>
             </tr>
-            {% if not a.docente %}
-            <tr id="nomina-{{ a.id }}" style="display:none;">
-                <td colspan="20" style="background:#f5f3ff; padding:6px 10px;">
-                    <form method="post" action="{{ url_for('assegnazioni.nomina', asgn_id=a.id) }}"
-                          style="display:flex; gap:6px; align-items:center;">
-                        <span style="font-size:.76rem; color:#3730a3; font-weight:600;">
-                            Nomina docente reale per "{{ a.nome_placeholder }}":
-                        </span>
-                        <select name="id_docente" required
-                                style="padding:4px 7px; border:1px solid #c4b5fd; border-radius:5px; font-size:.8rem;">
-                            <option value="">— scegli docente —</option>
-                            {% for d in docenti_anno %}
-                            <option value="{{ d.id }}">
-                                {{ d.cognome }} {{ d.nome }} (max {{ d.ore_max_effettive }}h)
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-primary btn-sm">Conferma</button>
-                        <button type="button"
-                                onclick="document.getElementById('nomina-{{ a.id }}').style.display='none';"
-                                style="background:none; border:none; cursor:pointer; color:var(--grigio); font-size:.8rem;">Annulla</button>
-                    </form>
-                </td>
-            </tr>
-            {% endif %}
                 {# Sub-riga dettaglio materie — visibile solo se almeno una classe ha multi_materia #}
                 {% if blk.multi_materia.values() | select | list %}
                 <tr id="sub-{{ cc.id }}-{{ a.id }}" style="display:none;">
@@ -703,6 +678,38 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 </div>{# fine area-card #}
 {% endfor %}
 
+{# ── Modal "Nomina" — sostituisce un placeholder con un docente reale ─ #}
+<div id="nomina-backdrop" style="display:none; position:fixed; inset:0; z-index:9998;
+     background:rgba(15,23,42,.35);" onclick="chiudiNomina()"></div>
+<div id="nomina-modal" style="display:none; position:fixed; z-index:9999; top:50%; left:50%;
+     transform:translate(-50%,-50%); background:white; border-radius:12px;
+     box-shadow:0 12px 32px rgba(0,0,0,.25); padding:18px 20px; width:340px; max-width:90vw;">
+    <div style="font-size:.92rem; font-weight:700; color:var(--blu); margin-bottom:4px;">
+        Nomina docente
+    </div>
+    <div style="font-size:.8rem; color:var(--grigio); margin-bottom:12px;">
+        Sostituisce il placeholder "<span id="nomina-nome-ph" style="font-weight:600; color:#3730a3;"></span>"
+        con un docente reale — le ore e le materie già assegnate restano invariate.
+    </div>
+    <form method="post" id="form-nomina">
+        <select name="id_docente" required
+                style="width:100%; padding:7px 9px; border:1px solid #d1d5db; border-radius:6px;
+                       font-size:.86rem; margin-bottom:14px;">
+            <option value="">— scegli docente —</option>
+            {% for d in docenti_anno %}
+            <option value="{{ d.id }}">
+                {{ d.cognome }} {{ d.nome }} (max {{ d.ore_max_effettive }}h)
+            </option>
+            {% endfor %}
+        </select>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="chiudiNomina()" class="btn btn-sm"
+                    style="background:#f1f5f9; color:#374151;">Annulla</button>
+            <button type="submit" class="btn btn-primary btn-sm">Conferma</button>
+        </div>
+    </form>
+</div>
+
 {# ── Popover autosave ore ─────────────────────────────────────────── #}
 <div id="ore-popover" style="display:none; position:fixed; z-index:9999;
      background:white; border:1px solid #e2e8f0; border-radius:10px;
@@ -725,6 +732,17 @@ let _popMats   = [];
 let _popNomi   = [];
 let _popCell   = null;
 let _autoT     = null;
+
+function apriNomina(asgnId, nomePlaceholder) {
+    document.getElementById('nomina-nome-ph').textContent = nomePlaceholder;
+    document.getElementById('form-nomina').action = '/assegnazioni/' + asgnId + '/nomina';
+    document.getElementById('nomina-backdrop').style.display = 'block';
+    document.getElementById('nomina-modal').style.display = 'block';
+}
+function chiudiNomina() {
+    document.getElementById('nomina-backdrop').style.display = 'none';
+    document.getElementById('nomina-modal').style.display = 'none';
+}
 
 function schedAutosave() {
     clearTimeout(_autoT);

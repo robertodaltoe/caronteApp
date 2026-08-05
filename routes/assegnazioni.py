@@ -15,6 +15,29 @@ from config_anno import get_anno_corrente
 assegnazioni_bp = Blueprint('assegnazioni', __name__)
 
 
+def _righe_piano(anno_scol, cc_id, anno_corso=None, indirizzo=None):
+    """
+    Righe di PianoStudi per una classe di concorso (opzionalmente filtrate
+    per anno_corso/indirizzo), con priorità alle ore "proprie" (non di
+    compresenza). Se per quella CC esistono SOLO righe di compresenza —
+    es. B-02 (conversazione lingue), B-03/B-12/B-14/B-16/B-17 (laboratori
+    tecnici): non hanno mai un titolare "principale" con ore proprie,
+    esistono solo come ore di compresenza affiancate a un'altra CC — usa
+    quelle. Altrimenti queste CC non avrebbero mai nessuna classe/ora da
+    mostrare e sparirebbero dalla pagina Assegnazioni nonostante siano
+    nel piano di studi (bug segnalato per B-02/B-03/B-12/B-14/B-16/B-17).
+    """
+    base = PianoStudi.query.filter_by(anno_scol=anno_scol, id_classe_concorso=cc_id)
+    if anno_corso is not None:
+        base = base.filter_by(anno_corso=anno_corso)
+    if indirizzo is not None:
+        base = base.filter_by(indirizzo=indirizzo)
+    righe = base.filter_by(compresenza=False).all()
+    if not righe:
+        righe = base.filter_by(compresenza=True).all()
+    return righe
+
+
 def _resolve_id_materia(anno_scol, cc_id, label):
     """
     Se la classe ha un'unica materia associata a questa classe di
@@ -35,9 +58,7 @@ def _resolve_id_materia(anno_scol, cc_id, label):
         return None
     anno_corso = int(m.group(1))
     indirizzo  = m.group(3).strip()
-    righe = PianoStudi.query.filter_by(
-        anno_scol=anno_scol, id_classe_concorso=cc_id,
-        anno_corso=anno_corso, indirizzo=indirizzo, compresenza=False).all()
+    righe = _righe_piano(anno_scol, cc_id, anno_corso, indirizzo)
     if len(righe) == 1:
         # id_materia, non id: AssegnazioneClasse.id_materia è FK verso la
         # tabella Materia, non verso PianoStudi (sono due entità diverse
@@ -110,7 +131,7 @@ AREE = [
     {'nome': 'Matematica e Scienze',
      'cc':   ['A-20', 'A-26', 'A-27', 'A-34', 'A-41', 'A-47', 'A-50']},
     {'nome': 'Tecnici Geo/Cost',
-     'cc':   ['A-37', 'A-51', 'B-14', 'B-17']},
+     'cc':   ['A-37', 'A-51', 'B-03', 'B-12', 'B-14', 'B-16', 'B-17']},
     {'nome': 'Lingue',
      'cc':   ['A-22-ING', 'A-22-TED', 'A-22-SPA',
                'B-02-ING', 'B-02-TED', 'B-02-SPA']},
@@ -142,13 +163,10 @@ def _anno_default():
 def _classi_per_cc(anno_scol, cc_id):
     """
     Restituisce lista ordinata di label classe (es. '1A AFM')
-    per cui il piano studi prevede ore in quella CC (non compresenza).
+    per cui il piano studi prevede ore in quella CC — vedi _righe_piano
+    per il fallback sulle CC che esistono solo come compresenza.
     """
-    righe = (PianoStudi.query
-             .filter_by(anno_scol=anno_scol,
-                        id_classe_concorso=cc_id,
-                        compresenza=False)
-             .all())
+    righe = _righe_piano(anno_scol, cc_id)
     classi = []
     for p in righe:
         sezioni = ClasseSezione.query.filter_by(
@@ -177,11 +195,8 @@ def _ore_piano_per_classe(anno_scol, cc_id, label_classe):
         return 0
     anno_corso = int(m.group(1))
     indirizzo  = m.group(3).strip()
-    p = PianoStudi.query.filter_by(
-        anno_scol=anno_scol, id_classe_concorso=cc_id,
-        anno_corso=anno_corso, indirizzo=indirizzo,
-        compresenza=False).first()
-    return p.ore_settimanali if p else 0
+    righe = _righe_piano(anno_scol, cc_id, anno_corso, indirizzo)
+    return righe[0].ore_settimanali if righe else 0
 
 
 def _budget(anno_scol, cc_id):
@@ -229,9 +244,7 @@ def _build_area(anno_scol, area):
                 continue
             ac = int(m.group(1))
             ind = m.group(3).strip()
-            righe_p = PianoStudi.query.filter_by(
-                anno_scol=anno_scol, id_classe_concorso=cc.id,
-                anno_corso=ac, indirizzo=ind, compresenza=False).all()
+            righe_p = _righe_piano(anno_scol, cc.id, ac, ind)
             piano[c] = sum(r.ore_settimanali for r in righe_p)
             # 'id' qui DEVE essere r.id_materia (la FK verso la tabella
             # Materia, quella che AssegnazioneClasse.id_materia referenzia
@@ -627,13 +640,11 @@ def aggiorna_ore(asgn_id):
         if ac_row.indirizzo == 'POT':
             continue
 
-        # Ore totali previste per questa CC in questa classe
-        ps_all = PianoStudi.query.filter_by(
-            anno_scol=asgn.anno_scol,
-            id_classe_concorso=asgn.id_classe_concorso,
-            indirizzo=ac_row.indirizzo,
-            anno_corso=ac_row.anno_corso).all()
-        ore_previste_tot = sum(p.ore_settimanali for p in ps_all if not p.compresenza)
+        # Ore totali previste per questa CC in questa classe (vedi
+        # _righe_piano per il fallback sulle CC solo-compresenza)
+        ps_all = _righe_piano(asgn.anno_scol, asgn.id_classe_concorso,
+                               ac_row.anno_corso, ac_row.indirizzo)
+        ore_previste_tot = sum(p.ore_settimanali for p in ps_all)
 
         # Ore assegnate a questa classe da questo docente (tutte le materie)
         ore_asgn_classe = sum(

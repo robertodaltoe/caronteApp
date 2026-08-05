@@ -30,6 +30,59 @@ dell'eccezione grezza.
 
 ---
 
+### Task 44 — CC "solo compresenza" (B-02, B-03, B-12, B-14, B-16,
+B-17) mai visibili in Assegnazioni nonostante fossero nel piano studi
+
+Causa comune trovata per due segnalazioni insieme: "B-02 (ing/ted/spa)
+dovrebbe comparire nella sezione Lingue" (già elencata in `AREE` ma di
+fatto invisibile) e "B-03/B-12/B-14/B-16/B-17 non compaiono nemmeno in
+tutte, nonostante siano nei piani di studio" (mancavano anche
+dall'elenco `AREE` sotto "Tecnici Geo/Cost", che aveva solo A-37,
+A-51, B-14, B-17).
+
+Verificato sul database: per tutte queste CC, OGNI riga di PianoStudi
+per il 2026-2027 ha `compresenza=True` — non hanno mai un titolare
+"principale" con ore proprie, esistono solo come ore di compresenza
+affiancate a un altro insegnamento (conversazione lingue, laboratori
+tecnici). Ma `_classi_per_cc`, `_ore_piano_per_classe`, il calcolo di
+`piano_materie` in `_build_area`, `_resolve_id_materia` e il controllo
+avvisi in `api_verifica` filtravano TUTTI esplicitamente
+`compresenza=False` — corretto per evitare doppi conteggi quando una
+CC ha ore proprie E ore di compresenza sulla stessa classe, ma quando
+una CC esiste SOLO come compresenza il filtro escludeva tutto,
+facendola sparire ovunque nella pagina.
+
+Aggiunto un helper unico `_righe_piano(anno_scol, cc_id, anno_corso,
+indirizzo)`: usa le righe non-compresenza se esistono, altrimenti
+quelle di compresenza come fallback — non cambia nulla per le CC che
+hanno già ore proprie, corregge solo il caso "solo compresenza".
+Sostituiti tutti e 5 i punti che duplicavano il filtro diretto.
+Completato anche l'elenco `AREE`: "Tecnici Geo/Cost" ora include
+B-03, B-12, B-16 oltre ad A-37, A-51, B-14, B-17 già presenti.
+
+Verificato pytest (51/51) e lettura reale di `/assegnazioni?anno=
+2026-2027`: tutte e otto le CC (B-02-ING/TED/SPA, B-03, B-12, B-14,
+B-16, B-17) ora compaiono nella pagina.
+
+### Task 43 — Corretto il layout del form "Nomina" (era tagliato dalla
+tabella) + simbolo del pulsante più chiaro
+
+Il form inline aggiunto nel Task 42 (una riga `<tr colspan="20">`
+dentro la tabella pivot) veniva tagliato dai contenitori con overflow/
+colonne sticky della tabella, restando visibile solo nei margini della
+prima colonna. Sostituito con un modal centrato a comparsa (stesso
+linguaggio visivo del popover ore già esistente in questa pagina:
+`position:fixed`, backdrop semi-trasparente cliccabile per chiudere),
+condiviso da tutte le righe placeholder invece di una copia per riga —
+un'unica select "docente" popolata una volta sola, il form cambia solo
+l'action (`/assegnazioni/<id>/nomina`) e il nome del placeholder
+mostrato via JS (`apriNomina`/`chiudiNomina`). Simbolo del pulsante
+cambiato da "☺︎" (poco chiaro) a "⇄︎" (scambio/sostituzione), con
+tooltip esplicito.
+
+Verificato pytest (51/51) e lettura reale della pagina: pulsante e
+modal presenti, nessuna riga con colspan residua nel markup.
+
 ### Task 42 — Pulsante "Nomina" per i placeholder in Assegnazioni +
 placeholder salvabili senza ore
 
