@@ -364,6 +364,15 @@
 </nav>
 
 <div class="container">
+    {% if g.utente is defined and n_conflitti_sync %}
+    <div class="flash warning" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <span>⚠️ {{ n_conflitti_sync }} modifica{{ 'e' if n_conflitti_sync != 1 else '' }}
+            fatta{{ 'e' if n_conflitti_sync != 1 else '' }} da un'altra postazione
+            {{ 'devono' if n_conflitti_sync != 1 else 'deve' }} essere confermat{{ 'e' if n_conflitti_sync != 1 else 'a' }}
+            prima di essere unita{{ 'e' if n_conflitti_sync != 1 else '' }} ai dati.</span>
+        <a href="{{ url_for('sync_conflitti.index') }}" class="btn btn-sm" style="white-space:nowrap;">Rivedi ora</a>
+    </div>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
             <div class="flash {{ cat }}">{{ msg }}</div>

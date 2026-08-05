@@ -28,6 +28,69 @@ Verificato: pytest 51/51, simulazione diretta di un token CSRF non
 valido su `/login` → redirect 302 pulito a `/login` invece
 dell'eccezione grezza.
 
+### Task 46 — Sync automatico additivo (assenze/supplenze) ogni 60s
+
+Seguito diretto del Task 45: Roberto ha chiesto un modo per evitare che
+la divergenza tra macchine (segreteria che segna le assenze mentre lui
+assegna le supplenze, entrambi con l'app aperta in parallelo) si
+ripresenti, senza aspettare il passaggio a un server condiviso
+(rimandato — vedi nota in fondo).
+
+Costruito un meccanismo a due parti:
+
+1. **`modules/auto_sync.py`** — un thread in background (avviato da
+   `app.py`, con guardia contro il doppio avvio dovuto al reloader di
+   Flask in debug) che ogni 60 secondi: scarica il database pubblicato
+   su Google Drive, lo confronta con quello locale SOLO sulle tabelle
+   `assenze` e `supplenze` (le due toccate dal caso d'uso descritto —
+   le cattedre annuali restano fuori, troppo delicate per un merge
+   anche parziale automatico, vedi Task 45), usando una chiave logica
+   stabile per riga (es. docente+data+fascia oraria per le assenze;
+   data+ora+classe+assente per le supplenze) invece dell'id
+   autoincrementale, che può coincidere per righe diverse su database
+   indipendenti. Le righe nuove (presenti solo sul remoto) vengono
+   inserite in automatico; le righe con la stessa chiave logica ma
+   contenuto diverso (vero conflitto, es. la stessa supplenza assegnata
+   in modo diverso sulle due postazioni) NON vengono toccate: finiscono
+   in una nuova tabella `sync_conflitti` (`models/sync_conflitto.py`)
+   in attesa di revisione umana. Se sono state inserite righe nuove, il
+   database locale aggiornato viene ripubblicato su Drive. Un lock file
+   dedicato su Drive (`caronte_autosync.lock`, separato dal lock
+   manuale di `sync_db.py`) evita che due giri partano nello stesso
+   istante da macchine diverse.
+
+2. **`routes/sync_conflitti.py` + `templates/sync_conflitti.html`** —
+   pagina `/sync/conflitti` con il confronto campo per campo (locale vs
+   "dall'altra postazione") di ogni conflitto in sospeso, e due
+   pulsanti per scegliere quale versione tenere. Alla conferma, si
+   aggiornano solo i campi realmente diversi (non l'intera riga) e si
+   ripubblica subito su Drive, cosi la scelta si propaga e il conflitto
+   non ricompare al giro successivo. Banner in `templates/base.html`
+   (subito sotto la barra di navigazione, su tutte le pagine) con il
+   conteggio dei conflitti in sospeso e link diretto alla revisione.
+
+Verificato: motore di merge testato in isolamento su copie di prova del
+database (non sul file reale) — inserimento additivo di una riga nuova
+confermato, conflitto rilevato correttamente senza toccare la riga
+locale, risoluzione con aggiornamento mirato dei soli campi diversi
+confermata, `PRAGMA integrity_check` ok in ogni fase. App avviata con
+`create_app()` e route `/sync/conflitti` verificata con test client
+(200 OK). Nota tecnica: l'ambiente sandbox di Cowork usato per questa
+sessione ha mostrato instabilità nella scrittura diretta sul file nel
+mount condiviso (stesso "disk I/O error" già visto nel Task 45); non è
+un problema del codice né riguarderà l'uso reale sul Mac di Roberto —
+gestito comunque ripristinando il database da un backup pulito ad ogni
+occorrenza, senza mai lasciare il file reale in uno stato inconsistente
+(verificato con integrity_check dopo ogni recupero).
+
+Resta sospeso, come da richiesta di Roberto: il passaggio a un server
+condiviso raggiungibile sia da scuola sia da casa (discusso ma non
+ancora scelto tra rete locale della scuola / piccolo hosting cloud) —
+il meccanismo di questo Task è pensato come soluzione-ponte fino a quel
+momento, non come sostituto definitivo.
+
+---
+
 ### Task 45 — Merge manuale macmini → macbookpro (Assegnazioni 2026-2027)
 
 Roberto aveva modificato le Assegnazioni sul macmini e l'organico di

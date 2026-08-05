@@ -122,6 +122,8 @@ def create_app():
     app.register_blueprint(ricerca_bp)
     from routes.orario_sostegno import orario_sostegno_bp
     app.register_blueprint(orario_sostegno_bp)
+    from routes.sync_conflitti import sync_conflitti_bp
+    app.register_blueprint(sync_conflitti_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json
@@ -226,6 +228,7 @@ def create_app():
         from models.sostituzione_scrutinio import SostituzioneScrutinio  # noqa
         from models.sospensione import SospensioneDidattica  # noqa
         from models.recupero import RecuperoDocente, RecuperoGruppo, RecuperoLezione, RecuperoAlunno, RecuperoVincolo, RecuperoImport, RecuperoPeriodo  # noqa
+        from models.sync_conflitto import SyncConflitto  # noqa
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()
@@ -259,6 +262,28 @@ def create_app():
                 'nome_istituto': DEFAULTS['nome_istituto'],
                 'indirizzo_istituto': DEFAULTS['indirizzo_istituto'],
             }
+
+    @app.context_processor
+    def _inject_conflitti_sync():
+        """Conteggio conflitti non risolti del sync automatico (banner in
+        base.html). Vedi modules/auto_sync.py."""
+        try:
+            from models.sync_conflitto import SyncConflitto
+            n = SyncConflitto.query.filter_by(risolto=False).count()
+            return {'n_conflitti_sync': n}
+        except Exception:
+            return {'n_conflitti_sync': 0}
+
+    # Sync automatico additivo in background (ogni 60s, solo su
+    # 'assenze'/'supplenze' — vedi modules/auto_sync.py e DEVLOG Task 46).
+    # Guardia contro il doppio avvio: con use_reloader=True Flask esegue
+    # create_app() sia nel processo "guardiano" sia in quello che serve
+    # davvero le richieste (quest'ultimo ha WERKZEUG_RUN_MAIN=true). Se il
+    # reloader è disattivo (es. produzione) WERKZEUG_RUN_MAIN non c'è: si
+    # avvia comunque, una volta sola.
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+        from modules.auto_sync import avvia_thread_autosync
+        avvia_thread_autosync(app)
 
     return app
 
