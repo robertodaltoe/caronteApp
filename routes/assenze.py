@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from models import db
 from models.assenza import Assenza
 from models.docente import Docente
@@ -16,6 +16,7 @@ from modules.assenze_registrazione import (
     _genera_supplenze, registra_assenze_form, contesto_form_nuova,
     contesto_form_assenza, modifica_assenza,
 )
+from modules.auto_sync import registra_eliminazione
 
 assenze_bp = Blueprint('assenze', __name__)
 
@@ -97,11 +98,25 @@ def elimina(id):
         data=a.data, id_assente=id_docente, origine='automatica'
     ).filter(Supplenza.stato.in_(['scoperta', 'non_assegnabile'])).all()
     n = len(auto)
+    utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
     for s in auto:
+        registra_eliminazione('supplenze', {
+            'data': s.data.isoformat(), 'ora': s.ora,
+            'classe': s.classe, 'id_assente': s.id_assente,
+        }, utente=utente_corrente)
         db.session.delete(s)
 
     # Ripristina presenze istituzionali collegate a questa assenza
     _ripristina_presenza_ist(id_docente, [a.data], id_assenza=id)
+
+    # Lapide PRIMA di eliminare: altrimenti il sync automatico la
+    # rimetterebbe al giro successivo trovandola ancora sull'altra
+    # macchina (vedi DEVLOG Task 46, segnalato da Roberto dopo aver
+    # cancellato un'assenza di prova solo da una postazione).
+    registra_eliminazione('assenze', {
+        'id_docente': id_docente, 'data': a.data.isoformat(),
+        'ora_inizio': a.ora_inizio, 'ora_fine': a.ora_fine,
+    }, utente=utente_corrente)
 
     db.session.delete(a)
     db.session.commit()

@@ -35,8 +35,14 @@
         <thead>
             <tr style="text-align:left; color:var(--grigio); font-size:.75rem; text-transform:uppercase;">
                 <th style="padding:4px 8px 4px 0;">Campo</th>
-                <th style="padding:4px 8px;">Qui (locale)</th>
-                <th style="padding:4px 8px;">Dall'altra postazione</th>
+                <th style="padding:4px 8px;">
+                    Qui (locale)
+                    {% if c.creato_da_locale %}<div style="text-transform:none; font-weight:400; color:var(--grigio); font-size:.72rem;">inserita da {{ c.creato_da_locale }}</div>{% endif %}
+                </th>
+                <th style="padding:4px 8px;">
+                    Dall'altra postazione
+                    {% if c.creato_da_remoto %}<div style="text-transform:none; font-weight:400; color:var(--grigio); font-size:.72rem;">inserita da {{ c.creato_da_remoto }}</div>{% endif %}
+                </th>
             </tr>
         </thead>
         <tbody>

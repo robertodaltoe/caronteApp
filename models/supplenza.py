@@ -21,6 +21,9 @@ class Supplenza(db.Model):
     creato_il        = db.Column(db.DateTime, default=datetime.utcnow)
     modificato_il    = db.Column(db.DateTime, default=datetime.utcnow,
                                   onupdate=datetime.utcnow)
+    # Username di chi ha inserito la supplenza (manuale) o "sistema" per
+    # quelle generate automaticamente — vedi models/assenza.py::creato_da.
+    creato_da        = db.Column(db.String(80), nullable=True)
 
     @property
     def assegnabile(self):

@@ -229,6 +229,7 @@ def create_app():
         from models.sospensione import SospensioneDidattica  # noqa
         from models.recupero import RecuperoDocente, RecuperoGruppo, RecuperoLezione, RecuperoAlunno, RecuperoVincolo, RecuperoImport, RecuperoPeriodo  # noqa
         from models.sync_conflitto import SyncConflitto  # noqa
+        from models.sync_tombstone import SyncTombstone  # noqa
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()
@@ -345,6 +346,8 @@ def _auto_migrate():
         ('docenti', 'part_time_prog',           'BOOLEAN',    None),
         ('docenti', 'ore_contratto_pt_prog',     'INTEGER',    None),
         ('docenti', 'anno_scol_part_time_prog',  'VARCHAR(9)', None),
+        ('assenze',   'creato_da',             'VARCHAR(80)', None),
+        ('supplenze', 'creato_da',             'VARCHAR(80)', None),
     ]
 
     with db.engine.connect() as conn:

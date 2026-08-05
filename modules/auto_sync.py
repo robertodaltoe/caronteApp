@@ -20,9 +20,19 @@ default) un thread in background:
    assegnata in modo diverso sulle due postazioni), NON sceglie da
    sola: registra il conflitto in SyncConflitto e lo lascia in
    sospeso per la revisione umana in /sync/conflitti;
-5. se ha aggiunto almeno una riga, ripubblica su Drive il database
-   locale aggiornato (così l'altra macchina, al giro successivo,
-   riceve anche ciò che questa ha appena prodotto).
+5. se ha aggiunto almeno una riga (o una lapide, vedi sotto), ripubblica
+   su Drive il database locale aggiornato (così l'altra macchina, al
+   giro successivo, riceve anche ciò che questa ha appena prodotto).
+
+Le eliminazioni si propagano con un meccanismo di "lapidi" (tombstone,
+vedi models/sync_tombstone.py): senza, una riga eliminata su una
+postazione ricomparirebbe al giro successivo perché l'altra macchina la
+ha ancora e verrebbe vista come "nuova". Quando una route elimina una
+riga di 'assenze'/'supplenze' registra prima la sua chiave in
+SyncTombstone (vedi registra_eliminazione più sotto); il merge unisce
+le lapidi tra le macchine, non reintroduce mai una riga la cui chiave
+ha una lapide, ed elimina anche in locale una riga la cui chiave
+risulta lapidata dall'altra macchina.
 
 Le cattedre annuali (assegnazioni_docenti/assegnazioni_classi) restano
 FUORI da questo meccanismo: la struttura padre-figlio e i conflitti su
@@ -76,7 +86,8 @@ TABELLE = {
                              'ora_ist_inizio', 'ora_ist_fine'],
         'colonne_insert': ['id_docente', 'data', 'ora_inizio', 'ora_fine',
                             'motivo', 'classe_libera', 'note_interne',
-                            'creato_il', 'ora_ist_inizio', 'ora_ist_fine'],
+                            'creato_il', 'ora_ist_inizio', 'ora_ist_fine',
+                            'creato_da'],
         'fk_docenti': ['id_docente'],
         'label': lambda r: f"Assenza — docente #{r['id_docente']} il {r['data']} "
                             f"(ore {r['ora_inizio']}-{r['ora_fine']}, {r['motivo']})",
@@ -87,11 +98,33 @@ TABELLE = {
                              'note_display', 'note'],
         'colonne_insert': ['data', 'ora', 'classe', 'id_assente', 'id_sostituto',
                             'tipo', 'stato', 'origine', 'note_display', 'note',
-                            'creato_il', 'modificato_il'],
+                            'creato_il', 'modificato_il', 'creato_da'],
         'fk_docenti': ['id_assente', 'id_sostituto'],
         'label': lambda r: f"Supplenza — {r['data']} ora {r['ora']} classe {r['classe']}",
     },
 }
+
+
+def registra_eliminazione(tabella, riga_dict, utente=None):
+    """Da chiamare PRIMA di eliminare fisicamente una riga di 'assenze' o
+    'supplenze' (db.session.delete/DELETE), passando la riga come dict
+    con almeno i campi usati dalla sua chiave logica (vedi TABELLE).
+    Registra una "lapide" così il sync automatico non la resuscita
+    quando la trova ancora sull'altra macchina, e la elimina anche là.
+    Idempotente — se esiste già una lapide per questa chiave non fa
+    nulla. Non fa il commit: lo fa la route chiamante insieme
+    all'eliminazione vera e propria, nella stessa transazione."""
+    from models.sync_tombstone import SyncTombstone
+    from models import db as _db
+
+    if tabella not in TABELLE:
+        return
+    chiave_json = json.dumps(TABELLE[tabella]['chiave'](riga_dict), sort_keys=True)
+    esiste = SyncTombstone.query.filter_by(
+        tabella=tabella, chiave_logica=chiave_json).first()
+    if not esiste:
+        _db.session.add(SyncTombstone(
+            tabella=tabella, chiave_logica=chiave_json, eliminato_da=utente))
 
 
 def _prova_lock_autosync(cartella):
@@ -126,32 +159,81 @@ def _rilascia_lock_autosync(lock_path):
 
 def _righe(conn, tabella):
     conn.row_factory = sqlite3.Row
-    return [dict(r) for r in conn.execute(f"SELECT * FROM {tabella}")]
+    try:
+        return [dict(r) for r in conn.execute(f"SELECT * FROM {tabella}")]
+    except sqlite3.OperationalError as e:
+        if 'no such table' in str(e):
+            # Il DB scaricato da Drive è stato pubblicato da una macchina
+            # con codice più vecchio, che non ha ancora questa tabella
+            # (es. le lapidi, introdotte dopo). Non è un errore: vuol
+            # dire semplicemente "nessuna riga da lì", finché anche
+            # l'altra macchina non aggiorna.
+            return []
+        raise
 
 
 def _merge_additivo(db, tmp_remoto_path):
     """Confronta 'assenze'/'supplenze' tra il DB locale (via la sessione
     SQLAlchemy già connessa, viva, dell'app) e il DB remoto scaricato da
-    Drive. Inserisce solo le righe nuove, segnala i conflitti reali."""
+    Drive. Inserisce solo le righe nuove, segnala i conflitti reali,
+    applica le eliminazioni tramite le lapidi (vedi modulo)."""
     from models.sync_conflitto import SyncConflitto
+    from models.sync_tombstone import SyncTombstone
 
     conn_remoto = sqlite3.connect(tmp_remoto_path)
     conn_remoto.row_factory = sqlite3.Row
 
-    inserite, conflitti_nuovi, conflitti_aggiornati = 0, 0, 0
-    solo_locali = 0   # righe che esistono qui ma non (ancora) su Drive:
-                       # segnala che tocca ripubblicare, altrimenti l'altra
-                       # postazione non le vedrebbe mai finché non chiudiamo
-                       # l'app (l'unico altro momento in cui si pubblica).
+    inserite, conflitti_nuovi, conflitti_aggiornati, eliminate = 0, 0, 0, 0
+    solo_locali = 0   # righe (o lapidi) che esistono qui ma non (ancora) su
+                       # Drive: segnala che tocca ripubblicare, altrimenti
+                       # l'altra postazione non le vedrebbe mai finché non
+                       # chiudiamo l'app (l'unico altro momento in cui si
+                       # pubblica).
     dettagli = []
 
     try:
+        # --- 0) Lapidi: si uniscono per prime, sono "solo aggiunta" — non
+        # può mai esserci un conflitto su un'eliminazione (o è lapidata o
+        # non lo è). Il set risultante serve sia a NON reintrodurre righe
+        # eliminate altrove, sia a eliminare qui righe la cui lapide è
+        # appena arrivata dall'altra macchina. ---
+        tomb_remote = _righe(conn_remoto, 'sync_tombstones')
+        tomb_locali_rows = SyncTombstone.query.all()
+        tomb_locali = {(t.tabella, t.chiave_logica) for t in tomb_locali_rows}
+        tomb_remote_set = {(t['tabella'], t['chiave_logica']) for t in tomb_remote}
+
+        for t in tomb_remote:
+            chiave_t = (t['tabella'], t['chiave_logica'])
+            if chiave_t not in tomb_locali:
+                db.session.add(SyncTombstone(
+                    tabella=t['tabella'], chiave_logica=t['chiave_logica'],
+                    eliminato_da=t.get('eliminato_da')))
+                tomb_locali.add(chiave_t)
+
+        solo_locali += sum(1 for k in tomb_locali if k not in tomb_remote_set)
+
         for tabella, cfg in TABELLE.items():
+            tomb_per_tabella = {chiave for (tab, chiave) in tomb_locali if tab == tabella}
+
             righe_remote = _righe(conn_remoto, tabella)
             righe_locali = [dict(r._mapping) for r in
                              db.session.execute(text(f"SELECT * FROM {tabella}"))]
             mappa_locale = {json.dumps(cfg['chiave'](r), sort_keys=True): r
                              for r in righe_locali}
+
+            # Righe presenti in locale la cui chiave è lapidata (da questa
+            # macchina o dall'altra): vanno eliminate anche qui, non solo
+            # ignorate — altrimenti resterebbero visibili in locale mentre
+            # sull'altra macchina non ci sono più.
+            for chiave_json, riga_locale in list(mappa_locale.items()):
+                if chiave_json in tomb_per_tabella:
+                    db.session.execute(
+                        text(f"DELETE FROM {tabella} WHERE id=:id"),
+                        {'id': riga_locale['id']})
+                    del mappa_locale[chiave_json]
+                    eliminate += 1
+                    dettagli.append(f"- {cfg['label'](riga_locale)}")
+
             chiavi_remote = {json.dumps(cfg['chiave'](r), sort_keys=True)
                               for r in righe_remote}
             solo_locali += sum(1 for k in mappa_locale if k not in chiavi_remote)
@@ -159,6 +241,8 @@ def _merge_additivo(db, tmp_remoto_path):
             for r_remota in righe_remote:
                 chiave = cfg['chiave'](r_remota)
                 chiave_json = json.dumps(chiave, sort_keys=True)
+                if chiave_json in tomb_per_tabella:
+                    continue  # eliminata (qui o là): non reintrodurla mai
                 locale = mappa_locale.get(chiave_json)
 
                 if locale is None:
@@ -241,6 +325,7 @@ def _merge_additivo(db, tmp_remoto_path):
 
     return {
         'inserite': inserite,
+        'eliminate': eliminate,
         'conflitti_nuovi': conflitti_nuovi,
         'conflitti_aggiornati': conflitti_aggiornati,
         'solo_locali': solo_locali,

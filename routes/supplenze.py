@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 from models import db
 from models.supplenza import Supplenza
 from models.docente import Docente
@@ -58,6 +58,7 @@ def nuova():
             note_display = nota_display,
             note         = note,
             origine      = 'manuale',
+            creato_da    = g.utente.username if getattr(g, 'utente', None) else None,
         )
         db.session.add(s)
         db.session.flush()

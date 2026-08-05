@@ -33,6 +33,8 @@ def _date_attivita(att):
     return lst
 
 def genera_effetti(attivita):
+    from flask import g as _g
+    _utente = _g.utente.username if getattr(_g, 'utente', None) else None
     stats = {'indisp':0,'assenze':0,'docenti_liberi':set()}
     IS_SIM      = attivita.tipo == 'simulazione'
     IS_GRUPPO_R = getattr(attivita, 'gruppo_rimanente', False)
@@ -69,7 +71,8 @@ def genera_effetti(attivita):
                                                    ora_inizio=s.ora,ora_fine=s.ora).first():
                         db.session.add(Assenza(id_docente=doc.id,data=data,
                             ora_inizio=s.ora,ora_fine=s.ora,motivo='progetto',
-                            note_interne=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}] (accompagnatore)'))
+                            note_interne=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}] (accompagnatore)',
+                            creato_da=_utente))
                         if not Supplenza.query.filter_by(data=data,id_assente=doc.id,
                                                          ora=s.ora,classe=s.classe).first():
                             # Salta se la classe è fuori aula:
@@ -86,7 +89,8 @@ def genera_effetti(attivita):
                             db.session.add(Supplenza(data=data,ora=s.ora,classe=s.classe,
                                 id_assente=doc.id,tipo='recupero',stato='scoperta',
                                 origine='automatica',
-                                note=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}]'))
+                                note=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}]',
+                                creato_da=_utente))
                             stats['assenze']+=1
     else:
         # Generica (simulazione, gita, progetto senza calendario)
@@ -124,7 +128,8 @@ def genera_effetti(attivita):
                         mot = 'viaggio' if attivita.tipo=='gita' else 'progetto'
                         db.session.add(Assenza(id_docente=docente.id,data=data,
                             ora_inizio=ora,ora_fine=ora,motivo=mot,
-                            note_interne=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}] (classe {attivita.classi_list} fuori aula)'))
+                            note_interne=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}] (classe {attivita.classi_list} fuori aula)',
+                            creato_da=_utente))
                         stats['assenze']+=1
                         slot_ora = next((s for s in slots_g if s.ora==ora and s.tipo_ora=='lezione'),None)
                         if slot_ora and slot_ora.classe not in ('POTENZIAMENTO','---','-x-','',None):
@@ -146,7 +151,8 @@ def genera_effetti(attivita):
                                 db.session.add(Supplenza(data=data,ora=ora,classe=slot_ora.classe,
                                     id_assente=docente.id,tipo='recupero',stato='scoperta',
                                     origine='automatica',
-                                    note=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}]'))
+                                    note=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}]',
+                                    creato_da=_utente))
 
     # Docenti liberi per classi coinvolte
     acc_ids = {d.id for d in attivita.accompagnatori}

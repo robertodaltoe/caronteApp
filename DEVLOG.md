@@ -151,7 +151,70 @@ lasciata volutamente intoccata da Roberto) ha due righe con la stessa
 chiave logica nello STESSO database — questo genera un conflitto
 "fantasma" ricorrente finché quella duplicazione non viene sistemata a
 mano; con la correzione sopra, però, resta un'unica voce che non si
-moltiplica più ad ogni giro.
+moltiplica più ad ogni giro. (Le tre assenze di prova su Alaimo sono
+poi state eliminate a mano su richiesta di Roberto, con backup cifrato
+prima dell'operazione.)
+
+**Terzo aggiornamento — quinto bug, il più importante: le eliminazioni
+non si propagavano**. Segnalato da Roberto: se elimini un'assenza solo
+su una postazione, l'altra la ha ancora — e al giro successivo il
+merge additivo la vede come "riga nuova" e la rimette, anche dove era
+stata cancellata apposta. Vero limite strutturale del solo "importa ciò
+che è nuovo": senza un modo per distinguere "non ancora arrivata" da
+"cancellata di proposito", le due situazioni sono indistinguibili.
+
+Aggiunto un meccanismo di "lapidi" (tombstone —
+`models/sync_tombstone.py`, tabella `sync_tombstones`): quando una
+route elimina fisicamente una riga di `assenze` o `supplenze`, prima
+registra la sua chiave logica con `modules.auto_sync.registra_eliminazione()`
+(agganciato in `routes/assenze.py::elimina` e nella cascata di
+`modules/assenze_registrazione.py::modifica_assenza`, gli unici due
+punti dell'app che cancellano fisicamente righe di queste tabelle).
+Il merge automatico ora: unisce le lapidi tra le macchine per prime
+(sono "solo aggiunta", non possono mai essere in conflitto); non
+reintroduce mai una riga la cui chiave ha una lapide, arrivata da
+qualunque lato; elimina anche in locale una riga ancora presente la
+cui chiave risulta lapidata dall'altra macchina. Le lapidi contano
+anche ai fini di `solo_locali` (una lapide nuova, come una riga nuova,
+attiva la ripubblicazione su Drive).
+
+Verificato con due test mirati su copie isolate del database (stessa
+riga presente su "locale" e "remoto", come se fosse già sincronizzata):
+1) elimino su "locale" (lapide + delete, come fa la route) → giro di
+merge con "remoto" che ha ancora la riga → resta eliminata, non
+resuscita; 2) dal lato opposto, "remoto" scarica la lapide arrivata da
+"locale" → la riga, ancora presente lì, viene eliminata anche lì.
+`PRAGMA integrity_check` ok in entrambi i casi. App avviata con
+`create_app()`: la nuova tabella si crea da sola via `db.create_all()`,
+nessuna regressione sulle route esistenti.
+
+**Quarto aggiornamento — nota "inserita da"**: su proposta di Roberto,
+aggiunta una colonna `creato_da` (username) a `assenze` e `supplenze`,
+valorizzata in tutti i punti che creano queste righe (form manuale di
+assenze/supplenze, generazione automatica supplenze scoperte,
+`routes/attivita.py::genera_effetti`, `routes/cambi_quadro.py`) con lo
+stesso pattern già in uso nel codebase (`g.utente.username`). Propagata
+nel sync automatico (`colonne_insert` in `modules/auto_sync.py`, non tra
+i `campi_confronto`: l'autore da solo non genera mai un conflitto).
+Mostrata nella pagina `/sync/conflitti` (sotto le intestazioni "Qui" e
+"Dall'altra postazione") e nella dashboard, tabella "Docenti assenti"
+("inserita da ..." sotto il tipo). Verificato: app avviata con
+`create_app()`, migrazione applicata al database reale
+(`PRAGMA integrity_check` ok, dati esistenti intatti), route
+`/`, `/sync/conflitti`, `/assenze/nuova`, `/supplenze/nuova` tutte
+200 OK. Non ancora verificato con un inserimento reale da interfaccia
+(solo sintassi + smoke test) — da controllare al prossimo utilizzo
+normale che il nome utente compaia correttamente.
+
+**Limite noto, non risolto in questo Task**: se invece di eliminare
+un'assenza la si MODIFICA cambiando docente o data (stessa riga, chiave
+logica diversa — `modules/assenze_registrazione.py::modifica_assenza`,
+punto 3), la vecchia chiave "sparisce" in locale esattamente come per
+un'eliminazione, ma non viene lapidata: se era già stata sincronizzata,
+il giro successivo potrebbe reintrodurla come riga a sé stante invece
+di riconoscere che è stata sostituita dalla modifica. Non affrontato
+ora (Roberto ha segnalato il caso della cancellazione, non questo);
+da valutare in un prossimo giro se emerge come problema reale.
 
 ---
 

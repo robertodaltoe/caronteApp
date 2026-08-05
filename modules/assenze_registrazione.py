@@ -16,6 +16,7 @@ from models.orario_docente import OrarioDocente
 from models.scambio_orario import ScambioOrario, ScambioSlot
 from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante, AttivitaIstPresenza
 from models.supplenza import Supplenza
+from modules.auto_sync import registra_eliminazione
 
 GIORNI_SETTIMANA = {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}  # weekday -> giorno orario
 
@@ -297,6 +298,8 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
         ).first():
             continue
 
+        from flask import g as _g
+        _utente = _g.utente.username if getattr(_g, 'utente', None) else None
         s = Supplenza(
             data         = data,
             ora          = slot.ora,
@@ -309,6 +312,7 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
                 'NON ASSEGNABILE' if not assegnabile else ''
             ),
             note         = f'Auto — {slot.materia or ""}',
+            creato_da    = _utente,
         )
         db.session.add(s)
         count += 1
@@ -439,6 +443,9 @@ def registra_assenze_form(form):
     from models.docente import Docente
     docente = Docente.query.get(id_docente)
 
+    from flask import g as _g
+    _utente = _g.utente.username if getattr(_g, 'utente', None) else None
+
     for data_ins in date_list:
         sosp = is_sospensione(data_ins)
         classe_libera = 'classe_libera' in form or motivo == 'classe_libera'
@@ -453,6 +460,7 @@ def registra_assenze_form(form):
             note_interne  = note,
             ora_ist_inizio= ora_ist_ini if motivo == 'permesso_orario' else None,
             ora_ist_fine  = ora_ist_fine_v if motivo == 'permesso_orario' else None,
+            creato_da     = _utente,
         )
         db.session.add(a)
         db.session.flush()
@@ -677,7 +685,16 @@ def modifica_assenza(a, form):
     auto_old = Supplenza.query.filter_by(
         data=old_data, id_assente=old_docente, origine="automatica"
     ).filter(Supplenza.stato.in_(["scoperta", "non_assegnabile"])).all()
+    from flask import g as _g
+    _utente = _g.utente.username if getattr(_g, 'utente', None) else None
     for s in auto_old:
+        # Lapide prima di eliminare, come in routes/assenze.py::elimina —
+        # altrimenti il sync automatico la rimetterebbe trovandola ancora
+        # sull'altra macchina.
+        registra_eliminazione('supplenze', {
+            'data': s.data.isoformat(), 'ora': s.ora,
+            'classe': s.classe, 'id_assente': s.id_assente,
+        }, utente=_utente)
         db.session.delete(s)
 
     # 3. Aggiorna l'assenza con i nuovi valori

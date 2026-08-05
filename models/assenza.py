@@ -221,6 +221,10 @@ class Assenza(db.Model):
     # Permesso orario per attività istituzionali — orario assoluto HH:MM
     ora_ist_inizio = db.Column(db.String(5), nullable=True)   # es. '14:00'
     ora_ist_fine   = db.Column(db.String(5), nullable=True)   # es. '16:00'
+    # Username di chi ha inserito l'assenza — utile per decidere in
+    # fretta un conflitto di sync (vedi /sync/conflitti) e per la
+    # dashboard. Non incide sul rilevamento dei conflitti in sé.
+    creato_da      = db.Column(db.String(80), nullable=True)
 
     @property
     def impatta_banca_ore(self):

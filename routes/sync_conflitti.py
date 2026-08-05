@@ -66,6 +66,8 @@ def index():
             'rilevato_il': c.rilevato_il,
             'aggiornato_il': c.aggiornato_il,
             'confronto': confronto,
+            'creato_da_locale': locale.get('creato_da'),
+            'creato_da_remoto': remoto.get('creato_da'),
         })
 
     risolti_recenti = (SyncConflitto.query

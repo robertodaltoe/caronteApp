@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from models import db
 from models.scambio_ore import ScambioOre
 from models.supplenza import Supplenza
@@ -105,6 +105,7 @@ def nuovo():
                     origine      = 'manuale',
                     note_display = note_disp,
                     note         = f'Scambio ore — {tipo_comune}',
+                    creato_da    = g.utente.username if getattr(g, 'utente', None) else None,
                 )
                 db.session.add(s)
                 db.session.flush()
