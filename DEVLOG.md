@@ -4,6 +4,780 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+### Task 41 — Etichette complete nelle pillole della barra passi
+
+Su richiesta di Roberto: le pillole della barra di navigazione a passi
+(Impostazione Anno) mostravano solo il numero, con l'etichetta
+visibile solo al passaggio del mouse (tooltip). Cambiato in
+"{{ numero }}. {{ etichetta }}" per tutte e 13, più leggibile a colpo
+d'occhio (il breadcrumb sopra già mostrava l'etichetta del passo
+corrente, invariato). Verificato pytest (51/51) e lettura reale di una
+pagina del wizard.
+
+### Task 40 — Box "Incarichi" nella scheda docente
+
+Su suggerimento di Roberto: aggiunto un box nella scheda docente
+(subito sotto "Materie insegnate", come da conferma) con gli incarichi
+dell'a.s. corrente in evidenza e lo storico degli anni precedenti in
+un dettaglio a scomparsa (`<details>`), sola lettura — si assegnano e
+modificano dalla pagina Incarichi esistente, linkata in alto nel box.
+Dati presi da `Docente.incarichi` (backref già presente su
+IncaricaDocente, nessun modello nuovo). Non mostrato nel form di
+creazione nuovo docente (non ha ancora incarichi per definizione).
+Verificato pytest (51/51) e lettura reale di /docenti/23/modifica
+(mostra correttamente "Nessun incarico per l'a.s. corrente" + storico
+con 1 incarico pregresso).
+
+### Task 39 — Aggiustamenti al Task 38: codice ministeriale nella
+classe di concorso, rimosso il blocco assegnazione superfluo,
+confermata l'origine delle sigle in /display
+
+Tre correzioni su segnalazione di Roberto:
+
+1. `Docente.materia_effettiva` mostrava solo il nome della classe di
+   concorso (es. "Scienze Motorie e Sportive sec. II grado"),
+   facilmente confuso con un nome di materia. Aggiunto il codice
+   ministeriale davanti: ora "A-48 — Scienze Motorie e Sportive sec. II
+   grado", inequivocabile.
+
+2. Rimosso il blocco "Materie insegnate secondo le assegnazioni"
+   aggiunto nel Task 38 nella scheda del singolo docente: secondo
+   Roberto il box già esistente "Materie insegnate (a.s. corrente)"
+   era già collegato correttamente e la nuova sezione era superflua.
+   Tolti sia il codice in routes/docenti.py::modifica() sia il blocco
+   in templates/docente_form.html; nessun impatto sul resto (era
+   un'aggiunta isolata del turno precedente).
+
+3. Verificata e confermata l'ipotesi di Roberto su /display: i titoli
+   dei singoli box materia in quella pagina vengono da
+   `OrarioDocente.materia` (l'orario scolastico importato da Excel),
+   NON dai campi `sigla`/`nome_breve`/`alias` che lui stesso imposta
+   su ogni Materia nella pagina "Materie ↔︎ Classi di concorso"
+   (passo 3) o in "Dipartimenti e Materie". Segnalato inoltre che
+   esiste già un campo pensato esattamente per questo collegamento —
+   `Materia.codice_orario` ("per matching automatico con
+   OrarioDocente.materia", editabile oggi solo dalla pagina
+   Dipartimenti e Materie) — ma non è attualmente usato da nessuna
+   logica di confronto/matching nell'app: è una base già pronta ma
+   incompiuta per il futuro compito di abbinare l'orario importato
+   alle sigle definite da Roberto, discusso ma non implementato in
+   questo giro.
+
+Verificato pytest (51/51) e lettura reale di /docenti (ora "A-48 —
+Scienze Motorie e Sportive sec. II grado") e di /docenti/23/modifica
+(blocco assegnazione confermato assente).
+
+### Task 38 — Correzione del Task 37: colonna "Materia" rinominata in
+"Classe di concorso" + materie realmente insegnate spostate nella
+scheda docente (da assegnazione, non da anagrafica)
+
+Osservazione corretta di Roberto: la colonna dell'elenco /docenti si
+chiamava "Materia" ma dal Task 37 mostrava la classe di concorso — le
+due cose sono concettualmente diverse (abilitazione vs materie
+davvero insegnate). Intestazione rinominata in "Classe di concorso"
+(contenuto invariato, era già corretto). Aggiunta invece nella scheda
+del singolo docente (routes/docenti.py::modifica) una sezione di sola
+lettura "Materie insegnate secondo le assegnazioni" per gli anni
+successivi a quello corrente per cui esistono già dati reali di
+assegnazione (oggi solo il 2026-2027) — calcolata da
+AssegnazioneDocente/AssegnazioneClasse (la scheda assegnazione, passo
+9), non dal roster DocenteMateria mantenuto a mano. Il blocco esistente
+"Materie insegnate (a.s. corrente)" resta identico, non toccato: per
+l'anno in corso restano le diciture già presenti, come richiesto.
+
+Chiarito anche il secondo dubbio: le sigle/materie mostrate in
+`/display` (cruscotto sale) per l'ora di lezione vengono da
+`OrarioDocente.materia`, un campo testo separato e legittimo,
+popolato dall'orario scolastico importato da Excel
+(routes/sincronizzazione.py + modules/parser_orario.py, foglio
+"ORARIO DEFINITIVO") — riflette la materia realmente schedulata quel
+giorno/ora, non ha nulla a che fare col vecchio campo libero
+Docente.materia. Trovata per l'occasione anche l'origine storica di
+quel vecchio campo: lo stesso importatore lo scrive UNA VOLTA (solo se
+vuoto) dal foglio "Docenti" dell'Excel importato — spiega perché è
+rimasto fermo alla prima importazione e mai più allineato.
+
+Verificato pytest (51/51) e lettura reale di /docenti (intestazione
+aggiornata) e /docenti/23/modifica (mostra correttamente "Discipline
+sportive" e "Scienze motorie e sportive" per l'a.s. 2026-2027, sola
+lettura, link alla pagina Assegnazioni per quell'anno).
+
+### Task 37 — Materia mostrata in anagrafica presa dalla classe di
+concorso (dato univoco), non più dal vecchio campo libero
+
+Segnalazione: nell'elenco /docenti, di fianco al proprio nome
+comparivano ancora "SCIENZE E DISCIPLINE SPORTIVE, SCIENZE MOTORIE" —
+dicitura mai più aggiornata da quando (probabilmente da un import
+iniziale) era stata scritta nel vecchio campo libero `Docente.materia`.
+Le materie reali collegate (DocenteMateria → Materia) erano corrette,
+il problema era solo che l'interfaccia leggeva il campo sbagliato.
+
+Su richiesta esplicita di "univocare il riferimento come per il resto
+dell'app": aggiunta la property `Docente.materia_effettiva` (in
+models/docente.py) che restituisce `classe_concorso.nome` — il dato
+relazionale già pensato come sostituto stabile del vecchio campo libero
+(lo dice esplicitamente il docstring di models/classe_concorso.py, mai
+attuato finora) — con fallback al vecchio campo solo per i docenti non
+ancora classificati con una CC, per non lasciare celle vuote.
+
+Sostituiti tutti i punti di sola VISUALIZZAZIONE che leggevano
+`Docente.materia`: elenco e ricerca docenti, scheda docente (elenco
+titolari per abbinamento ITP), export dati personali (GDPR art.15),
+form attività istituzionali e "fuori aula" (dati JS autocomplete),
+sostituzioni scrutinio (assente/candidati/select nomina), display
+sale (rimosso anche un vecchio hack `.split(',')[0]` che tagliava a
+mano la vecchia stringa concatenata — non più necessario), report e
+banca ore (intestazione scheda singolo docente), elenco docenti
+disponibili per il recupero. Il popup di scelta "materia" in
+routes/supplenze.py (usato dal cruscotto sostituzioni) ora costruisce
+il campo dalla stessa property.
+
+Deliberatamente NON toccata la logica di *matching* in
+routes/recupero_giugno.py (confronto testo libero con l'orario
+scolastico, `rd.docente.materia` usato come chiave di ricerca, non
+solo come etichetta) — cambiarla rischierebbe di rompere
+l'abbinamento automatico dei gruppi di recupero, ed esula dalla
+richiesta (che riguardava la visualizzazione in anagrafica). Lasciato
+invariato anche `routes/ricerca.py` (il filtro di ricerca testuale
+sul vecchio campo `materia`).
+
+Verificato pytest (51/51), lettura reale di /docenti (ora mostra
+"Scienze Motorie e Sportive sec. II grado" per Dal Toè, invece del
+vecchio testo) e di /docenti/23/esporta-dati (200, file generato senza
+errori).
+
+### Task 36 — Unificate le anagrafiche duplicate Ghezzi e Tramontana
+
+Confermato da Roberto: "Ghezzi Andrea" e "Ghezzi Angelo" sono la stessa
+persona (nome doppio), non due docenti come ipotizzato — da fondere
+come "Ghezzi Angelo". "Tramontana" confermato come duplicato reale.
+Stesso pattern già visto per Agrò (id 2/102): un record storico
+TD_annuale senza classe di concorso collegata (con tutto lo storico
+operativo — banca ore, presenze, supplenze, orario) e un record nuovo
+inserito per il 2026-2027 con la classificazione IRC corretta ma senza
+storico. Backup cifrato di sicurezza prima di procedere
+(`database_..._prima-unione-ghezzi-tramontana.db.enc`). Script dedicato
+`scripts/unisci_ghezzi_tramontana.py` (dry-run di default, `--applica`
+per confermare): per ciascuna coppia tiene l'id storico (43 per Ghezzi,
+81 per Tramontana), adotta da lì la classificazione corretta
+(tipo_contratto=IRC, id_classe_concorso=IRC, anno_scol_inizio=
+2026-2027), sposta le righe collegate (abilitazione classe di concorso,
+materia_ist, l'assegnazione classe→docente di Tramontana), rinomina
+Ghezzi da "Andrea" a "Angelo" come indicato, poi elimina il duplicato.
+Verificato `PRAGMA integrity_check`, audit di tutte le foreign key verso
+`docenti` (nessun riferimento residuo agli id 95/96 eliminati) e pytest
+(51/51).
+
+### Task 35 — Tre bug segnalati dopo il primo giro di test su /docenti
+
+Roberto ha riprovato la pagina e segnalato tre problemi concreti:
+
+1. **Anno di default sbagliato**: la pagina apriva già su "2026-2027"
+   nonostante oggi (4 agosto) siamo ancora operativamente nel
+   2025-2026 fino al 31 agosto. Causa: usava `_anno_default_piano()`
+   (pensato per il wizard "Impostazione Anno", che punta subito
+   all'anno che si sta preparando) invece dell'anno operativo reale.
+   Cambiato in `get_anno_corrente()` (stessa fonte usata da
+   assegnazioni, banca ore, ecc.).
+
+2. **Docenti del 2026-2027 visibili anche nel 2025-2026** (Bollasina,
+   De Agostini, Di Liberto, Fazio, Loffi, Misticoni, Remondina,
+   Tarabini, Toracca, Veda + le nuove schede di Ghezzi/Tramontana).
+   Causa: `_docenti_per_anno()` per gli anni correnti/passati
+   restituiva TUTTI i docenti attivi senza applicare i limiti
+   `anno_scol_inizio`/`anno_scol_uscita` (li applicava solo per gli
+   anni futuri). Ora i limiti si applicano sempre; il filtro
+   aggiuntivo sui TD senza data d'inizio resta solo per gli anni
+   futuri, per non escludere TD storici mai aggiornati con quel campo.
+   Verificato che dashboard_anno/assegnazioni/export_xlsx (altri 3
+   punti che usano la stessa funzione) continuano a funzionare: si
+   appoggiano tutti su AP uscenti/aspettativa restando nell'elenco,
+   comportamento non toccato da questa modifica.
+
+   Controllo collaterale sui presunti duplicati segnalati: "Ghezzi"
+   sono in realtà due persone diverse (Andrea id 43, Angelo id 95) —
+   falso allarme. "Tramontana Miriana" è invece un vero duplicato (id
+   81 storica TD_annuale senza CC, id 96 nuova IRC per il 2026-2027) —
+   segnalato a Roberto, in attesa di conferma per l'unione (stesso
+   percorso già seguito per Agrò), nessuna modifica ai dati fatta.
+
+3. **AP uscenti/aspettativa/trasferiti assenti dall'elenco "non in
+   servizio"**: la sezione "ex docenti" filtrava solo `attivo=False`,
+   ma questi stati (gestiti dal passo 7, `docenti_anno()`) non toccano
+   mai quel campo — restano `attivo=True`. Aggiunta
+   `_docenti_non_in_servizio(anno_scol)`, che unisce disattivati,
+   usciti (`anno_scol_uscita <= anno_scol`) e chi ha
+   `status_presenza` AP uscente/aspettativa. Tasto "Riattiva" nascosto
+   per chi ha `motivo_uscita == 'pensionamento'` (mostrato solo per
+   consultazione storica, con link diretto alla scheda) — bloccato
+   anche lato server nella route `riattiva()`, non solo nel template.
+   La riattivazione ora ripulisce anche `status_presenza`/`scuola_ap`,
+   non solo `anno_scol_uscita`/`motivo_uscita`.
+
+   Verificato pytest (51/51) e sul database reale: default ora
+   2025-2026 corretto, i docenti "puri 2026-2027" non compaiono più
+   nella vista 2025-2026, i 5 usciti/AP/aspettativa reali (Buiarelli,
+   Caprigli, Del Re, Libera, Meneghello, Toracca, Tarabini) compaiono
+   tutti nell'elenco "non in servizio" per il 2026-2027 con Riattiva
+   presente per tutti tranne i due pensionati (Buiarelli, Del Re).
+
+### Task 34 — Selettore anno sempre visibile (bug) + vista "ex docenti"
+con riattivazione senza duplicare l'anagrafica
+
+Due follow-up al Task 33, entrambi segnalati da Roberto dopo aver
+riprovato la pagina:
+
+1. **Bug: selettore anno invisibile.** Gli anni mostrati venivano presi
+   solo dai dati già inseriti in Piano di Studi/Classi — con un solo
+   anno in archivio ("2026-2027") il template nascondeva la fila di
+   pillole (condizione `length > 1`). Sostituito con una finestra fissa
+   di 4 anni intorno all'anno corrente (`_shift_anno()`, nuovo helper)
+   unita a qualunque anno con dati reali, sempre visibile.
+
+2. **"Un docente uscito quest'anno che torna il prossimo, posso
+   recuperare la sua anagrafica invece di ricrearla?"** — verificato che
+   oggi la risposta era no: `Docente.attivo=False` lo rende invisibile
+   ovunque (58 punti dell'app filtrano su quel campo), non esiste una
+   vista "non attivi", e i campi già pronti per l'uscita/rientro
+   (`anno_scol_inizio`, `anno_scol_uscita`, `motivo_uscita`) non sono
+   mai scritti da nessuna route. L'unica alternativa sarebbe stata
+   ricreare da zero l'anagrafica — lo stesso problema già visto con
+   Agrò (id 2/102). Su conferma esplicita, aggiunto: link "Mostra anche
+   i non attivi" in `/docenti` (elenco separato, non tocca le 58
+   query esistenti che filtrano `attivo=True`), e una nuova route
+   `POST /docenti/<id>/riattiva` che rimette `attivo=True` sulla STESSA
+   riga, imposta `anno_scol_inizio` all'anno di rientro scelto e
+   ripulisce `anno_scol_uscita`/`motivo_uscita` — nessuna nuova
+   anagrafica creata, storico/banca ore/supplenze restano collegati.
+   Non toccata la cessazione (deliberatamente fuori scope per questo
+   giro): il checkbox "attivo" in scheda docente resta l'unico modo per
+   disattivare, senza chiedere motivo/anno di uscita.
+   Verificato pytest (51/51) e un ciclo completo disattiva→mostra
+   inattivi→riattiva→verifica campi sul database reale (poi ripulito il
+   record di prova).
+
+### Task 33 — Selettore anno in Anagrafica docenti + versionamento
+part-time per anno futuro
+
+Su domanda ("l'elenco docenti in anagrafica docenti, non dovrebbe avere
+un selettore d'anno... un docente che oggi non ha part-time il
+prossimo anno potrebbe averlo... così posso predisporre oggi i dati
+per l'anno prossimo"), due interventi distinti (scelti insieme via
+AskUserQuestion):
+
+1. **Selettore anno in `/docenti`**: la lista ora riusa
+   `_docenti_per_anno()` (già scritta per il passo 7, "Docenti per
+   anno scolastico") così le due pagine si comportano in modo
+   coerente — anno corrente/passato mostra tutti gli attivi, anno
+   futuro filtra a soli TI senza uscita segnalata + TD/AP già
+   inseriti per quell'anno. Pillole anno in alto, avviso quando si
+   guarda un anno diverso da quello corrente.
+
+2. **Versionamento part-time/ore contratto PT**: prima del Task, questi
+   due campi erano un'unica "istantanea attuale" su `Docente`, letta
+   così com'è ovunque (nessun modo di dichiarare oggi un cambio di
+   regime già noto per l'anno prossimo senza toccare l'anno in corso).
+   Aggiunto lo stesso pattern già esistente per `ore_max_anno`/
+   `anno_scol_ore_max`: tre nuovi campi (`part_time_prog`,
+   `ore_contratto_pt_prog`, `anno_scol_part_time_prog`) + due metodi
+   `part_time_effettivo_per_anno(anno_scol)` /
+   `ore_contratto_pt_effettive_per_anno(anno_scol)` che restituiscono
+   il valore programmato solo se l'anno richiesto coincide con
+   `anno_scol_part_time_prog`, altrimenti il valore corrente — quindi
+   nessun rischio di alterare i calcoli dell'anno in corso. Verificato
+   il perimetro reale d'uso di `part_time`/`ore_contratto_pt` (solo
+   `routes/docenti.py` in scrittura e `models/docente.py` in lettura,
+   più poche righe di template) prima di procedere: intervento
+   circoscritto, non un refactor esteso. Form scheda docente: nuovo
+   riquadro "Cambio di regime già noto per un anno futuro" con
+   selezione dell'a.s. e del nuovo regime. Elenco docenti: badge PT
+   calcolato per l'anno visualizzato (segnala se deriva da un cambio
+   programmato). Migrazione automatica aggiunta a
+   `app.py::_auto_migrate()` per le tre nuove colonne. Verificato
+   pytest (51/51), smoke test su `/docenti`, `/docenti?anno=2027-2028`
+   e `/docenti/<id>/modifica`, `PRAGMA integrity_check` sul database
+   reale dopo la migrazione.
+
+### Task 32 — Rimossa la ANNO_SCOL_CORRENTE congelata in
+routes/attivita_ist.py (i 4 punti segnalati nel Task 31)
+
+Seguito della nota lasciata nel Task 31. Rimossa
+`ANNO_SCOL_CORRENTE = get_anno_corrente()` (calcolata una sola volta al
+caricamento del modulo, mai più aggiornata finché il server non viene
+riavviato) e sistemati i 4 punti che la usavano, ciascuno con la fonte
+più corretta per il proprio contesto invece di un semplice "richiama
+get_anno_corrente() ad ogni request":
+
+- `_preset_partecipanti()` (elenco automatico docenti per riunioni di
+  dipartimento): ora usa `_anno_scolastico(attivita.data)` — l'anno
+  scolastico della DATA dell'evento, non "oggi". Più corretto anche
+  della semplice sostituzione con l'anno corrente: una riunione
+  programmata per un anno diverso da quello in corso userà comunque le
+  materie dell'anno giusto.
+- `assegnazioni()` (`/attivita-ist/roster`, pagina roster
+  Docenti↔Materie): default ora `_anno_default_piano()`, coerente con
+  tutte le altre pagine anno-scoped sistemate in questa sessione.
+- `_score_candidato()` (suggerimento automatico supplenti per
+  scrutini, confronto materie assente/candidato): ora usa
+  `_anno_scolastico(evento.data)`, stessa logica di
+  `_preset_partecipanti()`.
+
+Rimosso anche l'import ormai inutilizzato di `get_anno_corrente` in
+testa al file.
+
+Verificato: py_compile, pytest 51/51, `/attivita-ist/roster` aperta
+senza parametro anno mostra correttamente 2026-2027 di default (prima
+sarebbe stata legata al valore congelato all'avvio del server).
+
+### Task 31 — Chiarito lo status anno di "Dipartimenti e Materie";
+selettore anno mancante per i referenti
+
+Roberto si chiedeva come impostare "Dipartimenti e Materie" per il
+2026-2027, non vedendo modo di cambiare anno su quella pagina.
+Chiarito: `Materia`/`Dipartimento` non hanno `anno_scol` — sono un
+catalogo stabile come "Classi di concorso" (passo 1), non legato
+all'anno. Quello che c'è oggi vale già anche per il 2026-2027, non va
+importato né reimpostato.
+
+Trovato però un problema reale nella stessa pagina: i **referenti di
+dipartimento** mostrati (badge verde/grigio sopra ogni dipartimento)
+sono per anno (`IncaricaDocente.anno_scol`), ma la query in
+`routes/attivita_ist.py::dipartimenti()` usava sempre
+`get_anno_corrente()` — l'anno "di sistema" configurabile a mano, che
+risulta fermo a 2025-2026 (stesso problema di fondo del Task 23) —
+senza alcun selettore per guardare un anno diverso. In pratica, per
+vedere/assegnare i referenti del 2026-2027 su questa pagina non c'era
+modo.
+
+Corretto: aggiunto un parametro `anno` (default `_anno_default_piano()`,
+come nelle altre pagine anno-scoped) e un selettore ad anni-pillola in
+`templates/attivita_ist/dipartimenti.html`, identico nello stile a
+quello già usato altrove. Aggiunta anche una nota nella pagina che
+spiega la distinzione (catalogo stabile vs referenti per anno), per
+evitare che la stessa domanda si riproponga.
+
+Verificato: default ora mostra 2026-2027 (non più fermo su 2025-2026),
+`?anno=2026-2027` esplicito funziona, pytest 51/51.
+
+**Nota per una sessione futura (non affrontata ora, fuori scope):**
+`routes/attivita_ist.py` ha anche una `ANNO_SCOL_CORRENTE` calcolata
+UNA VOLTA SOLA al caricamento del modulo (riga 13,
+`ANNO_SCOL_CORRENTE = _get_anno()`) e riusata in altri 4 punti del
+file (righe 40, 457, 605, 607) — resta congelata al valore di quando
+il server è partito, anche se il calendario cambia o la config
+anno_scol_corrente viene aggiornata mentre il server resta attivo. Non
+è lo stesso bug appena corretto (quello era "anno sbagliato ma
+selezionabile male"; questo è "anno giusto al boot, poi mai
+aggiornato"), ma vale la pena rivederlo in una sessione dedicata.
+
+### Task 30 — "Costo ora supplenza" reso un deep-link utile; collegata
+la gestione tipi di incarico (esisteva già, non era raggiungibile)
+
+Roberto ha segnalato che "Costo ora supplenza" (sezione Istituto)
+apriva semplicemente "Dati istituto" senza portare da nessuna parte di
+specifico, e che gli mancava un posto per definire gli incarichi
+assegnabili ai docenti.
+
+Verificato nel codice: `costo_ora_supplenza` è davvero un campo dentro
+"Dati istituto" (sezione "Parametri economici",
+`config_istituto.py`) — il link non è rotto, è solo un duplicato senza
+destinazione precisa. Aggiunto `id="parametri-economici"` alla sezione
+in `templates/impostazioni/dati_istituto.html` e cambiato il link in
+`templates/impostazioni/index.html` in
+`{{ url_for('impostazioni.dati_istituto') }}#parametri-economici`, così
+ora salta davvero al campo giusto invece di aprire la pagina da capo.
+
+Sugli incarichi: la gestione CRUD dei tipi di incarico esiste già
+(`models/incarico.py::TipoIncarico`, route `/incarichi/tipi` in
+`routes/incarichi.py`, template `incarichi/tipi.html`) — permette di
+creare/modificare/disattivare i tipi, con categoria e compenso
+default, ed è già quello che alimenta il selettore nella pagina
+"Assegna incarichi". Il problema era di scoperta, non di funzionalità
+mancante: era raggiungibile solo da un piccolo pulsante "⚙︎ Gestisci
+tipi" dentro la pagina Incarichi docenti, non da Istituto né dall'hub
+Impostazioni. Aggiunta una nuova card "✦︎ Tipi di incarico assegnabili"
+nella sezione Istituto di `impostazioni/index.html`, che punta
+direttamente a `incarichi.tipi`.
+
+Verificato via Flask test client: link con ancora presente, id
+dell'ancora presente nella pagina di destinazione, `/incarichi/tipi`
+raggiungibile (200). Pytest 51/51.
+
+### Task 29 — Barra mancante su "4b. Aule" e "9. Assegnazioni" (context
+processor registrato solo sul blueprint sbagliato)
+
+Roberto ha segnalato che le tessere 4b e 9 non mostravano il
+breadcrumb/barra introdotta nel Task 27. Causa: `nav_steps` era
+iniettato con `@impostazione_anno_bp.context_processor`, che in Flask
+si applica SOLO alle richieste gestite da quel blueprint — "Aule"
+(`routes/aule.py`, blueprint `aule`) e "Assegnazioni"
+(`routes/assegnazioni.py`, blueprint `assegnazioni`) vivono altrove,
+quindi non ricevevano mai la funzione e l'`{% include %}` in quelle due
+pagine non era stato nemmeno aggiunto.
+
+Corretto: il context processor è ora registrato a livello di app in
+`app.py` (`app.context_processor(lambda: dict(nav_steps=_nav_steps))`,
+subito dopo la registrazione del blueprint impostazione_anno) invece
+che sul solo blueprint — così raggiunge tutte le pagine dell'app.
+Aggiunto l'`{% include 'impostazione_anno/_step_nav.html' %}` anche in
+`templates/aule/lista.html` e `templates/assegnazioni/index.html`.
+
+Verificato via Flask test client (con `CARONTE_SKIP_LOGIN=1` per Aule,
+che richiede il permesso `aule_r` non posseduto dall'utente id=1 usato
+nei test precedenti — comportamento corretto del sistema permessi, non
+un bug): entrambe le pagine ora mostrano correttamente il breadcrumb
+("4b. Aule per classe" e "9. Assegnazioni classi →︎ docenti"). Pytest
+51/51.
+
+### Task 28 — Link correlati per Calendario, Sistema e Docenti (resto
+della sezione Impostazioni)
+
+Completata l'analisi promessa nel Task 27 sul resto di Impostazioni
+(oltre a Impostazione Anno). Premessa emersa dall'analisi: esiste già
+una barra di navigazione fissa in cima a ogni pagina (`base.html`) con
+un link sempre visibile a "Impostazioni" — tornare all'hub costa già
+un click da qualunque punto dell'app. Il vero problema, dove esiste,
+non è "tornare all'hub" ma muoversi lateralmente tra pagine sorelle
+dello stesso gruppo, che prima non si linkavano mai tra loro.
+
+A differenza di Impostazione Anno (10+ passi in sequenza, serviva una
+barra con prev/next), qui i gruppi sono piccoli (1-3 pagine) e non
+sequenziali: non serve un'analoga barra a passi, basta una riga
+compatta di "link correlati" in cima a ogni pagina. Aggiunta a:
+
+- **Calendario** (`impostazioni/sospensioni.html`,
+  `impostazioni/periodi.html`): si linkano a vicenda.
+- **Sistema** (`utenti/lista.html`, `cambia_pin.html`): si linkano a
+  vicenda più un link diretto a Backup database; aggiunto anche un
+  link di ritorno a Impostazioni che prima mancava del tutto su
+  entrambe le pagine (si affidavano solo alla nav fissa).
+- **Docenti** (`docenti.html`, `impostazione_anno/docenti_classi_concorso.html`,
+  `impostazione_anno/docenti_materie.html`, `attivita_ist/dipartimenti.html`):
+  gruppo più critico, quattro pagine su tre blueprint diversi
+  (`docenti`, `impostazione_anno`, `attivita_ist`) che riguardano lo
+  stesso docente da angolazioni diverse (anagrafica, abilitazioni,
+  materie insegnate, dipartimento) e prima non si linkavano affatto tra
+  loro. Sulle due pagine già dotate della barra a passi del Task 27
+  (docenti_classi_concorso, docenti_materie) la riga è ridotta a "Vedi
+  anche" per non affollare la pagina con due blocchi di navigazione
+  simili.
+
+Verificato via Flask test client su tutte le 9 pagine coinvolte: status
+200 ovunque. Pytest 51/51.
+
+### Task 27 — Barra di navigazione a passi per tutta la sezione
+Impostazione Anno
+
+Su richiesta di Roberto ("ti sembra intuitivo il modo di spostarsi da
+una pagina all'altra?"), implementata la proposta di navbar interna
+mostrata in anteprima nella chat.
+
+Aggiunto in `routes/impostazione_anno.py`: `_nav_steps(anno_corrente)`,
+elenco unico dei 13 passi (num, etichetta, endpoint, kwargs url, colore,
+flag `own` per distinguere le pagine di questo blueprint da quelle
+esterne come Aule e Assegnazioni), iniettato in tutti i template del
+blueprint tramite `@impostazione_anno_bp.context_processor`. Un solo
+punto da aggiornare se in futuro cambia l'ordine o si aggiunge un
+passo.
+
+Creato `templates/impostazione_anno/_step_nav.html`: breadcrumb
+("Impostazioni › Impostazione Anno › passo corrente"), prev/next per
+muoversi in sequenza con un click (limitato alle pagine di questo
+blueprint — Aule e Assegnazioni restano cliccabili nella fila di
+tessere ma non nel conteggio prev/next, avendo una loro navigazione
+propria), e una fila di tessere numerate sempre visibili (1, 2, 3, 4,
+4b, 5, 6, 6b, 7, 8, 8b, 9, 10) con quella corrente evidenziata, per
+saltare direttamente a un passo qualsiasi anche non adiacente. La barra
+usa la variabile `anno` della pagina corrente (se definita) invece di
+ricalcolare sempre l'anno di default, così spostandosi tra passi resta
+coerente con l'anno che si sta guardando.
+
+Incluso in tutte le 11 pagine "passo" del blueprint (classi_concorso,
+piano_studi, materie_classi_concorso, classi_attive, calcolo_organico,
+organico, cattedre_potenziamento, docenti_anno,
+docenti_classi_concorso, confronto_organico, docenti_materie), subito
+sotto l'intestazione esistente (lasciata invariata). Aggiunto anche un
+breadcrumb leggero (senza tessere, già ridondanti con la lista della
+pagina) nell'hub `impostazione_anno/index.html`.
+
+Verificato via Flask test client su tutte le 12 pagine (hub incluso):
+status 200 ovunque, breadcrumb corretto, prev/next assenti/presenti
+correttamente ai due estremi della sequenza (1 non ha "indietro", 10
+non ha "avanti", risulta collegato solo a 8b). Pytest 51/51.
+
+Prossimo passo (in corso): estendere l'analisi di navigazione anche
+alle altre sezioni di Impostazioni (Calendario, Docenti, Orario,
+Istituto, Sistema, Cambio Anno), non ancora toccate.
+
+## Sessione 32 — Ricostruzione modifiche organico di fatto perse dal ripristino
+
+Roberto ha chiesto di risalire alle modifiche fatte il 3/8 tra le 10 e
+le 14 ai dati di "Organico di fatto 2026-2027" (tabella
+`cattedre_organico`), non avendole più ritrovate.
+
+**Causa: effetto collaterale del ripristino da backup di ieri sera
+(Sessione 31, Task 19quinquies).** Quel ripristino era stato verificato
+confrontando solo il *numero* di righe per tabella tra lo stato
+pre-ripristino e il backup delle 10:58 — controllo che non rileva
+modifiche ai *valori* di righe già esistenti (solo aggiunte/rimozioni).
+Decifrando e confrontando riga per riga lo snapshot delle 10:59 di
+ieri con quello delle 21:51 (l'ultimo salvato prima del ripristino) è
+emerso che 15 righe di `cattedre_organico` (anno 2026-2027, tipo
+'fatto') erano state modificate in quella finestra — e il ripristino
+le aveva silenziosamente riportate allo stato delle 10:59, cancellando
+il lavoro della giornata su n_docenti, ore_residue e dati COE per le
+classi di concorso A-11, A-12, A-19, A-20, A-22-ING, A-22-SPA,
+A-22-TED, A-26, A-27, A-34, A-37, A-45, A-46, A-48, A-50.
+
+Riportati i valori corretti (quelli delle 21:51) a Roberto in una
+tabella riepilogativa; li ha reinseriti manualmente lui stesso — nessun
+intervento diretto sul DB da parte mia questa volta.
+
+**Lezione per i prossimi ripristini da backup:** confrontare sempre il
+contenuto riga per riga delle tabelle toccate di recente, non solo il
+conteggio delle righe — un conteggio invariato non esclude che righe
+esistenti siano state modificate nel frattempo. Da valutare in futuro:
+estendere la Cronologia attività (Task 16, Sessione 19) anche alle
+route di Impostazione Anno (organico, cattedre di potenziamento,
+piano studi override, ecc.), attualmente non tracciate — avrebbe reso
+questa ricostruzione immediata invece di richiedere il confronto
+manuale tra backup cifrati.
+
+---
+
+### Task 26 — Collegata la pagina standalone "Confronto TI ↔ Organico
+USR" (era raggiungibile solo digitando l'URL)
+
+Roberto ha chiesto dove si trovasse la pagina standalone corretta nel
+Task 24 (`/impostazione-anno/confronto-organico`) — non era collegata
+da nessuna parte dell'interfaccia, solo url diretto. Chiesto dove fosse
+logico collegarla: scelta la home di Impostazione Anno, come voce a sé
+(non legata a un solo passo, essendo una vista di controllo
+trasversale).
+
+Aggiunta in `templates/impostazione_anno/index.html` una card "8b.
+Verifica TI ↔︎ Organico USR" subito dopo il passo 8 (Docenti ↔︎ Classe
+di concorso) e prima del passo 9 (Assegnazioni) — posizione naturale:
+è il checkpoint per verificare le abilitazioni appena inserite al
+passo 8 prima di procedere alle assegnazioni ore. Verificato via test
+client: link presente in `/impostazione-anno`, pytest 51/51.
+
+### Task 25 — Il fix fatto/diritto del Task 24 era sulla pagina
+sbagliata; corrette anche Passo 8 e dashboard-anno
+
+Roberto non vedeva l'aggiornamento promesso nel Task 24. Causa: c'è
+sempre stata un'implementazione DUPLICATA della stessa verifica "TI
+collegati ↔ DOC Organico USR" — una standalone
+(`/impostazione-anno/confronto-organico`, quella corretta nel Task 24)
+e una identica ma inline nella pagina Passo 8
+(`/impostazione-anno/docenti-classi-concorso`,
+`routes/impostazione_anno.py::docenti_classi_concorso()`), con lo
+stesso identico titolo "⌕︎ Verifica: TI collegati ↔︎ DOC Organico
+USR". Quest'ultima è quella che Roberto guardava, e usava ancora
+`tipo='diritto'` fisso — non toccata dal Task 24.
+
+Corretta anche questa con la stessa precedenza fatto→diritto (stesso
+pattern di `_budget()`), stessa etichetta "(fatto)"/"(diritto)" in
+tabella, e sistemata la raccolta CC per evitare duplicati quando
+esistono sia la riga 'diritto' sia la riga 'fatto' (stesso fix del
+Task 24, applicato qui perché mancava).
+
+Approfittando della segnalazione, sistemato anche
+`routes/dashboard_anno.py` (`/dashboard-anno`, terza occorrenza dello
+stesso confronto, richiesta esplicitamente da Roberto): usava
+`CattedraOrganico.tipo.in_(['fatto','diritto']).first()` senza
+ordinamento esplicito — quale dei due risultasse primo dipendeva
+dall'ordine di inserimento nel DB, senza garantire la preferenza per il
+fatto. Ora usa la stessa logica esplicita fatto→diritto, con
+l'etichetta della fonte visibile accanto a ogni scarto segnalato.
+
+In totale, la stessa verifica "TI ↔ DOC Organico USR" esiste ora in tre
+punti dell'app (Passo 8 inline, pagina standalone, dashboard-anno) —
+tutti e tre coerenti sulla stessa logica. Verificato con Flask test
+client sulle tre pagine reali per l'anno 2026-2027: tutte mostrano
+"(fatto)", zero "(diritto)", nessuna CC duplicata. Pytest 51/51.
+
+### Task 24 — Confronto TI ↔︎ Organico USR: usava sempre l'organico di
+diritto invece di preferire quello di fatto
+
+Roberto ha fatto notare che la pagina "Confronto TI ↔︎ Organico USR"
+(`/impostazione-anno/confronto-organico`) confrontava i TI collegati in
+app sempre con l'organico **di diritto** (il bollettino USR iniziale,
+teorico, spesso rivisto), mentre altrove nell'app — in
+`routes/assegnazioni.py::_budget()`, usata per i controlli di budget
+cattedre in Assegnazioni — si preferisce già l'organico **di fatto**
+(la dotazione reale, calcolata dopo le iscrizioni effettive) e si
+ricade sul diritto solo se il fatto non è ancora stato inserito.
+Aveva ragione: era un'incoerenza, non una sua svista.
+
+Corretto `routes/impostazione_anno.py::confronto_organico()` con la
+stessa precedenza fatto→diritto. Aggiunta anche l'etichetta "(fatto)"
+o "(diritto)" accanto al numero DOC USR in tabella, per capire a colpo
+d'occhio quale fonte è stata usata riga per riga (utile finché il
+bollettino di fatto non è ancora stato inserito per tutte le CC).
+Sistemato anche un side-effect della query di raccolta CC: il vecchio
+join fisso su `tipo='diritto'` è stato tolto e sostituito con due
+sottoquery di id (una per CalcoloOrganico, una per CattedraOrganico di
+qualsiasi tipo), per evitare di duplicare una CC nell'elenco quando
+esistono sia la riga 'diritto' sia la riga 'fatto'.
+
+Verificato via Flask test client sulla pagina reale (2026-2027): 19 CC
+in elenco, nessuna duplicata, tutte le 19 mostrano "(fatto)" — nei dati
+attuali diritto e fatto coincidono ovunque quindi i numeri non
+cambiano oggi, ma la fonte usata ora è quella corretta. Pytest 51/51.
+
+### Task 23 — I box riassuntivi di impostazione-anno guardavano l'anno
+sbagliato (calendario vs anno di lavoro)
+
+Roberto stava impostando il 2026-2027 (agosto 2026) ma i 5 box in cima
+a `/impostazione-anno` mostravano dati vecchi. Causa: 3 dei 5 box
+("Sezioni attive", "Righe piano studi", "Calcoli organico confermati")
+usavano `anno_corrente`, calcolato SOLO dal calendario
+(`_anno_scolastico_corrente()`: cambia il 1° settembre) — ad agosto
+risulta ancora "2025-2026". Tutti i link della pagina sotto, invece,
+usavano già `anno_piano` (`_anno_default_piano()`: l'anno più recente
+con dati reali nel piano studi/calcolo organico), che risultava
+correttamente "2026-2027". I box e i link puntavano quindi a due anni
+diversi.
+
+Corretto in `routes/impostazione_anno.py::index()`: le tre query dei
+box ora filtrano su `anno_piano` invece di `anno_corrente`; anche il
+link "6. Organico USR" (che usava `anno_corrente`) ora usa
+`anno_piano`, per coerenza con tutti gli altri link della pagina.
+`anno_corrente` resta calcolato (serve altrove) ma non è più usato in
+questa pagina. Verificato coi dati reali: sul 2026-2027 risultano 38
+sezioni attive, 358 righe piano studi, 30/30 calcoli confermati — molto
+diversi dai numeri del 2025-2026 mostrati prima della correzione.
+Pytest 51/51.
+
+### Task 22 — Corretto badge "materie collegate": leggeva un campo
+legacy disallineato, non la tabella reale
+
+Roberto ha segnalato che "Geografia Economica" risultava non collegata
+nel badge nonostante avesse un collegamento a A-21 in passo 3 (stesso
+per "Tecnologia dell'informazione e della comunicazione" → A-41).
+Verificato: entrambe avevano regolarmente una riga in
+`MateriaClasseConcorso` (fonte='normativa'), ma il campo legacy
+`Materia.id_classe_concorso` — su cui si basava il badge introdotto nel
+Task 21 — era rimasto `NULL` per entrambe (probabilmente inserite in
+passo 3 con un percorso che non ha sincronizzato il campo legacy,
+oppure risalenti a un import diretto). Il campo legacy non è usato da
+nessun'altra funzionalità reale dell'app (Assegnazioni, Docenti↔Materie
+ecc. leggono già `MateriaClasseConcorso` direttamente) — l'unico
+impatto era il badge stesso.
+
+Corretto in due parti:
+1. Risincronizzato il campo legacy per le due materie (`id_classe_concorso
+   = 7` per Geografia Economica, `= 24` per TIC), verificato contro la
+   riga 'normativa' esistente prima di scrivere.
+2. Reso il badge "Materie con CC associata" in
+   `routes/impostazione_anno.py::index()` più robusto: ora conta le
+   materie con almeno una riga in `MateriaClasseConcorso` (fonte
+   qualsiasi, quindi anche 'eccezione_istituto' come Religione/IRC),
+   non più il campo legacy — così un futuro disallineamento dello
+   stesso tipo non si ripresenta. Risultato dopo la correzione: 49/49
+   materie collegate (Religione ora conta correttamente grazie al
+   collegamento IRC come eccezione istituto).
+
+Verificato: py_compile, pytest 51/51, conteggio confermato via query
+diretta (0 materie fuori da `MateriaClasseConcorso`).
+
+### Task 21 — Controllo coerenza passo 3, box riepilogo più chiari,
+unione anagrafiche duplicate Agrò
+
+**1) Controllo di coerenza in "Materie ↔ Classi di concorso" (passo
+3).** Confermato a Roberto che scollegare una materia da una CC non
+tocca a cascata le ore già assegnate (Assegnazioni classi → docenti).
+Per evitare che questo resti un'incoerenza silenziosa, in
+`routes/impostazione_anno.py::materie_classi_concorso()` ora, dopo il
+salvataggio, per ogni collegamento materia↔CC rimosso si controlla se
+esistono ancora righe `AssegnazioneClasse` con ore > 0 per quella
+coppia materia/CC; se sì, un flash di avviso (arancione) elenca
+docenti e classi coinvolti, senza toccare i dati. Il salvataggio non
+viene mai bloccato — solo segnalato.
+
+**2) Chiarimento box riepilogo in `/impostazione-anno`.** Il badge
+"46/49" era "Materie collegate" senza contesto. Rinominato in "Materie
+con CC associata", con tooltip che elenca le materie non collegate
+(nel caso reale: Religione cattolica — corretto, non ha una CC — più
+Geografia Economica e Tecnologia dell'informazione e della
+comunicazione, da rivedere). Aggiunto anche l'anno di riferimento alle
+etichette dei box che sono scope-anno (Sezioni attive, Righe piano
+studi, Calcoli organico confermati) e chiarito che l'ultimo box conta
+calcoli organico confermati, non classi di concorso.
+
+**3) Unione delle due anagrafiche duplicate di Agrò Andrea.** Docente
+id=2 ("AGRO'", senza accento, con tutto lo storico operativo: orario,
+banca ore, presenze, supplenze, cambio ore) e id=102 ("AGRÒ", con
+accento, creato quest'anno con l'abilitazione A-11 corretta e la
+cattedra 2026-2027 corretta) erano lo stesso docente. Durante l'analisi
+è emerso che id=2 aveva anche una cattedra 2026-2077 sbagliata sulla CC
+B-17 (Laboratorio Scienze e Tecnologie Meccaniche) — stesso pattern di
+errore di inserimento già visto per Abramini — mentre id=102 aveva
+quella corretta su A-11. Segnalato a Roberto, che ha confermato di
+eliminare la cattedra B-17.
+
+Eseguito `scripts/unisci_agro.py` (dry-run poi `--applica`, dopo backup
+cifrato): sopravvive id=2, con cognome "AGRÒ", abilitazione A-11,
+`tipo_contratto='TI'` e `anno_scol_inizio='2026-2027'` presi da id=102;
+spostate su id=2 anche l'abilitazione CC e la riga `recupero_docenti`
+di id=102; eliminata la cattedra B-17 sbagliata; eliminato id=102.
+Verificato con audit su tutte le tabelle con FK verso `docenti.id`:
+zero riferimenti residui a id=102. Pytest 51/51.
+
+### Task 20 — Chiarimento cascata passo 3, messa in sicurezza sync
+Docenti↔Materie, link docente→anagrafica in Assegnazioni
+
+Tre richieste di Roberto in un'unica sessione di follow-up dopo il
+Task 19undecies/19duodecies (bug id_materia):
+
+**1) Chiarimento (nessuna modifica di codice).** Chiesto se modificare
+le materie in "Materie ↔ Classi di concorso" (passo 3) aggiorni anche
+il resto dell'app. Risposta: no, non c'è propagazione automatica.
+Quella pagina scrive solo su `MateriaClasseConcorso` e su
+`Materia.id_classe_concorso`; non tocca `AssegnazioneClasse`,
+`DocenteMateria` né altro. Se una materia viene rimossa da una classe
+di concorso dopo che erano già state assegnate ore su quella materia
+per quella cattedra, le assegnazioni esistenti restano invariate (non
+vengono invalidate né segnalate). Nessuna azione richiesta da Roberto
+su questo punto per ora; resta un possibile miglioramento futuro (un
+controllo di coerenza) se in futuro servirà.
+
+**2) Messa in sicurezza del sync Docenti↔Materie (rischio perdita
+dati).** In risposta a "userei il sistema che riduce al minimo il
+rischio di perdere dati": due punti di scrittura cancellavano *tutte*
+le righe `DocenteMateria` di un docente/anno (o dell'intero anno, nel
+caso della pagina roster) prima di ricrearle, comprese quelle con
+`origine='auto'` sincronizzate automaticamente da Assegnazioni classi
+→ docenti (Task 19decies). Corretto in due punti, applicando lo stesso
+pattern — cancella e ricrea solo le righe `origine='manuale'`, mai
+quelle `'auto'`:
+- `routes/attivita_ist.py::assegnazioni()` (pagina roster
+  Dipartimenti/Attività istituzionali): da
+  `DocenteMateria.query.filter_by(anno_scol=anno).delete()` a
+  `.filter_by(anno_scol=anno, origine='manuale').delete()`, con
+  controllo di esistenza prima di inserire nuove righe.
+- `routes/docenti.py::_sync_materia_roster()` (scheda anagrafica
+  docente, campo materie): stesso pattern, scoping su
+  `origine='manuale'`.
+
+Prima di questa correzione, salvare il roster Dipartimenti per
+qualunque anno, o anche solo modificare l'anagrafica di un docente
+(pure per un dato non correlato come email/telefono), avrebbe
+silenziosamente cancellato le materie derivate dalle ore assegnate in
+Assegnazioni — richiedendo poi che il backfill/sync venisse rieseguito
+per ripristinarle.
+
+**3) Link docente → anagrafica in Assegnazioni.** In
+`templates/assegnazioni/index.html`, il nome del docente (sia nelle
+righe già assegnate sia nelle righe "docenti precaricati" non ancora
+assegnati) è ora un link a `docenti.modifica` (scheda anagrafica). I
+placeholder (supplenti non ancora nominati) restano testo semplice,
+non essendoci un'anagrafica da aprire.
+
+Verificato: `create_app()` senza eccezioni, py_compile su
+attivita_ist.py/docenti.py/assegnazioni.py, pytest 51/51.
+
 ### Task 19quinquies — Ripristino database da backup cifrato manuale
 Roberto ha caricato un backup cifrato del proprio Mac
 (`database_20260803_105809_MacBook-Pro-di-Roberto-DT.local.db.enc`,
@@ -34,6 +808,320 @@ fatto solo in locale su questa macchina: non è stato ripubblicato su
 Google Drive (va fatto con `sync_db.py carica` quando si è sicuri
 dello stato, specialmente dopo aver sistemato la chiave di cifratura
 condivisa con ministudio, Task 46).
+
+### Task 19duodecies — Applicate le correzioni sul database reale
+(eliminazione Abramini + backfill materie), risolto anche il venv rotto
+
+**Premessa tecnica**: i primi tentativi di scrivere sul database reale
+dalla sandbox di Cowork fallivano con "disk I/O error" — il mount di
+rete tra la sandbox e il Mac non regge bene il locking di SQLite in
+scrittura (letture e modifiche di file normali invece funzionano). Sul
+Mac di Roberto, inoltre, il `venv` del progetto risultava con `pip`
+puntato a un percorso di un'altra macchina
+(`/Users/ministudio/SupplenzeApp/venv/...` — probabilmente il venv era
+stato creato/sincronizzato lì e mai rigenerato su questo MacBook Pro),
+quindi `pip install` falliva con "bad interpreter" e Flask/Flask-WTF
+risultavano non importabili anche dopo aver individuato il venv giusto.
+Risolto passando a operare direttamente sul Mac di Roberto tramite il
+tool Desktop Commander (controllo del suo terminale reale, non più la
+sandbox) e rigenerando il venv da zero (`rm -rf venv && python3 -m venv
+venv && pip install -r requirements.txt`) — tutte le dipendenze
+necessarie (Flask, Flask-SQLAlchemy, Flask-WTF, SQLAlchemy, openpyxl)
+si installano e importano correttamente; solo WeasyPrint segnala le
+librerie di sistema mancanti (pango/cairo, note e non necessarie per
+queste operazioni — vedi README per l'installazione via brew se serve
+in futuro per l'export PDF).
+
+**Operazioni eseguite sul database reale, in ordine, con verifica dopo
+ciascuna:**
+1. Eliminata `AssegnazioneDocente` id 2 (ABRAMINI Iulia, CC B-17, 5A
+   LSP, 3h+2h) su richiesta esplicita di Roberto — la riassegnerà lui
+   con la classe di concorso corretta. Verificato che la riga sia
+   sparita e `PRAGMA integrity_check` → ok.
+2. Lanciato `scripts/backfill_id_materia.py` in dry-run: confermati gli
+   stessi numeri già visti sulle copie di prova (65 Caso A, 18 Caso B,
+   0 già corrette) — con qualche riga di Caso B in più (Boffi Silvia,
+   Bosisio Federica, Dal Toè Roberto) rispetto all'ultima verifica,
+   segno che Roberto ha continuato a usare il modulo Assegnazioni nel
+   frattempo con lo stesso bug non ancora corretto lato codice.
+3. Applicato con `--applica`: `AssegnazioneClasse` aggiornate, 3 righe
+   `DocenteMateria` con il vecchio valore sbagliato rimosse (le 3 di
+   Agrò, origine 'manuale' da migrazione), 4 nuove righe corrette
+   create (`origine='auto'`).
+4. Verificato sul database reale: `PRAGMA integrity_check` → ok;
+   `DocenteMateria` di Agrò (docente id 102) ora mostra correttamente
+   Lingua e letteratura italiana / Lingua e cultura latina / Storia e
+   geografia (invece di Spagnolo/Diritto ed economia dello
+   sport/materia inesistente); pytest 51/51.
+
+Nessun'altra modifica al database in questa voce. Da controllare da
+Roberto: pagina 10 (Docenti↔Materie) e scheda classe 1B LLI, per
+conferma visiva finale.
+
+### Task 19undecies — Bug MOLTO più serio trovato: id_materia sbagliato
+(non NULL) per TUTTE le classi "multi-materia" storiche — inclusa la mia
+propria correzione del Task 19decies
+
+**Come è emerso.** Verificando perché il caso reale di Agrò (docente id
+102, "AGRÒ Andrea", CC A-11, 1B LLI, 3 materie da 3h) non comparisse in
+Docenti↔Materie nonostante il fix del Task 19decies, ho trovato che
+`AssegnazioneClasse.id_materia` per le classi **multi-materia** (quelle
+col popover con un campo ore per materia — Lettere/Latino/Storia,
+Scienze motorie/Discipline sportive, ecc.) non è mai stato l'id della
+materia vera e propria. `_build_area()` in `routes/assegnazioni.py`
+costruiva il campo `piano_materie[classe]` usando `r.id` — la chiave
+primaria della RIGA di PianoStudi — invece di `r.id_materia`, la vera FK
+verso la tabella Materia (due entità con contatori indipendenti). Il
+form multi-materia nomina i suoi campi `ore_<classe>_<quel numero>`, e
+quel numero finiva salvato pari pari in `AssegnazioneClasse.id_materia`,
+dichiarata FK verso Materia — puntando quindi a una riga completamente
+sbagliata (o inesistente) ogni volta.
+
+Verificato sui dati reali di Agrò: id salvati 11/28/34 (id di righe
+PianoStudi) invece di 1/2/3 (id reali delle materie Lingua e letteratura
+italiana/Lingua e cultura latina/Storia e geografia) — risultato,
+`DocenteMateria` per Agrò conteneva "Spagnolo" e "Diritto ed economia
+dello sport" (materie reali ma completamente a caso, stesso id numerico
+per coincidenza) più una terza riga con id 34 che nella tabella Materia
+non esiste affatto (quindi invisibile ovunque, silenziosamente).
+Rilanciando il backfill in dry-run sull'intero database reale: **0**
+righe multi-materia/materia-singola risultavano già corrette, 65 casi
+"NULL" (Task 19decies) e **18 casi di id sbagliato** (non solo Agrò —
+anche BOFFI Silvia, Scienze motorie/Discipline sportive su più classi).
+Il bug era quindi sistemico, presente probabilmente da quando è stato
+introdotto il form multi-materia, e mai emerso prima perché nessuno
+sincronizzava ancora automaticamente Docenti↔Materie da qui.
+
+**Errore mio da segnalare esplicitamente:** la funzione
+`_resolve_id_materia()` che avevo scritto nel Task 19decies per il caso
+"materia singola" (id NULL) conteneva **lo stesso identico errore**
+(`return righe[0].id` invece di `righe[0].id_materia`) — non è mai stata
+eseguita con `--applica` su un database reale (solo dry-run e su copie
+di prova), quindi non ha corrotto nulla, ma andava comunque corretta
+insieme al resto.
+
+**Fix (tutti nello stesso commit logico):**
+- `routes/assegnazioni.py::_build_area()` — `piano_materie[classe]`
+  ora usa `r.id_materia` (e scarta le righe senza materia collegata,
+  nessuna in pratica: verificato 0/358 righe piano studi senza
+  `id_materia` sul database reale).
+- `routes/assegnazioni.py::_resolve_id_materia()` — stesso fix.
+- `routes/export_xlsx.py::_riempi_foglio_classe()` — stesso fix nel
+  fallback per righe storiche.
+- `scripts/backfill_id_materia.py` — riscritto per correggere **entrambi**
+  i casi (A: NULL: come nel Task 19decies; B: id sbagliato — nuovo):
+  per ogni riga con `id_materia` valorizzato, verifica se il valore
+  combacia con un id di Materia valido per il contesto (già corretto,
+  non tocca) oppure con l'id di una riga di PianoStudi dello stesso
+  contesto (Caso B, corregge). Alla sincronizzazione finale, oltre a
+  ripulire le righe `DocenteMateria` `origine='auto'` orfane, ripulisce
+  anche le righe con il vecchio valore sbagliato **di qualunque
+  origine** (incluse quelle marcate `'manuale'` solo per default della
+  migrazione, come le 3 di Agrò, create da una sincronizzazione
+  automatica precedente a questa sessione).
+- Verificato **sul database reale, solo in dry-run e su copie**: 65
+  Caso A + 18 Caso B, 0 già corrette. Applicato **su una copia**
+  (`--applica`): Agrò risulta correttamente con Lingua e letteratura
+  italiana/Lingua e cultura latina/Storia e geografia (`origine='auto'`),
+  le 3 righe sbagliate precedenti rimosse, pytest 51/51 dopo
+  l'applicazione. **Non ancora applicato al database reale** — da fare
+  Roberto sul suo Mac dopo backup, vedi istruzioni nello script.
+
+**Perché "Docenti ↔ Materie" non mostrava comunque Agrò anche a dati
+corretti:** trovato un secondo problema, indipendente. La pagina 10
+mostra solo le materie ammesse dalle classi di concorso **abilitate**
+del docente (passo 8, tabella `DocenteClasseConcorso`) — se una materia
+è in `DocenteMateria` ma la relativa classe di concorso non è tra le sue
+abilitazioni, il checkbox semplicemente non veniva mai renderizzato (il
+template scorre solo `materie_ammesse`). Nel caso reale, Agrò/AGRÒ
+(docente 102) **ha** A-11 tra le abilitazioni, quindi questo problema
+specifico non lo riguarda più una volta corretto l'id_materia — ma
+esiste comunque un **secondo docente omonimo**, id 2 "AGRO'" (senza
+accento, con apostrofo), abilitazioni vuote, con una vecchia
+assegnazione su B-17/1A AFM tuttora NULL e irrisolvibile dal backfill
+(0 materie nel piano studi per quella combinazione) — probabile
+duplicato anagrafico della stessa persona, da unificare o eliminare
+manualmente: **segnalato a Roberto, nessuna azione automatica presa**,
+serve una decisione umana su quale dei due record tenere.
+
+Corretto comunque il problema generale di visibilità in
+`routes/impostazione_anno.py::docenti_materie()` +
+`templates/impostazione_anno/docenti_materie.html`: le materie già in
+`DocenteMateria` ma non coperte da nessuna abilitazione ora vengono
+mostrate comunque, in una sezione "extra" con avviso arancione che
+rimanda al passo 8, invece di restare invisibili. Corretta anche la
+validazione POST della pagina 10 (`ids_ammessi`) perché non cancellasse
+in silenzio queste righe extra a ogni salvataggio del form.
+
+**Verifica:** `py_compile` su tutti i file Python toccati; pytest 51/51
+su copie fresche, prima e dopo l'applicazione reale del backfill
+corretto; riprodotto l'intero scenario di Agrò via Flask test client
+(crea-e-assegna + aggiorna-ore con gli id materia corretti) confermando
+sync corretto di DocenteMateria e comparsa in pagina 10.
+**Non eseguibile da qui**: applicazione del backfill sul database
+reale — da fare Roberto, con backup preventivo.
+
+### Task 19decies — Bug reale trovato: id_materia NULL per classi "materia
+singola" in Assegnazioni, e sincronizzazione automatica Docenti↔Materie
+
+**Causa del caso di Agrò segnalato da Roberto** (le ore inserite in
+Assegnazioni non comparivano al passo 10 "Docenti ↔ Materie"): nel form
+di Assegnazioni, quando una classe ha una sola materia nel piano studi
+per quella classe di concorso (caso comune — es. Matematica in una
+classe che non ha "multi-materia"), il campo del form è `ore_<classe>`
+senza indicare l'id materia, perché non c'è ambiguità da chiedere
+all'utente. `AssegnazioneClasse.id_materia` restava quindi **NULL** per
+queste righe. `_sync_docente_materie()` (introdotta nella sessione
+precedente per questo scopo) filtra esplicitamente `if ac.id_materia`,
+quindi le righe NULL venivano ignorate — Docenti ↔ Materie non si
+aggiornava mai per queste assegnazioni (solo per quelle su classi
+multi-materia, dove il form passa sempre l'id). Stessa causa dietro il
+secondo problema segnalato: l'export "scheda classe" (Impostazione Anno
+→ Classi attive → Esporta scheda classe) mostrava il tipo di contratto
+(es. "TI") al posto del nome materia, perché il suo fallback su
+`ac.id_materia` mancante era proprio quello.
+
+**Fix alla radice** (`routes/assegnazioni.py`): nuova
+`_resolve_id_materia(anno_scol, cc_id, label)` — se il piano studi ha
+esattamente una materia per quella classe di concorso/indirizzo/anno
+corso, la risolve e la usa come `id_materia`, invece di lasciarlo NULL.
+Applicata sia in `salva()` (creazione nuova assegnazione) sia in
+`aggiorna_ore()` (modifica AJAX delle ore). Da ora in poi le nuove
+assegnazioni/modifiche su classi a materia singola hanno sempre
+`id_materia` valorizzato, e la sincronizzazione verso Docenti↔Materie
+funziona anche lì. Aggiornato anche l'export scheda classe
+(`_riempi_foglio_classe` in `export_xlsx.py`) per risolvere al volo la
+materia mancante sulle righe storiche non ancora corrette, così i file
+generati sono corretti da subito anche prima del backfill.
+
+**Backfill dati storici**: `scripts/backfill_id_materia.py` (una
+tantum, non eseguito automaticamente) — corregge le `AssegnazioneClasse`
+già esistenti con `id_materia` NULL risolvibili in modo univoco dal
+piano studi, e sincronizza di conseguenza Docenti↔Materie per i docenti
+toccati. Dry-run di default, richiede `--applica` per scrivere
+davvero. Da lanciare da Roberto sul suo Mac (`python scripts/
+backfill_id_materia.py` poi, se l'elenco sembra corretto, `--applica`)
+— non eseguibile da questo ambiente sandbox (mancano le dipendenze
+Python del progetto qui).
+
+**Le tre opzioni di centralizzazione discusse, tutte implementate:**
+
+1. **Pulizia automatica dei simmetrici mancanti.** Nuovo campo
+   `DocenteMateria.origine` (`'auto'` | `'manuale'`, migrazione
+   additiva in `app.py::_auto_migrate()`, default `'manuale'` per le
+   righe esistenti — nessuna già presente viene reinterpretata come
+   automatica). `_sync_docente_materie()` marca `origine='auto'` le
+   righe che crea. Nuova `_pulisci_docente_materie_orfane(id_docente,
+   anno_scol)`: rimuove le righe `origine='auto'` non più coperte da
+   nessuna `AssegnazioneClasse` del docente per quell'anno — mai quelle
+   `'manuale'`. Richiamata quando si azzerano le ore di una
+   classe/materia (`aggiorna_ore`, ramo ore=0) e quando si elimina
+   un'intera assegnazione (`elimina`).
+2. **Tracciabilità della provenienza.** Il campo `origine` sopra è
+   proprio questo: ogni riga sa se è "dichiarata a mano" o "dedotta
+   dalle ore assegnate".
+3. **Visibilità in pagina 10.** `templates/impostazione_anno/
+   docenti_materie.html`: le materie con `origine='auto'` mostrano un
+   piccolo badge viola "auto" con tooltip esplicativo. Scelta
+   deliberata: il badge è solo informativo, la spunta resta comunque
+   rimovibile manualmente da lì (bloccarla del tutto avrebbe impedito
+   di correggere un caso sbagliato senza prima andare a togliere le ore
+   in Assegnazioni) — un salvataggio manuale da questa pagina resetta
+   comunque tutto a `'manuale'` per quel docente (dichiarazione
+   esplicita che sovrascrive la deduzione automatica).
+
+**Verifica:** sintassi Python controllata (`py_compile`) su tutti i
+file toccati (`app.py`, `routes/assegnazioni.py`,
+`routes/impostazione_anno.py`, `routes/export_xlsx.py`,
+`models/materia.py`, `scripts/backfill_id_materia.py`) — nessun errore.
+**Non eseguibile da qui**: pytest (51/51 attesi), test funzionale reale
+del caso Agrò, e il backfill stesso — mancano le dipendenze del
+progetto in questo ambiente sandbox. Da fare alla prossima sessione sul
+Mac: pytest, riprovare il caso di Agrò (inserire ore → verificare
+comparsa in passo 10), lanciare il backfill in dry-run e controllarne
+l'elenco prima di `--applica`, rigenerare una scheda classe e
+verificare che mostri i nomi materia invece del tipo contratto.
+
+### Task 19novies — Riordino passi 9/10 in Impostazione Anno Scolastico
+Su richiesta, invertito l'ordine dei due ultimi passi nell'indice
+`/impostazione-anno` (`templates/impostazione_anno/index.html`): ora è
+**9. Assegnazioni classi → docenti** e **10. Docenti ↔ Materie** (prima
+erano invertiti). Solo etichette numeriche e ordine dei due blocchi
+scambiati, nessun link/route toccato.
+
+### Task 19octies — Docenti di sostegno nella vista Orario globale
+Riaperto uno dei tre punti chiusi "così com'è" nella voce precedente:
+su richiesta, la vista `/orario/globale` ora mostra anche gli slot dei
+docenti di sostegno, che non compaiono nel file Excel importato (vivono
+in `OrarioSostegno`, tabella separata — vedi Sessione 23).
+
+**Implementazione:**
+- `routes/sincronizzazione.py::orario_globale()`: oltre agli slot di
+  `OrarioDocente`, ora interroga anche `OrarioSostegno` per lo stesso
+  giorno e costruisce una seconda griglia `griglia_sostegno[classe][ora]`
+  (tenuta separata da `griglia`, non unita/travestita da OrarioDocente —
+  qui serve un rendering distinto, non il matching supplenze già
+  gestito da `slots_come_orario_docente()` altrove). `docenti_map` ora
+  include anche i docenti di sostegno.
+- `templates/orario_globale.html`: nella cella della griglia, sotto il
+  titolare (blu) e l'eventuale ITP in compresenza (viola, invariato),
+  aggiunta una riga "+ cognome" in bordeaux (`var(--blu-med)`, la
+  stessa palette di brand) per ogni docente di sostegno nello stesso
+  classe/ora. Stessa logica riportata nella modale di dettaglio classe
+  (click su una classe) e nei dati JS `ORARIO_DATI`. Aggiunta una
+  legenda colori sopra la tabella (Titolare/ITP/Sostegno).
+
+Nessuna modifica a `OrarioSostegno`, a `compresenze.py` o alla logica
+supplenze — solo visualizzazione. `pianifica_permessi()` resta non
+toccata (fuori dall'ambito di questa richiesta).
+
+**Verifica:** da fare alla prossima sessione con pytest (51/51 attesi,
+nessun test tocca `/orario/globale` con dati di sostegno) e controllo
+visivo con un docente di sostegno reale inserito in griglia — non
+eseguibile in questo ambiente (sandbox senza le dipendenze Python del
+progetto).
+
+### Task 19septies — Chiusura task aperti (nessuna azione)
+Su richiesta esplicita di Roberto, i task/note in sospeso elencati sotto
+sono stati chiusi così come sono, senza ulteriori interventi:
+
+- **Task 19quinquies**: le 2 assegnazioni cattedra 2026-2027 mancanti
+  dopo il ripristino (docente id 102/classe concorso 2, docente id
+  1/classe concorso 11, entrambe tipo TI) **non** sono state
+  reinserite — se servono, andranno aggiunte a mano in futuro. Il DB
+  ripristinato resta pubblicato solo localmente su questa macchina, non
+  ricaricato su Google Drive.
+- **Sessione 30, Task 10**: il report GDPR resta fermo alla v2.2, in
+  attesa di riscontro dal DPO sui quattro punti aperti (base giuridica,
+  residenza dati tenant Google Workspace, copertura DPA per Drive uso
+  amministrativo, verifica registro trattamenti su Spaggiari).
+- **Sessione 23**: `pianifica_permessi()` e la vista orario globale
+  restano senza gli slot dei docenti di sostegno — non implementato.
+
+Nessuna modifica al codice o al database in questa voce.
+
+### Task 19sexies — Login CSRF su ministudio dopo il ripristino chiave
+Dopo aver sincronizzato la chiave di cifratura e ripubblicato il DB su
+Drive (Task 19quater/quinquies), il login su ministudio falliva con
+"Bad Request: The CSRF tokens do not match", indipendente da browser,
+cache e orologio di sistema (tutti esclusi in diagnosi).
+
+Diagnosi: confrontando il token nel campo nascosto del form inviato
+con il token dentro il cookie di sessione effettivamente mandato dal
+browser (decodificati entrambi manualmente, formato itsdangerous), i
+due NON coincidevano — prova diretta che la pagina inviata era
+disallineata dalla sessione attiva. Causa reale: sul MacBook Pro di
+Roberto era rimasta aperta una scheda su `localhost:5002` mentre si
+lavorava sul Mac mini via condivisione Finder/schermo — le due
+macchine hanno istanze CaronteApp separate (stesso indirizzo locale,
+server diversi), ed è facile confondersi su quale finestra si sta
+usando durante lo screen sharing, inviando il form dalla scheda
+sbagliata. Nessun bug applicativo: chiudendo la scheda sull'altro Mac
+e ripetendo il login su una sola finestra pulita, ha funzionato.
+
+Nessuna modifica al codice per questo punto — solo diagnosi e
+procedura operativa da tenere a mente quando si usano le due macchine
+in contemporanea con screen sharing attivo.
 
 ---
 

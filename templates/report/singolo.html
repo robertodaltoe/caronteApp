@@ -46,7 +46,7 @@
             {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}
         </h1>
         <p style="color:var(--grigio); font-size:.85rem;">
-            {% if docente.materia %}{{ docente.materia }} · {% endif %}
+            {% if docente.materia_effettiva %}{{ docente.materia_effettiva }} · {% endif %}
             {{ docente.ore_contratto }}h/sett
             {% if docente.tipo_contratto %} · {{ docente.tipo_contratto }}{% endif %}
         </p>

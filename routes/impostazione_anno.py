@@ -18,29 +18,94 @@ from datetime import date
 impostazione_anno_bp = Blueprint('impostazione_anno', __name__)
 
 
+# ── BARRA DI NAVIGAZIONE A PASSI (breadcrumb + prev/next + tessere) ───
+# Iniettata in ogni pagina della sezione tramite templates/impostazione_anno/
+# _step_nav.html. Elenco unico qui: se cambia l'ordine o si aggiunge un
+# passo, si aggiorna solo questa lista e tutte le pagine si allineano.
+# 'own'=False per i passi che vivono in un altro blueprint (Aule,
+# Assegnazioni): restano cliccabili nella fila di tessere ma sono esclusi
+# dal conteggio prev/next, che si muove solo tra le pagine di QUESTA
+# sezione (altrimenti "avanti" da una pagina Aule tornerebbe qui dentro
+# in modo confuso, dato che Aule/Assegnazioni hanno una loro navigazione).
+def _nav_steps(anno_corrente=None):
+    ap = anno_corrente or _anno_default_piano()
+    return [
+        {'num': '1',  'label': 'Classi di concorso',
+         'endpoint': 'impostazione_anno.classi_concorso', 'kwargs': {},
+         'color': '#0369a1', 'own': True},
+        {'num': '2',  'label': 'Piano di studi',
+         'endpoint': 'impostazione_anno.piano_studi', 'kwargs': {'anno': ap},
+         'color': '#7c3aed', 'own': True},
+        {'num': '3',  'label': 'Materie ↔︎ Classi di concorso',
+         'endpoint': 'impostazione_anno.materie_classi_concorso', 'kwargs': {},
+         'color': '#6366f1', 'own': True},
+        {'num': '4',  'label': 'Classi attive',
+         'endpoint': 'impostazione_anno.classi_attive', 'kwargs': {'anno': ap},
+         'color': '#0891b2', 'own': True},
+        {'num': '4b', 'label': 'Aule per classe',
+         'endpoint': 'aule.lista', 'kwargs': {},
+         'color': '#0891b2', 'own': False},
+        {'num': '5',  'label': 'Calcolo organico richiesto',
+         'endpoint': 'impostazione_anno.calcolo_organico', 'kwargs': {'anno': ap},
+         'color': '#0891b2', 'own': True},
+        {'num': '6',  'label': 'Organico USR',
+         'endpoint': 'impostazione_anno.organico',
+         'kwargs': {'anno': ap, 'tipo': 'diritto'},
+         'color': '#166534', 'own': True},
+        {'num': '6b', 'label': 'Cattedre di potenziamento',
+         'endpoint': 'impostazione_anno.cattedre_potenziamento', 'kwargs': {'anno': ap},
+         'color': '#7c3aed', 'own': True},
+        {'num': '7',  'label': 'Docenti per anno scolastico',
+         'endpoint': 'impostazione_anno.docenti_anno', 'kwargs': {'anno': ap},
+         'color': '#dc2626', 'own': True},
+        {'num': '8',  'label': 'Docenti ↔︎ Classe di concorso',
+         'endpoint': 'impostazione_anno.docenti_classi_concorso', 'kwargs': {},
+         'color': '#b45309', 'own': True},
+        {'num': '8b', 'label': 'Verifica TI ↔︎ Organico USR',
+         'endpoint': 'impostazione_anno.confronto_organico', 'kwargs': {'anno': ap},
+         'color': '#7c3aed', 'own': True},
+        {'num': '9',  'label': 'Assegnazioni classi →︎ docenti',
+         'endpoint': 'assegnazioni.index', 'kwargs': {'anno': ap},
+         'color': '#6366f1', 'own': False},
+        {'num': '10', 'label': 'Docenti ↔︎ Materie',
+         'endpoint': 'impostazione_anno.docenti_materie', 'kwargs': {},
+         'color': '#be185d', 'own': True},
+    ]
+
+
+# Nota: registrato globalmente su tutta l'app (in app.py), non solo su
+# questo blueprint — serve anche nelle pagine "4b. Aule" e "9. Assegnazioni",
+# che vivono in routes/aule.py e routes/assegnazioni.py (blueprint diversi,
+# altrimenti un context_processor di blueprint non li raggiungerebbe e la
+# barra risulterebbe assente proprio su quei due passi).
+
+
 def _docenti_per_anno(anno_scol):
     """
-    Restituisce i docenti per un dato anno scolastico.
+    Restituisce i docenti "sulla pianta organica" per un dato anno
+    scolastico (include AP uscenti e in aspettativa — sono ancora
+    titolari della scuola: dashboard_anno/assegnazioni li contano e poi
+    li filtrano ulteriormente da soli dove serve, vedi rispettivamente
+    i conteggi n_aspettativa/n_ap_uscente e il filtro status_presenza
+    in routes/assegnazioni.py).
 
-    - Anno corrente o passato (anno_scol <= anno_scol_corrente nel DB):
-      tutti i docenti attivi, senza filtro — serve per le funzioni operative.
-    - Anno futuro (anno_scol > anno_scol_corrente):
-      solo TI senza uscita segnalata + TD già inseriti con anno_scol_inizio.
-      Esclude chi ha anno_scol_uscita <= anno_scol (esce quell'anno o prima).
+    I limiti anno_scol_inizio/anno_scol_uscita si applicano SEMPRE, non
+    solo per gli anni futuri: altrimenti un docente già inserito con
+    anno_scol_inizio dell'anno prossimo comparirebbe anche nell'anno
+    corrente/passato (bug osservato: nuovi docenti 2026-2027 visibili
+    anche nel 2025-2026).
+
+    Per gli anni futuri (anno_scol > anno_scol_corrente) si applica
+    inoltre un filtro aggiuntivo: i TD/supplenti senza anno_scol_inizio
+    esplicito non sono ancora nominati e non compaiono.
     """
     from sqlalchemy import or_
     from config_anno import get_anno_corrente
 
-    base = Docente.query.filter_by(attivo=True)
     anno_corrente = get_anno_corrente()  # fonte di verità: DB
 
-    if anno_scol <= anno_corrente:
-        # Anno corrente o storico: tutti i docenti attivi
-        return base.order_by(Docente.cognome).all()
-
-    # Anno futuro: filtra
-    return base.filter(
-        # TI storico (nessuna data inizio) o TD/AP già inserito per quell'anno
+    base = Docente.query.filter_by(attivo=True).filter(
+        # Non ancora arrivato (TI storico senza data = sempre incluso)
         or_(
             Docente.anno_scol_inizio == None,
             Docente.anno_scol_inizio <= anno_scol,
@@ -50,13 +115,18 @@ def _docenti_per_anno(anno_scol):
             Docente.anno_scol_uscita == None,
             Docente.anno_scol_uscita > anno_scol,
         ),
-        # TD/supplenti/IRC senza data inizio non compaiono (non ancora nominati)
-        # Le AP uscenti compaiono comunque (sono TI titolari della scuola)
-        or_(
+    )
+
+    if anno_scol > anno_corrente:
+        # Anno futuro: i TD/supplenti/IRC senza data inizio esplicita
+        # non sono ancora nominati per quell'anno, non compaiono.
+        # Le AP uscenti compaiono comunque (sono TI titolari della scuola).
+        base = base.filter(or_(
             Docente.tipo_contratto.in_(['TI', 'IRC']),
             Docente.anno_scol_inizio != None,
-        ),
-    ).order_by(Docente.cognome).all()
+        ))
+
+    return base.order_by(Docente.cognome).all()
 
 
 def _anno_scolastico_corrente():
@@ -87,21 +157,37 @@ def _anno_default_piano():
 
 @impostazione_anno_bp.route('/impostazione-anno')
 def index():
+    from models.classe_concorso import MateriaClasseConcorso
     anno_corrente = _anno_scolastico_corrente()
     n_classi = ClasseConcorso.query.filter_by(attiva=True).count()
-    n_materie_collegate = Materia.query.filter(Materia.id_classe_concorso.isnot(None)).count()
+    # Fonte di verità: la tabella MateriaClasseConcorso (collegamenti
+    # 'normativa' o 'eccezione_istituto'), non il campo legacy
+    # Materia.id_classe_concorso — quel campo è solo una cache del primo
+    # collegamento 'normativa' e può disallinearsi (visto per Geografia
+    # Economica e TIC, Task 22: righe presenti ma legacy rimasto NULL).
+    ids_materie_collegate = {r.id_materia for r in MateriaClasseConcorso.query.all()}
+    n_materie_collegate = len(ids_materie_collegate)
     n_materie_tot = Materia.query.count()
+    materie_non_collegate = Materia.query.filter(
+        ~Materia.id.in_(ids_materie_collegate)).order_by(Materia.nome).all()
     anni_organico = sorted({r.anno_scol for r in CattedraOrganico.query.all()}, reverse=True)
-    # KPI piano studi
-    n_sezioni_attive = ClasseSezione.query.filter_by(anno_scol=anno_corrente, attiva=True).count()
-    n_piano_righe   = PianoStudi.query.filter_by(anno_scol=anno_corrente).count()
-    n_calcolo_ok    = CalcoloOrganico.query.filter_by(anno_scol=anno_corrente, confermato=True).count()
-    n_calcolo_tot   = CalcoloOrganico.query.filter_by(anno_scol=anno_corrente).filter(
+    anno_piano = _anno_default_piano()  # anno su cui si sta lavorando davvero
+    # KPI piano studi — riferiti ad anno_piano (l'anno con dati reali,
+    # cioè quello su cui si sta effettivamente lavorando), NON a
+    # anno_corrente: anno_corrente è calcolato solo dal calendario
+    # (cambia il 1° settembre) e a inizio anno solare risulterebbe
+    # ancora l'anno vecchio anche se si sta già impostando quello nuovo
+    # — prima di questa correzione i box mostravano i dati dell'anno
+    # sbagliato mentre tutti i link sotto puntavano già ad anno_piano.
+    n_sezioni_attive = ClasseSezione.query.filter_by(anno_scol=anno_piano, attiva=True).count()
+    n_piano_righe   = PianoStudi.query.filter_by(anno_scol=anno_piano).count()
+    n_calcolo_ok    = CalcoloOrganico.query.filter_by(anno_scol=anno_piano, confermato=True).count()
+    n_calcolo_tot   = CalcoloOrganico.query.filter_by(anno_scol=anno_piano).filter(
         CalcoloOrganico.ore_totali_calcolate > 0).count()
-    anno_piano = _anno_default_piano()  # anno con dati reali nel piano studi
     return render_template('impostazione_anno/index.html',
         n_classi=n_classi, n_materie_collegate=n_materie_collegate,
-        n_materie_tot=n_materie_tot, anni_organico=anni_organico,
+        n_materie_tot=n_materie_tot, materie_non_collegate=materie_non_collegate,
+        anni_organico=anni_organico,
         anno_corrente=anno_corrente,
         anno_piano=anno_piano,
         n_sezioni_attive=n_sezioni_attive, n_piano_righe=n_piano_righe,
@@ -173,8 +259,18 @@ def materie_classi_concorso():
     campo legacy Materia.id_classe_concorso.
     """
     from models.classe_concorso import MateriaClasseConcorso
+    from models.assegnazione import AssegnazioneClasse, AssegnazioneDocente
 
     if request.method == 'POST':
+        # Raccoglie i collegamenti materia↔CC che vengono rimossi in questo
+        # salvataggio, per poter controllare DOPO se esistono già ore
+        # assegnate (Assegnazioni classi → docenti) su quella coppia —
+        # il collegamento passo 3 non ha effetto a cascata su quanto già
+        # assegnato, quindi rimuoverlo senza controllo lascerebbe
+        # un'incoerenza silenziosa (ore assegnate su una CC che secondo
+        # la normativa/eccezione non insegna più quella materia).
+        rimossi = []  # [(id_materia, id_classe_concorso), ...]
+
         for m in Materia.query.all():
             # Aggiorna nome_breve e alias se presenti nel form
             nb = request.form.get(f'nome_breve_{m.id}', '').strip()
@@ -194,6 +290,7 @@ def materie_classi_concorso():
 
             for cc_id, riga in esistenti.items():
                 if riga.fonte == 'normativa' and cc_id not in nuove:
+                    rimossi.append((m.id, cc_id))
                     db.session.delete(riga)
 
             for cc_id in nuove:
@@ -204,7 +301,33 @@ def materie_classi_concorso():
             m.id_classe_concorso = ids_validi[0] if ids_validi else None
 
         db.session.commit()
-        flash('Materie e collegamenti CC aggiornati.', 'success')
+
+        # Controllo di coerenza: per ogni coppia rimossa, ci sono ore già
+        # assegnate in Assegnazioni su quella materia per quella CC?
+        avvisi = []
+        for id_materia, cc_id in rimossi:
+            righe = (AssegnazioneClasse.query
+                     .join(AssegnazioneDocente,
+                           AssegnazioneClasse.id_assegnazione == AssegnazioneDocente.id)
+                     .filter(AssegnazioneClasse.id_materia == id_materia,
+                             AssegnazioneDocente.id_classe_concorso == cc_id,
+                             AssegnazioneClasse.ore > 0)
+                     .all())
+            if righe:
+                materia = Materia.query.get(id_materia)
+                cc = ClasseConcorso.query.get(cc_id)
+                docenti = sorted({r.assegnazione.display_name for r in righe})
+                avvisi.append(
+                    f'"{materia.nome if materia else id_materia}" scollegata da '
+                    f'{cc.codice if cc else cc_id}, ma risultano ancora ore assegnate '
+                    f'in Assegnazioni per: {", ".join(docenti)}. Le ore NON sono state '
+                    f'toccate — verificale in Assegnazioni classi → docenti.')
+
+        if avvisi:
+            flash('Materie e collegamenti CC aggiornati, ma sono state trovate '
+                  'incoerenze: ' + ' | '.join(avvisi), 'warning')
+        else:
+            flash('Materie e collegamenti CC aggiornati.', 'success')
         return redirect(url_for('impostazione_anno.materie_classi_concorso'))
 
     materie = Materia.query.join(Dipartimento).order_by(
@@ -449,14 +572,19 @@ def docenti_classi_concorso():
     if anno not in anni_disponibili:
         anni_disponibili.insert(0, anno)
 
-    # Confronto TI collegati vs DOC organico USR — inline nella pagina
+    # Confronto TI collegati vs DOC organico USR — inline nella pagina.
+    # Stessa precedenza fatto→diritto usata in confronto_organico() e in
+    # routes/assegnazioni.py::_budget(): l'organico di fatto è la
+    # dotazione reale (dopo le iscrizioni), quello di diritto è solo un
+    # ripiego se il fatto non è ancora stato inserito. Niente join fisso
+    # su tipo='diritto' per raccogliere le CC (duplicherebbe la CC se
+    # esistono sia la riga 'diritto' sia la riga 'fatto').
     from models.classe_concorso import CattedraOrganico, DocenteClasseConcorso
+    ids_con_cattedra = {c.id_classe_concorso for c in
+                         CattedraOrganico.query.filter_by(anno_scol=anno)
+                         .filter(CattedraOrganico.n_docenti > 0).all()}
     cc_con_dati = (ClasseConcorso.query
-        .join(CattedraOrganico,
-              (CattedraOrganico.id_classe_concorso == ClasseConcorso.id) &
-              (CattedraOrganico.anno_scol == anno) &
-              (CattedraOrganico.tipo == 'diritto'), isouter=True)
-        .filter(CattedraOrganico.n_docenti > 0)
+        .filter(ClasseConcorso.id.in_(ids_con_cattedra))
         .order_by(ClasseConcorso.codice).all())
 
     confronto = []
@@ -466,13 +594,19 @@ def docenti_classi_concorso():
                 .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
                         Docente.attivo == True, Docente.tipo_contratto == 'TI')
                 .scalar() or 0)
-        cat = CattedraOrganico.query.filter_by(
-            anno_scol=anno, tipo='diritto', id_classe_concorso=cc.id).first()
+        cat = None
+        for tipo_tentativo in ('fatto', 'diritto'):
+            cat = CattedraOrganico.query.filter_by(
+                anno_scol=anno, tipo=tipo_tentativo, id_classe_concorso=cc.id).first()
+            if cat:
+                break
         n_usr = cat.n_docenti if cat and cat.n_docenti else 0
+        tipo_usr = cat.tipo if cat else None
         scarto = n_ti - n_usr
         sem = 'verde' if scarto == 0 else ('giallo' if abs(scarto) == 1 else 'rosso')
         confronto.append({'cc': cc, 'n_ti_app': n_ti,
-                          'n_doc_usr': n_usr, 'scarto': scarto, 'semaforo': sem})
+                          'n_doc_usr': n_usr, 'tipo_usr': tipo_usr,
+                          'scarto': scarto, 'semaforo': sem})
 
     return render_template('impostazione_anno/docenti_classi_concorso.html',
         docenti=docenti, classi=classi, anno=anno, anni_disponibili=anni_disponibili,
@@ -517,9 +651,18 @@ def docenti_materie():
             # Vincolo di sicurezza: anche se il form venisse manomesso,
             # accetta solo id di materie effettivamente ammesse da una
             # delle sue classi di concorso (via MateriaClasseConcorso,
-            # normativa o eccezione_istituto) — mai testo libero, mai
-            # materie fuori da ogni sua abilitazione.
-            ids_ammessi = {m.id for m in _materie_ammesse_per_classi(cc_ids)}
+            # normativa o eccezione_istituto) — mai testo libero. Unica
+            # eccezione: le materie GIA' presenti in DocenteMateria prima
+            # di questo salvataggio (es. sincronizzate da Assegnazioni su
+            # una classe di concorso non ancora collegata al passo 8) —
+            # senza questa eccezione un salvataggio qualsiasi da questa
+            # pagina le avrebbe cancellate in silenzio, anche restando
+            # spuntate in schermata (vedi 'materie_extra' nella GET).
+            # Non introduce testo libero: resta un id_materia già esistito
+            # nel DB per questo docente, mai un valore arbitrario del form.
+            ids_gia_presenti = {dm.id_materia for dm in DocenteMateria.query.filter_by(
+                id_docente=docente.id, anno_scol=anno_f).all()}
+            ids_ammessi = {m.id for m in _materie_ammesse_per_classi(cc_ids)} | ids_gia_presenti
             ids_validi = [int(i) for i in ids_selezionati if i.isdigit() and int(i) in ids_ammessi]
 
             DocenteMateria.query.filter_by(id_docente=docente.id, anno_scol=anno_f).delete()
@@ -537,12 +680,33 @@ def docenti_materie():
     for d in docenti:
         cc_ids = [a.id_classe_concorso for a in d.abilitazioni]
         materie_ammesse = _materie_ammesse_per_classi(cc_ids)
-        assegnate_ids = {dm.id_materia for dm in DocenteMateria.query.filter_by(
-            id_docente=d.id, anno_scol=anno).all()}
+        dm_esistenti = DocenteMateria.query.filter_by(
+            id_docente=d.id, anno_scol=anno).all()
+        assegnate_ids = {dm.id_materia for dm in dm_esistenti}
+        # origine ('auto' = da Assegnazioni, 'manuale' = da questa pagina
+        # o dalla scheda docente) — solo per il badge informativo, non
+        # limita in alcun modo cosa si può togliere da qui.
+        origine_map = {dm.id_materia: dm.origine for dm in dm_esistenti}
+
+        # Materie già assegnate al docente (in DocenteMateria, quindi
+        # anche quelle sincronizzate da Assegnazioni) ma NON coperte da
+        # nessuna sua classe di concorso abilitata (passo 8): senza
+        # questo controllo restavano invisibili qui — il checkbox non
+        # veniva mai renderizzato perché il loop scorre solo
+        # materie_ammesse. Le mostriamo comunque, separate, con un
+        # avviso: segnalano quasi sempre una classe di concorso mancante
+        # al passo 8, non un dato sbagliato da correggere qui.
+        ids_ammesse = {m.id for m in materie_ammesse}
+        ids_extra = assegnate_ids - ids_ammesse
+        materie_extra = (Materia.query.filter(Materia.id.in_(ids_extra))
+                          .order_by(Materia.nome).all()) if ids_extra else []
+
         righe.append({
             'docente': d,
             'materie_ammesse': materie_ammesse,
+            'materie_extra': materie_extra,
             'assegnate_ids': assegnate_ids,
+            'origine_map': origine_map,
         })
 
     anni_disponibili = sorted(
@@ -1524,18 +1688,20 @@ def confronto_organico():
     anno_corrente = get_anno_corrente()
 
     # Tutte le CC con dati nel calcolo organico o nell'organico USR
+    # (di fatto O di diritto — il filtro serve solo a includere la CC
+    # nell'elenco, il tipo usato per il confronto vero e proprio è
+    # deciso riga per riga più sotto, vedi _budget()). Niente join con
+    # CattedraOrganico qui: potendoci essere sia la riga 'diritto' sia
+    # la riga 'fatto' per la stessa CC, un join diretto duplicherebbe
+    # la CC nell'elenco — si usano invece due sottoquery di id.
+    ids_calcolo = {c.id_classe_concorso for c in
+                   CalcoloOrganico.query.filter_by(anno_scol=anno)
+                   .filter(CalcoloOrganico.ore_totali_calcolate > 0).all()}
+    ids_cattedra = {c.id_classe_concorso for c in
+                     CattedraOrganico.query.filter_by(anno_scol=anno)
+                     .filter(CattedraOrganico.n_docenti > 0).all()}
     cc_list = (ClasseConcorso.query
-               .join(CalcoloOrganico,
-                     (CalcoloOrganico.id_classe_concorso == ClasseConcorso.id) &
-                     (CalcoloOrganico.anno_scol == anno), isouter=True)
-               .join(CattedraOrganico,
-                     (CattedraOrganico.id_classe_concorso == ClasseConcorso.id) &
-                     (CattedraOrganico.anno_scol == anno) &
-                     (CattedraOrganico.tipo == 'diritto'), isouter=True)
-               .filter(
-                   db.or_(
-                       CalcoloOrganico.ore_totali_calcolate > 0,
-                       CattedraOrganico.n_docenti > 0))
+               .filter(ClasseConcorso.id.in_(ids_calcolo | ids_cattedra))
                .order_by(ClasseConcorso.codice)
                .all())
 
@@ -1554,11 +1720,21 @@ def confronto_organico():
                         Docente.tipo_contratto == 'TI')
                     .scalar() or 0)
 
-        # DOC dall'organico USR di diritto
-        cat = CattedraOrganico.query.filter_by(
-            anno_scol=anno, tipo='diritto',
-            id_classe_concorso=cc.id).first()
+        # DOC dall'organico USR — di fatto se presente (è la
+        # fotografia più aggiornata e reale della dotazione, calcolata
+        # dopo le iscrizioni effettive), altrimenti di diritto come
+        # ripiego (bollettino iniziale, spesso rivisto). Stessa
+        # precedenza già usata altrove in app per lo stesso motivo
+        # (vedi routes/assegnazioni.py::_budget()).
+        cat = None
+        for tipo_tentativo in ('fatto', 'diritto'):
+            cat = CattedraOrganico.query.filter_by(
+                anno_scol=anno, tipo=tipo_tentativo,
+                id_classe_concorso=cc.id).first()
+            if cat:
+                break
         n_doc_usr = cat.n_docenti if cat and cat.n_docenti else 0
+        tipo_usr = cat.tipo if cat else None
 
         # Calcolo organico richiesto
         calc = CalcoloOrganico.query.filter_by(
@@ -1584,6 +1760,7 @@ def confronto_organico():
             'ore_richieste': ore_richieste,
             'n_ti_app': n_ti_app,
             'n_doc_usr': n_doc_usr,
+            'tipo_usr': tipo_usr,
             'scarto': scarto,
             'semaforo': semaforo,
             'tipo_organico': calc.tipo_calcolato if calc else '—',

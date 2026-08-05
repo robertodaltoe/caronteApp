@@ -103,6 +103,8 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
     </div>
 </div>
 
+{% include 'impostazione_anno/_step_nav.html' %}
+
 {% set colori_area = ['#1e40af','#15803d','#b45309','#0e7490','#7c2d12','#86198f','#0f766e','#6b7280'] %}
 
 {# ── Badge area disciplinare — filtra visibilità ─────────────────── #}
@@ -315,7 +317,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 style="{{ 'background:#fde8e8;' if is_over else ('background:#fff0e0;' if ore_mat_over else ('background:#fff3cd;' if ore_classe_over else '')) }}">
                 <td class="td-doc">
                     {% if a.docente %}
-                    <span style="font-weight:600;">{{ a.docente.cognome }} {{ a.docente.nome }}</span>
+                    <a href="{{ url_for('docenti.modifica', id=a.docente.id) }}" style="font-weight:600; color:inherit; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">{{ a.docente.cognome }} {{ a.docente.nome }}</a>
                     {% if a.docente.ore_contratto_pt %}
                     <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
                     {% endif %}
@@ -448,9 +450,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             {% for d in blk.docenti_precaricati %}
             <tr style="background:#f8f9ff; opacity:.7;">
                 <td class="td-doc">
-                    <span style="font-weight:600; color:#6b7280;">
+                    <a href="{{ url_for('docenti.modifica', id=d.id) }}" style="font-weight:600; color:#6b7280; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">
                         {{ d.cognome }} {{ d.nome }}
-                    </span>
+                    </a>
                     {% if d.ore_contratto_pt %}
                     <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
                     {% endif %}

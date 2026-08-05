@@ -144,8 +144,8 @@
     <div class="doc-header" onclick="toggle(this)">
         <div>
             <strong>{{ r.doc.cognome }}{% if r.doc.nome %} {{ r.doc.nome }}{% endif %}</strong>
-            {% if r.doc.materia %}
-            <span style="font-size:.8rem; opacity:.75; margin-left:8px;">{{ r.doc.materia }}</span>
+            {% if r.doc.materia_effettiva %}
+            <span style="font-size:.8rem; opacity:.75; margin-left:8px;">{{ r.doc.materia_effettiva }}</span>
             {% endif %}
         </div>
         <div style="display:flex; gap:12px; align-items:center;">

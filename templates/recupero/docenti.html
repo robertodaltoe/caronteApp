@@ -18,7 +18,7 @@
                 <option value="">— seleziona —</option>
                 {% for d in non_ancora %}
                 <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-                    {% if d.materia %} — {{ d.materia }}{% endif %}</option>
+                    {% if d.materia_effettiva %} — {{ d.materia_effettiva }}{% endif %}</option>
                 {% endfor %}
             </select>
         </div>
@@ -54,7 +54,7 @@
         {% for rd in disponibili %}
         <tr>
             <td><strong>{{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}</strong></td>
-            <td style="font-size:.86rem;">{{ rd.docente.materia or '—' }}</td>
+            <td style="font-size:.86rem;">{{ rd.docente.materia_effettiva or '—' }}</td>
             <td style="font-size:.82rem; color:var(--grigio);">
                 {% set altre = rd.docente.materie_ist %}
                 {% if altre %}

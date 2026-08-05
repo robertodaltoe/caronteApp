@@ -33,7 +33,7 @@
   {"id": {{ d.id }},
    "cognome": "{{ d.cognome }}",
    "nome": "{{ d.nome or '' }}",
-   "materia": "{{ d.materia or '' }}"}{% if not loop.last %},{% endif %}
+   "materia": "{{ d.materia_effettiva or '' }}"}{% if not loop.last %},{% endif %}
 {% endfor %}]
 </script>
 
@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Accompagnatori già selezionati — pre-popola come tag
     const accEsistenti = [{% for d in attivita.accompagnatori %}
-        {id: {{ d.id }}, cognome: '{{ d.cognome }}', nome: '{{ d.nome or '' }}', materia: '{{ d.materia or '' }}'}{% if not loop.last %},{% endif %}
+        {id: {{ d.id }}, cognome: '{{ d.cognome }}', nome: '{{ d.nome or '' }}', materia: '{{ d.materia_effettiva or '' }}'}{% if not loop.last %},{% endif %}
     {% endfor %}];
     accEsistenti.forEach(d => {
         if (typeof selezionati !== 'undefined') selezionati.set(d.id, d);

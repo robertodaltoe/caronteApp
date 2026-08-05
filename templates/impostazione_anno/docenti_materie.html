@@ -15,11 +15,21 @@
     </div>
 </div>
 
+{% include 'impostazione_anno/_step_nav.html' %}
+
+<div style="font-size:.76rem; color:var(--grigio); margin-bottom:12px;">
+    Vedi anche: <a href="{{ url_for('docenti.lista') }}" style="color:#6366f1; text-decoration:none;">Anagrafica docenti</a> ·
+    <a href="{{ url_for('attivita_ist.dipartimenti') }}" style="color:#6366f1; text-decoration:none;">Dipartimenti e materie</a>
+</div>
+
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
     Per ogni docente compaiono solo le materie ammesse dalla sua classe di concorso — non è
     possibile scegliere materie fuori dall'abilitazione, né testo libero. I docenti senza
     classe di concorso assegnata non compaiono qui:
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}">assegnala prima</a>.
+    Le materie con il badge <span style="font-size:.62rem; color:#7c3aed; font-weight:700; border:1px solid #ddd6fe;
+    background:#f5f3ff; border-radius:6px; padding:0 4px;">auto</span> sono state aggiunte automaticamente da
+    Assegnazioni classi → docenti; puoi comunque togliere la spunta se non è corretta.
 </div>
 
 <form method="post">
@@ -43,7 +53,17 @@
             {% endfor %}
         </div>
 
-        {% if not r.materie_ammesse %}
+        {% if r.materie_extra %}
+        <div style="font-size:.76rem; color:#b45309; background:#fffbeb; border:1px solid #fde68a;
+                    border-radius:6px; padding:6px 10px; margin-bottom:8px;">
+            ⚠︎ Ha ore assegnate su {{ r.materie_extra | map(attribute='nome') | join(', ') }}, ma nessuna
+            delle sue classi di concorso (passo 8) le ammette — probabile classe di concorso mancante:
+            <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}">verifica al passo 8</a>.
+            Restano comunque spuntate qui sotto perché il dato esiste davvero.
+        </div>
+        {% endif %}
+
+        {% if not r.materie_ammesse and not r.materie_extra %}
         <div style="font-size:.78rem; color:#dc2626;">
             ⚠︎ Nessuna materia collegata a questa classe di concorso —
             <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}">verifica i collegamenti</a>.
@@ -58,6 +78,22 @@
                 <input type="checkbox" name="materie_docente_{{ r.docente.id }}" value="{{ m.id }}"
                        {% if m.id in r.assegnate_ids %}checked{% endif %}>
                 {{ m.nome }}
+                {% if r.origine_map.get(m.id) == 'auto' %}
+                <span title="Aggiunta automaticamente da un'assegnazione di ore in Assegnazioni classi → docenti"
+                      style="font-size:.62rem; color:#7c3aed; font-weight:700; border:1px solid #ddd6fe;
+                             background:#f5f3ff; border-radius:6px; padding:0 4px;">auto</span>
+                {% endif %}
+            </label>
+            {% endfor %}
+            {% for m in r.materie_extra %}
+            <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;
+                          padding:4px 10px; border-radius:7px; font-size:.82rem;
+                          border:1px solid #fcd34d; background:#fffbeb;">
+                <input type="checkbox" name="materie_docente_{{ r.docente.id }}" value="{{ m.id }}" checked>
+                {{ m.nome }}
+                <span title="Materia fuori dalle classi di concorso abilitate al passo 8 — verifica lì"
+                      style="font-size:.62rem; color:#b45309; font-weight:700; border:1px solid #fcd34d;
+                             background:#fef3c7; border-radius:6px; padding:0 4px;">⚠︎ fuori CC</span>
             </label>
             {% endfor %}
         </div>

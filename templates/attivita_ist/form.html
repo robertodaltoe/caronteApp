@@ -101,7 +101,7 @@
                    {% if (evento and d.id in docenti_selezionati) or
                          (not evento and d.id in preset_ids) %}checked{% endif %}>
             {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-            {% if d.materia %}<span style="font-size:.72rem; color:var(--grigio); margin-left:4px;">{{ d.materia }}</span>{% endif %}
+            {% if d.materia_effettiva %}<span style="font-size:.72rem; color:var(--grigio); margin-left:4px;">{{ d.materia_effettiva }}</span>{% endif %}
         </label>
         {% endfor %}
     </div>

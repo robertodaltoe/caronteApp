@@ -12,12 +12,23 @@ GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
 
 
 def _sync_materia_roster(docente, materie_ids, anno):
-    """Sincronizza le materie selezionate nella scheda docente con il roster."""
-    DocenteMateria.query.filter_by(id_docente=docente.id, anno_scol=anno).delete()
+    """
+    Sincronizza le materie selezionate nella scheda docente. Tocca solo
+    le righe 'manuale' (dichiarate qui): non cancella mai le righe
+    'auto' sincronizzate da Assegnazioni classi -> docenti — altrimenti
+    ogni modifica dell'anagrafica (anche solo email o telefono) avrebbe
+    silenziosamente cancellato le materie derivate dalle ore assegnate.
+    """
+    DocenteMateria.query.filter_by(
+        id_docente=docente.id, anno_scol=anno, origine='manuale').delete()
     for mid in materie_ids:
         if mid.isdigit():
-            db.session.add(DocenteMateria(
-                id_docente=docente.id, id_materia=int(mid), anno_scol=anno))
+            esiste = DocenteMateria.query.filter_by(
+                id_docente=docente.id, id_materia=int(mid), anno_scol=anno).first()
+            if not esiste:
+                db.session.add(DocenteMateria(
+                    id_docente=docente.id, id_materia=int(mid),
+                    anno_scol=anno, origine='manuale'))
     # Aggiorna anche il campo materia testuale (prima materia selezionata)
     if materie_ids:
         prima = Materia.query.get(int(materie_ids[0]))
@@ -25,10 +36,102 @@ def _sync_materia_roster(docente, materie_ids, anno):
             docente.materia = prima.nome
 
 
+def _shift_anno(anno_scol, n):
+    """'2026-2027' + 1 -> '2027-2028' (idem con n negativo)."""
+    a1, a2 = anno_scol.split('-')
+    return f"{int(a1)+n}-{int(a2)+n}"
+
+
+def _docenti_non_in_servizio(anno_scol):
+    """
+    Docenti non in servizio nell'anno indicato: disattivati (attivo=False),
+    usciti (trasferimento/pensionamento/fine_td, segnalati dal passo 7 con
+    anno_scol_uscita <= anno_scol) o segnalati come AP uscente/in
+    aspettativa (status_presenza — vedi routes/impostazione_anno.py::
+    docenti_anno). Questi ultimi due gruppi restano 'attivo=True' — sono
+    ancora titolari della scuola secondo il resto dell'app — ma qui vanno
+    comunque mostrati perché "potrebbero tornare".
+
+    Nota: status_presenza e motivo_uscita non sono per-singolo-anno (sono
+    lo stato più recente noto, stessa approssimazione già usata altrove
+    nell'app, es. dashboard_anno) — quindi qui non filtriamo per
+    anno_scol su questi due campi, mostriamo lo stato attuale.
+    """
+    from sqlalchemy import or_, and_
+    return (Docente.query.filter(or_(
+        Docente.attivo == False,
+        and_(Docente.anno_scol_uscita != None, Docente.anno_scol_uscita <= anno_scol),
+        Docente.status_presenza.in_(['ap_uscente', 'aspettativa']),
+    )).order_by(Docente.cognome).all())
+
+
 @docenti_bp.route('/docenti')
 def lista():
-    docenti = Docente.query.order_by(Docente.cognome).all()
-    return render_template('docenti.html', docenti=docenti)
+    from config_anno import get_anno_corrente
+    from routes.impostazione_anno import _docenti_per_anno
+    from models.piano_studi import PianoStudi, ClasseSezione
+
+    # Anno operativo reale (calendario/config — lo stesso usato da
+    # assegnazioni, banca ore, ecc.), NON _anno_default_piano(): quello è
+    # pensato per il wizard "Impostazione Anno" e punta subito all'anno che
+    # si sta preparando, anche prima del cambio effettivo a settembre.
+    anno_default = get_anno_corrente()
+    anno_sel = request.args.get('anno', anno_default)
+
+    # Finestra fissa di anni (indipendente dai dati già inseriti, altrimenti
+    # con un solo anno di Piano di Studi in archivio il selettore sparirebbe)
+    # unita a qualunque anno con dati reali già presenti.
+    anni_disponibili = ({_shift_anno(anno_default, n) for n in (-1, 0, 1, 2)} |
+        {r.anno_scol for r in PianoStudi.query.with_entities(PianoStudi.anno_scol).distinct()} |
+        {r.anno_scol for r in ClasseSezione.query.with_entities(ClasseSezione.anno_scol).distinct()} |
+        {anno_sel})
+    anni_disponibili = sorted(anni_disponibili, reverse=True)
+
+    docenti = _docenti_per_anno(anno_sel)
+    docenti = sorted(docenti, key=lambda d: d.cognome)
+
+    mostra_inattivi = request.args.get('mostra') == 'inattivi'
+    docenti_inattivi = _docenti_non_in_servizio(anno_sel) if mostra_inattivi else []
+
+    return render_template('docenti.html', docenti=docenti,
+                           anno_sel=anno_sel, anni_disponibili=anni_disponibili,
+                           anno_default=anno_default,
+                           mostra_inattivi=mostra_inattivi,
+                           docenti_inattivi=docenti_inattivi)
+
+
+@docenti_bp.route('/docenti/<int:id>/riattiva', methods=['POST'])
+def riattiva(id):
+    """
+    Riattiva un docente non più attivo sulla STESSA scheda (non ne crea una
+    nuova) — evita la duplicazione di anagrafiche vista in passato (es. caso
+    Agrò, id 2/102 unificati manualmente). Imposta l'anno di rientro e
+    ripulisce i segnali di uscita precedenti.
+    """
+    d = Docente.query.get_or_404(id)
+    if d.motivo_uscita == 'pensionamento':
+        flash(f'{d.nome_completo} risulta pensionato: non riattivabile da qui.', 'error')
+        return redirect(url_for('docenti.lista', mostra='inattivi'))
+
+    anno_rientro = request.form.get('anno_rientro', '').strip()
+    if not anno_rientro:
+        flash('Indica l\'anno scolastico di rientro prima di riattivare.', 'error')
+        return redirect(url_for('docenti.lista', mostra='inattivi'))
+
+    d.attivo = True
+    d.anno_scol_inizio = anno_rientro
+    d.anno_scol_uscita = None
+    d.motivo_uscita = None
+    # Ripulisce anche lo stato di presenza (AP uscente/aspettativa) —
+    # vedi routes/impostazione_anno.py::docenti_anno() "annulla_status".
+    d.status_presenza = 'presente'
+    d.scuola_ap = None
+    db.session.commit()
+    from routes.auth import log as auth_log
+    auth_log('riattiva_docente', f'{d.nome_completo} (dal {anno_rientro})')
+    flash(f"{d.nome_completo} riattivato dall'a.s. {anno_rientro}. "
+          f"Controlla e completa la scheda.", 'success')
+    return redirect(url_for('docenti.modifica', id=d.id))
 
 @docenti_bp.route('/docenti/nuovo', methods=['GET', 'POST'])
 def nuovo():
@@ -118,6 +221,22 @@ def modifica(id):
             d.ore_contratto_pt = int(request.form.get('ore_contratto_pt') or 0) or None
         else:
             d.ore_contratto_pt = None
+
+        # Cambio di regime part-time programmato per un anno futuro (vedi
+        # Docente.part_time_effettivo_per_anno) — non tocca part_time/
+        # ore_contratto_pt correnti, usati dall'anno in corso.
+        anno_prog = request.form.get('anno_scol_part_time_prog', '').strip()
+        if anno_prog:
+            tipo_prog = request.form.get('tipo_servizio_prog', 'full')
+            d.anno_scol_part_time_prog = anno_prog
+            d.part_time_prog = (tipo_prog == 'part_time')
+            d.ore_contratto_pt_prog = (
+                int(request.form.get('ore_contratto_pt_prog') or 0) or None
+                if tipo_prog == 'part_time' else None)
+        else:
+            d.anno_scol_part_time_prog = None
+            d.part_time_prog = None
+            d.ore_contratto_pt_prog = None
         if tipo_serv == 'multi_sede':
             import json as _json
             ou = {}
@@ -205,13 +324,28 @@ def modifica(id):
         {get_anno_corrente()},
         reverse=True)
 
+    # Incarichi: anno corrente in evidenza, resto come storico (sola
+    # lettura — si assegnano/modificano dalla pagina Incarichi, non da qui).
+    from models.incarico import IncaricaDocente
+    anno_c = get_anno_corrente()
+    tutti_incarichi = (d.incarichi
+                        .order_by(IncaricaDocente.anno_scol.desc()).all())
+    incarichi_corrente = [i for i in tutti_incarichi if i.anno_scol == anno_c]
+    incarichi_storico = {}
+    for i in tutti_incarichi:
+        if i.anno_scol != anno_c:
+            incarichi_storico.setdefault(i.anno_scol, []).append(i)
+
     return render_template('docente_form.html', docente=d,
                            materie=materie, mat_assegnate=mat_assegnate,
         giorni=list(enumerate(GIORNI)), eccezioni=eccezioni,
         id_prev=id_prev, id_next=id_next,
         titolari_disponibili=titolari_disponibili,
         abbinamenti_itp=abbinamenti_itp,
-        anni_disponibili_ore_max=anni_ore_max)
+        anni_disponibili_ore_max=anni_ore_max,
+        anno_corrente_incarichi=anno_c,
+        incarichi_corrente=incarichi_corrente,
+        incarichi_storico=incarichi_storico)
 
 @docenti_bp.route('/docenti/<int:id>/anonimizza', methods=['POST'])
 def anonimizza(id):

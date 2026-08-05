@@ -10,14 +10,57 @@
 
 {% block content %}
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
     <div>
         <h1 style="font-size:1.4rem; color:var(--blu);">Elenco docenti</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
-            {{ docenti|length }} docenti
+            {{ docenti|length }} docenti in servizio nell'a.s. {{ anno_sel }}
         </p>
     </div>
-    <a href="{{ url_for('docenti.nuovo') }}" class="btn btn-success">+ Nuovo docente</a>
+    <div style="display:flex; align-items:center; gap:8px;">
+        {% if anni_disponibili %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('docenti.lista', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno_sel %}background:#1e3a8a; color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ url_for('docenti.nuovo') }}" class="btn btn-success">+ Nuovo docente</a>
+    </div>
+</div>
+
+<div style="font-size:.78rem; margin-bottom:14px;">
+    {% if mostra_inattivi %}
+    <a href="{{ url_for('docenti.lista', anno=anno_sel) }}" style="color:#6366f1; text-decoration:none;">
+        ↑︎ Nascondi i non attivi
+    </a>
+    {% else %}
+    <a href="{{ url_for('docenti.lista', anno=anno_sel, mostra='inattivi') }}" style="color:#6366f1; text-decoration:none;">
+        ⚙︎ Mostra anche i non attivi (docenti usciti, per riattivarli se tornano)
+    </a>
+    {% endif %}
+</div>
+
+{% if anno_sel != anno_default %}
+<div style="font-size:.78rem; color:#92400e; background:#fff7ed; border:1px solid #fde68a;
+     border-radius:6px; padding:6px 10px; margin-bottom:12px;">
+    ⚠︎ Stai visualizzando l'a.s. {{ anno_sel }} (diverso dall'anno corrente {{ anno_default }}).
+    Per gli anni futuri l'elenco mostra solo i docenti già noti come in servizio
+    ({{ 'TI senza uscita segnalata + TD/AP già inseriti' if anno_sel > anno_default else '' }}).
+</div>
+{% endif %}
+
+<div style="font-size:.78rem; color:var(--grigio); margin-bottom:14px;">
+    Docenti: <strong style="color:#1f2937;">Anagrafica docenti</strong> ·
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" style="color:#6366f1; text-decoration:none;">Docenti ↔︎ Classi di concorso</a> ·
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" style="color:#6366f1; text-decoration:none;">Docenti ↔︎ Materie</a> ·
+    <a href="{{ url_for('attivita_ist.dipartimenti') }}" style="color:#6366f1; text-decoration:none;">Dipartimenti e materie</a>
 </div>
 
 {% set conferma_id = request.args.get('conferma_elimina', type=int) %}
@@ -28,7 +71,7 @@
         <tr>
             <th style="width:130px;">Cognome</th>
             <th style="width:100px;">Nome</th>
-            <th>Materia</th>
+            <th>Classe di concorso</th>
             <th style="text-align:center; width:60px;">H/sett</th>
             <th style="width:130px;">Tipo contratto</th>
             <th style="text-align:center; width:130px;">Colloqui</th>
@@ -57,13 +100,19 @@
             {% else %}<span style="color:#f59e0b; font-size:.8rem;">⚠︎</span>
             {% endif %}
         </td>
-        <td style="color:var(--grigio); font-size:.88rem;">{{ d.materia or '—' }}</td>
+        <td style="color:var(--grigio); font-size:.88rem;">{{ d.materia_effettiva or '—' }}</td>
         <td style="text-align:center;">{{ d.ore_contratto }}h</td>
         <td>
             {% if d.tipo_contratto %}
                 <span class="badge badge-grigio">{{ d.tipo_contratto }}</span>
             {% else %}
                 <span style="color:#f59e0b; font-size:.8rem;">⚠︎ da completare</span>
+            {% endif %}
+            {% if d.part_time_effettivo_per_anno(anno_sel) %}
+                <span class="badge" style="background:#e0f2fe; color:#0369a1; margin-left:3px;"
+                      title="Part-time nell'a.s. {{ anno_sel }}{{ ' (cambio programmato)' if d.anno_scol_part_time_prog == anno_sel else '' }}">
+                    PT{{ ' ' ~ d.ore_contratto_pt_effettive_per_anno(anno_sel) ~ 'h' if d.ore_contratto_pt_effettive_per_anno(anno_sel) else '' }}
+                </span>
             {% endif %}
         </td>
         <td style="text-align:center; white-space:nowrap; font-size:.82rem; color:var(--grigio);">
@@ -118,5 +167,59 @@
     </tbody>
 </table>
 </div>
+
+{% if mostra_inattivi %}
+<div class="card" style="margin-top:20px;">
+    <h2 style="font-size:1.1rem; color:var(--grigio); margin-bottom:4px;">Docenti non attivi</h2>
+    <p style="color:var(--grigio); font-size:.8rem; margin-bottom:14px;">
+        {{ docenti_inattivi|length }} docenti non in servizio nell'a.s. {{ anno_sel }} — disattivati,
+        usciti, AP in uscita o in aspettativa. Riattivandoli si riusa la stessa scheda (storico,
+        banca ore, supplenze restano collegati) invece di crearne una nuova.
+    </p>
+    {% if not docenti_inattivi %}
+    <p style="color:var(--grigio); font-size:.85rem;">Nessuno.</p>
+    {% endif %}
+    {% for d in docenti_inattivi %}
+    {% set pensionato = (d.motivo_uscita == 'pensionamento') %}
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;
+         padding:10px 0; border-bottom:1px solid #f1f5f9; flex-wrap:wrap;">
+        <div>
+            <strong>{{ d.cognome }} {{ d.nome }}</strong>
+            <span style="color:var(--grigio); font-size:.82rem; margin-left:6px;">{{ d.materia_effettiva or '—' }}</span>
+            {% if d.anno_scol_uscita %}
+            <span style="color:var(--grigio); font-size:.78rem; margin-left:6px;">
+                — uscito nel {{ d.anno_scol_uscita }}{% if d.motivo_uscita %} ({{ d.motivo_uscita }}){% endif %}
+            </span>
+            {% elif d.status_presenza == 'ap_uscente' %}
+            <span style="color:#0369a1; font-size:.78rem; margin-left:6px;">
+                — AP in uscita{% if d.scuola_ap %} → {{ d.scuola_ap }}{% endif %}
+            </span>
+            {% elif d.status_presenza == 'aspettativa' %}
+            <span style="color:#0369a1; font-size:.78rem; margin-left:6px;">— in aspettativa</span>
+            {% elif not d.attivo %}
+            <span style="color:var(--grigio); font-size:.78rem; margin-left:6px;">— non attivo</span>
+            {% endif %}
+        </div>
+        {% if pensionato %}
+        <span style="color:var(--grigio); font-size:.78rem;">Pensionato — solo storico,
+            <a href="{{ url_for('docenti.modifica', id=d.id) }}" style="color:#6366f1;">apri scheda</a>
+        </span>
+        {% else %}
+        <form method="post" action="{{ url_for('docenti.riattiva', id=d.id) }}"
+              style="display:flex; gap:6px; align-items:center;">
+            <select name="anno_rientro" required
+                    style="padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.8rem;">
+                <option value="">— a.s. di rientro —</option>
+                {% for a in anni_disponibili %}
+                <option value="{{ a }}" {% if a == anno_sel %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Riattiva</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 {% endblock %}

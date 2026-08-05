@@ -74,7 +74,7 @@
             </strong>
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
                 {{ riga.presenza.stato }}
-                {% if riga.assente.materia %}· {{ riga.assente.materia }}{% endif %}
+                {% if riga.assente.materia_effettiva %}· {{ riga.assente.materia_effettiva }}{% endif %}
             </span>
         </div>
         {% if riga.sostituzione and riga.sostituzione.id_sostituto %}
@@ -105,8 +105,8 @@
             <span style="font-weight:700; font-size:.9rem; flex:1;">
                 {{ cand.cognome }}{% if cand.nome %} {{ cand.nome[0] }}.{% endif %}
             </span>
-            {% if cand.materia %}
-            <span style="font-size:.75rem; color:var(--grigio);">{{ cand.materia }}</span>
+            {% if cand.materia_effettiva %}
+            <span style="font-size:.75rem; color:var(--grigio);">{{ cand.materia_effettiva }}</span>
             {% endif %}
         </div>
         {% else %}
@@ -132,7 +132,7 @@
                     <option value="{{ d.id }}"
                         {% if riga.sostituzione and riga.sostituzione.id_sostituto == d.id %}selected{% endif %}>
                         {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-                        {% if d.materia %} ({{ d.materia }}){% endif %}
+                        {% if d.materia_effettiva %} ({{ d.materia_effettiva }}){% endif %}
                     </option>
                     {% endfor %}
                 </select>

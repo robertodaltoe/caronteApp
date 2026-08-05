@@ -64,6 +64,8 @@
 .cell-mat  { color: var(--grigio); font-size: .73rem; font-style: italic; }
 .cell-pot  { color: #7c3aed; font-size: .72rem; }
 .cell-vuota { color: #d1d5db; font-size: .8rem; }
+.cell-itp  { font-size: .68rem; color: #7c3aed; font-weight: 600; }
+.cell-sos  { font-size: .68rem; color: var(--blu-med); font-weight: 600; }
 
 /* TAB GIORNI */
 .tab-giorni {
@@ -103,6 +105,12 @@
     <a href="{{ url_for('sync.index') }}" class="btn btn-primary btn-sm">⚙︎ Gestione orario</a>
 </div>
 
+<div style="display:flex; gap:16px; font-size:.75rem; color:var(--grigio); margin-bottom:10px;">
+    <span><span style="color:var(--blu); font-weight:700;">■</span> Titolare</span>
+    <span><span style="color:#7c3aed; font-weight:700;">■</span> ITP (compresenza)</span>
+    <span><span style="color:var(--blu-med); font-weight:700;">■</span> Sostegno</span>
+</div>
+
 <!-- TAB GIORNI -->
 <div class="tab-giorni">
     {% for g in giorni_con_orario %}
@@ -134,6 +142,7 @@
         {% for ora in ore_list %}
         {% set slots = griglia.get(classe, {}).get(ora, []) %}
         {% set slot = slots[0] if slots else none %}
+        {% set slots_sos = griglia_sostegno.get(classe, {}).get(ora, []) %}
         <td>
             {% if slot %}
                 {% if slot.tipo_ora == 'potenziamento' %}
@@ -150,7 +159,7 @@
                     {% set doc2 = docenti_map.get(extra.id_docente) %}
                     {% if doc2 and doc2.cognome != doc.cognome and doc2.cognome not in nomi_extra %}
                     {% set _ = nomi_extra.append(doc2.cognome) %}
-                    <div style="font-size:.68rem; color:#7c3aed; font-weight:600;">+ {{ doc2.cognome[:10] }}</div>
+                    <div class="cell-itp">+ {{ doc2.cognome[:10] }}</div>
                     {% endif %}
                     {% endfor %}
                     {% endif %}
@@ -160,6 +169,14 @@
             {% else %}
                 <span class="cell-vuota">·</span>
             {% endif %}
+            {% set nomi_sos = [] %}
+            {% for extra_s in slots_sos %}
+            {% set doc_s = docenti_map.get(extra_s.id_docente) %}
+            {% if doc_s and doc_s.cognome not in nomi_sos %}
+            {% set _ = nomi_sos.append(doc_s.cognome) %}
+            <div class="cell-sos">+ {{ doc_s.cognome[:10] }}</div>
+            {% endif %}
+            {% endfor %}
         </td>
         {% endfor %}
     </tr>
@@ -195,7 +212,13 @@ ORARIO_DATI["{{ classe }}"] = {
     {% set slot = griglia.get(classe, {}).get(ora) %}
     {% set slots_js = griglia.get(classe, {}).get(ora, []) %}
     {% set slot_js = slots_js[0] if slots_js else none %}
-    "{{ ora }}": {% if slot_js and slot_js.tipo_ora == "lezione" and slot_js.id_docente %}{% set doc = docenti_map.get(slot_js.id_docente) %}{"doc":"{{ doc.cognome if doc else '' }}","mat":"{{ (slot_js.materia or '')|replace('"',' ') }}","tipo":"lezione"}{% elif slot_js and slot_js.tipo_ora == "potenziamento" %}{"doc":"Potenziamento","mat":"","tipo":"potenziamento"}{% else %}null{% endif %},
+    {% set slots_sos_js = griglia_sostegno.get(classe, {}).get(ora, []) %}
+    {% set sos_nomi = [] %}
+    {% for extra_s in slots_sos_js %}
+    {% set doc_s = docenti_map.get(extra_s.id_docente) %}
+    {% if doc_s and doc_s.cognome not in sos_nomi %}{% set _ = sos_nomi.append(doc_s.cognome) %}{% endif %}
+    {% endfor %}
+    "{{ ora }}": {% if slot_js and slot_js.tipo_ora == "lezione" and slot_js.id_docente %}{% set doc = docenti_map.get(slot_js.id_docente) %}{"doc":"{{ doc.cognome if doc else '' }}","mat":"{{ (slot_js.materia or '')|replace('"',' ') }}","tipo":"lezione","sos":{{ sos_nomi|tojson }}}{% elif slot_js and slot_js.tipo_ora == "potenziamento" %}{"doc":"Potenziamento","mat":"","tipo":"potenziamento","sos":{{ sos_nomi|tojson }}}{% elif sos_nomi %}{"doc":"","mat":"","tipo":"solo_sostegno","sos":{{ sos_nomi|tojson }}}{% else %}null{% endif %},
     {% endfor %}
 };
 {% endfor %}
@@ -213,12 +236,16 @@ function apriOrarioClasse(classe, giorno) {
         const s = dati[ora];
         const bg = i%2===0 ? "#f8fafc" : "white";
         const fascia = ORE_FASCE[String(ora)] || "";
+        const sosHtml = (s && s.sos && s.sos.length)
+            ? '<div style="color:#a5241f;font-weight:600;font-size:.78rem;margin-top:2px;">+ sostegno: '+s.sos.join(', ')+'</div>' : '';
         if (!s) {
             rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#d1d5db;">'+ora+'ª</td><td colspan="2" style="padding:8px;color:#d1d5db;">—</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
         } else if (s.tipo === "potenziamento") {
-            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#7c3aed;">'+ora+'ª</td><td colspan="2" style="padding:8px;color:#7c3aed;font-style:italic;">Potenziamento</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
+            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#7c3aed;">'+ora+'ª</td><td colspan="2" style="padding:8px;color:#7c3aed;font-style:italic;">Potenziamento'+sosHtml+'</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
+        } else if (s.tipo === "solo_sostegno") {
+            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#6b7280;">'+ora+'ª</td><td colspan="2" style="padding:8px;color:#d1d5db;">—'+sosHtml+'</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
         } else {
-            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#6b7280;">'+ora+'ª</td><td style="padding:8px;font-weight:700;color:#0a1f35;">'+s.doc+'</td><td style="padding:8px;color:#6b7280;font-style:italic;font-size:.85rem;">'+s.mat+'</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
+            rows += '<tr style="background:'+bg+'"><td style="text-align:center;padding:8px 12px;font-weight:800;color:#6b7280;">'+ora+'ª</td><td style="padding:8px;font-weight:700;color:#0a1f35;">'+s.doc+'</td><td style="padding:8px;color:#6b7280;font-style:italic;font-size:.85rem;">'+s.mat+sosHtml+'</td><td style="padding:8px;color:#9ca3af;font-size:.78rem;">'+fascia+'</td></tr>';
         }
     });
 

@@ -142,7 +142,7 @@
                     border:1px solid {{ '#fecaca' if item.scarto > 0 else '#fde68a' }};
                     color:{{ '#dc2626' if item.scarto > 0 else '#d97706' }};">
             <strong>{{ item.cc.codice }}</strong>
-            TI={{ item.n_ti }} · USR={{ item.n_usr }}
+            TI={{ item.n_ti }} · USR={{ item.n_usr }}{% if item.tipo_usr %}<span style="opacity:.7;"> ({{ item.tipo_usr }})</span>{% endif %}
             <span style="font-weight:800;">
                 ({{ '+' if item.scarto > 0 else '' }}{{ item.scarto }})
             </span>

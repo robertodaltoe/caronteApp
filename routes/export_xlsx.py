@@ -749,7 +749,19 @@ def _riempi_foglio_classe(ws, anno, label_classe):
     doc_map = defaultdict(list)
     for ac in assegnazioni_classe:
         a = ac.assegnazione
-        mat = Materia.query.get(ac.id_materia) if ac.id_materia else None
+        id_mat = ac.id_materia
+        if id_mat is None and indirizzo != 'POT':
+            # Riga storica salvata prima del fix sulla materia singola
+            # (routes/assegnazioni.py::_resolve_id_materia): prova a
+            # risolverla ora dal piano studi invece di mostrare il tipo
+            # di contratto al posto del nome materia.
+            from models.piano_studi import PianoStudi as _PS
+            righe_p = _PS.query.filter_by(
+                anno_scol=anno, id_classe_concorso=a.id_classe_concorso,
+                anno_corso=anno_corso, indirizzo=indirizzo, compresenza=False).all()
+            if len(righe_p) == 1:
+                id_mat = righe_p[0].id_materia
+        mat = Materia.query.get(id_mat) if id_mat else None
         nome_mat = (mat.nome_breve or mat.nome) if mat else (a.tipo if a.tipo else '—')
         doc_map[a].append((nome_mat, ac.ore))
 

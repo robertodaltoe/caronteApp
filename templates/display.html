@@ -199,8 +199,8 @@
                     {% set mat_sost = slot_map.get(mat_sost_key, '') %}
                     {% if mat_sost %}
                     <span class="tipo-badge tipo-{{ s.tipo }}">{{ mat_sost }}</span>
-                    {% elif s.sostituto and s.sostituto.materia %}
-                    <span class="tipo-badge tipo-{{ s.tipo }}">{{ s.sostituto.materia.split(',')[0].strip() }}</span>
+                    {% elif s.sostituto and s.sostituto.materia_effettiva %}
+                    <span class="tipo-badge tipo-{{ s.tipo }}">{{ s.sostituto.materia_effettiva }}</span>
                     {% endif %}
                     {% endif %}
                 </div>

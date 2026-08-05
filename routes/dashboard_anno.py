@@ -74,21 +74,34 @@ def index():
         PianoStudi.id_materia == None).count()
 
     # ── Organico: confronto TI vs DOC ─────────────────────────────
+    # Preferisce l'organico di fatto (dotazione reale, dopo le
+    # iscrizioni) e ricade su quello di diritto solo se il fatto non è
+    # ancora stato inserito — stessa precedenza usata in
+    # routes/assegnazioni.py::_budget() e nelle pagine di confronto di
+    # impostazione_anno.py. Prima filtrava su
+    # tipo.in_(['fatto','diritto']) senza ordinamento esplicito: quale
+    # dei due risultasse "first()" dipendeva dall'ordine casuale/di
+    # inserimento nel DB, non garantiva la preferenza per il fatto.
     confronto_cc = []
     for cc in cc_con_calc:
-        cat = CattedraOrganico.query.filter_by(
-            anno_scol=anno, id_classe_concorso=cc.id).filter(
-            CattedraOrganico.tipo.in_(['fatto', 'diritto'])).first()
+        cat = None
+        for tipo_tentativo in ('fatto', 'diritto'):
+            cat = CattedraOrganico.query.filter_by(
+                anno_scol=anno, tipo=tipo_tentativo, id_classe_concorso=cc.id).first()
+            if cat:
+                break
         n_usr = cat.n_docenti if cat else 0
         n_ti_cc = (db.session.query(db.func.count(DocenteClasseConcorso.id))
                    .join(Docente, DocenteClasseConcorso.id_docente == Docente.id)
                    .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
                            Docente.attivo == True, Docente.tipo_contratto == 'TI')
                    .scalar() or 0)
+        tipo_usr = cat.tipo if cat else None
         scarto = n_ti_cc - n_usr
         if scarto != 0:
             confronto_cc.append({
-                'cc': cc, 'n_ti': n_ti_cc, 'n_usr': n_usr, 'scarto': scarto})
+                'cc': cc, 'n_ti': n_ti_cc, 'n_usr': n_usr,
+                'tipo_usr': tipo_usr, 'scarto': scarto})
 
     # ── Aule mancanti ─────────────────────────────────────────────
     from models.aula import Aula

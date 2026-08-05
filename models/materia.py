@@ -62,6 +62,13 @@ class DocenteMateria(db.Model):
     id_docente  = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False)
     id_materia  = db.Column(db.Integer, db.ForeignKey('materie.id'),  nullable=False)
     anno_scol   = db.Column(db.String(9), nullable=False)   # es. '2025-2026'
+    # 'manuale' (aggiunta a mano dalla pagina 10 o dalla scheda docente,
+    # non toccata dalla pulizia automatica) | 'auto' (creata da
+    # routes/assegnazioni.py quando si assegnano ore su una materia —
+    # rimossa automaticamente se quella materia non è più coperta da
+    # nessuna assegnazione del docente). Vedi _sync_docente_materie() e
+    # _pulisci_docente_materie_orfane() in routes/assegnazioni.py.
+    origine     = db.Column(db.String(10), nullable=False, default='manuale')
 
     docente = db.relationship('Docente', back_populates='materie_ist')
     materia = db.relationship('Materia', back_populates='docenti_mat')

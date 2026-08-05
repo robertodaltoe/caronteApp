@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Impostazione Anno Scolastico{% endblock %}
 {% block content %}
+<div style="font-size:.78rem; color:var(--grigio); margin-bottom:8px;">
+    <a href="{{ url_for('impostazioni.index') }}" style="color:#6366f1; text-decoration:none;">Impostazioni</a> ›
+    <span style="color:#1f2937; font-weight:600;"> Impostazione Anno</span>
+</div>
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
     <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">▦︎️ Impostazione Anno Scolastico</h1>
@@ -13,25 +17,35 @@
 </div>
 
 <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px;">
-    <div class="card" style="text-align:center; padding:10px;">
+    <div class="card" style="text-align:center; padding:10px;"
+         title="Classi di concorso attive nell'anagrafica (passo 1), indipendenti dall'anno.">
         <div style="font-size:1.5rem; font-weight:800; color:var(--blu);">{{ n_classi }}</div>
-        <div style="font-size:.72rem; color:var(--grigio);">Classi di concorso</div>
+        <div style="font-size:.72rem; color:var(--grigio);">Classi di concorso attive</div>
     </div>
-    <div class="card" style="text-align:center; padding:10px;">
+    <div class="card" style="text-align:center; padding:10px;"
+         title="{{ n_materie_collegate }} materie su {{ n_materie_tot }} hanno almeno una classe di concorso associata (passo 3).{% if materie_non_collegate %} Non collegate: {{ materie_non_collegate|map(attribute='nome')|join(', ') }}.{% endif %}">
         <div style="font-size:1.5rem; font-weight:800; color:#7c3aed;">{{ n_materie_collegate }}/{{ n_materie_tot }}</div>
-        <div style="font-size:.72rem; color:var(--grigio);">Materie collegate</div>
+        <div style="font-size:.72rem; color:var(--grigio);">Materie con CC associata</div>
+        {% if materie_non_collegate %}
+        <div style="font-size:.66rem; color:#b45309; margin-top:2px;">
+            {{ materie_non_collegate|length }} senza CC: {{ materie_non_collegate|map(attribute='nome')|join(', ') }}
+        </div>
+        {% endif %}
     </div>
-    <div class="card" style="text-align:center; padding:10px;">
+    <div class="card" style="text-align:center; padding:10px;"
+         title="Sezioni di classe attive nell'anno {{ anno_piano }} (l'anno su cui stai lavorando).">
         <div style="font-size:1.5rem; font-weight:800; color:#0891b2;">{{ n_sezioni_attive }}</div>
-        <div style="font-size:.72rem; color:var(--grigio);">Sezioni attive</div>
+        <div style="font-size:.72rem; color:var(--grigio);">Sezioni attive {{ anno_piano }}</div>
     </div>
-    <div class="card" style="text-align:center; padding:10px;">
+    <div class="card" style="text-align:center; padding:10px;"
+         title="Righe di piano di studi (materia + ore settimanali per classe) inserite per l'anno {{ anno_piano }} (l'anno su cui stai lavorando).">
         <div style="font-size:1.5rem; font-weight:800; color:#166534;">{{ n_piano_righe }}</div>
-        <div style="font-size:.72rem; color:var(--grigio);">Righe piano studi</div>
+        <div style="font-size:.72rem; color:var(--grigio);">Righe piano studi {{ anno_piano }}</div>
     </div>
-    <div class="card" style="text-align:center; padding:10px;">
+    <div class="card" style="text-align:center; padding:10px;"
+         title="Calcoli organico confermati su calcoli con ore &gt; 0 per l'anno {{ anno_piano }} (l'anno su cui stai lavorando) — non il numero di classi di concorso.">
         <div style="font-size:1.5rem; font-weight:800; color:#b45309;">{{ n_calcolo_ok }}/{{ n_calcolo_tot }}</div>
-        <div style="font-size:.72rem; color:var(--grigio);">CC confermate</div>
+        <div style="font-size:.72rem; color:var(--grigio);">Calcoli organico confermati {{ anno_piano }}</div>
     </div>
 </div>
 
@@ -103,7 +117,7 @@
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→︎</div>
     </a>
-    <a href="{{ url_for('impostazione_anno.organico', anno=anno_corrente, tipo='diritto') }}" class="card" style="padding:14px 18px;
+    <a href="{{ url_for('impostazione_anno.organico', anno=anno_piano, tipo='diritto') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #166534;">
         <div style="font-size:1.6rem;">▤︎</div>
         <div>
@@ -147,13 +161,14 @@
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→︎</div>
     </a>
-    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="card" style="padding:14px 18px;
-       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #be185d;">
-        <div style="font-size:1.6rem;">▥︎</div>
+    <a href="{{ url_for('impostazione_anno.confronto_organico', anno=anno_piano) }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
+        <div style="font-size:1.6rem;">⌕︎</div>
         <div>
-            <div style="font-weight:700; color:#be185d;">9. Docenti ↔︎ Materie</div>
+            <div style="font-weight:700; color:#7c3aed;">8b. Verifica TI ↔︎ Organico USR</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
-                Materie insegnate da ciascun docente, filtrate per la sua classe di concorso
+                Confronto per ogni CC tra i TI collegati (passo 8) e il DOC del bollettino USR — con
+                ore richieste, tipo organico e KPI riassuntivi
             </div>
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→︎</div>
@@ -162,9 +177,20 @@
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #6366f1;">
         <div style="font-size:1.6rem;">▤︎</div>
         <div>
-            <div style="font-weight:700; color:#6366f1;">10. Assegnazioni classi →︎ docenti</div>
+            <div style="font-weight:700; color:#6366f1;">9. Assegnazioni classi →︎ docenti</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Assegnazione nominativa con controllo ore max, budget USR e placeholder supplenti
+            </div>
+        </div>
+        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+    </a>
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="card" style="padding:14px 18px;
+       text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #be185d;">
+        <div style="font-size:1.6rem;">▥︎</div>
+        <div>
+            <div style="font-weight:700; color:#be185d;">10. Docenti ↔︎ Materie</div>
+            <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+                Materie insegnate da ciascun docente, filtrate per la sua classe di concorso
             </div>
         </div>
         <div style="margin-left:auto; color:var(--grigio);">→︎</div>

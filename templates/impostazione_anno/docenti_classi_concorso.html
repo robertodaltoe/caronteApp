@@ -15,6 +15,13 @@
     </div>
 </div>
 
+{% include 'impostazione_anno/_step_nav.html' %}
+
+<div style="font-size:.76rem; color:var(--grigio); margin-bottom:12px;">
+    Vedi anche: <a href="{{ url_for('docenti.lista') }}" style="color:#6366f1; text-decoration:none;">Anagrafica docenti</a> ·
+    <a href="{{ url_for('attivita_ist.dipartimenti') }}" style="color:#6366f1; text-decoration:none;">Dipartimenti e materie</a>
+</div>
+
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
     Per ogni docente, aggiungi una o più classi di concorso (abilitazioni) dal select — un
     docente può essere abilitato su più classi e ricevere ore da entrambe. È un dato stabile,
@@ -126,8 +133,10 @@ function rimuoviBadge(xEl) {
     <div style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;
          padding:8px 12px; background:#f5f3ff; border-radius:6px; border-left:3px solid #7c3aed;">
         <strong>TI collegati</strong> = docenti TI assegnati a questa CC qui sopra &nbsp;|&nbsp;
-        <strong>DOC USR</strong> = titolari nel bollettino organico di diritto
-        (inclusi AP uscenti e aspettative) &nbsp;|&nbsp;
+        <strong>DOC USR</strong> = titolari nel bollettino organico
+        (inclusi AP uscenti e aspettative) — di <strong>fatto</strong> se già
+        inserito, altrimenti di <strong>diritto</strong> come ripiego (indicato
+        tra parentesi) &nbsp;|&nbsp;
         ✓︎ allineati &nbsp; ⚠︎️ scarto di 1 &nbsp; ✕︎ scarto &gt; 1
     </div>
     <div class="card" style="padding:0; overflow-x:auto;">
@@ -150,7 +159,12 @@ function rimuoviBadge(xEl) {
             <td style="padding:8px 12px; color:#374151;">{{ r.cc.nome }}</td>
             <td style="padding:8px 8px; text-align:center; font-weight:700;
                        color:{{ '#16a34a' if r.n_ti_app > 0 else '#9ca3af' }};">{{ r.n_ti_app }}</td>
-            <td style="padding:8px 8px; text-align:center; font-weight:700; color:#0369a1;">{{ r.n_doc_usr }}</td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700; color:#0369a1;">
+                {{ r.n_doc_usr }}
+                {% if r.tipo_usr %}
+                <span style="font-size:.64rem; font-weight:400; color:var(--grigio);">({{ r.tipo_usr }})</span>
+                {% endif %}
+            </td>
             <td style="padding:8px 8px; text-align:center; font-weight:700;
                        color:{{ '#16a34a' if r.scarto == 0 else ('#f59e0b' if r.scarto|abs == 1 else '#dc2626') }};">
                 {{ '+' if r.scarto > 0 else '' }}{{ r.scarto if r.scarto != 0 else '—' }}

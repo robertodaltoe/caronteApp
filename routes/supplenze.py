@@ -322,7 +322,7 @@ def api_suggerimenti():
             'id':      doc_id,
             'cognome': doc.cognome,
             'nome':    doc.nome or '',
-            'materia': doc.materia or '',
+            'materia': doc.materia_effettiva or '',
             'saldo_min':      saldo_eff,
             'saldo_prev_min': saldo_prev,
             'saldo_label':    saldo_label,
@@ -459,7 +459,7 @@ def api_suggerimenti():
                     'id':      doc_id,
                     'cognome': doc.cognome,
                     'nome':    doc.nome or '',
-                    'materia': doc.materia or '',
+                    'materia': doc.materia_effettiva or '',
                     'saldo_min':   saldi_eff.get(doc_id, 0),
                     'saldo_label': formatta_saldo_label_proiettato(
                                        saldi_eff.get(doc_id, 0), saldi_prev.get(doc_id, 0)),

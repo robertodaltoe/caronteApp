@@ -52,7 +52,7 @@
                 {{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}
             </strong>
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
-                {{ rd.docente.materia or '' }}
+                {{ rd.docente.materia_effettiva or '' }}
             </span>
             {% if rd.vincoli %}
             <span style="font-size:.72rem; background:#dbeafe; color:#1e40af;

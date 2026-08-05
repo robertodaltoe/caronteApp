@@ -42,7 +42,7 @@
     <tr><td>Nominativo display</td><td>{{ docente.nome_display or '—' }}</td></tr>
     <tr><td>Email</td><td>{{ docente.email or '—' }}</td></tr>
     <tr><td>Ruolo didattico</td><td>{{ docente.ruolo or '—' }}</td></tr>
-    <tr><td>Materia / classe di concorso</td><td>{{ docente.materia or (docente.classe_concorso.codice if docente.classe_concorso else '—') }}</td></tr>
+    <tr><td>Materia / classe di concorso</td><td>{{ docente.materia_effettiva or '—' }}</td></tr>
     <tr><td>Tipo contratto</td><td>{{ docente.tipo_contratto or '—' }}</td></tr>
     <tr><td>Ore di contratto</td><td>{{ docente.ore_contratto or '—' }}</td></tr>
     <tr><td>Part-time</td><td>{{ 'Sì (' ~ (docente.ore_contratto_pt or '?') ~ ' ore)' if docente.part_time else 'No' }}</td></tr>

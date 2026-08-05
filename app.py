@@ -84,8 +84,11 @@ def create_app():
     app.register_blueprint(incarichi_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(dashboard_anno_bp)
-    from routes.impostazione_anno import impostazione_anno_bp
+    from routes.impostazione_anno import impostazione_anno_bp, _nav_steps
     app.register_blueprint(impostazione_anno_bp)
+    # Globale (non solo sul blueprint impostazione_anno): serve anche nelle
+    # pagine "4b. Aule" e "9. Assegnazioni", che vivono in altri blueprint.
+    app.context_processor(lambda: dict(nav_steps=_nav_steps))
     from routes.recupero import recupero_bp
     app.register_blueprint(recupero_bp)
     from routes.rientro import rientro_bp
@@ -286,6 +289,10 @@ def _auto_migrate():
         ('banca_ore', 'anno_scol',           'VARCHAR(9)',  None),
         ('docenti',   'modificato_il',       'DATETIME',    None),
         ('esami_integrativi_materie', 'tipologia', 'VARCHAR(10)', None),
+        ('docente_materie', 'origine', "VARCHAR(10)", "'manuale'"),
+        ('docenti', 'part_time_prog',           'BOOLEAN',    None),
+        ('docenti', 'ore_contratto_pt_prog',     'INTEGER',    None),
+        ('docenti', 'anno_scol_part_time_prog',  'VARCHAR(9)', None),
     ]
 
     with db.engine.connect() as conn:

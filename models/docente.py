@@ -70,14 +70,40 @@ class Docente(db.Model):
         """
         Ore massime assegnabili per un dato anno scolastico.
         Se ore_max_anno è impostato e si riferisce all'anno richiesto, lo usa.
-        Altrimenti usa ore_contratto_pt > ore_contratto.
+        Altrimenti usa ore_contratto_pt > ore_contratto (già risolti per l'anno,
+        vedi part_time_effettivo_per_anno/ore_contratto_pt_effettive_per_anno).
         """
         if (self.ore_max_anno is not None and
                 (anno_scol is None or self.anno_scol_ore_max == anno_scol)):
             return self.ore_max_anno
-        if self.ore_contratto_pt is not None:
-            return self.ore_contratto_pt
+        ore_pt = self.ore_contratto_pt_effettive_per_anno(anno_scol)
+        if ore_pt is not None:
+            return ore_pt
         return self.ore_contratto or 18
+
+    # Cambio di regime part-time già noto per un anno scolastico futuro
+    # (es. oggi a tempo pieno, ma dal 2027-2028 passerà part-time): permette
+    # di "preparare" oggi il dato senza toccare il valore usato per l'anno
+    # in corso. NULL = nessun cambio programmato, valgono sempre part_time/
+    # ore_contratto_pt correnti. Stesso pattern di ore_max_anno/anno_scol_ore_max.
+    part_time_prog          = db.Column(db.Boolean, nullable=True)
+    ore_contratto_pt_prog   = db.Column(db.Integer, nullable=True)
+    anno_scol_part_time_prog = db.Column(db.String(9), nullable=True)
+
+    def part_time_effettivo_per_anno(self, anno_scol=None):
+        """Stato part-time per un dato anno scolastico (usa il cambio
+        programmato solo se anno_scol coincide con anno_scol_part_time_prog)."""
+        if (anno_scol is not None and self.anno_scol_part_time_prog == anno_scol
+                and self.part_time_prog is not None):
+            return self.part_time_prog
+        return self.part_time
+
+    def ore_contratto_pt_effettive_per_anno(self, anno_scol=None):
+        """Ore contratto part-time per un dato anno scolastico (idem sopra)."""
+        if (anno_scol is not None and self.anno_scol_part_time_prog == anno_scol
+                and self.ore_contratto_pt_prog is not None):
+            return self.ore_contratto_pt_prog
+        return self.ore_contratto_pt
 
     @property
     def ore_max_effettive(self):
@@ -93,6 +119,22 @@ class Docente(db.Model):
     colloqui_giorno      = db.Column(db.Integer)   # 0=lun…5=sab, None=nessuno
     colloqui_ora_inizio  = db.Column(db.Integer)   # ora inizio (1-9)
     colloqui_ora_fine    = db.Column(db.Integer)   # ora fine (1-9)
+
+    @property
+    def materia_effettiva(self):
+        """
+        Materia/disciplina da mostrare nell'interfaccia, presa dal dato
+        relazionale univoco (classe di concorso collegata) invece del
+        vecchio campo libero 'materia' — che poteva essere scritto a mano
+        una volta (es. da un import) e restare disallineato per sempre,
+        dato che non si aggiorna mai da solo quando cambia la classe di
+        concorso. Fallback sul campo libero solo se la CC non è ancora
+        stata impostata (docenti non ancora classificati), per non
+        lasciare la visualizzazione vuota.
+        """
+        if self.classe_concorso:
+            return f"{self.classe_concorso.codice} — {self.classe_concorso.nome}"
+        return self.materia
 
     @property
     def colloqui_label(self):

@@ -15,8 +15,45 @@ from config_anno import get_anno_corrente
 assegnazioni_bp = Blueprint('assegnazioni', __name__)
 
 
+def _resolve_id_materia(anno_scol, cc_id, label):
+    """
+    Se la classe ha un'unica materia associata a questa classe di
+    concorso nel piano studi, ritorna il suo id — è il caso "materia
+    singola" del form di Assegnazioni, che non chiede esplicitamente
+    quale materia (non c'è ambiguità) e quindi non la passa nel campo
+    ore_<classe>. Prima di questa funzione, in quel caso
+    AssegnazioneClasse.id_materia restava NULL, con due conseguenze:
+    _sync_docente_materie() non aveva modo di sapere quale materia
+    sincronizzare in DocenteMateria, e l'export "scheda classe" mostrava
+    il tipo di contratto al posto del nome materia. Se le materie sono
+    più di una (caso multi-materia, già gestito esplicitamente dal form)
+    o zero, ritorna None senza indovinare.
+    """
+    import re as _re5
+    m = _re5.match(r'(\d+)([AB]?)\s+(.+)', label)
+    if not m:
+        return None
+    anno_corso = int(m.group(1))
+    indirizzo  = m.group(3).strip()
+    righe = PianoStudi.query.filter_by(
+        anno_scol=anno_scol, id_classe_concorso=cc_id,
+        anno_corso=anno_corso, indirizzo=indirizzo, compresenza=False).all()
+    if len(righe) == 1:
+        # id_materia, non id: AssegnazioneClasse.id_materia è FK verso la
+        # tabella Materia, non verso PianoStudi (sono due entità diverse
+        # con id indipendenti — vedi nota in _build_area più sotto).
+        return righe[0].id_materia
+    return None
+
+
 def _sync_docente_materie(id_docente, asgn, anno_scol):
-    """Crea DocenteMateria per le materie dell'assegnazione, se non esistono."""
+    """
+    Crea DocenteMateria per le materie dell'assegnazione, se non
+    esistono già (origine='auto' — vedi _pulisci_docente_materie_orfane
+    per la pulizia simmetrica quando le ore vengono tolte). Non tocca
+    mai righe già presenti, nemmeno per cambiarne l'origine: se una
+    materia era già stata aggiunta a mano (origine='manuale') resta tale.
+    """
     from models.materia import DocenteMateria
 
     materie_ids = {ac.id_materia for ac in asgn.classi if ac.id_materia}
@@ -32,8 +69,39 @@ def _sync_docente_materie(id_docente, asgn, anno_scol):
             db.session.add(DocenteMateria(
                 id_docente=id_docente,
                 id_materia=id_mat,
-                anno_scol=anno_scol))
+                anno_scol=anno_scol,
+                origine='auto'))
     db.session.commit()
+
+
+def _pulisci_docente_materie_orfane(id_docente, anno_scol):
+    """
+    Rimuove da DocenteMateria le materie con origine='auto' che non sono
+    più coperte da nessuna AssegnazioneClasse del docente per l'anno
+    (es. le ore su quella materia sono state azzerate o l'assegnazione
+    è stata eliminata). Le materie con origine='manuale' non vengono mai
+    toccate qui: sono una dichiarazione esplicita di chi usa l'app, non
+    un derivato delle assegnazioni.
+    """
+    if not id_docente:
+        return
+    from models.materia import DocenteMateria
+
+    materie_coperte = {
+        ac.id_materia
+        for a in AssegnazioneDocente.query.filter_by(
+            anno_scol=anno_scol, id_docente=id_docente).all()
+        for ac in a.classi if ac.id_materia
+    }
+
+    orfane = DocenteMateria.query.filter_by(
+        id_docente=id_docente, anno_scol=anno_scol, origine='auto').filter(
+        ~DocenteMateria.id_materia.in_(materie_coperte) if materie_coperte
+        else True).all()
+    for dm in orfane:
+        db.session.delete(dm)
+    if orfane:
+        db.session.commit()
 
 # ── Aree disciplinari e CC (dal file ASSEGNAZIONI CLASSI) ─────────────
 AREE = [
@@ -165,11 +233,23 @@ def _build_area(anno_scol, area):
                 anno_scol=anno_scol, id_classe_concorso=cc.id,
                 anno_corso=ac, indirizzo=ind, compresenza=False).all()
             piano[c] = sum(r.ore_settimanali for r in righe_p)
+            # 'id' qui DEVE essere r.id_materia (la FK verso la tabella
+            # Materia, quella che AssegnazioneClasse.id_materia referenzia
+            # davvero) — non r.id (la chiave primaria della riga di
+            # PianoStudi, un'entità diversa). Erano stati scambiati: il
+            # form multi-materia mandava r.id come "id_materia" nel campo
+            # ore_<classe>_<id>, che veniva salvato così com'è in
+            # AssegnazioneClasse.id_materia — puntando quindi a una
+            # materia sbagliata ogni volta che l'id numerico della riga
+            # di piano studi coincideva (per caso) con l'id di un'altra
+            # materia nella tabella Materia. Vedi DEVLOG Task 19undecies
+            # e scripts/backfill_id_materia.py per la correzione dei dati
+            # già salvati in modo sbagliato.
             piano_materie[c] = [
                 {'nome': r.nome_materia_locale,
                  'ore':  r.ore_settimanali,
-                 'id':   r.id}
-                for r in righe_p
+                 'id':   r.id_materia}
+                for r in righe_p if r.id_materia
             ]
         multi_materia = {c: len(piano_materie[c]) > 1 for c in classi}
         budget = _budget(anno_scol, cc.id)
@@ -378,6 +458,11 @@ def salva():
     for (lbl, id_mat), ore in classi_ore.items():
         m = _re2.match(r'(\d+)([AB]?)\s+(.+)', lbl)
         if m:
+            # Caso "materia singola": il form non passa id_mat perché
+            # non c'è ambiguità — la risolviamo comunque dal piano studi,
+            # invece di lasciare id_materia NULL (vedi _resolve_id_materia).
+            if id_mat is None and lbl != '__POT__':
+                id_mat = _resolve_id_materia(anno, cc_id, lbl)
             db.session.add(AssegnazioneClasse(
                 id_assegnazione=asgn.id,
                 indirizzo=m.group(3).strip(),
@@ -482,6 +567,11 @@ def aggiorna_ore(asgn_id):
         anno_corso = int(m.group(1))
         sezione    = m.group(2) or 'A'
         indirizzo  = m.group(3).strip()
+        # Caso "materia singola": il form non passa id_mat, la risolviamo
+        # comunque dal piano studi (vedi _resolve_id_materia) invece di
+        # lasciare id_materia NULL sulla riga.
+        if id_mat is None:
+            id_mat = _resolve_id_materia(asgn.anno_scol, asgn.id_classe_concorso, lbl)
 
     # Cerca riga esistente
     filtro = dict(id_assegnazione=asgn_id, indirizzo=indirizzo,
@@ -492,6 +582,11 @@ def aggiorna_ore(asgn_id):
         if ac:
             db.session.delete(ac)
             db.session.commit()
+            # La materia potrebbe non essere più coperta da nessuna ora
+            # di questo docente: ripulisce l'eventuale voce automatica
+            # ormai orfana in DocenteMateria (mai quelle manuali).
+            if asgn.id_docente:
+                _pulisci_docente_materie_orfane(asgn.id_docente, asgn.anno_scol)
         return jsonify(ok=True, ore=0, tot=_tot_ore(asgn_id))
 
     if ac:
@@ -584,8 +679,11 @@ def elimina(asgn_id):
         return redirect(url_for('assegnazioni.index'))
     anno = asgn.anno_scol
     nome = asgn.display_name
+    id_doc = asgn.id_docente
     db.session.delete(asgn)
     db.session.commit()
+    if id_doc:
+        _pulisci_docente_materie_orfane(id_doc, anno)
     flash(f'Assegnazione {nome} eliminata.', 'warning')
     return redirect(url_for('assegnazioni.index', anno=anno))
 

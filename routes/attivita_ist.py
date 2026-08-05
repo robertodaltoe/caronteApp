@@ -9,10 +9,6 @@ from datetime import date, datetime
 
 attivita_ist_bp = Blueprint('attivita_ist', __name__)
 
-from config_anno import get_anno_corrente as _get_anno
-ANNO_SCOL_CORRENTE = _get_anno()
-
-
 def _anno_scolastico(d=None):
     d = d or date.today()
     return f'{d.year}-{d.year+1}' if d.month >= 9 else f'{d.year-1}-{d.year}'
@@ -35,9 +31,14 @@ def _preset_partecipanti(attivita):
 
     if tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \
             and attivita.id_dipartimento:
+        # Anno scolastico dell'EVENTO (dalla sua data), non "oggi": una
+        # riunione di dipartimento programmata per marzo 2027 deve
+        # guardare le materie del 2026-2027, indipendentemente da
+        # quando la si sta creando.
+        anno_evento = _anno_scolastico(attivita.data)
         ids = {dm.id_docente for dm in DocenteMateria.query.join(Materia).filter(
             Materia.id_dipartimento == attivita.id_dipartimento,
-            DocenteMateria.anno_scol == ANNO_SCOL_CORRENTE
+            DocenteMateria.anno_scol == anno_evento
         ).all()}
         return list(ids)
 
@@ -369,10 +370,20 @@ def dipartimenti():
     # Filtra i dipartimenti reali (escludi "Non assegnato" dall'elenco principale)
     dips_reali = [d for d in dips if d.sigla != '—']
 
-    # Referenti di dipartimento per l'anno corrente
-    from config_anno import get_anno_corrente
+    # Referenti di dipartimento — a differenza di Materie/Dipartimenti
+    # (catalogo stabile, non legato all'anno), IncaricaDocente è per
+    # anno scolastico. Prima usava sempre get_anno_corrente() (l'anno
+    # "di sistema" configurato a mano, spesso disallineato dall'anno su
+    # cui si sta effettivamente lavorando — vedi Task 23) senza
+    # possibilità di scegliere: ora c'è un selettore, come nelle altre
+    # pagine anno-scoped, di default sull'anno con dati reali.
+    from routes.impostazione_anno import _anno_default_piano
     from models.incarico import IncaricaDocente, TipoIncarico
-    anno_c = get_anno_corrente()
+    anno_c = request.args.get('anno', _anno_default_piano())
+    anni_disponibili = sorted(
+        {r.anno_scol for r in IncaricaDocente.query.all()}, reverse=True)
+    if anno_c not in anni_disponibili:
+        anni_disponibili.insert(0, anno_c)
     tipo_ref = TipoIncarico.query.filter_by(nome='Referente di dipartimento').first()
     referenti = {}  # {id_dipartimento: Docente}
     if tipo_ref:
@@ -387,6 +398,7 @@ def dipartimenti():
                            tutte_materie=materie_da_assegnare,
                            referenti=referenti,
                            anno_c=anno_c,
+                           anni_disponibili=anni_disponibili,
                            tipi=TIPI_ATTIVITA)
 
 
@@ -454,7 +466,8 @@ def salva_materia():
 
 @attivita_ist_bp.route('/attivita-ist/roster', methods=['GET', 'POST'])
 def assegnazioni():
-    anno   = request.args.get('anno', ANNO_SCOL_CORRENTE)
+    from routes.impostazione_anno import _anno_default_piano
+    anno   = request.args.get('anno', _anno_default_piano())
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     materie = Materia.query.join(Dipartimento).order_by(
         Dipartimento.ordine, Materia.nome).all()
@@ -463,17 +476,34 @@ def assegnazioni():
               for dm in DocenteMateria.query.filter_by(anno_scol=anno).all()}
 
     if request.method == 'POST':
-        DocenteMateria.query.filter_by(anno_scol=anno).delete()
+        # Tocca solo le righe 'manuale' (quelle dichiarate da questa
+        # pagina): non cancella mai le righe 'auto', sincronizzate
+        # automaticamente da Assegnazioni classi -> docenti quando si
+        # inseriscono ore su una materia. Prima questo salvataggio
+        # cancellava TUTTO il roster dell'anno (tutti i docenti, incluse
+        # le righe 'auto') per poi ricrearlo solo dalle caselle di questa
+        # pagina — un salvataggio qui avrebbe potuto silenziosamente
+        # perdere dati derivati da un'altra pagina. Per togliere una
+        # materia 'auto' bisogna farlo da Assegnazioni (togliendo le ore)
+        # o dal passo 10 "Docenti <-> Materie", che gestisce entrambe le
+        # origini esplicitamente.
+        DocenteMateria.query.filter_by(anno_scol=anno, origine='manuale').delete()
         coppie = set()
         for key in request.form:
             if key.startswith('dm_'):
                 _, did, mid = key.split('_')
                 coppie.add((int(did), int(mid)))
+        n_nuove = 0
         for did, mid in coppie:
-            db.session.add(DocenteMateria(
-                id_docente=did, id_materia=mid, anno_scol=anno))
+            esiste = DocenteMateria.query.filter_by(
+                id_docente=did, id_materia=mid, anno_scol=anno).first()
+            if not esiste:
+                db.session.add(DocenteMateria(
+                    id_docente=did, id_materia=mid, anno_scol=anno,
+                    origine='manuale'))
+                n_nuove += 1
         db.session.commit()
-        flash(f'Roster aggiornato ({len(coppie)} assegnazioni).', 'success')
+        flash(f'Roster aggiornato ({len(coppie)} assegnazioni, {n_nuove} nuove).', 'success')
         return redirect(url_for('attivita_ist.assegnazioni', anno=anno))
 
     docenti_lista = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
@@ -583,11 +613,14 @@ def sostituzione_scrutinio(id):
         if d.id in assenti_giorno: return 999  # non disponibile
         if d.id in impegnati_altri: return 998
 
-        # Materia dell'assente
+        # Materia dell'assente — anno scolastico dell'evento (evento.data),
+        # non "oggi": uno scrutinio programmato per un anno diverso da
+        # quello corrente deve confrontare le materie di quell'anno.
+        anno_evento = _anno_scolastico(evento.data)
         assente_mat_ids = {dm.id_materia for dm in DocenteMateria.query.filter_by(
-            id_docente=assente_id, anno_scol=ANNO_SCOL_CORRENTE).all()}
+            id_docente=assente_id, anno_scol=anno_evento).all()}
         cand_mat_ids = {dm.id_materia for dm in DocenteMateria.query.filter_by(
-            id_docente=d.id, anno_scol=ANNO_SCOL_CORRENTE).all()}
+            id_docente=d.id, anno_scol=anno_evento).all()}
 
         if assente_mat_ids & cand_mat_ids:
             score = 10  # stessa materia

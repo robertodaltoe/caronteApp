@@ -22,12 +22,14 @@ def allowed_file(filename):
 def orario_globale():
     from models.orario_docente import OrarioDocente
     from models.docente import Docente
+    from models.orario_sostegno import OrarioSostegno
     from collections import defaultdict
 
     GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
     giorno_sel = request.args.get('giorno', 0, type=int)
 
     slots_giorno = OrarioDocente.query.filter_by(giorno=giorno_sel).all()
+    sostegno_giorno = OrarioSostegno.query.filter_by(giorno=giorno_sel).all()
 
     classi = sorted(set(
         s.classe for s in slots_giorno
@@ -36,13 +38,21 @@ def orario_globale():
     ))
     ore_list = sorted(set(s.ora for s in slots_giorno if s.classe in classi))
 
-    # griglia[classe][ora] = lista di slot (supporta compresenze)
+    # griglia[classe][ora] = lista di slot (supporta compresenze/ITP)
     griglia = defaultdict(lambda: defaultdict(list))
     for s in slots_giorno:
         if s.classe in classi:
             griglia[s.classe][s.ora].append(s)
 
-    doc_ids = {s.id_docente for s in slots_giorno}
+    # griglia_sostegno[classe][ora] = lista di slot OrarioSostegno,
+    # tenuta separata (colore diverso in template, tabella diversa) —
+    # il docente di sostegno non compare nel file orario importato.
+    griglia_sostegno = defaultdict(lambda: defaultdict(list))
+    for s in sostegno_giorno:
+        if s.classe in classi:
+            griglia_sostegno[s.classe][s.ora].append(s)
+
+    doc_ids = {s.id_docente for s in slots_giorno} | {s.id_docente for s in sostegno_giorno}
     docenti_map = {d.id: d for d in Docente.query.filter(
         Docente.id.in_(doc_ids)).all()}
 
@@ -56,6 +66,7 @@ def orario_globale():
         classi=classi,
         ore_list=ore_list,
         griglia=griglia,
+        griglia_sostegno=griglia_sostegno,
         docenti_map=docenti_map,
         giorno_sel=giorno_sel,
         giorni_con_orario=giorni_con_orario,

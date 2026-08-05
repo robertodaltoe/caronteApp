@@ -2,7 +2,14 @@
 {% block title %}Cambia PIN{% endblock %}
 {% block content %}
 
-<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">⚿︎ Cambia PIN di accesso</h1>
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:12px;">⚿︎ Cambia PIN di accesso</h1>
+
+<div style="font-size:.78rem; color:var(--grigio); margin-bottom:14px;">
+    Sistema: <a href="{{ url_for('auth.lista_utenti') }}" style="color:#6366f1; text-decoration:none;">Gestione utenti</a> ·
+    <strong style="color:#1f2937;">Cambia PIN</strong> ·
+    <a href="{{ url_for('impostazioni.backup') }}" style="color:#6366f1; text-decoration:none;">Backup database</a> ·
+    <a href="{{ url_for('impostazioni.index') }}" style="color:#6366f1; text-decoration:none;">← Impostazioni</a>
+</div>
 
 <div class="card" style="max-width:400px;">
     <form method="post">

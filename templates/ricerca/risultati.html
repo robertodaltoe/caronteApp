@@ -40,7 +40,7 @@
         <tr>
             <td style="padding:5px 0;">
                 <a href="{{ url_for('docenti.modifica', id=d.id) }}"><strong>{{ d.cognome }} {{ d.nome }}</strong></a>
-                {% if d.materia %}<span style="color:var(--grigio); margin-left:8px;">{{ d.materia }}</span>{% endif %}
+                {% if d.materia_effettiva %}<span style="color:var(--grigio); margin-left:8px;">{{ d.materia_effettiva }}</span>{% endif %}
                 {% if not d.attivo %}<span style="color:#dc2626; font-size:.75rem; margin-left:8px;">(non attivo)</span>{% endif %}
             </td>
         </tr>
