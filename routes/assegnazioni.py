@@ -429,9 +429,14 @@ def salva():
             lbl = raw
         classi_ore[(lbl, id_mat)] = ore_v
 
-    if not classi_ore:
-        flash('Inserisci almeno un\'ora su una classe.', 'warning')
+    if not classi_ore and not placeholder:
+        flash('Inserisci almeno un\'ora su una classe (oppure, se è un '
+              'placeholder da completare più avanti, inserisci solo il nome).', 'warning')
         return redirect(url_for('assegnazioni.index', anno=anno))
+    # I placeholder possono essere inseriti anche senza ore — riga
+    # "riservata" da completare quando si conoscono i dettagli, o da
+    # nominare direttamente (vedi assegnazioni.nomina) quando arriva
+    # il docente reale.
 
     # Verifica ore max
     if id_doc:

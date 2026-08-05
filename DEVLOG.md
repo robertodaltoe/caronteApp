@@ -30,6 +30,45 @@ dell'eccezione grezza.
 
 ---
 
+### Task 42 — Pulsante "Nomina" per i placeholder in Assegnazioni +
+placeholder salvabili senza ore
+
+Due segnalazioni collegate su Assegnazioni classi→docenti:
+
+1. **"Come rinomino un placeholder col docente reale quando arriva?
+   Avevamo previsto un sistema ma non lo trovo più."** Verificato: il
+   backend esiste già ed è completo — route
+   `POST /assegnazioni/<id>/nomina` (routes/assegnazioni.py), assegna
+   il docente reale al posto del placeholder e sincronizza
+   automaticamente le sue materie — ma NON era collegata a nessun
+   controllo nell'interfaccia (nessun form/pulsante nel template la
+   richiamava). Aggiunto un pulsante "☺︎" nella colonna azioni di ogni
+   riga placeholder che apre un mini-form inline (select docente reale
+   + conferma), riusando la stessa lista `docenti_anno` già caricata
+   per il form di aggiunta assegnazione.
+
+2. **"Ho provato ad aggiungere un placeholder per A-22-SPA e B-02-ING
+   ma non compare in tabella."** Riprodotto un salvataggio via backend
+   con dati equivalenti: la logica di salvataggio ha funzionato
+   correttamente quando erano presenti delle ore — il sospetto era che
+   il valore ore non fosse stato effettivamente registrato nella
+   cella della griglia prima di premere "Salva", nel qual caso l'app
+   silenziosamente rifiuta il salvataggio con un flash message
+   ("Inserisci almeno un'ora su una classe") che Roberto ha confermato
+   di non aver notato. Contestualmente Roberto ha chiesto una modifica
+   più ampia: poter inserire un placeholder anche SENZA nessuna ora
+   assegnata (riga "riservata" da completare più avanti). Tolto quel
+   blocco per i soli placeholder in routes/assegnazioni.py::salva()
+   (i docenti reali restano soggetti al controllo, invariato) — un
+   placeholder senza ore su nessuna classe viene ora salvato
+   normalmente (0h totali) e resta modificabile/nominabile da lì.
+
+Verificato pytest (51/51) e un ciclo completo via test client: salvato
+un placeholder senza ore su A-22-SPA (comparso in tabella con 0
+classi), poi nominato con successo un docente reale al suo posto
+tramite la nuova route/pulsante, confermando `id_docente` valorizzato
+e `nome_placeholder` azzerato.
+
 ### Task 41 — Etichette complete nelle pillole della barra passi
 
 Su richiesta di Roberto: le pillole della barra di navigazione a passi

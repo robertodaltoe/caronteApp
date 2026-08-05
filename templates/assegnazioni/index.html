@@ -400,10 +400,16 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 <td class="td-sticky-r col-max">
                     {{ max_ore }}h
                 </td>
-                <td class="td-sticky-r col-azioni">
+                <td class="td-sticky-r col-azioni" style="white-space:nowrap;">
+                    {% if not a.docente %}
+                    <button type="button" title="Nomina un docente al posto del placeholder"
+                            onclick="document.getElementById('nomina-{{ a.id }}').style.display='flex'; this.style.display='none';"
+                            style="background:none; border:none; cursor:pointer;
+                                   color:#3730a3; font-size:.8rem;">☺︎</button>
+                    {% endif %}
                     <form method="post"
                           action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
-                          style="margin:0;"
+                          style="margin:0; display:inline;"
                           onsubmit="return confirm('Eliminare?')">
                         <button type="submit"
                                 style="background:none; border:none; cursor:pointer;
@@ -411,6 +417,31 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </form>
                 </td>
             </tr>
+            {% if not a.docente %}
+            <tr id="nomina-{{ a.id }}" style="display:none;">
+                <td colspan="20" style="background:#f5f3ff; padding:6px 10px;">
+                    <form method="post" action="{{ url_for('assegnazioni.nomina', asgn_id=a.id) }}"
+                          style="display:flex; gap:6px; align-items:center;">
+                        <span style="font-size:.76rem; color:#3730a3; font-weight:600;">
+                            Nomina docente reale per "{{ a.nome_placeholder }}":
+                        </span>
+                        <select name="id_docente" required
+                                style="padding:4px 7px; border:1px solid #c4b5fd; border-radius:5px; font-size:.8rem;">
+                            <option value="">— scegli docente —</option>
+                            {% for d in docenti_anno %}
+                            <option value="{{ d.id }}">
+                                {{ d.cognome }} {{ d.nome }} (max {{ d.ore_max_effettive }}h)
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm">Conferma</button>
+                        <button type="button"
+                                onclick="document.getElementById('nomina-{{ a.id }}').style.display='none';"
+                                style="background:none; border:none; cursor:pointer; color:var(--grigio); font-size:.8rem;">Annulla</button>
+                    </form>
+                </td>
+            </tr>
+            {% endif %}
                 {# Sub-riga dettaglio materie — visibile solo se almeno una classe ha multi_materia #}
                 {% if blk.multi_materia.values() | select | list %}
                 <tr id="sub-{{ cc.id }}-{{ a.id }}" style="display:none;">
