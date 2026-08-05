@@ -12,13 +12,14 @@ from models.sync_conflitto import SyncConflitto
 sync_conflitti_bp = Blueprint('sync_conflitti', __name__)
 
 TABELLA_LABEL = {
-    'assenze':   'Assenza docente',
-    'supplenze': 'Supplenza',
+    'assenze':         'Assenza docente',
+    'supplenze':       'Supplenza',
+    'indisponibilita': 'Indisponibilità docente',
 }
 
 # Etichette leggibili per i nomi di colonna, usate nel confronto campo per campo
 CAMPO_LABEL = {
-    'motivo':         'Motivo assenza',
+    'motivo':         'Motivo',
     'classe_libera':  'Classe libera (nessun sostituto)',
     'note_interne':   'Note interne',
     'ora_ist_inizio': 'Inizio permesso orario',

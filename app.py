@@ -346,8 +346,9 @@ def _auto_migrate():
         ('docenti', 'part_time_prog',           'BOOLEAN',    None),
         ('docenti', 'ore_contratto_pt_prog',     'INTEGER',    None),
         ('docenti', 'anno_scol_part_time_prog',  'VARCHAR(9)', None),
-        ('assenze',   'creato_da',             'VARCHAR(80)', None),
-        ('supplenze', 'creato_da',             'VARCHAR(80)', None),
+        ('assenze',         'creato_da', 'VARCHAR(80)', None),
+        ('supplenze',       'creato_da', 'VARCHAR(80)', None),
+        ('indisponibilita', 'creato_da', 'VARCHAR(80)', None),
     ]
 
     with db.engine.connect() as conn:

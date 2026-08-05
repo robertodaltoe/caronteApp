@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from models import db
 from models.indisponibilita import Indisponibilita
 from models.indisponibilita_ricorrente import IndisponibilitaRicorrente
@@ -66,6 +66,7 @@ def nuova():
         n_righe   = int(request.form.get('n_righe', 1))
         inseriti  = 0
         prima_data = None
+        utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
 
         for idx in range(n_righe):
             id_doc_s = request.form.get(f'id_docente[{idx}]', '')
@@ -95,7 +96,8 @@ def nuova():
                         if not gia:
                             db.session.add(Indisponibilita(
                                 id_docente=id_docente, data=data,
-                                ora=o_int, motivo=motivo, note=note
+                                ora=o_int, motivo=motivo, note=note,
+                                creato_da=utente_corrente,
                             ))
                             inseriti += 1
                 else:
@@ -106,7 +108,8 @@ def nuova():
                     if not gia:
                         db.session.add(Indisponibilita(
                             id_docente=id_docente, data=data,
-                            ora=None, motivo=motivo, note=note
+                            ora=None, motivo=motivo, note=note,
+                            creato_da=utente_corrente,
                         ))
                         inseriti += 1
 

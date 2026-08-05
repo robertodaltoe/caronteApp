@@ -90,6 +90,7 @@ def nuovo():
                         ora        = None,
                         motivo     = 'ferie',
                         note       = f'Auto — ferie/permesso concordato',
+                        creato_da  = g.utente.username if getattr(g, 'utente', None) else None,
                     ))
 
             # Genera supplenza se c'è coprente e classe

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from models import db
 from models.indisponibilita import Indisponibilita
 from models.assenza import Assenza
@@ -7,6 +7,7 @@ from models.scambio_ore import ScambioOre
 from models.docente import Docente
 from datetime import date, timedelta
 from collections import defaultdict
+from modules.auto_sync import registra_eliminazione
 
 agenda_bp = Blueprint('agenda', __name__)
 
@@ -125,12 +126,17 @@ def elimina_gruppo_indisp():
     ids_str = request.form.get('ids', '')
     ids = [int(x) for x in ids_str.split(',') if x.strip()]
 
+    utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
+
     # Raccogli info prima di eliminare
     rimossi = []
     for id_ in ids:
         i = Indisponibilita.query.get(id_)
         if i:
             rimossi.append((i.id_docente, i.data, i.ora, i.note or ''))
+            registra_eliminazione('indisponibilita', {
+                'id_docente': i.id_docente, 'data': i.data.isoformat(), 'ora': i.ora,
+            }, utente=utente_corrente)
             db.session.delete(i)
 
     # Se erano AUTO, rimuovi anche assenze e supplenze scoperte collegate
@@ -143,6 +149,10 @@ def elimina_gruppo_indisp():
             ora_inizio=ora, ora_fine=ora
         ).filter(Assenza.note_interne.like('Auto%')).all()
         for a in assenze:
+            registra_eliminazione('assenze', {
+                'id_docente': a.id_docente, 'data': a.data.isoformat(),
+                'ora_inizio': a.ora_inizio, 'ora_fine': a.ora_fine,
+            }, utente=utente_corrente)
             db.session.delete(a)
 
         # Supplenze AUTO scoperte per il docente in quella data e ora
@@ -151,6 +161,10 @@ def elimina_gruppo_indisp():
             origine='automatica'
         ).filter(Supplenza.stato.in_(['scoperta', 'non_assegnabile'])).all()
         for s in sups:
+            registra_eliminazione('supplenze', {
+                'data': s.data.isoformat(), 'ora': s.ora,
+                'classe': s.classe, 'id_assente': s.id_assente,
+            }, utente=utente_corrente)
             db.session.delete(s)
 
     db.session.commit()

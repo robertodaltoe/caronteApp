@@ -61,7 +61,8 @@ def genera_effetti(attivita):
                     db.session.add(Indisponibilita(
                         id_docente=doc.id,data=data,ora=ora_ind,
                         motivo=attivita.tipo,
-                        note=f'Auto — {attivita.tipo} {attivita.descrizione or ""} [{attivita.id}]'))
+                        note=f'Auto — {attivita.tipo} {attivita.descrizione or ""} [{attivita.id}]',
+                        creato_da=_utente))
                     stats['indisp']+=1
             for s in OrarioDocente.query.filter_by(id_docente=doc.id,giorno=giorno).all():
                 if (s.tipo_ora=='lezione' and s.ora in ore_set
@@ -120,7 +121,8 @@ def genera_effetti(attivita):
                     if not Indisponibilita.query.filter_by(id_docente=docente.id,data=data,ora=ora_ind).first():
                         db.session.add(Indisponibilita(id_docente=docente.id,data=data,ora=ora_ind,
                             motivo=attivita.tipo,
-                            note=f'Auto — {attivita.tipo} {attivita.descrizione or ""} [{attivita.id}]'))
+                            note=f'Auto — {attivita.tipo} {attivita.descrizione or ""} [{attivita.id}]',
+                            creato_da=_utente))
                         stats['indisp']+=1
                 for ora in ore_cop:
                     if not Assenza.query.filter_by(id_docente=docente.id,data=data,

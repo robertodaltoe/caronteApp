@@ -6,9 +6,10 @@ default) un thread in background:
 
 1. scarica (senza toccare il lock manuale di sync_db.py) il database
    pubblicato su Google Drive dall'altra postazione;
-2. confronta, tabella per tabella (solo 'assenze' e 'supplenze': sono
-   i dati che segreteria e chi gestisce le supplenze aggiornano in
-   parallelo — vedi DEVLOG Task 46), le righe locali e quelle remote
+2. confronta, tabella per tabella (vedi TABELLE più sotto — 'assenze',
+   'supplenze', 'indisponibilita': sono i dati che segreteria e chi
+   gestisce le supplenze aggiornano in parallelo — vedi DEVLOG Task
+   46), le righe locali e quelle remote
    usando una chiave logica stabile (es. docente+data+fascia oraria),
    non l'id autoincrementale, che può coincidere per righe diverse su
    database indipendenti;
@@ -79,6 +80,12 @@ def _chiave_supplenza(r):
     }
 
 
+def _chiave_indisponibilita(r):
+    return {
+        'id_docente': r['id_docente'], 'data': r['data'], 'ora': r['ora'],
+    }
+
+
 TABELLE = {
     'assenze': {
         'chiave': _chiave_assenza,
@@ -101,6 +108,15 @@ TABELLE = {
                             'creato_il', 'modificato_il', 'creato_da'],
         'fk_docenti': ['id_assente', 'id_sostituto'],
         'label': lambda r: f"Supplenza — {r['data']} ora {r['ora']} classe {r['classe']}",
+    },
+    'indisponibilita': {
+        'chiave': _chiave_indisponibilita,
+        'campi_confronto': ['motivo', 'note'],
+        'colonne_insert': ['id_docente', 'data', 'ora', 'motivo', 'note',
+                            'creato_il', 'creato_da'],
+        'fk_docenti': ['id_docente'],
+        'label': lambda r: f"Indisponibilità — docente #{r['id_docente']} il {r['data']} "
+                            f"(ora {r['ora'] if r['ora'] is not None else 'tutta la giornata'})",
     },
 }
 

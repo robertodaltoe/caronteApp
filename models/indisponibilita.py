@@ -12,6 +12,8 @@ class Indisponibilita(db.Model):
     # colloqui | consiglio | uscita | progetto | gara | formazione | altro
     note        = db.Column(db.Text)
     creato_il   = db.Column(db.DateTime, default=datetime.utcnow)
+    # Username di chi ha inserito — vedi models/assenza.py::creato_da.
+    creato_da   = db.Column(db.String(80), nullable=True)
 
     def __repr__(self):
         return f"<Indisponibilita docente:{self.id_docente} {self.data} ora:{self.ora}>"

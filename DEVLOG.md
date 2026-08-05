@@ -28,6 +28,45 @@ Verificato: pytest 51/51, simulazione diretta di un token CSRF non
 valido su `/login` → redirect 302 pulito a `/login` invece
 dell'eccezione grezza.
 
+### Task 31 — Estensione sync automatico a indisponibilità
+
+Seguito diretto del Task 46 (e delle sue 4 "aggiornamento" successive,
+in particolare `creato_da` e l'intervallo portato a 30s): Roberto ha
+chiesto se lo stesso sistema di sync valga anche per le indisponibilità
+docenti, confermando che anche lì capita l'editing concorrente tra
+postazioni.
+
+Estesa `TABELLE` in `modules/auto_sync.py` con una voce `indisponibilita`
+(chiave logica: docente+data+ora; campi di confronto: motivo, note),
+seguendo esattamente lo stesso schema già in uso per assenze/supplenze.
+Aggiunta colonna `creato_da` al modello `Indisponibilita` (migrazione
+additiva automatica in `_auto_migrate()`), popolata in tutti i punti di
+creazione trovati con una ricerca mirata nel codice:
+`routes/indisponibilita.py::nuova()`, `routes/cambi_quadro.py::nuovo()`
+(indisponibilità automatica per ferie/permesso concordato),
+`routes/attivita.py::genera_effetti()` (le due creazioni legate alle
+attività fuori aula).
+
+Aggiunta anche la lapide (`registra_eliminazione`) nei punti di
+eliminazione trovati: `routes/agenda.py::elimina_gruppo_indisp()` — e
+qui, controllando questa route, si è scoperta una lacuna precedente non
+ancora chiusa: le eliminazioni a cascata di Assenza/Supplenza collegate
+(quando l'indisponibilità era "Auto") non venivano tombstonate neppure
+nel lavoro precedente sulle assenze — chiusa in questo stesso giro.
+
+Verificato in isolamento su copie di prova (`/tmp/test_indisp`, non sul
+database reale): inserimento additivo di una indisponibilità presente
+solo sul "remoto" confermato; conflitto genuino (stesso docente/data/ora,
+motivo diverso) rilevato correttamente con `campi_diversi=["motivo"]`;
+eliminazione locale con lapide verificata — un secondo giro di merge
+non resuscita la riga eliminata (comportamento identico ai test già
+fatti per le assenze). App avviata con `create_app()` e route `/`,
+`/sync/conflitti`, `/indisponibilita/nuova` verificate con test client
+(200 OK su tutte). Come già notato per `creato_da` su assenze/supplenze,
+resta da verificare al primo uso reale in browser che il campo si popoli
+correttamente (i test automatici lo confermano solo a livello di query
+diretta).
+
 ### Task 46 — Sync automatico additivo (assenze/supplenze) ogni 60s
 
 Seguito diretto del Task 45: Roberto ha chiesto un modo per evitare che
@@ -214,7 +253,31 @@ un'eliminazione, ma non viene lapidata: se era già stata sincronizzata,
 il giro successivo potrebbe reintrodurla come riga a sé stante invece
 di riconoscere che è stata sostituita dalla modifica. Non affrontato
 ora (Roberto ha segnalato il caso della cancellazione, non questo);
-da valutare in un prossimo giro se emerge come problema reale.
+da valutare in un prossimo giro se emerge come problema reale. Lo
+stesso limite vale anche per `routes/indisponibilita.py::modifica()`
+(Task 31, sotto).
+
+**Quinto aggiornamento — intervallo portato a 30s**: su richiesta di
+Roberto ("forse un minuto è troppo"), `INTERVALLO_SECONDI` in
+`modules/auto_sync.py` portato da 60 a 30.
+
+**Sesto aggiornamento — valutata e scartata l'estensione ad Attività
+fuori aula**: Roberto ha chiesto se includere anche
+`AttivitaFuoriAula` nel sync automatico. Analizzato il modello: a
+differenza di assenze/supplenze/indisponibilità (una riga = un fatto
+indipendente), qui c'è un record padre con due tabelle collegate
+tramite il suo id autoincrementale (`AttivitaClasse`, associazione
+many-to-many con i docenti accompagnatori) più un riferimento
+auto-referenziale (`id_attivita_gruppo`) — struttura paragonabile ad
+Assegnazioni, già esclusa in Task 45 come "troppo delicata per un
+merge anche parziale automatico". Concordato con Roberto di NON
+estendere il sync al record dell'attività in sé: gli effetti concreti
+che generano davvero conflitti nell'uso quotidiano (le assenze,
+supplenze e indisponibilità generate da `genera_effetti()` per i
+docenti accompagnatori) sono già coperti dal sync automatico da
+oggi (Task 46 + Task 31). Il record dell'attività (nome, date, elenco
+classi/accompagnatori) resta gestito solo manualmente, come
+Assegnazioni.
 
 ---
 
