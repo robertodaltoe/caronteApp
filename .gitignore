@@ -1,6 +1,7 @@
 # Database (gestito separatamente)
 database.db
 *.db
+*.db-journal
 *.sqlite
 
 # Venv Python

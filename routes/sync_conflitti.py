@@ -18,6 +18,7 @@ TABELLA_LABEL = {
 
 # Etichette leggibili per i nomi di colonna, usate nel confronto campo per campo
 CAMPO_LABEL = {
+    'motivo':         'Motivo assenza',
     'classe_libera':  'Classe libera (nessun sostituto)',
     'note_interne':   'Note interne',
     'ora_ist_inizio': 'Inizio permesso orario',

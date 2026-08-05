@@ -50,10 +50,15 @@ _LOCK = threading.Lock()   # evita due giri sovrapposti sulla stessa macchina
 
 
 def _chiave_assenza(r):
+    # NOTA: 'motivo' non fa parte della chiave di identità — se lo stesso
+    # docente ha un'assenza nella stessa fascia oraria dello stesso giorno
+    # ma con un motivo diverso su due postazioni (es. "lutto" su una,
+    # "malattia" sull'altra), è la STESSA riga logica modificata in modo
+    # diverso: va segnalata come conflitto (motivo è in 'campi_confronto'
+    # qui sotto), non trattata come due assenze distinte da sommare.
     return {
         'id_docente': r['id_docente'], 'data': r['data'],
         'ora_inizio': r['ora_inizio'], 'ora_fine': r['ora_fine'],
-        'motivo': r['motivo'],
     }
 
 
@@ -67,7 +72,7 @@ def _chiave_supplenza(r):
 TABELLE = {
     'assenze': {
         'chiave': _chiave_assenza,
-        'campi_confronto': ['classe_libera', 'note_interne',
+        'campi_confronto': ['motivo', 'classe_libera', 'note_interne',
                              'ora_ist_inizio', 'ora_ist_fine'],
         'colonne_insert': ['id_docente', 'data', 'ora_inizio', 'ora_fine',
                             'motivo', 'classe_libera', 'note_interne',
@@ -278,11 +283,16 @@ def avvia_thread_autosync(app):
             try:
                 with app.app_context():
                     risultato = esegui_sync_automatico(app)
-                if risultato.get('inserite') or risultato.get('conflitti_nuovi'):
-                    app.logger.info(f"[auto_sync] {risultato}")
+                # Una riga ad OGNI giro (non solo quando succede qualcosa):
+                # serve a vedere da terminale che il thread è davvero
+                # attivo, non solo quando c'è qualcosa da segnalare.
+                # print() invece di app.logger perché il livello di log di
+                # Flask di default filtra via gli INFO anche in debug.
+                print(f"[auto_sync] {datetime.now().strftime('%H:%M:%S')} — {risultato}",
+                      flush=True)
             except Exception:
-                app.logger.error("[auto_sync] errore nel giro periodico:\n"
-                                  + traceback.format_exc())
+                print("[auto_sync] errore nel giro periodico:\n"
+                      + traceback.format_exc(), flush=True)
             time.sleep(INTERVALLO_SECONDI)
 
     t = threading.Thread(target=_loop, name='auto_sync', daemon=True)

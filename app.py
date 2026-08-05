@@ -276,14 +276,20 @@ def create_app():
 
     # Sync automatico additivo in background (ogni 60s, solo su
     # 'assenze'/'supplenze' — vedi modules/auto_sync.py e DEVLOG Task 46).
-    # Guardia contro il doppio avvio: con use_reloader=True Flask esegue
-    # create_app() sia nel processo "guardiano" sia in quello che serve
-    # davvero le richieste (quest'ultimo ha WERKZEUG_RUN_MAIN=true). Se il
-    # reloader è disattivo (es. produzione) WERKZEUG_RUN_MAIN non c'è: si
-    # avvia comunque, una volta sola.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+    # Guardia contro il doppio avvio: con use_reloader=True (sempre attivo
+    # in questa app, vedi fondo file) Werkzeug esegue create_app() due
+    # volte — una nel processo "guardiano" che si limita a sorvegliare i
+    # file e rilanciare, una in quello che serve davvero le richieste
+    # (quest'ultimo, solo, ha WERKZEUG_RUN_MAIN=true). NOTA: qui non si può
+    # usare app.debug per distinguere i due casi — a questo punto della
+    # funzione è sempre False, perché diventa True solo dentro app.run(),
+    # chiamato DOPO che create_app() è già tornato. Con il debug=True
+    # hardcoded più sotto, il processo "vero" avrà sempre
+    # WERKZEUG_RUN_MAIN=true: ci si affida solo a quello.
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         from modules.auto_sync import avvia_thread_autosync
         avvia_thread_autosync(app)
+        print('[auto_sync] thread avviato — primo giro tra ~10s, poi ogni 60s.', flush=True)
 
     return app
 
