@@ -4,6 +4,32 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+### Task 27 — Gestione elegante del mismatch CSRF (errorhandler)
+Su ministudio l'errore "Bad Request: The CSRF tokens do not match" si
+è ripresentato una seconda volta, questa volta senza altre schede/Mac
+collegati. Confrontando (come la volta precedente) il token nel campo
+nascosto del form con quello nel cookie di sessione inviato dal
+browser: di nuovo diversi, ma con timestamp itsdangerous quasi
+identici — segno di due richieste GET /login quasi simultanee (tipico
+di un prefetch/precaricamento del browser al primissimo accesso su un
+browser "pulito"), ciascuna con la propria sessione/token, non di un
+problema di dati o di codice.
+
+Invece di continuare a diagnosticare caso per caso un fenomeno che può
+ripresentarsi per varie cause innocue (prefetch, sessione scaduta,
+scheda vecchia), aggiunto un `@app.errorhandler(CSRFError)` in
+`app.py`: invece della pagina bianca "Bad Request", ora si viene
+rediretti al login (o alla pagina di provenienza) con un messaggio
+chiaro ("La sessione era scaduta... riprova"). Non elimina la causa
+di fondo (che resta innocua e specifica del browser/momento), ma la
+rende un semplice "riprova" invece di un errore che sembra un guasto.
+
+Verificato: pytest 51/51, simulazione diretta di un token CSRF non
+valido su `/login` → redirect 302 pulito a `/login` invece
+dell'eccezione grezza.
+
+---
+
 ### Task 41 — Etichette complete nelle pillole della barra passi
 
 Su richiesta di Roberto: le pillole della barra di navigazione a passi

@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, redirect, url_for, flash, request
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError
 from models import db
 import os, locale, shutil
 
@@ -28,6 +29,26 @@ def create_app():
     # Il token viene iniettato lato client automaticamente (vedi
     # templates/base.html) per non dover modificare ogni singolo form.
     CSRFProtect(app)
+
+    @app.errorhandler(CSRFError)
+    def _csrf_error(e):
+        """
+        Mostra un messaggio comprensibile invece della pagina bianca
+        "Bad Request: The CSRF tokens do not match" di Werkzeug.
+
+        Il mismatch capita quasi sempre per un token ormai superato:
+        due richieste quasi simultanee alla stessa pagina al primo
+        caricamento (tipico di prefetch/precaricamento del browser),
+        una scheda rimasta aperta da prima, o una sessione scaduta.
+        Non è quasi mai un problema dei dati: basta ricaricare la
+        pagina (che genera un token nuovo, coerente con la sessione
+        corrente) e riprovare.
+        """
+        flash('La sessione era scaduta o non più valida: la pagina è stata '
+              'ricaricata, riprova ad inviare il modulo.', 'warning')
+        if request.path.startswith('/login'):
+            return redirect(url_for('auth.login'))
+        return redirect(request.referrer or url_for('dashboard.index'))
 
     try:
         locale.setlocale(locale.LC_TIME, 'it_IT.UTF-8')
