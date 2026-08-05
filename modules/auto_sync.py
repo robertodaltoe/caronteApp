@@ -139,6 +139,10 @@ def _merge_additivo(db, tmp_remoto_path):
     conn_remoto.row_factory = sqlite3.Row
 
     inserite, conflitti_nuovi, conflitti_aggiornati = 0, 0, 0
+    solo_locali = 0   # righe che esistono qui ma non (ancora) su Drive:
+                       # segnala che tocca ripubblicare, altrimenti l'altra
+                       # postazione non le vedrebbe mai finché non chiudiamo
+                       # l'app (l'unico altro momento in cui si pubblica).
     dettagli = []
 
     try:
@@ -148,6 +152,9 @@ def _merge_additivo(db, tmp_remoto_path):
                              db.session.execute(text(f"SELECT * FROM {tabella}"))]
             mappa_locale = {json.dumps(cfg['chiave'](r), sort_keys=True): r
                              for r in righe_locali}
+            chiavi_remote = {json.dumps(cfg['chiave'](r), sort_keys=True)
+                              for r in righe_remote}
+            solo_locali += sum(1 for k in mappa_locale if k not in chiavi_remote)
 
             for r_remota in righe_remote:
                 chiave = cfg['chiave'](r_remota)
@@ -213,6 +220,7 @@ def _merge_additivo(db, tmp_remoto_path):
         'inserite': inserite,
         'conflitti_nuovi': conflitti_nuovi,
         'conflitti_aggiornati': conflitti_aggiornati,
+        'solo_locali': solo_locali,
         'dettagli': dettagli,
     }
 
@@ -258,7 +266,12 @@ def esegui_sync_automatico(app):
         except OSError:
             pass
 
-        if risultato['inserite'] > 0:
+        # Ripubblica su Drive se: abbiamo importato qualcosa dall'altra
+        # postazione, OPPURE abbiamo noi righe locali (es. un'assenza
+        # appena inserita qui) che su Drive non ci sono ancora — altrimenti
+        # l'altra macchina non le vedrebbe mai finché qualcuno non chiude
+        # l'app (unico altro momento in cui si pubblica).
+        if risultato['inserite'] > 0 or risultato['solo_locali'] > 0:
             carica(db_locale)
 
         return risultato

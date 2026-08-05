@@ -89,6 +89,43 @@ ancora scelto tra rete locale della scuola / piccolo hosting cloud) —
 il meccanismo di questo Task è pensato come soluzione-ponte fino a quel
 momento, non come sostituto definitivo.
 
+**Aggiornamento — due bug trovati nel primo collaudo reale** (Roberto ha
+provato con un'assenza a "Alaimo Giuseppe" — docente/motivo diversi
+sulle due macchine per lo stesso giorno):
+
+1. Il thread di background non partiva in modo affidabile: la guardia
+   contro il doppio avvio (per via del reloader di Flask) controllava
+   `app.debug`, che a quel punto della funzione `create_app()` è
+   sempre `False` (diventa `True` solo dentro `app.run()`, chiamato
+   dopo). Corretto affidandosi solo a `WERKZEUG_RUN_MAIN`. Aggiunto
+   anche un log a ogni giro (non solo quando succede qualcosa) tramite
+   `print()` invece di `app.logger`, perché il livello di log di
+   default di Flask filtra via gli `INFO` anche in debug — serve a
+   vedere da terminale che il thread è vivo.
+2. La chiave logica delle assenze includeva `motivo`: due assenze per
+   lo stesso docente/giorno/fascia oraria ma con motivo diverso (es.
+   "lutto" su una macchina, un altro motivo sull'altra) venivano viste
+   come due righe distinte e sommate invece che segnalate come
+   conflitto. Rimosso `motivo` dalla chiave, spostato tra i
+   `campi_confronto`. **Effetto collaterale già scritto nel database**
+   di produzione durante il collaudo (prima della correzione): Alaimo
+   Giuseppe risulta con due assenze per il 6/8/2026 invece di una
+   ("formazione" e "lutto") — segnalato a Roberto, che ha scelto di
+   sistemarlo a mano più avanti, non toccato da qui.
+3. Un terzo problema, di comportamento non di bug: il sync pubblicava
+   su Drive solo quando riceveva righe nuove dall'altra postazione, mai
+   quando era la macchina locale ad avere novità proprie — quindi in
+   pratica nessuna delle due macchine vedeva mai i dati dell'altra
+   finché qualcuno non chiudeva l'app. Corretto: `_merge_additivo` ora
+   calcola anche `solo_locali` (righe presenti in locale ma non ancora
+   su Drive) e il ciclo pubblica se `inserite>0` OPPURE `solo_locali>0`.
+
+Nota di processo: non sono riuscito a fare `git commit`/`push` da questo
+ambiente (stesso tipo di blocco di scrittura sul mount già visto per
+`database.db` — file di lock che non si riescono a rimuovere). Le
+modifiche sono comunque scritte correttamente sui file reali; commit e
+push restano da fare da Roberto direttamente dal proprio terminale.
+
 ---
 
 ### Task 45 — Merge manuale macmini → macbookpro (Assegnazioni 2026-2027)
