@@ -65,14 +65,14 @@
                 {% else %}—{% endif %}
             </td>
             <td style="font-size:.82rem;">
-                {% if rd.materie_extra %}{% for m in rd.materie_extra.split(',') %}<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;margin:1px;font-size:.78rem;display:inline-block;">{{ m.strip() }}</span>{% endfor %}{% else %}<span style="color:#d1d5db;font-size:.78rem;">—</span>{% endif %}
+                {% if rd.materie_extra %}{% for m in rd.materie_extra.split(',') %}<span style="background:var(--giallo-bg);color:var(--giallo);padding:1px 6px;border-radius:4px;margin:1px;font-size:.78rem;display:inline-block;">{{ m.strip() }}</span>{% endfor %}{% else %}<span style="color:#d1d5db;font-size:.78rem;">—</span>{% endif %}
                 <button type="button" onclick="toggleEditDocente({{ rd.id }})" style="background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--grigio);padding:1px 4px;">✎︎️</button>
             </td>
             <td style="font-size:.82rem; color:var(--grigio);">{{ rd.note or '—' }}</td>
             <td style="text-align:center;">
                 <a href="{{ url_for('recupero.vincoli') }}#docente-{{ rd.id }}"
                    class="btn btn-sm"
-                   style="background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;
+                   style="background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);
                           font-size:.78rem; padding:3px 9px; text-decoration:none;">
                     ▦︎ {% if rd.vincoli %}{{ rd.vincoli|length }}{% else %}+{% endif %}
                 </a>
@@ -85,7 +85,7 @@
                 </form>
             </td>
         </tr>
-        <tr id="edit-doc-{{ rd.id }}" style="display:none; background:#fffbeb;">
+        <tr id="edit-doc-{{ rd.id }}" style="display:none; background:var(--giallo-bg);">
             <td colspan="7" style="padding:8px 14px;">
                 <form method="post" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
                     <input type="hidden" name="azione" value="modifica_docente">
@@ -94,16 +94,16 @@
                         <label style="font-size:.72rem;color:var(--grigio);">Materie extra recupero (separate da virgola)</label><br>
                         <input type="text" name="materie_extra" value="{{ rd.materie_extra or '' }}"
                                placeholder="Es. Fisica, Scienze"
-                               style="width:100%;padding:5px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:.84rem;">
+                               style="width:100%;padding:5px 8px;border:1px solid var(--giallo);border-radius:6px;font-size:.84rem;">
                     </div>
                     <div style="flex:2; min-width:160px;">
                         <label style="font-size:.72rem;color:var(--grigio);">Note</label><br>
                         <input type="text" name="note" value="{{ rd.note or '' }}"
-                               style="width:100%;padding:5px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:.84rem;">
+                               style="width:100%;padding:5px 8px;border:1px solid var(--giallo);border-radius:6px;font-size:.84rem;">
                     </div>
                     <button type="submit" class="btn btn-success btn-sm">Salva</button>
                     <button type="button" onclick="toggleEditDocente({{ rd.id }})"
-                            class="btn btn-sm" style="background:#fee2e2;color:#dc2626;">chiudi</button>
+                            class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">chiudi</button>
                 </form>
             </td>
         </tr>

@@ -32,7 +32,7 @@
     <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Disponibilità docenti per i recuperi</h1>
 </div>
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
-     color:var(--grigio); border-left:4px solid #7c3aed;">
+     color:var(--grigio); border-left:4px solid var(--viola);">
     Aggiungi una riga per ogni fascia oraria disponibile. Puoi aggiungerne quante vuoi per giorno
     (es. giovedì 8:00–10:00 <em>e</em> giovedì 12:00–13:00 = due righe).
     Se un docente non ha vincoli impostati, il sistema userà il default: tutti i giorni lun–ven, 08:00–13:00.
@@ -44,7 +44,7 @@
 <div class="card" style="margin-bottom:8px; padding:0; overflow:hidden;"
      id="docente-{{ rd.id }}">
     <!-- Header docente — click per aprire/chiudere -->
-    <div style="background:#f0f4ff; padding:8px 16px; display:flex;
+    <div style="background:var(--blu-light); padding:8px 16px; display:flex;
                 justify-content:space-between; align-items:center; cursor:pointer;"
          onclick="toggleVincoli({{ rd.id }}, this)">
         <div>
@@ -60,7 +60,7 @@
                 {{ rd.vincoli|length }} fasce
             </span>
             {% else %}
-            <span style="font-size:.72rem; background:#fef3c7; color:#92400e;
+            <span style="font-size:.72rem; background:var(--giallo-bg); color:var(--giallo);
                          padding:1px 7px; border-radius:8px; margin-left:8px;">
                 ⚠︎ nessun vincolo
             </span>
@@ -73,7 +73,7 @@
                 <input type="hidden" name="azione" value="elimina_tutti">
                 <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
                 <button type="submit" class="btn btn-sm"
-                        style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;
+                        style="background:var(--rosso-bg); color:var(--rosso); border:1px solid #fca5a5;
                                font-size:.74rem;">✕︎</button>
             </form>
             {% endif %}
@@ -116,7 +116,7 @@
             <td style="font-size:.82rem; color:var(--grigio);">{{ v.note or '—' }}</td>
             <td style="text-align:center; display:flex; gap:3px; justify-content:center;">
                 <button type="button" onclick="toggleModifica({{ v.id }})"
-                        style="background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;
+                        style="background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);
                                border-radius:5px; padding:2px 7px; font-size:.78rem; cursor:pointer;">✎︎️</button>
                 <form method="post" style="margin:0;">
                     <input type="hidden" name="azione" value="elimina">
@@ -170,7 +170,7 @@
                     </div>
                     <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0; white-space:nowrap;">▤︎</button>
                     <button type="button" onclick="toggleModifica({{ v.id }})"
-                            class="btn btn-sm" style="flex-shrink:0; background:#fee2e2; color:#dc2626;">✕︎</button>
+                            class="btn btn-sm" style="flex-shrink:0; background:var(--rosso-bg); color:var(--rosso);">✕︎</button>
                 </form>
             </td>
         </tr>
@@ -190,19 +190,19 @@
         <div style="margin-bottom:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
             <span style="font-size:.72rem; color:var(--grigio);">Preset:</span>
             <button type="button" onclick="preset('{{ rd.id }}','lmm','08:00','13:00')"
-                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);">
                 Lun–Mer–Ven 8–13
             </button>
             <button type="button" onclick="preset('{{ rd.id }}','mgio','08:00','13:00')"
-                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);">
                 Mar–Gio 8–13
             </button>
             <button type="button" onclick="preset('{{ rd.id }}','tutti','08:00','13:00')"
-                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);">
                 Tutti i giorni 8–13
             </button>
             <button type="button" onclick="preset('{{ rd.id }}','tutti','08:00','16:00')"
-                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;">
+                class="btn btn-sm" style="font-size:.72rem; padding:2px 8px; background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);">
                 Tutti i giorni 8–16
             </button>
         </div>

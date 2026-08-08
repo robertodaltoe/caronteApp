@@ -25,7 +25,7 @@
     white-space: nowrap;
 }
 .fsl-table thead th.doc-col {
-    background: #1e3a5c; text-align: left; padding-left: 14px;
+    background: var(--blu); text-align: left; padding-left: 14px;
     min-width: 130px; position: sticky; left: 0; z-index: 2;
 }
 .fsl-table tbody td.doc-cell {
@@ -38,9 +38,9 @@
     transition: background .1s;
     position: relative;
 }
-.slot-cell:hover { background: #eff6ff !important; }
+.slot-cell:hover { background: var(--blu-light) !important; }
 .slot-cell.attivo {
-    background: #dcfce7 !important;
+    background: var(--verde-bg) !important;
     cursor: pointer;
 }
 .slot-cell.attivo::after {
@@ -48,7 +48,7 @@
     display: block;
     font-size: .72rem;
     font-weight: 700;
-    color: #166534;
+    color: var(--verde);
     padding: 2px 4px;
     line-height: 1.3;
 }
@@ -186,9 +186,9 @@ let oreSelezionate = new Set();
 function aggiornaBadgeStile() {
     document.querySelectorAll('.ore-badge-btn').forEach(b => {
         const sel = oreSelezionate.has(parseInt(b.dataset.ora));
-        b.style.background    = sel ? '#166534' : 'white';
+        b.style.background    = sel ? 'var(--verde)' : 'white';
         b.style.color         = sel ? 'white'   : '#374151';
-        b.style.borderColor   = sel ? '#166534' : '#e5e7eb';
+        b.style.borderColor   = sel ? 'var(--verde)' : '#e5e7eb';
     });
 }
 
@@ -318,8 +318,8 @@ function copiaRiga(docId) {
     const btn = event.target;
     const orig = btn.textContent;
     btn.textContent = `✓︎ ${copiate} celle`;
-    btn.style.background = '#dcfce7';
-    btn.style.color = '#166534';
+    btn.style.background = 'var(--verde-bg)';
+    btn.style.color = 'var(--verde)';
     setTimeout(() => {
         btn.textContent = orig;
         btn.style.background = '';
@@ -355,7 +355,7 @@ document.getElementById('btn-salva').addEventListener('click', async () => {
 
     if (data.ok) {
         btn.textContent = '✓︎ Salvato!';
-        btn.style.background = '#166534';
+        btn.style.background = 'var(--verde)';
         setTimeout(() => {
             btn.textContent = '✓︎ Salva calendario';
             btn.style.background = '';

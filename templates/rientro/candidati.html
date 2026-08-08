@@ -40,7 +40,7 @@
         Classi con materie già impostate: {{ classi_con_materie | join(', ') }}
     </div>
     {% else %}
-    <div style="font-size:.74rem; color:#dc2626; margin-top:8px;">
+    <div style="font-size:.74rem; color:var(--rosso); margin-top:8px;">
         ⚠︎ Nessuna classe ha ancora le materie impostate — vai prima in "Materie per classe".
     </div>
     {% endif %}
@@ -74,7 +74,7 @@
                 <form method="post" onsubmit="return confirm('Rimuovere {{ c.cognome }} {{ c.nome }}?')">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ c.id }}">
-                    <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                    <button type="submit" style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
                             border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">✕︎</button>
                 </form>
             </td>

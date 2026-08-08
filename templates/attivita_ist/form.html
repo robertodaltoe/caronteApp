@@ -136,7 +136,7 @@ function aggiornaTipo() {
     document.getElementById('sez-classe').style.display = info.classe ? 'block' : 'none';
     document.getElementById('sez-dip').style.display    = info.dip    ? 'block' : 'none';
     const box = document.getElementById('info-bucket');
-    const colori = {A:'var(--blu-light),var(--blu),var(--blu-med)', B:'#dcfce7,#166534,#86efac', null:'#f3f4f6,#6b7280,#d1d5db'};
+    const colori = {A:'var(--blu-light),var(--blu),var(--blu-med)', B:'var(--verde-bg),var(--verde),#86efac', null:'#f3f4f6,#6b7280,#d1d5db'};
     const c = (colori[info.bucket] || colori[null]).split(',');
     box.style.background  = c[0]; box.style.color = c[1]; box.style.borderColor = c[2];
     box.textContent = info.txt || '';

@@ -236,7 +236,7 @@
     </div>
 
     <!-- GRUPPO RIMANENTE -->
-    <div style="background:#fef9c3; border:1px solid #fde047; border-radius:8px;
+    <div style="background:#fef9c3; border:1px solid var(--giallo); border-radius:8px;
                 padding:14px 18px; margin-bottom:16px;">
         <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
             <input type="checkbox" name="gruppo_rimanente" value="1" id="chk-gruppo-r"
@@ -244,10 +244,10 @@
                    style="width:16px; height:16px; margin-top:2px; flex-shrink:0;"
                    onchange="toggleGruppoRimanente()">
             <div style="flex:1;">
-                <span style="font-weight:700; color:#854d0e; font-size:.92rem;">
+                <span style="font-weight:700; color:var(--giallo); font-size:.92rem;">
                     🔀 Gruppo rimanente (classe parzialmente in aula)
                 </span>
-                <p style="font-size:.8rem; color:#713f12; margin-top:4px;">
+                <p style="font-size:.8rem; color:var(--giallo); margin-top:4px;">
                     Una parte della classe è fuori aula, il gruppo rimasto va sorvegliato.<br>
                     <strong>Effetto:</strong> docenti indisponibili, classe NON scoperta.
                 </p>
@@ -255,8 +255,8 @@
         </label>
 
         <!-- Sezione attività collegata — appare solo se gruppo_rimanente è attivo -->
-        <div id="sez-gruppo-att" style="display:none; margin-top:14px; border-top:1px solid #fde047; padding-top:14px;">
-            <p style="font-size:.82rem; font-weight:700; color:#854d0e; margin-bottom:10px;">
+        <div id="sez-gruppo-att" style="display:none; margin-top:14px; border-top:1px solid var(--giallo); padding-top:14px;">
+            <p style="font-size:.82rem; font-weight:700; color:var(--giallo); margin-bottom:10px;">
                 👥 Collega un'attività per il gruppo rimasto in aula:
             </p>
             <div style="display:flex; gap:16px; margin-bottom:12px;">
@@ -286,7 +286,7 @@
                     </option>
                     {% endfor %}
                 </select>
-                <p style="font-size:.76rem; color:#713f12; margin-top:6px;">
+                <p style="font-size:.76rem; color:var(--giallo); margin-top:6px;">
                     Es. seleziona "Progetto BIM" se il gruppo rimasto è già gestito da quell'attività.
                 </p>
             </div>
@@ -330,11 +330,11 @@
     </div>
 
     <!-- MIGRAZIONE GRUPPO PER ORA -->
-    <div id="sez-migrazione" style="display:none; margin-top:14px; border-top:1px solid #fde047; padding-top:14px;">
-        <p style="font-size:.82rem; font-weight:700; color:#854d0e; margin-bottom:6px;">
+    <div id="sez-migrazione" style="display:none; margin-top:14px; border-top:1px solid var(--giallo); padding-top:14px;">
+        <p style="font-size:.82rem; font-weight:700; color:var(--giallo); margin-bottom:6px;">
             📍 Pianificazione migrazione per ora:
         </p>
-        <p style="font-size:.78rem; color:#713f12; margin-bottom:12px;">
+        <p style="font-size:.78rem; color:var(--giallo); margin-bottom:12px;">
             Per ogni ora indica la classe in cui migra il gruppo. La ✅ associa automaticamente
             il docente di quella classe in quell'ora — si disattiva se è assente/indisponibile.
         </p>
@@ -350,7 +350,7 @@
 
         <!-- GRIGLIA MIGRAZIONE: righe = ore, colonne = giorni dell'attività -->
         <div id="mig-griglia-container" style="overflow-x:auto;">
-            <div id="mig-griglia-loading" style="color:#713f12; font-size:.82rem; font-style:italic;">
+            <div id="mig-griglia-loading" style="color:var(--giallo); font-size:.82rem; font-style:italic;">
                 ⏳ Compila le date e le classi dell'attività per vedere la griglia...
             </div>
             <div id="mig-griglia" style="display:none;"></div>
@@ -359,24 +359,24 @@
         <!-- Campi hidden per il submit — popolati da JS -->
         <div id="mig-hidden-fields"></div>
 
-        <p style="font-size:.76rem; color:#713f12; margin-top:10px;">
+        <p style="font-size:.76rem; color:var(--giallo); margin-top:10px;">
             ℹ️ Il gruppo non genera supplenze scoperte in nessuna ora.
             Le classi con ✅ auto ricevono una nota di sorveglianza nel registro.
         </p>
     </div>
 
     <!-- RICONOSCI ORE FUORI SERVIZIO -->
-    <div id="sez-ore-acc" style="background:#f0fdf4; border:1px solid #86efac;
+    <div id="sez-ore-acc" style="background:var(--verde-bg); border:1px solid #86efac;
          border-radius:8px; padding:14px 18px; margin-bottom:16px;">
         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;
-                      font-weight:700; color:#166534; font-size:.92rem;">
+                      font-weight:700; color:var(--verde); font-size:.92rem;">
             <input type="checkbox" name="riconosci_ore_acc" value="1" id="chk-ore-acc"
                    {% if not attivita or attivita.riconosci_ore_acc %}checked{% endif %}
                    style="width:16px; height:16px;" onchange="toggleOreAcc()">
             ✅ Riconosci ore fuori servizio agli accompagnatori come credito banca ore
         </label>
         <div id="sez-ore-acc-dettaglio" style="margin-top:12px;">
-            <p style="font-size:.8rem; color:#166534; margin-bottom:12px;">
+            <p style="font-size:.8rem; color:var(--verde); margin-bottom:12px;">
                 I badge verdi sono le ore in cui il docente è <strong>libero</strong>
                 (nessuna lezione). Quelli grigi sono ore con lezione. Clicca per selezionare/deselezionare.
             </p>
@@ -467,13 +467,13 @@ async function aggiornaGrigliaMigrazione() {
         const parti = d.label.split(' ');  // es. ['ven', '29/05']
         const linea1 = parti[0] ? parti[0].toUpperCase() : '';
         const linea2 = parti[1] || '';
-        html += '<th style="background:#fef08a; padding:4px 6px; min-width:95px; text-align:center; border-right:1px solid #fde047;"><span style="display:block; font-size:.65rem; color:#92400e; text-transform:uppercase; letter-spacing:.5px;">' + linea1 + '</span><span style="display:block; font-size:.75rem; font-weight:800; color:#292524;">' + linea2 + '</span></th>';
+        html += '<th style="background:#fef08a; padding:4px 6px; min-width:95px; text-align:center; border-right:1px solid var(--giallo);"><span style="display:block; font-size:.65rem; color:var(--giallo); text-transform:uppercase; letter-spacing:.5px;">' + linea1 + '</span><span style="display:block; font-size:.75rem; font-weight:800; color:#292524;">' + linea2 + '</span></th>';
     });
     html += '</tr></thead><tbody>';
 
     for (let ora = 1; ora <= 9; ora++) {
-        html += '<tr style="border-bottom:1px solid #fde047;">';
-        html += '<td style="padding:4px 6px; font-weight:700; color:#854d0e; text-align:center; font-size:.78rem;">' + ora + 'ª</td>';
+        html += '<tr style="border-bottom:1px solid var(--giallo);">';
+        html += '<td style="padding:4px 6px; font-weight:700; color:var(--giallo); text-align:center; font-size:.78rem;">' + ora + 'ª</td>';
         dates.forEach(d => {
             const key = ora + '_' + d.iso;
             const st  = migStato[key] || {};
@@ -482,7 +482,7 @@ async function aggiornaGrigliaMigrazione() {
             html += '<div style="position:relative;">';
             html += '<input type="text" id="mig-cl-' + key + '" data-key="' + key + '" data-ora="' + ora + '" data-data="' + d.iso + '" data-wd="' + d.wd + '"';
             html += ' value="' + (st.classe||'') + '" placeholder="classe" autocomplete="off" maxlength="7"';
-            html += ' style="width:70px; padding:3px 5px; border:1px solid #fde047; border-radius:4px; font-size:.78rem; font-family:monospace; background:#fffbeb; text-transform:uppercase;"';
+            html += ' style="width:70px; padding:3px 5px; border:1px solid var(--giallo); border-radius:4px; font-size:.78rem; font-family:monospace; background:var(--giallo-bg); text-transform:uppercase;"';
             html += ' oninput="migInputChange(this)" onfocus="migDropdownShow(this)" onblur="setTimeout(()=>migDropdownHide(this.dataset.key),200)">';
             html += '<div id="mig-dd-' + key + '" style="display:none; position:absolute; top:100%; left:0; min-width:90px; background:white; border:1px solid #d1d5db; border-radius:0 0 6px 6px; box-shadow:0 4px 12px rgba(0,0,0,.12); z-index:200; max-height:180px; overflow-y:auto;"></div>';
             html += '</div>';
@@ -501,7 +501,7 @@ function _migAutoHtml(key, st) {
     if (!st.classe) return '';
     if (!st.docente) return '<em style="font-size:.72rem;color:#9ca3af">caricamento...</em>';
     const disp = st.disponibile !== false;
-    const color = disp ? '#166534' : '#9ca3af';
+    const color = disp ? 'var(--verde)' : '#9ca3af';
     const title = disp ? st.docente.cognome : (st.motivo || 'non disponibile');
     // Usa template literal per evitare apici annidati
     const dis = disp ? '' : 'disabled';
@@ -817,7 +817,7 @@ function aggiornaOreBadge() {
         .then(renderBadge)
         .catch(e => {
             document.getElementById('ore-badge-container').innerHTML =
-                '<p style="color:#dc2626;font-size:.82rem;">Errore nel caricamento.</p>';
+                '<p style="color:var(--rosso);font-size:.82rem;">Errore nel caricamento.</p>';
         });
 }
 
@@ -845,10 +845,10 @@ function renderBadge(data) {
         const libereSet = new Set(doc.ore_libere_comuni);
 
         const blocco = document.createElement('div');
-        blocco.style.cssText = 'margin-bottom:14px; padding:10px 12px; background:white; border-radius:8px; border:1px solid #d1fae5;';
+        blocco.style.cssText = 'margin-bottom:14px; padding:10px 12px; background:white; border-radius:8px; border:1px solid var(--verde-bg);';
 
         const nome = document.createElement('div');
-        nome.style.cssText = 'font-weight:700; font-size:.88rem; color:#166534; margin-bottom:8px;';
+        nome.style.cssText = 'font-weight:700; font-size:.88rem; color:var(--verde); margin-bottom:8px;';
         nome.textContent = doc.cognome + (doc.nome ? ' ' + doc.nome[0] + '.' : '');
         if (!doc.ore_libere_comuni.length) {
             nome.innerHTML += ' <span style="color:#9ca3af; font-weight:400; font-size:.78rem;">(nessuna ora libera)</span>';
@@ -890,9 +890,9 @@ function renderBadge(data) {
 function aggiornaBadgeStile(badge, libero, selezionato) {
     badge.style.cssText = `padding:5px 12px; border-radius:8px; font-size:.85rem; font-weight:700;
         border:2px solid; cursor:${libero ? 'pointer' : 'default'}; transition:all .12s;
-        background:${selezionato ? '#166534' : libero ? '#dcfce7' : '#f3f4f6'};
-        color:${selezionato ? 'white' : libero ? '#166534' : '#9ca3af'};
-        border-color:${selezionato ? '#166534' : libero ? '#86efac' : '#e5e7eb'};`;
+        background:${selezionato ? 'var(--verde)' : libero ? 'var(--verde-bg)' : '#f3f4f6'};
+        color:${selezionato ? 'white' : libero ? 'var(--verde)' : '#9ca3af'};
+        border-color:${selezionato ? 'var(--verde)' : libero ? '#86efac' : '#e5e7eb'};`;
 }
 
 function aggiornaHiddenOre() {

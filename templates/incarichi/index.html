@@ -72,13 +72,13 @@
                         color:{{ cat_color[cat] }};">
                 {{ tipo.nome }}
                 {% if tipo.collegato_a %}
-                <span style="font-size:.68rem; background:#e0e7ff; color:#3730a3;
+                <span style="font-size:.68rem; background:var(--bronzo-bg); color:var(--bronzo);
                               padding:1px 6px; border-radius:4px; font-weight:400;">
                     per {{ tipo.collegato_a }}
                 </span>
                 {% endif %}
                 {% if tipo.compenso_tipo %}
-                <span style="font-size:.68rem; background:#d1fae5; color:#065f46;
+                <span style="font-size:.68rem; background:var(--verde-bg); color:#065f46;
                               padding:1px 6px; border-radius:4px; font-weight:400;">
                     {{ tipo.compenso_tipo }}
                 </span>
@@ -101,13 +101,13 @@
                             {{ n.label_classe }}
                         </span>
                         {% elif n.dipartimento %}
-                        <span style="background:#f0fdf4; color:#166534; padding:1px 7px;
+                        <span style="background:var(--verde-bg); color:var(--verde); padding:1px 7px;
                                       border-radius:5px;">
                             {{ n.dipartimento.nome }}
                         </span>
                         {% endif %}
                     </td>
-                    <td style="padding:7px 8px; font-size:.78rem; color:#166534; font-weight:600;">
+                    <td style="padding:7px 8px; font-size:.78rem; color:var(--verde); font-weight:600;">
                         {{ n.compenso_display }}
                     </td>
                     <td style="padding:7px 8px; color:var(--grigio); font-size:.76rem;">
@@ -120,7 +120,7 @@
                               onsubmit="return confirm('Eliminare questa nomina?')">
                             <button type="submit"
                                     style="background:none; border:none; cursor:pointer;
-                                           color:#dc2626; font-size:.8rem;">✕︎</button>
+                                           color:var(--rosso); font-size:.8rem;">✕︎</button>
                         </form>
                     </td>
                 </tr>

@@ -74,7 +74,7 @@
 <form method="post" id="form-roster">
 <div id="hidden-assegn"></div>
 
-{% set DIP_COLORS = ['#1e40af','#0369a1','#166534','#92400e','#b45309','#5b21b6','#374151'] %}
+{% set DIP_COLORS = ['#1e40af','#0369a1','var(--verde)','var(--giallo)','#b45309','#5b21b6','#374151'] %}
 
 {% for d in docenti %}
 {% set mat_ids_sel = assegn | selectattr(0, 'equalto', d.id) | map(attribute=1) | list %}

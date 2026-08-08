@@ -45,7 +45,7 @@
     <form method="post" onsubmit="return confirm('Rimuovere le materie per {{ classe }}?')">
         <input type="hidden" name="azione" value="elimina_classe">
         <input type="hidden" name="classe" value="{{ classe }}">
-        <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+        <button type="submit" style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
                 border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">✕︎ Rimuovi</button>
     </form>
 </div>

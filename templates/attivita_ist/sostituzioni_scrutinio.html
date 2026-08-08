@@ -6,20 +6,20 @@
 .cand-row { display:flex; align-items:center; gap:8px; padding:6px 10px;
     border-radius:6px; border:1px solid #e5eaf0; margin-bottom:4px;
     cursor:pointer; transition:all .1s; background:white; }
-.cand-row:hover { background:#f0f4ff; border-color:#b6c8e0; }
-.cand-row.priorita-1 { border-left:3px solid #16a34a; }
+.cand-row:hover { background:var(--blu-light); border-color:#b6c8e0; }
+.cand-row.priorita-1 { border-left:3px solid var(--verde); }
 .cand-row.priorita-2 { border-left:3px solid #0369a1; }
-.cand-row.priorita-3 { border-left:3px solid #7c3aed; }
+.cand-row.priorita-3 { border-left:3px solid var(--viola); }
 .cand-row.priorita-altro { border-left:3px solid #e5eaf0; }
 .prio-badge { font-size:.68rem; font-weight:700; padding:1px 6px;
     border-radius:8px; white-space:nowrap; }
-.p1 { background:#dcfce7; color:#166534; }
+.p1 { background:var(--verde-bg); color:var(--verde); }
 .p2 { background:#dbeafe; color:#1e40af; }
-.p3 { background:#ede9fe; color:#5b21b6; }
+.p3 { background:var(--viola-bg); color:#5b21b6; }
 .p4 { background:#f3f4f6; color:#6b7280; }
-.assente-card { border:1px solid #fecaca; border-radius:8px; padding:14px 16px;
-    margin-bottom:16px; background:#fff5f5; }
-.sost-registrata { border-color:#86efac; background:#f0fdf4; }
+.assente-card { border:1px solid var(--rosso-bg); border-radius:8px; padding:14px 16px;
+    margin-bottom:16px; background:var(--rosso-bg); }
+.sost-registrata { border-color:#86efac; background:var(--verde-bg); }
 </style>
 {% endblock %}
 
@@ -55,11 +55,11 @@
 {% else %}
 
 <div class="card" style="padding:10px 14px; margin-bottom:16px;
-     font-size:.82rem; color:var(--grigio); border-left:4px solid #7c3aed;">
+     font-size:.82rem; color:var(--grigio); border-left:4px solid var(--viola);">
     <strong>Logica suggerimenti:</strong>
-    <span style="margin-left:6px; background:#dcfce7; color:#166534; border-radius:6px; padding:1px 7px; font-size:.75rem; font-weight:700;">① stessa materia</span>
+    <span style="margin-left:6px; background:var(--verde-bg); color:var(--verde); border-radius:6px; padding:1px 7px; font-size:.75rem; font-weight:700;">① stessa materia</span>
     <span style="margin-left:4px; background:#dbeafe; color:#1e40af; border-radius:6px; padding:1px 7px; font-size:.75rem; font-weight:700;">② stesso dip.</span>
-    <span style="margin-left:4px; background:#ede9fe; color:#5b21b6; border-radius:6px; padding:1px 7px; font-size:.75rem; font-weight:700;">③ altra riunione lo stesso giorno</span>
+    <span style="margin-left:4px; background:var(--viola-bg); color:#5b21b6; border-radius:6px; padding:1px 7px; font-size:.75rem; font-weight:700;">③ altra riunione lo stesso giorno</span>
     <span style="margin-left:4px; background:#f3f4f6; color:#6b7280; border-radius:6px; padding:1px 7px; font-size:.75rem; font-weight:700;">④ disponibile</span>
     <span style="margin-left:8px; color:var(--grigio);">— Esclusi: docenti della classe {{ evento.classe }}, assenti, impegnati in scrutini paralleli</span>
 </div>
@@ -69,7 +69,7 @@
     <div style="display:flex; align-items:center; justify-content:space-between;
                 margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <div>
-            <strong style="font-size:1rem; color:#b91c1c;">
+            <strong style="font-size:1rem; color:var(--rosso);">
                 ✕︎ {{ riga.assente.cognome }}{% if riga.assente.nome %} {{ riga.assente.nome[0] }}.{% endif %}
             </strong>
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
@@ -78,7 +78,7 @@
             </span>
         </div>
         {% if riga.sostituzione and riga.sostituzione.id_sostituto %}
-        <div style="font-size:.82rem; background:#dcfce7; color:#166534;
+        <div style="font-size:.82rem; background:var(--verde-bg); color:var(--verde);
                     border-radius:6px; padding:4px 12px; font-weight:700;">
             ✓︎ Nominato: {{ riga.sostituzione.sostituto.cognome }}
             {% if riga.sostituzione.n_protocollo %}
@@ -177,8 +177,8 @@ function selezionaCandidat(assenteId, candidatoId, nome) {
     if (sel) {
         sel.value = candidatoId;
         // Feedback visivo
-        sel.style.borderColor = '#16a34a';
-        sel.style.background  = '#f0fdf4';
+        sel.style.borderColor = 'var(--verde)';
+        sel.style.background  = 'var(--verde-bg)';
         setTimeout(() => {
             sel.style.borderColor = '';
             sel.style.background  = '';

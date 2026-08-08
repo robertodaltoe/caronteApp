@@ -7,7 +7,7 @@
 </div>
 
 {% if not periodo %}
-<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid #dc2626; background:#fff5f5;">
+<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid var(--rosso); background:var(--rosso-bg);">
     ⚠︎ Nessun periodo configurato per i colloqui di rientro. Configuralo in Impostazioni periodi
     (codice <code>colloqui_rientro</code>) prima di generare la bozza.
 </div>
@@ -34,13 +34,13 @@
         <input type="hidden" name="azione" value="completa_bozza">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#166534; font-size:.9rem;">+ Completa bozza</strong>
+                <strong style="color:var(--verde); font-size:.9rem;">+ Completa bozza</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Calendarizza solo i colloqui ancora senza data/ora — non tocca quelli già
                     inseriti manualmente o da una bozza precedente.
                 </div>
             </div>
-            <button type="submit" class="btn btn-sm" style="background:#166534; color:white;
+            <button type="submit" class="btn btn-sm" style="background:var(--verde); color:white;
                     white-space:nowrap; margin-left:auto; flex-shrink:0;">+ Completa bozza</button>
         </div>
     </form>
@@ -49,12 +49,12 @@
         <input type="hidden" name="azione" value="azzera_tutto">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#dc2626; font-size:.9rem;">✕︎ Azzera calendario</strong>
+                <strong style="color:var(--rosso); font-size:.9rem;">✕︎ Azzera calendario</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Rimuove data/orario di tutti i colloqui (la commissione resta impostata).
                 </div>
             </div>
-            <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white;
+            <button type="submit" class="btn btn-sm" style="background:var(--rosso); color:white;
                     white-space:nowrap; margin-left:auto; flex-shrink:0;">✕︎ Azzera tutto</button>
         </div>
     </form>
@@ -73,15 +73,15 @@
 </div>
 
 {% if conflitti %}
-<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid #dc2626; background:#fff5f5;">
-    <div style="font-size:.9rem; font-weight:700; color:#dc2626; margin-bottom:8px;">
+<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid var(--rosso); background:var(--rosso-bg);">
+    <div style="font-size:.9rem; font-weight:700; color:var(--rosso); margin-bottom:8px;">
         ⚠︎ {{ conflitti|length }} conflitt{{ 'o' if conflitti|length==1 else 'i' }} rilevat{{ 'o' if conflitti|length==1 else 'i' }}
     </div>
     {% for cf in conflitti %}
     <div style="font-size:.8rem; margin-bottom:4px;">
         <span style="font-size:.7rem; padding:1px 6px; border-radius:4px; font-weight:700;
-                     background:{{ '#fee2e2' if cf.tipo=='rientro' else '#fef3c7' }};
-                     color:{{ '#dc2626' if cf.tipo=='rientro' else '#92400e' }};">
+                     background:{{ 'var(--rosso-bg)' if cf.tipo=='rientro' else 'var(--giallo-bg)' }};
+                     color:{{ 'var(--rosso)' if cf.tipo=='rientro' else 'var(--giallo)' }};">
             {{ '⊕︎ rientro' if cf.tipo=='rientro' else '✎︎ agosto' }}
         </span>
         <span style="color:#374151; margin-left:6px;">{{ cf.msg }}</span>
@@ -104,7 +104,7 @@
             <span style="font-size:.78rem; background:#dbeafe; color:#1e40af; padding:2px 8px;
                          border-radius:8px; font-weight:700; margin-left:8px;">{{ r.candidato.classe }}</span>
             {% if r.colloquio.data %}
-            <span style="font-size:.78rem; background:#dcfce7; color:#166534; padding:2px 8px;
+            <span style="font-size:.78rem; background:var(--verde-bg); color:var(--verde); padding:2px 8px;
                          border-radius:8px; font-weight:700; margin-left:6px;">
                 ✓︎ {{ r.colloquio.data.strftime('%d/%m') }} {{ r.colloquio.ora_inizio }}–{{ r.colloquio.ora_fine }}
             </span>
@@ -121,12 +121,12 @@
                    style="width:80px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.78rem;">
             <input type="time" name="ora_fine" value="{{ r.colloquio.ora_fine or '' }}"
                    style="width:80px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.78rem;">
-            <button type="submit" class="btn btn-sm" style="background:#166534;color:white;">▤︎</button>
+            <button type="submit" class="btn btn-sm" style="background:var(--verde);color:white;">▤︎</button>
         </form>
     </div>
 
     {% if not r.membri_materia %}
-    <div style="font-size:.78rem; color:#dc2626;">
+    <div style="font-size:.78rem; color:var(--rosso);">
         ⚠︎ Nessuna materia impostata per la classe {{ r.candidato.classe }}.
     </div>
     {% endif %}
@@ -141,7 +141,7 @@
                 <input type="hidden" name="campo" value="{{ m.campo }}">
                 <select name="id_docente" onchange="this.form.submit()"
                         style="width:100%; padding:4px 8px; border:1px solid
-                               {{ '#dc2626' if m.disponibile == False else '#d1d5db' }};
+                               {{ 'var(--rosso)' if m.disponibile == False else '#d1d5db' }};
                                border-radius:6px; font-size:.82rem;">
                     <option value="">— nessuno —</option>
                     {% if m.docente_attuale %}

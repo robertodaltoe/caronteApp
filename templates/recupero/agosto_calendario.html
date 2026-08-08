@@ -18,7 +18,7 @@
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Scritti distribuiti 24–27/8 · Orali il 28/8 · No sovrapposizioni alunni ·
                     Assistente proposto automaticamente (TI/TD annuale).
-                    <strong style="color:#dc2626;">Sovrascrive tutte le prove esistenti.</strong>
+                    <strong style="color:var(--rosso);">Sovrascrive tutte le prove esistenti.</strong>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0;">
@@ -40,13 +40,13 @@
         <input type="hidden" name="azione" value="completa_bozza">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#166534; font-size:.9rem;">◐︎ Completa bozza</strong>
+                <strong style="color:var(--verde); font-size:.9rem;">◐︎ Completa bozza</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Aggiunge prove solo ai gruppi ancora senza data — non tocca quelle già
                     pianificate, automaticamente o a mano.
                 </div>
             </div>
-            <button type="submit" class="btn btn-sm" style="background:#166534; color:white;
+            <button type="submit" class="btn btn-sm" style="background:var(--verde); color:white;
                     white-space:nowrap; margin-left:auto; flex-shrink:0;">
                 ◐︎ Completa
             </button>
@@ -61,13 +61,13 @@
         <input type="hidden" name="azione" value="elimina_tutto">
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
-                <strong style="color:#dc2626; font-size:.9rem;">✕︎ Azzera tutto il calendario</strong>
+                <strong style="color:var(--rosso); font-size:.9rem;">✕︎ Azzera tutto il calendario</strong>
                 <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                     Elimina tutte le prove pianificate (titolare, assistente e classi dei gruppi
                     restano intatti).
                 </div>
             </div>
-            <button type="submit" class="btn btn-sm" style="background:#dc2626; color:white;
+            <button type="submit" class="btn btn-sm" style="background:var(--rosso); color:white;
                     white-space:nowrap; margin-left:auto; flex-shrink:0;">
                 ✕︎ Azzera tutto
             </button>
@@ -76,15 +76,15 @@
 </div>
 
 {% if conflitti %}
-<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid #dc2626; background:#fff5f5;">
-    <div style="font-size:.9rem; font-weight:700; color:#dc2626; margin-bottom:8px;">
+<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid var(--rosso); background:var(--rosso-bg);">
+    <div style="font-size:.9rem; font-weight:700; color:var(--rosso); margin-bottom:8px;">
         ⚠︎ {{ conflitti|length }} conflitt{{ 'o' if conflitti|length==1 else 'i' }} rilevat{{ 'o' if conflitti|length==1 else 'i' }}
     </div>
     {% for cf in conflitti %}
     <div style="font-size:.8rem; margin-bottom:4px; display:flex; gap:8px; align-items:flex-start;">
         <span style="flex-shrink:0; font-size:.7rem; padding:1px 6px; border-radius:4px; font-weight:700;
-                     background:{{ '#fef3c7' if cf.tipo=='docente' else '#fee2e2' }};
-                     color:{{ '#92400e' if cf.tipo=='docente' else '#dc2626' }};">
+                     background:{{ 'var(--giallo-bg)' if cf.tipo=='docente' else 'var(--rosso-bg)' }};
+                     color:{{ 'var(--giallo)' if cf.tipo=='docente' else 'var(--rosso)' }};">
             {{ '◍︎▨︎ docente' if cf.tipo=='docente' else '◍︎△︎ alunno' }}
         </span>
         <span style="color:#374151;">
@@ -158,7 +158,7 @@
 {% set MESI_IT = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'] %}
 {% for data in lezioni_per_data.keys() | sort %}
 <div class="card" style="margin-bottom:12px; padding:0; overflow:hidden;">
-    <div style="background:{% if data.weekday() == 3 %}#7c3aed{% else %}var(--blu){% endif %};
+    <div style="background:{% if data.weekday() == 3 %}var(--viola){% else %}var(--blu){% endif %};
                 color:white; padding:8px 14px; font-weight:700; font-size:.9rem;
                 display:flex; justify-content:space-between; align-items:center;">
         <span>{{ GIORNI_IT[data.weekday()] }} {{ data.day }} {{ MESI_IT[data.month] }} {{ data.year }}</span>
@@ -182,7 +182,7 @@
         </thead>
         <tbody>
         {% for l, g in lezioni_per_data[data] | sort(attribute='0.ora_inizio') %}
-        <tr style="{{ 'background:#fff5f5;' if l.id in conflitti_ids else '' }}">
+        <tr style="{{ 'background:var(--rosso-bg);' if l.id in conflitti_ids else '' }}">
             <td style="font-size:.86rem; font-weight:700; white-space:nowrap;">
                 {{ l.ora_inizio }}–{{ l.ora_fine }}
             </td>
@@ -220,7 +220,7 @@
             <td style="text-align:center; white-space:nowrap;">
                 <div style="display:inline-flex; gap:3px; flex-wrap:nowrap;">
                     <button type="button" onclick="toggleEditLezione({{ l.id }})"
-                            style="background:#f0f4ff;color:var(--blu);border:1px solid #c7d2fe;
+                            style="background:var(--blu-light);color:var(--blu);border:1px solid var(--bronzo);
                                    border-radius:5px;padding:2px 6px;font-size:.76rem;cursor:pointer;
                                    white-space:nowrap; flex-shrink:0;">✎︎️</button>
                     <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0; flex-shrink:0;">
@@ -231,7 +231,7 @@
                 </div>
             </td>
         </tr>
-        <tr id="edit-l-{{ l.id }}" style="display:none; background:#fffbeb;">
+        <tr id="edit-l-{{ l.id }}" style="display:none; background:var(--giallo-bg);">
             <td colspan="9" style="padding:6px 12px;">
                 <form method="post" style="display:flex; gap:6px; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto;">
                     <input type="hidden" name="azione" value="modifica">
@@ -239,26 +239,26 @@
                     <div style="flex-shrink:0;">
                         <label style="font-size:.68rem;color:var(--grigio);">Data</label><br>
                         <input type="date" name="data" value="{{ l.data.isoformat() }}"
-                               style="padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.8rem;">
+                               style="padding:3px 5px;border:1px solid var(--giallo);border-radius:5px;font-size:.8rem;">
                     </div>
                     <div style="flex-shrink:0;">
                         <label style="font-size:.68rem;color:var(--grigio);">Dalle</label><br>
                         <input type="time" name="ora_inizio" value="{{ l.ora_inizio }}"
-                               style="width:88px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.8rem;">
+                               style="width:88px;padding:3px 5px;border:1px solid var(--giallo);border-radius:5px;font-size:.8rem;">
                     </div>
                     <div style="flex-shrink:0;">
                         <label style="font-size:.68rem;color:var(--grigio);">Alle</label><br>
                         <input type="time" name="ora_fine" value="{{ l.ora_fine }}"
-                               style="width:88px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.8rem;">
+                               style="width:88px;padding:3px 5px;border:1px solid var(--giallo);border-radius:5px;font-size:.8rem;">
                     </div>
                     <div style="flex-shrink:0;width:60px;">
                         <label style="font-size:.68rem;color:var(--grigio);">Aula</label><br>
                         <input type="text" name="aula" value="{{ l.aula or '' }}"
-                               style="width:60px;padding:3px 5px;border:1px solid #fcd34d;border-radius:5px;font-size:.8rem;">
+                               style="width:60px;padding:3px 5px;border:1px solid var(--giallo);border-radius:5px;font-size:.8rem;">
                     </div>
                     <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0;">▤︎</button>
                     <button type="button" onclick="toggleEditLezione({{ l.id }})"
-                            class="btn btn-sm" style="flex-shrink:0;background:#fee2e2;color:#dc2626;">✕︎</button>
+                            class="btn btn-sm" style="flex-shrink:0;background:var(--rosso-bg);color:var(--rosso);">✕︎</button>
                 </form>
             </td>
         </tr>

@@ -20,7 +20,7 @@
         <div style="font-size:.76rem; color:var(--grigio);">Gruppi prova</div>
     </div>
     <div class="card" style="text-align:center; padding:12px;">
-        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ tot_alunni }}</div>
+        <div style="font-size:1.8rem; font-weight:800; color:var(--verde);">{{ tot_alunni }}</div>
         <div style="font-size:.76rem; color:var(--grigio);">Alunni</div>
     </div>
     <div class="card" style="text-align:center; padding:12px;">
@@ -63,13 +63,13 @@
     {{ step('2','#0369a1','◈︎','Crea gruppi prova',
         'recupero.agosto_gruppi',
         'Accorpa classi per materia+titolare (max 12 alunni) e scegli il sorvegliante') }}
-    {{ step('3','#166534','▦︎','Pianifica il calendario prove',
+    {{ step('3','var(--verde)','▦︎','Pianifica il calendario prove',
         'recupero.agosto_calendario',
         'Bozza automatica: scritti 24–27/8, orali 28/8 · Commissario proposto automaticamente') }}
-    {{ step('4','#92400e','▲︎','Esporta XLSX',
+    {{ step('4','var(--giallo)','▲︎','Esporta XLSX',
         'recupero.agosto_export_xlsx',
         'Foglio Famiglie (per giornata, senza nomi) + foglio Docenti (con tutti i nominativi)') }}
-    {{ step('5','#7c3aed','▧︎','Schede coppie (ZIP)',
+    {{ step('5','var(--viola)','▧︎','Schede coppie (ZIP)',
         'recupero.agosto_export_schede_coppie',
         'Un file XLSX per ogni coppia somministratore+assistente — date, durata, candidati', last=true) }}
 </div>

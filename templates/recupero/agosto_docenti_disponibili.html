@@ -16,23 +16,23 @@
         Periodo: <strong>{{ periodo.data_inizio.strftime('%d/%m/%Y') }} – {{ periodo.data_fine.strftime('%d/%m/%Y') }}</strong>
         ({{ date_periodo|length }} giorni feriali).
         {% else %}
-        <span style="color:#dc2626; font-weight:700;">Nessun periodo configurato per le prove di agosto.</span>
+        <span style="color:var(--rosso); font-weight:700;">Nessun periodo configurato per le prove di agosto.</span>
         {% endif %}
     </div>
 </div>
 
 <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
-    <div class="card" style="text-align:center; padding:14px; background:#dcfce7;">
-        <div style="font-size:1.8rem; font-weight:800; color:#166534;">{{ n_completamente_liberi }}</div>
-        <div style="font-size:.78rem; color:#166534;">✓︎ Completamente liberi</div>
+    <div class="card" style="text-align:center; padding:14px; background:var(--verde-bg);">
+        <div style="font-size:1.8rem; font-weight:800; color:var(--verde);">{{ n_completamente_liberi }}</div>
+        <div style="font-size:.78rem; color:var(--verde);">✓︎ Completamente liberi</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:#fef9c3;">
-        <div style="font-size:1.8rem; font-weight:800; color:#92400e;">{{ n_con_assenze }}</div>
-        <div style="font-size:.78rem; color:#92400e;">⚠︎ Con alcune assenze</div>
+        <div style="font-size:1.8rem; font-weight:800; color:var(--giallo);">{{ n_con_assenze }}</div>
+        <div style="font-size:.78rem; color:var(--giallo);">⚠︎ Con alcune assenze</div>
     </div>
-    <div class="card" style="text-align:center; padding:14px; background:#fee2e2;">
-        <div style="font-size:1.8rem; font-weight:800; color:#dc2626;">{{ n_non_disponibili }}</div>
-        <div style="font-size:.78rem; color:#dc2626;">✕︎ Non disponibili (assenti tutto il periodo)</div>
+    <div class="card" style="text-align:center; padding:14px; background:var(--rosso-bg);">
+        <div style="font-size:1.8rem; font-weight:800; color:var(--rosso);">{{ n_non_disponibili }}</div>
+        <div style="font-size:.78rem; color:var(--rosso);">✕︎ Non disponibili (assenti tutto il periodo)</div>
     </div>
 </div>
 
@@ -59,7 +59,7 @@
                 {% if r.assenze %}
                     {% for a in r.assenze %}
                         <span style="display:inline-block; margin:1px 4px 1px 0; padding:1px 6px;
-                                     background:#fee2e2; color:#dc2626; border-radius:4px; font-size:.72rem;">
+                                     background:var(--rosso-bg); color:var(--rosso); border-radius:4px; font-size:.72rem;">
                             {{ a.data.strftime('%d/%m') }}{% if a.motivo %} ({{ a.motivo }}){% endif %}
                         </span>
                     {% endfor %}
@@ -70,13 +70,13 @@
             <td style="text-align:center;">
                 {% if r.completamente_assente %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fee2e2; color:#dc2626;">✕︎ non disp.</span>
+                             background:var(--rosso-bg); color:var(--rosso);">✕︎ non disp.</span>
                 {% elif r.completamente_libero %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#dcfce7; color:#166534;">✓︎ libero</span>
+                             background:var(--verde-bg); color:var(--verde);">✓︎ libero</span>
                 {% else %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fef9c3; color:#92400e;">⚠︎ parziale</span>
+                             background:#fef9c3; color:var(--giallo);">⚠︎ parziale</span>
                 {% endif %}
             </td>
         </tr>

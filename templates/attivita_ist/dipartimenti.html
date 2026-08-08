@@ -10,13 +10,13 @@
         {% for a in anni_disponibili %}
         <a href="{{ url_for('attivita_ist.dipartimenti', anno=a) }}"
            style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
-                  background:{{ '#6366f1' if a == anno_c else '#f3f4f6' }};
+                  background:{{ 'var(--bronzo)' if a == anno_c else '#f3f4f6' }};
                   color:{{ 'white' if a == anno_c else '#374151' }};">{{ a }}</a>
         {% endfor %}
     </div>
 </div>
 
-<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+<div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid var(--bronzo);">
     Materie e dipartimenti sono un catalogo stabile, non legato a un anno scolastico
     specifico — quello che vedi qui si applica automaticamente anche al prossimo anno,
     senza bisogno di importarlo o reimpostarlo. Solo i <strong>referenti di dipartimento</strong>
@@ -25,9 +25,9 @@
 </div>
 
 <div style="font-size:.78rem; color:var(--grigio); margin-bottom:14px;">
-    Docenti: <a href="{{ url_for('docenti.lista') }}" style="color:#6366f1; text-decoration:none;">Anagrafica docenti</a> ·
-    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" style="color:#6366f1; text-decoration:none;">Docenti ↔︎ Classi di concorso</a> ·
-    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" style="color:#6366f1; text-decoration:none;">Docenti ↔︎ Materie</a> ·
+    Docenti: <a href="{{ url_for('docenti.lista') }}" style="color:var(--bronzo); text-decoration:none;">Anagrafica docenti</a> ·
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" style="color:var(--bronzo); text-decoration:none;">Docenti ↔︎ Classi di concorso</a> ·
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" style="color:var(--bronzo); text-decoration:none;">Docenti ↔︎ Materie</a> ·
     <strong style="color:#1f2937;">Dipartimenti e materie</strong>
 </div>
 
@@ -43,8 +43,8 @@
         <h2 style="font-size:.95rem; color:var(--blu); margin:0; font-weight:700;">{{ dip.nome }}</h2>
         {% if referenti.get(dip.id) %}
         {% set ref = referenti[dip.id] %}
-        <span style="font-size:.78rem; color:#166534; background:#f0fdf4;
-                     padding:3px 10px; border-radius:6px; border:1px solid #bbf7d0;">
+        <span style="font-size:.78rem; color:var(--verde); background:var(--verde-bg);
+                     padding:3px 10px; border-radius:6px; border:1px solid var(--verde);">
             ◍︎ Referente: <strong>{{ ref.cognome }} {{ ref.nome }}</strong>
         </span>
         {% else %}
@@ -215,7 +215,7 @@
                 ({{ tutte_materie | length }} ancora da assegnare)
             </span>
             {% else %}
-            <span style="font-size:.72rem; font-weight:400; color:#16a34a;">✓︎ tutte assegnate</span>
+            <span style="font-size:.72rem; font-weight:400; color:var(--verde);">✓︎ tutte assegnate</span>
             {% endif %}
         </summary>
         <div style="margin-top:8px; background:#f0f4f8; padding:12px 14px;

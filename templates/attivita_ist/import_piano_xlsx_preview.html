@@ -7,9 +7,9 @@
 </div>
 
 {% if avvisi %}
-<div class="card" style="padding:14px 18px; border-left:4px solid #f59e0b; background:#fffbeb; margin-bottom:16px;">
-    <strong style="color:#92400e;">⚠︎ Avvisi durante la lettura ({{ avvisi|length }}):</strong>
-    <ul style="margin:8px 0 0 18px; font-size:.82rem; color:#92400e; line-height:1.7;">
+<div class="card" style="padding:14px 18px; border-left:4px solid var(--giallo); background:var(--giallo-bg); margin-bottom:16px;">
+    <strong style="color:var(--giallo);">⚠︎ Avvisi durante la lettura ({{ avvisi|length }}):</strong>
+    <ul style="margin:8px 0 0 18px; font-size:.82rem; color:var(--giallo); line-height:1.7;">
         {% for a in avvisi %}
         <li>{{ a }}</li>
         {% endfor %}
@@ -55,7 +55,7 @@
     </table>
 </div>
 
-<div class="card" style="padding:16px 20px; border-left:4px solid #16a34a;">
+<div class="card" style="padding:16px 20px; border-left:4px solid var(--verde);">
     <p style="font-size:.85rem; margin-bottom:12px;">
         Nulla è stato ancora salvato. Confermando, gli eventi verranno creati
         (quelli già presenti con stesso tipo/data/titolo/classe vengono saltati automaticamente).

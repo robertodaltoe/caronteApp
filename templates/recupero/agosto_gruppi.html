@@ -46,7 +46,7 @@
 {% endif %}
 
 {% for g in gruppi %}
-<div class="card" style="padding:12px 16px; margin-bottom:10px; background:#f0fdf4;">
+<div class="card" style="padding:12px 16px; margin-bottom:10px; background:var(--verde-bg);">
     <div style="display:flex; justify-content:space-between; align-items:flex-start;
                 flex-wrap:wrap; gap:10px; margin-bottom:8px;">
         <div>
@@ -65,7 +65,7 @@
             <input type="hidden" name="azione" value="elimina">
             <input type="hidden" name="id" value="{{ g.id }}">
             <button type="submit"
-                    style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                    style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
                            border-radius:5px;padding:2px 8px;font-size:.76rem;cursor:pointer;">
                 ✕︎ Elimina
             </button>
@@ -124,9 +124,9 @@
 {% endfor %}
 
 <!-- ══ SEZIONE 0: GRUPPO LIBERO (qualsiasi titolare, tutte le classi) ══ -->
-<h2 style="font-size:1rem; color:var(--7c3aed,#7c3aed); margin:6px 0 8px;">○︎ Crea gruppo libero</h2>
+<h2 style="font-size:1rem; color:var(--7c3aed,var(--viola)); margin:6px 0 8px;">○︎ Crea gruppo libero</h2>
 <div class="card" style="padding:10px 14px; margin-bottom:10px; font-size:.8rem;
-     color:var(--grigio); border-left:4px solid #7c3aed;">
+     color:var(--grigio); border-left:4px solid var(--viola);">
     Scegli materia e titolare liberamente: qui compaiono <strong>tutte</strong> le classi con un
     debito in quella materia, indipendentemente da chi ha assegnato il debito. Utile quando vuoi
     affidare a un docente la somministrazione di più classi che non sono le sue.
@@ -284,9 +284,9 @@ function aggiornaClassiLibero() {
         input.value = cls;
         input.style.display = 'none';
         input.onchange = function() {
-            label.style.background = this.checked ? '#ede9fe' : '#f9fafb';
-            label.style.color = this.checked ? '#6d28d9' : '#6b7280';
-            label.style.borderColor = this.checked ? '#7c3aed' : '#d1d5db';
+            label.style.background = this.checked ? 'var(--viola-bg)' : '#f9fafb';
+            label.style.color = this.checked ? 'var(--viola)' : '#6b7280';
+            label.style.borderColor = this.checked ? 'var(--viola)' : '#d1d5db';
         };
         label.appendChild(input);
         label.appendChild(document.createTextNode(cls + (giaCoperta ? ' ✓︎' : '')));
@@ -320,17 +320,17 @@ function aggiornaClassiLibero() {
                     <span style="font-size:.7rem; color:#9ca3af;">({{ p.materia_raw[:30] }})</span>
                 </span>
                 {% if p.n_classi_coperte > 0 %}
-                <span style="font-size:.7rem; color:#166534; margin-left:6px;">
+                <span style="font-size:.7rem; color:var(--verde); margin-left:6px;">
                     ✓︎ {{ p.n_classi_coperte }} class{{ 'e' if p.n_classi_coperte != 1 else 'e' }} già in un gruppo
                 </span>
                 {% endif %}
             </div>
             {% if p.rd_suggerito %}
-            <span style="font-size:.72rem; color:#166534; font-weight:700;">
+            <span style="font-size:.72rem; color:var(--verde); font-weight:700;">
                 ✓︎ titolare: {{ p.rd_suggerito.docente.cognome }} {{ p.rd_suggerito.docente.nome[:1] }}.
             </span>
             {% else %}
-            <span style="font-size:.72rem; color:#dc2626;">⚠︎ docente non trovato tra i disponibili</span>
+            <span style="font-size:.72rem; color:var(--rosso);">⚠︎ docente non trovato tra i disponibili</span>
             {% endif %}
         </div>
 

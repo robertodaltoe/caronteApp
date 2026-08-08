@@ -5,7 +5,7 @@
     <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">←︎ Recupero</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">◍︎△︎ Alunni con giudizio sospeso</h1>
     <a href="{{ url_for('recupero.copertura') }}" class="btn btn-sm"
-       style="background:#166534; color:white; margin-left:auto;">✓︎ Verifica copertura</a>
+       style="background:var(--verde); color:white; margin-left:auto;">✓︎ Verifica copertura</a>
 </div>
 
 <!-- Import XLSX -->
@@ -103,17 +103,17 @@
 
 <!-- Riepilogo stati -->
 <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:14px;">
-    <div class="card" style="text-align:center; padding:10px; background:#dcfce7;">
-        <div style="font-size:1.4rem; font-weight:800; color:#166534;">{{ conteggi.aderisce }}</div>
-        <div style="font-size:.72rem; color:#166534;">✓︎ aderisce</div>
+    <div class="card" style="text-align:center; padding:10px; background:var(--verde-bg);">
+        <div style="font-size:1.4rem; font-weight:800; color:var(--verde);">{{ conteggi.aderisce }}</div>
+        <div style="font-size:.72rem; color:var(--verde);">✓︎ aderisce</div>
     </div>
     <div class="card" style="text-align:center; padding:10px; background:#fef9c3;">
-        <div style="font-size:1.4rem; font-weight:800; color:#92400e;">{{ conteggi.studio_ind }}</div>
-        <div style="font-size:.72rem; color:#92400e;">▥︎ studio ind.</div>
+        <div style="font-size:1.4rem; font-weight:800; color:var(--giallo);">{{ conteggi.studio_ind }}</div>
+        <div style="font-size:.72rem; color:var(--giallo);">▥︎ studio ind.</div>
     </div>
-    <div class="card" style="text-align:center; padding:10px; background:#fee2e2;">
-        <div style="font-size:1.4rem; font-weight:800; color:#dc2626;">{{ conteggi.non_risposto }}</div>
-        <div style="font-size:.72rem; color:#dc2626;">? non risposto</div>
+    <div class="card" style="text-align:center; padding:10px; background:var(--rosso-bg);">
+        <div style="font-size:1.4rem; font-weight:800; color:var(--rosso);">{{ conteggi.non_risposto }}</div>
+        <div style="font-size:.72rem; color:var(--rosso);">? non risposto</div>
     </div>
     <div class="card" style="text-align:center; padding:10px; background:#f3f4f6;">
         <div style="font-size:1.4rem; font-weight:800; color:#6b7280;">{{ conteggi.non_aderisce }}</div>
@@ -125,14 +125,14 @@
     </div>
 </div>
 
-{% set STATO_BG    = {'aderisce':'#dcfce7','studio_ind':'#fef9c3','non_risposto':'#fee2e2','non_aderisce':'#f3f4f6','sconosciuto':'#f9fafb'} %}
-{% set STATO_COLOR = {'aderisce':'#166534','studio_ind':'#92400e','non_risposto':'#dc2626','non_aderisce':'#6b7280','sconosciuto':'#9ca3af'} %}
+{% set STATO_BG    = {'aderisce':'var(--verde-bg)','studio_ind':'#fef9c3','non_risposto':'var(--rosso-bg)','non_aderisce':'#f3f4f6','sconosciuto':'#f9fafb'} %}
+{% set STATO_COLOR = {'aderisce':'var(--verde)','studio_ind':'var(--giallo)','non_risposto':'var(--rosso)','non_aderisce':'#6b7280','sconosciuto':'#9ca3af'} %}
 {% set STATO_LABEL = {'aderisce':'✓︎','studio_ind':'▥︎','non_risposto':'?','non_aderisce':'✕︎','sconosciuto':'—'} %}
 
 <!-- Lista per materia -->
 {% for (materia, cogn_doc, ini_doc), alunni in per_materia.items() | sort %}
 <div class="card" style="margin-bottom:10px; padding:0; overflow:hidden;">
-    <div style="background:#f0f4ff; padding:7px 14px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="background:var(--blu-light); padding:7px 14px; display:flex; justify-content:space-between; align-items:center;">
         <div>
             <strong style="color:var(--blu);">{{ materia[:60] }}</strong>
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
@@ -169,7 +169,7 @@
                     <select name="tipo_prova" onchange="this.form.submit()"
                             style="font-size:.72rem; padding:2px 5px; border-radius:6px;
                                    font-weight:600; cursor:pointer; border:1px solid #d1d5db;
-                                   background:{{ '#f9fafb' if not a.tipo_prova_raw else '#f0f4ff' }};
+                                   background:{{ '#f9fafb' if not a.tipo_prova_raw else 'var(--blu-light)' }};
                                    color:{{ '#9ca3af' if not a.tipo_prova_raw else '#1e40af' }};">
                         {% for k, v in TIPO_PROVA_LABEL.items() %}
                         <option value="{{ k }}" {% if tp_attuale == k %}selected{% endif %}>{{ v }}</option>
@@ -187,11 +187,11 @@
                                    background:{{ STATO_BG.get(a.stato_adesione,'#f9fafb') }};
                                    color:{{ STATO_COLOR.get(a.stato_adesione,'#9ca3af') }};">
                         <option value="aderisce"     {% if a.stato_adesione=='aderisce' %}selected{% endif %}
-                                style="background:#dcfce7;color:#166534;">✓︎ aderisce</option>
+                                style="background:var(--verde-bg);color:var(--verde);">✓︎ aderisce</option>
                         <option value="studio_ind"   {% if a.stato_adesione=='studio_ind' %}selected{% endif %}
-                                style="background:#fef9c3;color:#92400e;">▥︎ studio ind.</option>
+                                style="background:#fef9c3;color:var(--giallo);">▥︎ studio ind.</option>
                         <option value="non_risposto" {% if a.stato_adesione=='non_risposto' %}selected{% endif %}
-                                style="background:#fee2e2;color:#dc2626;">? non risposto</option>
+                                style="background:var(--rosso-bg);color:var(--rosso);">? non risposto</option>
                         <option value="non_aderisce" {% if a.stato_adesione=='non_aderisce' %}selected{% endif %}
                                 style="background:#f3f4f6;color:#6b7280;">✕︎ non aderisce</option>
                         <option value="sconosciuto"  {% if a.stato_adesione=='sconosciuto' %}selected{% endif %}
@@ -205,7 +205,7 @@
                     <input type="hidden" name="azione" value="elimina_alunno">
                     <input type="hidden" name="id" value="{{ a.id }}">
                     <button type="submit" title="Rimuovi alunno"
-                            style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                            style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
                                    border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">
                         ✕︎
                     </button>

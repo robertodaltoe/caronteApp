@@ -54,7 +54,7 @@
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
         <div>
             <strong style="color:var(--blu); font-size:.95rem;">{{ c.cognome }} {{ c.nome }}</strong>
-            <span style="font-size:.78rem; background:#ede9fe; color:#7c3aed; padding:2px 8px;
+            <span style="font-size:.78rem; background:var(--viola-bg); color:var(--viola); padding:2px 8px;
                          border-radius:8px; font-weight:700; margin-left:8px;">→ {{ c.classe_destinazione }}</span>
             {% if c.provenienza %}
             <span style="font-size:.78rem; color:var(--grigio); margin-left:6px;">da {{ c.provenienza }}</span>
@@ -66,7 +66,7 @@
         <form method="post" onsubmit="return confirm('Rimuovere {{ c.cognome }} {{ c.nome }} e tutte le sue materie?')">
             <input type="hidden" name="azione" value="elimina">
             <input type="hidden" name="id" value="{{ c.id }}">
-            <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+            <button type="submit" style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
                     border-radius:5px;padding:3px 9px;font-size:.78rem;cursor:pointer;">✕︎ Rimuovi candidato</button>
         </form>
     </div>
@@ -82,7 +82,7 @@
                 <select name="tipologia" onchange="this.form.submit()"
                         style="border:1px solid #d1d5db; border-radius:5px; font-size:.72rem;
                                padding:1px 3px; background:white;
-                               color:{{ '#0369a1' if m.tipologia=='scritta' else ('#7c3aed' if m.tipologia=='orale' else '#9ca3af') }};">
+                               color:{{ '#0369a1' if m.tipologia=='scritta' else ('var(--viola)' if m.tipologia=='orale' else '#9ca3af') }};">
                     <option value="" {% if not m.tipologia %}selected{% endif %}>— tipo —</option>
                     <option value="scritta" {% if m.tipologia=='scritta' %}selected{% endif %}>Scritta</option>
                     <option value="orale" {% if m.tipologia=='orale' %}selected{% endif %}>Orale</option>
@@ -91,12 +91,12 @@
             <form method="post" style="margin:0;" onsubmit="return confirm('Rimuovere la materia {{ m.materia }}?')">
                 <input type="hidden" name="azione" value="elimina_materia">
                 <input type="hidden" name="id_materia" value="{{ m.id }}">
-                <button type="submit" style="background:none; border:none; color:#dc2626;
+                <button type="submit" style="background:none; border:none; color:var(--rosso);
                         cursor:pointer; font-size:.78rem; padding:0;">✕︎</button>
             </form>
         </span>
         {% else %}
-        <span style="font-size:.78rem; color:#dc2626;">⚠︎ Nessuna materia impostata</span>
+        <span style="font-size:.78rem; color:var(--rosso);">⚠︎ Nessuna materia impostata</span>
         {% endfor %}
     </div>
 
@@ -110,7 +110,7 @@
             <option value="scritta">Scritta</option>
             <option value="orale">Orale</option>
         </select>
-        <button type="submit" class="btn btn-sm" style="background:#7c3aed; color:white;">+ Materia</button>
+        <button type="submit" class="btn btn-sm" style="background:var(--viola); color:white;">+ Materia</button>
     </form>
 </div>
 {% endfor %}
