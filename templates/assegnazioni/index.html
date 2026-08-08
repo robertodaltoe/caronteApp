@@ -40,10 +40,10 @@ table.pivot tr.tr-copertura td { font-size:.66rem; font-weight:700; padding:2px 
 table.pivot tr.tr-add td { background:#fafbff; }
 .badge-tipo { font-size:.65rem; padding:1px 5px; border-radius:4px;
     font-weight:700; margin-left:4px; }
-.btn-add { background:none; border:1px dashed #c7d2fe; border-radius:6px;
-    color:#6366f1; cursor:pointer; font-size:.75rem; padding:3px 8px; }
-.btn-add:hover { background:#f0f0ff; }
-.form-add { display:none; padding:10px 18px; background:#f8f7ff;
+.btn-add { background:none; border:1px dashed var(--bronzo); border-radius:6px;
+    color:var(--bronzo); cursor:pointer; font-size:.75rem; padding:3px 8px; }
+.btn-add:hover { background:var(--blu-light); }
+.form-add { display:none; padding:10px 18px; background:var(--blu-light);
     border-top:1px solid #e5e7eb; }
 .form-add.open { display:block; }
 .verifica-ore { font-size:.75rem; padding:4px 10px; border-radius:5px;
@@ -84,20 +84,20 @@ table.pivot th.th-tipo { z-index:3; }
 .subrow td { background:#f0f9ff !important; font-size:.75rem; }
 input.inp-ore { width:38px; padding:2px 4px; text-align:center;
     border:1px solid #d1d5db; border-radius:4px; font-size:.8rem; }
-input.inp-ore:focus { border-color:#6366f1; outline:none; }
+input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p9', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p9', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:var(--verde); color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">▤︎ Assegnazioni classi — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('assegnazioni.index', anno=a) }}"
            style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
-                  background:{{ '#6366f1' if a == anno else '#f3f4f6' }};
+                  background:{{ 'var(--bronzo)' if a == anno else '#f3f4f6' }};
                   color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
         {% endfor %}
     </div>
@@ -152,7 +152,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {{ budget.n_coi or 0 }} COI
             </span>
             {% if budget.n_coe %}
-            <span class="cc-budget" style="background:#fef3c7; color:#92400e;">
+            <span class="cc-budget" style="background:var(--giallo-bg); color:var(--giallo);">
                 {{ budget.n_coe }} COE
             </span>
             {% endif %}
@@ -185,12 +185,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <th class="th-doc">Docente</th>
 <th class="th-tipo" style="background:#f1f5f9; border:1px solid #e2e8f0; font-size:.7rem; color:var(--grigio);">Tipo</th>
                     {% if blk.potenziamento %}
-<th class="th-pot" style="background:#7c3aed; color:white; font-size:.65rem; font-weight:700; border:1px solid #6d28d9; writing-mode:vertical-rl; transform:rotate(180deg); height:60px; padding:4px 2px;">POT {{ blk.potenziamento.ore }}h</th>
+<th class="th-pot" style="background:var(--viola); color:white; font-size:.65rem; font-weight:700; border:1px solid var(--viola); writing-mode:vertical-rl; transform:rotate(180deg); height:60px; padding:4px 2px;">POT {{ blk.potenziamento.ore }}h</th>
                     {% endif %}
                     {% set IND_COLORS = {
                         'AFM':'#1e40af','RIM':'#1d4ed8',
                         'CAT':'#b45309','LLI':'#15803d',
-                        'LSC':'#0e7490','LSP':'#7c3aed',
+                        'LSC':'#0e7490','LSP':'var(--viola)',
                         'LSU':'#be185d','SOS':'#6b7280'} %}
                     {% set prev_ind = namespace(v='') %}
                     {% for classe in classi %}
@@ -220,15 +220,15 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </td>
                     <td class="td-tipo"></td>
                     {% if blk.potenziamento %}
-                    <td style="border:1px solid #6d28d9; background:#f5f3ff;
-                               text-align:center; font-size:.72rem; color:#7c3aed; font-weight:700;">
+                    <td style="border:1px solid var(--viola); background:var(--viola-bg);
+                               text-align:center; font-size:.72rem; color:var(--viola); font-weight:700;">
                         {{ blk.potenziamento.ore }}h
                     </td>
                     {% endif %}
                     {% set IND_COLORS2 = {
                         'AFM':'#1e40af','RIM':'#1d4ed8',
                         'CAT':'#b45309','LLI':'#15803d',
-                        'LSC':'#0e7490','LSP':'#7c3aed',
+                        'LSC':'#0e7490','LSP':'var(--viola)',
                         'LSU':'#be185d','SOS':'#6b7280'} %}
                     {% set prev_ind2 = namespace(v='') %}
                     {% set cc_multi_classes_hdr = [] %}
@@ -247,7 +247,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         title="{{ mats | map(attribute='nome') | join(' / ') }}"
                         onclick="togglePianoMat('piano-detail-{{ cc.id }}', '{{ cc.id }}', '{{ cc_multi_classes_hdr | join('|') }}')"
                         {% endif %}>
-                        {{ blk.piano[classe] }}{% if blk.multi_materia[classe] %}<span style="color:#6366f1;">▾</span>{% endif %}
+                        {{ blk.piano[classe] }}{% if blk.multi_materia[classe] %}<span style="color:var(--bronzo);">▾</span>{% endif %}
                     </td>
                     {% endfor %}
                     <td class="td-sticky-r col-tot" style="font-size:.72rem; color:var(--grigio);">
@@ -271,7 +271,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </td>
                     <td class="td-tipo" style="border:1px solid #e2e8f0;"></td>
                     {% if blk.potenziamento %}
-                    <td style="border:1px solid #6d28d9; background:#f5f3ff;"></td>
+                    <td style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
                     {% endif %}
                     {% for classe in classi %}
                     {% if classe in cc_multi_classes %}
@@ -314,18 +314,18 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
             {% endfor %}
             <tr data-asgn-id="{{ a.id }}"
                 data-max-ore="{{ a.docente.ore_max_effettive if a.docente else 9999 }}"
-                style="{{ 'background:#fde8e8;' if is_over else ('background:#fff0e0;' if ore_mat_over else ('background:#fff3cd;' if ore_classe_over else '')) }}">
+                style="{{ 'background:var(--rosso-bg);' if is_over else ('background:var(--giallo-bg);' if ore_mat_over else ('background:var(--giallo-bg);' if ore_classe_over else '')) }}">
                 <td class="td-doc">
                     {% if a.docente %}
                     <a href="{{ url_for('docenti.modifica', id=a.docente.id) }}" style="font-weight:600; color:inherit; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">{{ a.docente.cognome }} {{ a.docente.nome }}</a>
                     {% if a.docente.ore_contratto_pt %}
-                    <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
+                    <span class="badge-tipo" style="background:var(--giallo-bg); color:var(--giallo);">PT</span>
                     {% endif %}
                     {% else %}
-                    <span style="color:#6366f1; font-weight:600; font-style:italic;">
+                    <span style="color:var(--bronzo); font-weight:600; font-style:italic;">
                         {{ a.nome_placeholder }}
                     </span>
-                    <span class="badge-tipo" style="background:#e0e7ff; color:#3730a3;">ph</span>
+                    <span class="badge-tipo" style="background:var(--bronzo-bg); color:var(--bronzo);">ph</span>
                     {% endif %}
                     {% if a.note %}
                     <div style="font-size:.68rem; color:var(--grigio);">{{ a.note }}</div>
@@ -334,9 +334,9 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
 <td class="td-tipo" style="border:1px solid #e2e8f0;"><span style="font-size:.68rem; background:#f3f4f6; padding:1px 5px; border-radius:4px;">{{ tipo_display.get(a.tipo, a.tipo) }}</span></td>
                 {% if blk.potenziamento %}
                 {% set ore_pot = blk.ore_pot_doc.get(a.id, 0) %}
-                <td class="{{ 'ore-val' if ore_pot else 'ore-zero' }} td-pot" style="border:1px solid #6d28d9; cursor:pointer;
-                           background:{{ '#f5f3ff' if ore_pot else 'white' }};
-                           color:{{ '#7c3aed' if ore_pot else '#d8b4fe' }};"
+                <td class="{{ 'ore-val' if ore_pot else 'ore-zero' }} td-pot" style="border:1px solid var(--viola); cursor:pointer;
+                           background:{{ 'var(--viola-bg)' if ore_pot else 'white' }};
+                           color:{{ 'var(--viola)' if ore_pot else 'var(--viola)' }};"
                     data-asgn="{{ a.id }}" data-classe="__POT__"
                     data-multi="false" data-matids="[]"
                     data-matnomi='["Potenziamento"]'
@@ -349,7 +349,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% set IND_COL3 = {
                     'AFM':'#1e40af','RIM':'#1d4ed8',
                     'CAT':'#b45309','LLI':'#15803d',
-                    'LSC':'#0e7490','LSP':'#7c3aed',
+                    'LSC':'#0e7490','LSP':'var(--viola)',
                     'LSU':'#be185d','SOS':'#6b7280'} %}
                 {% set prev_ind3 = namespace(v='') %}
                 {% for classe in classi %}
@@ -367,7 +367,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 <td class="{{ 'ore-val' if ore else 'ore-zero' }}"
                     style="cursor:pointer; width:34px; text-align:center; border:1px solid #e2e8f0;
                            {{ 'border-left:3px solid '~IND_COL3.get(ind3,'#374151')~';' if is_first_of_ind3 else '' }}
-                           {% if is_over %}color:#b91c1c;{% elif ore_mat_over_cella %}color:#9a3412;{% elif ore_cl_over %}color:#92400e;{% endif %}"
+                           {% if is_over %}color:var(--rosso);{% elif ore_mat_over_cella %}color:var(--giallo);{% elif ore_cl_over %}color:var(--giallo);{% endif %}"
                     title="Clicca per inserire/modificare ore"
                     data-asgn="{{ a.id }}"
                     data-classe="{{ classe }}"
@@ -381,7 +381,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {{ ore if ore else '—' }}
                     </span>
                     {% if blk.multi_materia[classe] and ore %}
-                    <span style="font-size:.55rem; color:#6366f1;">▾</span>
+                    <span style="font-size:.55rem; color:var(--bronzo);">▾</span>
                     {% endif %}
                 </td>
                 {% endfor %}
@@ -394,7 +394,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     {% endif %}>
                     <span class="tot-ore" id="tot-span-{{ a.id }}">{{ tot }}h</span>
                     {% if blk.multi_materia.values() | select | list %}
-                    <span style="font-size:.62rem; color:#6366f1;">▾</span>
+                    <span style="font-size:.62rem; color:var(--bronzo);">▾</span>
                     {% endif %}
                 </td>
                 <td class="td-sticky-r col-max">
@@ -405,7 +405,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     <button type="button" title="Nomina un docente reale al posto di questo placeholder"
                             onclick="apriNomina({{ a.id }}, {{ a.nome_placeholder|tojson }})"
                             style="background:none; border:none; cursor:pointer;
-                                   color:#3730a3; font-size:.85rem;">⇄︎</button>
+                                   color:var(--bronzo); font-size:.85rem;">⇄︎</button>
                     {% endif %}
                     <form method="post"
                           action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
@@ -413,7 +413,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                           onsubmit="return confirm('Eliminare?')">
                         <button type="submit"
                                 style="background:none; border:none; cursor:pointer;
-                                       color:#dc2626; font-size:.8rem;">✕︎</button>
+                                       color:var(--rosso); font-size:.8rem;">✕︎</button>
                     </form>
                 </td>
             </tr>
@@ -427,7 +427,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     </td>
                     <td class="td-tipo" style="border:1px solid #e2e8f0;"></td>
                     {% if blk.potenziamento %}
-                    <td style="border:1px solid #6d28d9; background:#f5f3ff;"></td>
+                    <td style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
                     {% endif %}
                     {% for classe in classi %}
                     <td style="border:1px solid #e2e8f0; padding:2px 4px; vertical-align:top; overflow:visible;">
@@ -460,7 +460,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                         {{ d.cognome }} {{ d.nome }}
                     </a>
                     {% if d.ore_contratto_pt %}
-                    <span class="badge-tipo" style="background:#fef3c7; color:#92400e;">PT</span>
+                    <span class="badge-tipo" style="background:var(--giallo-bg); color:var(--giallo);">PT</span>
                     {% endif %}
                     <span class="nome-da-assegnare">max {{ d.ore_max_effettive }}h — da assegnare</span>
                 </td>
@@ -468,12 +468,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     TI
                 </td>
                 {% if blk.potenziamento %}
-                <td style="border:1px solid #6d28d9; background:#f5f3ff; color:#d8b4fe; text-align:center;">—</td>
+                <td style="border:1px solid var(--viola); background:var(--viola-bg); color:var(--viola); text-align:center;">—</td>
                 {% endif %}
                 {% set IND_COL_PRE = {
                     'AFM':'#1e40af','RIM':'#1d4ed8',
                     'CAT':'#b45309','LLI':'#15803d',
-                    'LSC':'#0e7490','LSP':'#7c3aed',
+                    'LSC':'#0e7490','LSP':'var(--viola)',
                     'LSU':'#be185d','SOS':'#6b7280'} %}
                 {% set prev_ind_pre = namespace(v='') %}
                 {% for classe in classi %}
@@ -501,8 +501,8 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 <td class="td-sticky-r col-azioni">
                     <button type="button"
                             onclick="quickAssign('{{ cc.id }}', '{{ d.id }}')"
-                            style="background:none; border:1px solid #c7d2fe; border-radius:4px;
-                                   cursor:pointer; color:#6366f1; font-size:.7rem; padding:2px 4px;"
+                            style="background:none; border:1px solid var(--bronzo); border-radius:4px;
+                                   cursor:pointer; color:var(--bronzo); font-size:.7rem; padding:2px 4px;"
                             title="Assegna {{ d.cognome }} {{ d.nome }}">＋</button>
                 </td>
             </tr>
@@ -518,8 +518,8 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 {% set cop_pot = blk.ore_pot_totali %}
                 {% set prev_pot = blk.potenziamento.ore %}
                 <td class="td-cop" id="cop-{{ cc.id }}-__POT__" data-prev="{{ prev_pot }}"
-                    style="color:{{ '#16a34a' if cop_pot==prev_pot else ('#dc2626' if cop_pot>prev_pot else '#f59e0b') }};
-                           border:1px solid #6d28d9; background:#f5f3ff; font-weight:700; text-align:center;">
+                    style="color:{{ 'var(--verde)' if cop_pot==prev_pot else ('var(--rosso)' if cop_pot>prev_pot else 'var(--giallo)') }};
+                           border:1px solid var(--viola); background:var(--viola-bg); font-weight:700; text-align:center;">
                     {{ cop_pot }}/{{ prev_pot }}
                 </td>
                 {% endif %}
@@ -529,7 +529,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                 <td class="td-cop"
                     id="cop-{{ cc.id }}-{{ classe|replace(' ','_') }}"
                     data-prev="{{ prev }}"
-                    style="color:{{ '#16a34a' if cop == prev else ('#dc2626' if cop > prev else '#f59e0b') }};
+                    style="color:{{ 'var(--verde)' if cop == prev else ('var(--rosso)' if cop > prev else 'var(--giallo)') }};
                             border:1px solid #e2e8f0; text-align:center; white-space:nowrap;">
                     {{ cop }}/{{ prev }}
                 </td>
@@ -545,12 +545,12 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                     ⇩︎ Scheda classe
                 </td>
                 {% if blk.potenziamento %}
-                <td style="border:1px solid #6d28d9; background:#f5f3ff;"></td>
+                <td style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
                 {% endif %}
                 {% for classe in classi %}
                 <td style="border:1px solid #e2e8f0; text-align:center; padding:3px 4px;">
                     <a href="{{ url_for('export_xlsx.export_classe', label=classe, anno=anno) }}"
-                       style="font-size:.65rem; color:#16a34a; text-decoration:none;"
+                       style="font-size:.65rem; color:var(--verde); text-decoration:none;"
                        title="Scarica scheda {{ classe }}">⇩︎</a>
                 </td>
                 {% endfor %}
@@ -624,7 +624,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                                     border-bottom:1px solid #f0f0f0; padding-bottom:3px;">
                             {{ classe }}
                             <span style="font-size:.6rem; font-weight:400;
-                                         color:{{ '#16a34a' if libere == 0 else '#f59e0b' if libere > 0 else '#dc2626' }};">
+                                         color:{{ 'var(--verde)' if libere == 0 else 'var(--giallo)' if libere > 0 else 'var(--rosso)' }};">
                                 ({{ libere }}h lib.)
                             </span>
                         </div>
@@ -688,7 +688,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
         Nomina docente
     </div>
     <div style="font-size:.8rem; color:var(--grigio); margin-bottom:12px;">
-        Sostituisce il placeholder "<span id="nomina-nome-ph" style="font-weight:600; color:#3730a3;"></span>"
+        Sostituisce il placeholder "<span id="nomina-nome-ph" style="font-weight:600; color:var(--bronzo);"></span>"
         con un docente reale — le ore e le materie già assegnate restano invariate.
     </div>
     <form method="post" id="form-nomina">
@@ -718,7 +718,7 @@ input.inp-ore:focus { border-color:#6366f1; outline:none; }
                                 margin-bottom:8px;"></div>
     <div id="pop-fields"></div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-        <span id="pop-msg" style="font-size:.72rem; color:#16a34a;"></span>
+        <span id="pop-msg" style="font-size:.72rem; color:var(--verde);"></span>
         <button onclick="chiudiPopover()" style="background:none; border:none; cursor:pointer;
                 font-size:.8rem; color:#9ca3af;" title="Chiudi">✕︎</button>
     </div>
@@ -966,9 +966,9 @@ function _aggiornaCopertura(ccId, classe) {
     });
 
     copEl.textContent = totCop + '/' + prev;
-    if (totCop === prev)      copEl.style.color = '#16a34a';
-    else if (totCop > prev)   copEl.style.color = '#dc2626';
-    else                      copEl.style.color = '#f59e0b';
+    if (totCop === prev)      copEl.style.color = 'var(--verde)';
+    else if (totCop > prev)   copEl.style.color = 'var(--rosso)';
+    else                      copEl.style.color = 'var(--giallo)';
 }
 
 function _aggiornaColoreRiga(res) {
@@ -978,11 +978,11 @@ function _aggiornaColoreRiga(res) {
 
     // ── Colore riga (sfondo) ────────────────────────────────────────
     if (res.warn_docente) {
-        tr.style.background = '#fde8e8';
+        tr.style.background = 'var(--rosso-bg)';
     } else if (res.warn_materia) {
-        tr.style.background = '#fff0e0';
+        tr.style.background = 'var(--giallo-bg)';
     } else if (res.warn_classe) {
-        tr.style.background = '#fff3cd';
+        tr.style.background = 'var(--giallo-bg)';
     } else {
         tr.style.background = '';
     }
@@ -992,13 +992,13 @@ function _aggiornaColoreRiga(res) {
                || tr.querySelector('.tot-ore');
     if (totEl) {
         if (res.warn_docente) {
-            totEl.style.color = '#dc2626';
+            totEl.style.color = 'var(--rosso)';
             totEl.title = 'Supera le ore max del docente';
         } else if (res.warn_materia) {
-            totEl.style.color = '#c2410c';
+            totEl.style.color = 'var(--giallo)';
             totEl.title = 'Supera le ore previste per questa materia';
         } else if (res.warn_classe) {
-            totEl.style.color = '#d97706';
+            totEl.style.color = 'var(--giallo)';
             totEl.title = 'Supera le ore previste per questa CC';
         } else {
             totEl.style.color = '';
@@ -1009,11 +1009,11 @@ function _aggiornaColoreRiga(res) {
     // ── Colore cella specifica appena modificata ────────────────────
     // (usa il warning più grave applicabile a quella cella)
     if (res.warn_docente) {
-        _popCell.style.color = '#b91c1c';
+        _popCell.style.color = 'var(--rosso)';
     } else if (res.warn_materia) {
-        _popCell.style.color = '#9a3412';
+        _popCell.style.color = 'var(--giallo)';
     } else if (res.warn_classe) {
-        _popCell.style.color = '#92400e';
+        _popCell.style.color = 'var(--giallo)';
     } else {
         _popCell.style.color = '';
     }
@@ -1068,7 +1068,7 @@ async function salvaPopover(keepOpen = false) {
     }
 
     msg.textContent = '✓︎';
-    msg.style.color = '#16a34a';
+    msg.style.color = 'var(--verde)';
     if (!keepOpen) setTimeout(chiudiPopover, 600);
 }
 
@@ -1104,22 +1104,22 @@ function _ricalcolaColoriTutteRighe() {
             });
 
             // Colora testo cella
-            if (warnDoc)      td.style.color = '#b91c1c';
-            else if (warnMat) td.style.color = '#9a3412';
-            else if (warnCella) td.style.color = '#92400e';
+            if (warnDoc)      td.style.color = 'var(--rosso)';
+            else if (warnMat) td.style.color = 'var(--giallo)';
+            else if (warnCella) td.style.color = 'var(--giallo)';
             else              td.style.color = '';
         });
 
         // Colora sfondo riga e Tot.
         if (warnDoc) {
-            tr.style.background = '#fde8e8';
-            if (totSpan) { totSpan.style.color='#dc2626'; totSpan.title='Supera ore max docente'; }
+            tr.style.background = 'var(--rosso-bg)';
+            if (totSpan) { totSpan.style.color='var(--rosso)'; totSpan.title='Supera ore max docente'; }
         } else if (warnMat) {
-            tr.style.background = '#fff0e0';
-            if (totSpan) { totSpan.style.color='#c2410c'; totSpan.title='Supera ore materia'; }
+            tr.style.background = 'var(--giallo-bg)';
+            if (totSpan) { totSpan.style.color='var(--giallo)'; totSpan.title='Supera ore materia'; }
         } else if (warnCella) {
-            tr.style.background = '#fff3cd';
-            if (totSpan) { totSpan.style.color='#d97706'; totSpan.title='Supera ore CC'; }
+            tr.style.background = 'var(--giallo-bg)';
+            if (totSpan) { totSpan.style.color='var(--giallo)'; totSpan.title='Supera ore CC'; }
         } else {
             tr.style.background = '';
             if (totSpan) { totSpan.style.color=''; totSpan.title=''; }
@@ -1274,8 +1274,8 @@ function verificaOre(ccId, anno) {
     .then(data => {
         if (!data.avvisi || !data.avvisi.length) { div.style.display='none'; return; }
         const a = data.avvisi[0];
-        const col = {error:'#dc2626', ok:'#16a34a', info:'#0369a1'};
-        const bg  = {error:'#fef2f2', ok:'#f0fdf4', info:'#eff6ff'};
+        const col = {error:'var(--rosso)', ok:'var(--verde)', info:'#0369a1'};
+        const bg  = {error:'var(--rosso-bg)', ok:'var(--verde-bg)', info:'#eff6ff'};
         div.style.color = col[a.livello] || '#374151';
         div.style.background = bg[a.livello] || '#f8fafc';
         div.style.borderLeft = '3px solid ' + (col[a.livello] || '#6b7280');

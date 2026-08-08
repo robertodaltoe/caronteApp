@@ -20,8 +20,8 @@
 }
 .classe-card .nome { font-size: 1.1rem; font-weight: 800; color: var(--blu); }
 .classe-card .aula-assegnata { font-size: .82rem; color: var(--grigio); }
-.classe-card .aula-assegnata strong { color: #166534; }
-.classe-card.no-aula { border-left: 3px solid #f59e0b; }
+.classe-card .aula-assegnata strong { color: var(--verde); }
+.classe-card.no-aula { border-left: 3px solid var(--giallo); }
 
 /* POPUP */
 .popup-overlay {
@@ -61,7 +61,7 @@
     color: #374151;
     user-select: none;
 }
-.aula-badge:hover { border-color: var(--blu); color: var(--blu); background: #eff6ff; }
+.aula-badge:hover { border-color: var(--blu); color: var(--blu); background: var(--blu-light); }
 .aula-badge.selezionato { border-color: var(--blu); background: var(--blu); color: white; }
 .sezione-label {
     font-size: .72rem; font-weight: 700; text-transform: uppercase;
@@ -81,8 +81,8 @@
     font-size: .85rem; font-weight: 500; color: #374151;
     transition: all .12s;
 }
-.sede-radio:hover { border-color: var(--blu); background: #eff6ff; }
-.sede-radio.selezionata { border-color: var(--blu); background: #eff6ff; color: var(--blu); }
+.sede-radio:hover { border-color: var(--blu); background: var(--blu-light); }
+.sede-radio.selezionata { border-color: var(--blu); background: var(--blu-light); color: var(--blu); }
 .sede-radio input { display: none; }
 </style>
 {% endblock %}
@@ -97,7 +97,7 @@
         {% for a in anni_disponibili %}
         <a href="{{ url_for('aule.lista', anno=a) }}"
            style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
-                  background:{{ '#0891b2' if a == anno else '#f3f4f6' }};
+                  background:{{ 'var(--blu)' if a == anno else '#f3f4f6' }};
                   color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
         {% endfor %}
     </div>
@@ -108,7 +108,7 @@
 <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
     <div class="card" style="padding:10px 16px; font-size:.82rem; color:var(--grigio); flex:1; min-width:180px;">
         <strong style="color:var(--blu);">{{ aule|length }}</strong> classi assegnate &nbsp;·&nbsp;
-        <strong style="color:{{ '#dc2626' if classi_mancanti else '#16a34a' }};">
+        <strong style="color:{{ 'var(--rosso)' if classi_mancanti else 'var(--verde)' }};">
             {{ classi_mancanti|length }}
         </strong> da assegnare
     </div>
@@ -127,7 +127,7 @@
             </select>
             <input type="hidden" name="anno_a" value="{{ anno }}">
             <button type="submit" class="btn btn-sm"
-                    style="background:#0891b2; color:white; font-size:.78rem; padding:4px 10px;">
+                    style="background:var(--blu); color:white; font-size:.78rem; padding:4px 10px;">
                 ▤︎ Copia a {{ anno }}
             </button>
         </form>
@@ -136,8 +136,8 @@
 </div>
 
 {% if classi_mancanti %}
-<div class="card" style="border-left:4px solid #f59e0b; padding:12px 16px; margin-bottom:16px;">
-    <p style="font-size:.88rem; color:#92400e; font-weight:600;">
+<div class="card" style="border-left:4px solid var(--giallo); padding:12px 16px; margin-bottom:16px;">
+    <p style="font-size:.88rem; color:var(--giallo); font-weight:600;">
         ⚠︎ {{ classi_mancanti|length }} classi senza aula: {{ classi_mancanti | join(', ') }}
     </p>
 </div>
@@ -165,7 +165,7 @@
     {% for c in classi_mancanti %}
     <div class="classe-card no-aula">
         <div class="nome">{{ c }}</div>
-        <div class="aula-assegnata" style="color:#92400e;">Nessuna aula assegnata</div>
+        <div class="aula-assegnata" style="color:var(--giallo);">Nessuna aula assegnata</div>
         <button class="btn btn-success btn-sm" style="margin-top:4px; width:100%;"
                 data-classe="{{ c }}"
                 data-aula=""
@@ -313,7 +313,7 @@ function aggiornaBottone() {
     if (dbg) {
         if (aulaSelezionata && sedeSelezionata) {
             dbg.textContent = 'Selezionato: Aula ' + aulaSelezionata + ' — ' + sedeSelezionata;
-            dbg.style.color = '#166534';
+            dbg.style.color = 'var(--verde)';
         } else {
             dbg.textContent = (!aulaSelezionata ? 'Seleziona un\'aula' : '') +
                               (!sedeSelezionata ? (aulaSelezionata ? 'Seleziona la sede' : ' e la sede') : '');

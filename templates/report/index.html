@@ -15,7 +15,7 @@
     font-size:.78rem; font-weight:700; }
 .pill-verde  { background:var(--verde-bg);  color:var(--verde); }
 .pill-rosso  { background:var(--rosso-bg);  color:var(--rosso); }
-.pill-giallo { background:#fef3c7; color:#d97706; }
+.pill-giallo { background:var(--giallo-bg); color:var(--giallo); }
 .pill-grigio { background:#e5e7eb; color:var(--grigio); }
 /* righe compatte solo su td */
 .card table td { padding:3px 6px; }
@@ -25,8 +25,8 @@
     box-shadow:0 4px 16px rgba(0,0,0,.15); min-width:160px; padding:4px 0; }
 .azione-item { display:block; padding:7px 14px; font-size:.82rem; color:var(--blu);
     text-decoration:none; white-space:nowrap; }
-.azione-item:hover { background:#f0f4ff; }
-.azione-item.danger { color:#dc2626; }
+.azione-item:hover { background:var(--blu-light); }
+.azione-item.danger { color:var(--rosso); }
 .azione-sep { border:none; border-top:1px solid #f0f0f0; margin:3px 0; }
 
 /* Tab nav */
@@ -42,9 +42,9 @@
 .kpi-box .kpi-val { font-size:1.5rem; font-weight:800; }
 .kpi-box .kpi-label { font-size:.78rem; color:var(--grigio); margin-top:2px; }
 .kpi-trend { font-size:.75rem; margin-left:6px; font-weight:600; }
-.alert-box { border-left:4px solid #d97706; background:#fffbeb; border-radius:6px;
+.alert-box { border-left:4px solid var(--giallo); background:var(--giallo-bg); border-radius:6px;
     padding:10px 16px; margin-bottom:10px; font-size:.85rem; }
-.alert-box.rosso { border-left-color:#dc2626; background:#fef2f2; }
+.alert-box.rosso { border-left-color:var(--rosso); background:var(--rosso-bg); }
 </style>
 {% endblock %}
 
@@ -242,7 +242,7 @@
             </td>
             <td style="text-align:center;">
                 {% if s.get('perm_ist', 0) > 0 %}
-                <span class="saldo-pill" style="background:#fff7ed; color:#c2410c;">-{{ s.perm_ist }}h</span>
+                <span class="saldo-pill" style="background:var(--giallo-bg); color:var(--giallo);">-{{ s.perm_ist }}h</span>
                 {% else %}—{% endif %}
             </td>
             <td style="text-align:center;">
@@ -259,9 +259,9 @@
             {% set oi = ore_ist_idx.get(d.id, {}) %}
             <td style="text-align:center; font-size:.78rem; white-space:nowrap;">
                 {% if oi %}
-                <span title="Bucket A" style="color:{% if oi.A >= 40 %}#dc2626{% elif oi.A >= 32 %}#d97706{% else %}#1e40af{% endif %}; font-weight:{% if oi.A > 0 %}700{% else %}400{% endif %};">{{ oi.A }}h</span>
+                <span title="Bucket A" style="color:{% if oi.A >= 40 %}var(--rosso){% elif oi.A >= 32 %}var(--giallo){% else %}#1e40af{% endif %}; font-weight:{% if oi.A > 0 %}700{% else %}400{% endif %};">{{ oi.A }}h</span>
                 <span style="color:#d1d5db;">/</span>
-                <span title="Bucket B" style="color:{% if oi.B >= 40 %}#dc2626{% elif oi.B >= 32 %}#d97706{% else %}#166534{% endif %}; font-weight:{% if oi.B > 0 %}700{% else %}400{% endif %};">{{ oi.B }}h</span>
+                <span title="Bucket B" style="color:{% if oi.B >= 40 %}var(--rosso){% elif oi.B >= 32 %}var(--giallo){% else %}var(--verde){% endif %}; font-weight:{% if oi.B > 0 %}700{% else %}400{% endif %};">{{ oi.B }}h</span>
                 {% else %}—{% endif %}
             </td>
             {% endif %}
@@ -282,9 +282,9 @@
             </td>
             <td style="text-align:center;">
                 {% if proiettato > 0 %}
-                    <span title="Credito" style="font-size:2.8rem; line-height:1; color:#16a34a;">●</span>
+                    <span title="Credito" style="font-size:2.8rem; line-height:1; color:var(--verde);">●</span>
                 {% elif proiettato < -2 %}
-                    <span title="Recupero" style="font-size:2.8rem; line-height:1; color:#dc2626;">●</span>
+                    <span title="Recupero" style="font-size:2.8rem; line-height:1; color:var(--rosso);">●</span>
                 {% else %}
                     <span title="Pari" style="font-size:2.8rem; line-height:1; color:#9ca3af;">●</span>
                 {% endif %}
@@ -353,14 +353,14 @@
         </a>
     </div>
 
-    <div class="report-card" style="border-left:4px solid #e63946;">
+    <div class="report-card" style="border-left:4px solid var(--rosso);">
         <div class="report-icon">▧︎</div>
         <div class="report-info">
             <h3>Esporta tutti i report PDF</h3>
             <p>Genera un PDF per ogni docente (DOC_COGNOME.pdf) e li scarica in un unico archivio ZIP. Estratto nella cartella di tua scelta.</p>
         </div>
         <a href="{{ url_for('report.esporta_tutti_pdf') }}"
-           class="btn btn-sm" style="background:#e63946; color:white; white-space:nowrap;"
+           class="btn btn-sm" style="background:var(--rosso); color:white; white-space:nowrap;"
            onclick="this.textContent='⏳ Generazione...'; this.style.pointerEvents='none';">
             ⇩︎ Scarica tutti PDF
         </a>

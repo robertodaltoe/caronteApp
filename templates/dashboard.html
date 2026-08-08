@@ -7,7 +7,7 @@
 .assegna-inline select { padding:4px 6px; border:1px solid #d1d5db; border-radius:5px;
     font-family:var(--font); font-size:.78rem; width:100%; }
 .assegna-inline .btn-row { display:flex; gap:4px; }
-.tag-auto { display:inline-block; font-size:.7rem; background:#e0e7ff; color:#3730a3;
+.tag-auto { display:inline-block; font-size:.7rem; background:var(--bronzo-bg); color:var(--bronzo);
     border-radius:4px; padding:1px 6px; font-weight:600; margin-left:4px; }
 #pannello-suggerimenti {
     position:fixed; top:56px; right:0; width:400px; height:calc(100vh - 56px);
@@ -37,7 +37,7 @@
 .saldo-pos { background:var(--verde-bg); color:var(--verde); }
 .saldo-zer { background:#e5e7eb; color:var(--grigio); }
 .btn-suggerisci { display:inline-flex; align-items:center; gap:6px;
-    background:#f0f0ff; color:var(--viola); border:1px solid #c4b5fd;
+    background:var(--viola-bg); color:var(--viola); border:1px solid var(--viola);
     padding:4px 10px; border-radius:6px; font-size:.8rem; font-weight:600;
     cursor:pointer; font-family:var(--font); transition:background .15s; }
 .btn-suggerisci:hover { background:var(--viola-bg); }
@@ -80,15 +80,15 @@
         <a href="{{ url_for('supplenze.nuova', data=data_sel.isoformat()) }}"
            class="btn btn-success btn-sm">+ Supplenza</a>
         <a href="{{ url_for('display.display', data=data_sel.isoformat()) }}"
-           target="_blank" class="btn btn-sm" style="background:#1e3a5c; color:white;">
+           target="_blank" class="btn btn-sm" style="background:var(--blu); color:white;">
             ⧉︎ Display {{ data_sel.strftime('%d/%m') }}
         </a>
         <a href="{{ url_for('report.prospetto_web', data_str=data_sel.isoformat()) }}"
-           class="btn btn-sm" style="background:#166534; color:white;">
+           class="btn btn-sm" style="background:var(--verde); color:white;">
             ▤︎ Prospetto
         </a>
         <a href="{{ url_for('agenda.index') }}"
-           class="btn btn-sm" style="background:#7c3aed; color:white;">
+           class="btn btn-sm" style="background:var(--viola); color:white;">
             📅 Agenda
         </a>
     </div>
@@ -253,11 +253,11 @@
 <!-- ASSENZE -->
 <!-- ATTIVITÀ ISTITUZIONALI DEL GIORNO -->
 {% if eventi_ist %}
-<div class="card" style="margin-bottom:16px; border-left:4px solid #7c3aed;">
+<div class="card" style="margin-bottom:16px; border-left:4px solid var(--viola);">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
         <h2 style="margin:0;">▨︎ Attività istituzionali</h2>
         <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm"
-           style="background:#f5f3ff; color:#7c3aed; font-size:.78rem;">Vai al modulo →︎</a>
+           style="background:var(--viola-bg); color:var(--viola); font-size:.78rem;">Vai al modulo →︎</a>
     </div>
     <table style="table-layout:fixed; width:100%;">
         <thead>
@@ -280,8 +280,8 @@
             <td>
                 <span style="font-size:.82rem;">{{ ev.tipo_emoji }} {{ ev.tipo_label }}</span>
                 {% if ev.bucket %}
-                <span style="font-size:.68rem; background:{% if ev.bucket=='A' %}#dbeafe{% else %}#dcfce7{% endif %};
-                    color:{% if ev.bucket=='A' %}#1e40af{% else %}#166534{% endif %};
+                <span style="font-size:.68rem; background:{% if ev.bucket=='A' %}#dbeafe{% else %}var(--verde-bg){% endif %};
+                    color:{% if ev.bucket=='A' %}#1e40af{% else %}var(--verde){% endif %};
                     border-radius:8px; padding:1px 5px; font-weight:700; margin-left:3px;">
                     {{ ev.bucket }}
                 </span>
@@ -302,9 +302,9 @@
             <td style="text-align:center;">
                 {% if ev.presenze %}
                 <span style="font-size:.78rem;">
-                    <span style="color:#16a34a; font-weight:700;">{{ n_pres }}✓︎</span>
-                    {% if n_ass %}<span style="color:#dc2626; font-weight:700; margin-left:4px;">{{ n_ass }}✕︎</span>{% endif %}
-                    {% if n_gius %}<span style="color:#d97706; font-weight:700; margin-left:4px;">{{ n_gius }}~</span>{% endif %}
+                    <span style="color:var(--verde); font-weight:700;">{{ n_pres }}✓︎</span>
+                    {% if n_ass %}<span style="color:var(--rosso); font-weight:700; margin-left:4px;">{{ n_ass }}✕︎</span>{% endif %}
+                    {% if n_gius %}<span style="color:var(--giallo); font-weight:700; margin-left:4px;">{{ n_gius }}~</span>{% endif %}
                 </span>
                 {% else %}
                 <span style="color:var(--grigio); font-size:.78rem;">—</span>
@@ -313,7 +313,7 @@
             <td style="text-align:center; white-space:nowrap;">
                 <div style="display:flex; gap:3px; justify-content:center; flex-wrap:nowrap;">
                 <a href="{{ url_for('attivita_ist.presenze', id=ev.id) }}"
-                   class="btn btn-sm" style="background:#7c3aed; color:white;
+                   class="btn btn-sm" style="background:var(--viola); color:white;
                    padding:3px 6px; font-size:.72rem;" title="Presenze">✓︎</a>
                 {% if ev.tipo == 'scrutinio' %}
                 <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=ev.id) }}"
@@ -555,22 +555,22 @@ function renderSuggerimenti(data) {
                     margin-left:4px;">▥︎ sua classe</span>`
                 : '';
             const badgeCompresenza = doc.compresenza
-                ? `<span style="font-size:.68rem; background:#fef9c3; color:#854d0e;
+                ? `<span style="font-size:.68rem; background:var(--giallo-bg); color:var(--giallo);
                     border-radius:3px; padding:1px 5px; font-weight:700;
                     margin-left:4px;">⚑︎ compresenza</span>`
                 : '';
             const badgeITP = (doc.ruolo === 'itp')
-                ? `<span style="font-size:.68rem; background:#f5f3ff; color:#7c3aed;
-                    border:1px solid #c4b5fd; border-radius:3px; padding:1px 5px;
+                ? `<span style="font-size:.68rem; background:var(--viola-bg); color:var(--viola);
+                    border:1px solid var(--viola); border-radius:3px; padding:1px 5px;
                     font-weight:700; margin-left:4px;">ITP</span>`
                 : '';
             const badgePT = doc.multi_sede
-                ? `<span style="font-size:.68rem; background:#fff7ed; color:#c2410c;
-                    border:1px solid #fdba74; border-radius:3px; padding:1px 5px;
+                ? `<span style="font-size:.68rem; background:var(--giallo-bg); color:var(--giallo);
+                    border:1px solid var(--giallo); border-radius:3px; padding:1px 5px;
                     font-weight:700; margin-left:4px;" title="${doc.altra_scuola}">Altro contratto</span>`
                 : '';
             const avvisoSede = doc.fuori_sede
-                ? `<div style="font-size:.68rem; color:#b45309; background:#fef3c7;
+                ? `<div style="font-size:.68rem; color:var(--giallo); background:var(--giallo-bg);
                     border-radius:3px; padding:1px 6px; margin-top:2px;">
                     ⚠︎ oggi non in sede (${doc.altra_scuola})</div>`
                 : '';

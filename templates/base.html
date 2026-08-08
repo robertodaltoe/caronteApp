@@ -212,8 +212,18 @@
             overflow-x: auto; scrollbar-width: thin;
         }
         nav .brand img {
-            height: 46px; width: 46px; display: block; object-fit: contain;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
+            /* Sfondo chiaro dietro il disegno: il tratto dell'icona è un
+               rosso scuro molto simile al bordeaux della barra — misurato,
+               il contrasto tra i due è troppo basso per essere leggibile
+               (~1.2:1, sotto qualunque soglia percepibile) qualunque
+               sfumatura di bordeaux si scelga per la barra. Un cerchio
+               chiaro dietro risolve il problema alla radice, invece di
+               inseguire una tonalità di bordeaux "quella giusta" che non
+               esiste per un rosso su rosso. */
+            height: 40px; width: 40px; display: block; object-fit: contain;
+            padding: 5px; border-radius: 50%;
+            background: var(--blu-light);
+            box-shadow: 0 1px 3px rgba(0,0,0,.25);
         }
         nav .brand .brand-testi {
             display: flex; flex-direction: column; justify-content: center;

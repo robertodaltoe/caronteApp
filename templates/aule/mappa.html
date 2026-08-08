@@ -19,7 +19,7 @@
 .tabella-aule th { background: var(--blu); color: white; padding: 6px 8px; text-align: left;
                     position: sticky; top: 0; }
 .tabella-aule td { padding: 5px 8px; border-bottom: 1px solid #eef0f3; }
-.tabella-aule tr.occupata-riga td { background: #f0fdf4; }
+.tabella-aule tr.occupata-riga td { background: var(--verde-bg); }
 .tabella-aule .cella-vuota { color: var(--grigio); font-style: italic; }
 .sezione-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .sezione-tabs button {
@@ -199,12 +199,12 @@ function apriPopover(ev, num) {
     if (classi.length) {
         viewDiv.innerHTML = classi.map(c =>
             '<div style="display:flex; justify-content:space-between; align-items:center; ' +
-            'background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:5px 8px; ' +
+            'background:var(--verde-bg); border:1px solid var(--verde); border-radius:6px; padding:5px 8px; ' +
             'margin-bottom:5px; font-size:.82rem;">' +
             '<span>' + c + '</span>' +
             (MODO === 'assegna'
                 ? '<button onclick="liberaAula(\'' + c + '\')" style="background:none; border:none; ' +
-                  'color:#dc2626; cursor:pointer; font-size:.72rem;">Libera</button>'
+                  'color:var(--rosso); cursor:pointer; font-size:.72rem;">Libera</button>'
                 : '') +
             '</div>'
         ).join('');

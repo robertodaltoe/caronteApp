@@ -18,19 +18,48 @@
             src: url('{{ url_for('static', filename='fonts/plexsans-600.woff2') }}') format('woff2');
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        /* Stessa palette di base.html (--blu/--blu-med/--rosso/--rosso-bg/
+           --grigio) ripetuta qui in chiaro: login.html è un documento a
+           sé, non estende base.html, quindi non ha accesso alle sue
+           variabili CSS. Prima era rimasto sul vecchio blu navy
+           (#0a1f35/#1a4a7a), scollegato dal bordeaux del resto dell'app. */
         body {
             min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, #0a1f35 0%, #1a4a7a 100%);
+            /* Sfondo di riserva se per qualche motivo l'SVG sotto non
+               caricasse — stesse tonalità, così non si nota la differenza. */
+            background: linear-gradient(135deg, #43110d 0%, #7a1c17 100%);
             font-family: 'Plex Sans Local', 'Segoe UI', sans-serif;
+            position: relative;
+            overflow: hidden;
         }
+        /* Sfondo low-poly: mesh triangolare generata proceduralmente nelle
+           stesse tonalità del brand (dal bordeaux più scuro in alto al più
+           acceso in basso), ispirata allo stile "sfaccettato" richiesto —
+           originale, non un asset stock. */
+        .bg-lowpoly {
+            position: fixed; inset: 0; z-index: 0;
+            width: 100%; height: 100%;
+        }
+        .bg-lowpoly svg { width: 100%; height: 100%; display: block; }
         .card {
-            background: white; border-radius: 16px; padding: 40px;
+            position: relative; z-index: 1;
+            /* Leggermente trasparente: lascia intravedere la mesh low-poly
+               dietro. backdrop-filter mantiene il testo leggibile sopra
+               uno sfondo comunque mosso. */
+            background: rgba(255,255,255,.88);
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
+            border-radius: 16px; padding: 40px;
             width: 100%; max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,.25);
+            box-shadow: 0 20px 60px rgba(0,0,0,.35);
         }
-        .logo { text-align: center; margin-bottom: 28px; }
-        .logo h1 { font-family: 'Oswald Local', 'Segoe UI', sans-serif; font-size: 1.4rem; font-weight: 700; color: #0a1f35; }
-        .logo p { font-size: .82rem; color: #6b7280; margin-top: 4px; }
+        .logo {
+            display: flex; align-items: center; justify-content: center;
+            gap: 12px; margin-bottom: 28px; text-align: left;
+        }
+        .logo img { height: 44px; width: 44px; object-fit: contain; flex-shrink: 0; }
+        .logo h1 { font-family: 'Oswald Local', 'Segoe UI', sans-serif; font-size: 1.4rem; font-weight: 700; color: #7a1c17; }
+        .logo p { font-size: .82rem; color: #6b7280; margin-top: 2px; }
         .form-group { margin-bottom: 16px; }
         label { display: block; font-size: .82rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
         input {
@@ -38,24 +67,157 @@
             border-radius: 8px; font-size: .95rem; font-family: inherit;
             transition: border-color .12s;
         }
-        input:focus { outline: none; border-color: #0a1f35; }
+        input:focus { outline: none; border-color: #7a1c17; }
         .btn {
             width: 100%; padding: 12px; border: none; border-radius: 8px;
-            background: #0a1f35; color: white; font-size: 1rem; font-weight: 700;
+            background: #7a1c17; color: white; font-size: 1rem; font-weight: 700;
             cursor: pointer; transition: background .12s; font-family: inherit;
         }
-        .btn:hover { background: #1a4a7a; }
-        .error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;
+        .btn:hover { background: #a5241f; }
+        .error { background: #fde8e8; color: #b91c1c; border: 1px solid #f3c2be;
                  border-radius: 8px; padding: 10px 14px; font-size: .85rem; margin-bottom: 16px; }
         .footer-link { text-align: center; margin-top: 20px; font-size: .75rem; color: #9ca3af; }
         .footer-link a { color: #6b7280; }
     </style>
 </head>
 <body>
+<div class="bg-lowpoly">
+<svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+<polygon points="0,0 97.3,0 109.0,75.6" fill="#43110e"/>
+<polygon points="0,0 109.0,75.6 0,64.0" fill="#45120e"/>
+<polygon points="97.3,0 179.8,0 157.9,67.4" fill="#41110d"/>
+<polygon points="97.3,0 157.9,67.4 109.0,75.6" fill="#43110e"/>
+<polygon points="179.8,0 241.9,0 157.9,67.4" fill="#3b0f0c"/>
+<polygon points="241.9,0 255.9,100.9 157.9,67.4" fill="#4e1511"/>
+<polygon points="241.9,0 329.7,0 255.9,100.9" fill="#45120e"/>
+<polygon points="329.7,0 337.7,89.6 255.9,100.9" fill="#4b130f"/>
+<polygon points="329.7,0 420.4,0 337.7,89.6" fill="#48120f"/>
+<polygon points="420.4,0 452.2,79.6 337.7,89.6" fill="#48130f"/>
+<polygon points="420.4,0 529.1,0 536.0,64.7" fill="#45120e"/>
+<polygon points="420.4,0 536.0,64.7 452.2,79.6" fill="#4b130f"/>
+<polygon points="529.1,0 601.2,0 597.6,71.6" fill="#3e100d"/>
+<polygon points="529.1,0 597.6,71.6 536.0,64.7" fill="#44110e"/>
+<polygon points="601.2,0 718.2,0 721.2,82.2" fill="#40100d"/>
+<polygon points="601.2,0 721.2,82.2 597.6,71.6" fill="#45120e"/>
+<polygon points="718.2,0 800,0 721.2,82.2" fill="#43110e"/>
+<polygon points="800,0 800,89.8 721.2,82.2" fill="#47120e"/>
+<polygon points="0,64.0 109.0,75.6 0,161.8" fill="#511612"/>
+<polygon points="109.0,75.6 105.4,181.0 0,161.8" fill="#561814"/>
+<polygon points="109.0,75.6 157.9,67.4 163.4,175.0" fill="#571914"/>
+<polygon points="109.0,75.6 163.4,175.0 105.4,181.0" fill="#591a15"/>
+<polygon points="157.9,67.4 255.9,100.9 268.1,189.4" fill="#551813"/>
+<polygon points="157.9,67.4 268.1,189.4 163.4,175.0" fill="#5b1b16"/>
+<polygon points="255.9,100.9 337.7,89.6 368.4,161.2" fill="#5a1a15"/>
+<polygon points="255.9,100.9 368.4,161.2 268.1,189.4" fill="#5b1b16"/>
+<polygon points="337.7,89.6 452.2,79.6 471.3,153.1" fill="#581914"/>
+<polygon points="337.7,89.6 471.3,153.1 368.4,161.2" fill="#581a15"/>
+<polygon points="452.2,79.6 536.0,64.7 528.7,183.8" fill="#541813"/>
+<polygon points="452.2,79.6 528.7,183.8 471.3,153.1" fill="#5a1a15"/>
+<polygon points="536.0,64.7 597.6,71.6 602.7,170.9" fill="#4d1510"/>
+<polygon points="536.0,64.7 602.7,170.9 528.7,183.8" fill="#591a15"/>
+<polygon points="597.6,71.6 721.2,82.2 602.7,170.9" fill="#501611"/>
+<polygon points="721.2,82.2 685.3,179.5 602.7,170.9" fill="#551813"/>
+<polygon points="721.2,82.2 800,89.8 800,174.9" fill="#581a15"/>
+<polygon points="721.2,82.2 800,174.9 685.3,179.5" fill="#571914"/>
+<polygon points="0,161.8 105.4,181.0 0,248.2" fill="#661d18"/>
+<polygon points="105.4,181.0 99.8,261.7 0,248.2" fill="#6f1e19"/>
+<polygon points="105.4,181.0 163.4,175.0 99.8,261.7" fill="#681e19"/>
+<polygon points="163.4,175.0 182.3,255.0 99.8,261.7" fill="#6b1f1a"/>
+<polygon points="163.4,175.0 268.1,189.4 182.3,255.0" fill="#681e19"/>
+<polygon points="268.1,189.4 285.7,278.5 182.3,255.0" fill="#6f1e19"/>
+<polygon points="268.1,189.4 368.4,161.2 285.7,278.5" fill="#6c1f1a"/>
+<polygon points="368.4,161.2 354.1,265.0 285.7,278.5" fill="#691e19"/>
+<polygon points="368.4,161.2 471.3,153.1 354.1,265.0" fill="#661e19"/>
+<polygon points="471.3,153.1 419.8,266.8 354.1,265.0" fill="#691f1a"/>
+<polygon points="471.3,153.1 528.7,183.8 541.6,280.8" fill="#651d18"/>
+<polygon points="471.3,153.1 541.6,280.8 419.8,266.8" fill="#701e19"/>
+<polygon points="528.7,183.8 602.7,170.9 640.3,246.8" fill="#671e19"/>
+<polygon points="528.7,183.8 640.3,246.8 541.6,280.8" fill="#6e1e19"/>
+<polygon points="602.7,170.9 685.3,179.5 640.3,246.8" fill="#6a1f1a"/>
+<polygon points="685.3,179.5 704.7,265.2 640.3,246.8" fill="#711e19"/>
+<polygon points="685.3,179.5 800,174.9 800,255.3" fill="#661e19"/>
+<polygon points="685.3,179.5 800,255.3 704.7,265.2" fill="#6e1e19"/>
+<polygon points="0,248.2 99.8,261.7 64.2,355.7" fill="#761d18"/>
+<polygon points="0,248.2 64.2,355.7 0,324.5" fill="#7a1c17"/>
+<polygon points="99.8,261.7 182.3,255.0 157.0,330.7" fill="#771d18"/>
+<polygon points="99.8,261.7 157.0,330.7 64.2,355.7" fill="#7a1c17"/>
+<polygon points="182.3,255.0 285.7,278.5 157.0,330.7" fill="#771d18"/>
+<polygon points="285.7,278.5 260.6,360.7 157.0,330.7" fill="#7c1d18"/>
+<polygon points="285.7,278.5 354.1,265.0 260.6,360.7" fill="#7e1e18"/>
+<polygon points="354.1,265.0 332.1,340.4 260.6,360.7" fill="#7f1e19"/>
+<polygon points="354.1,265.0 419.8,266.8 332.1,340.4" fill="#7b1c17"/>
+<polygon points="419.8,266.8 447.2,361.3 332.1,340.4" fill="#82201a"/>
+<polygon points="419.8,266.8 541.6,280.8 447.2,361.3" fill="#761d18"/>
+<polygon points="541.6,280.8 551.2,360.3 447.2,361.3" fill="#7f1e19"/>
+<polygon points="541.6,280.8 640.3,246.8 551.2,360.3" fill="#7d1d18"/>
+<polygon points="640.3,246.8 609.8,338.8 551.2,360.3" fill="#7f1e19"/>
+<polygon points="640.3,246.8 704.7,265.2 703.2,361.3" fill="#731d18"/>
+<polygon points="640.3,246.8 703.2,361.3 609.8,338.8" fill="#771d18"/>
+<polygon points="704.7,265.2 800,255.3 800,326.1" fill="#751d18"/>
+<polygon points="704.7,265.2 800,326.1 703.2,361.3" fill="#771d18"/>
+<polygon points="0,324.5 64.2,355.7 74.0,427.8" fill="#82201a"/>
+<polygon points="0,324.5 74.0,427.8 0,415.7" fill="#84201b"/>
+<polygon points="64.2,355.7 157.0,330.7 74.0,427.8" fill="#88221c"/>
+<polygon points="157.0,330.7 182.8,417.2 74.0,427.8" fill="#8d251e"/>
+<polygon points="157.0,330.7 260.6,360.7 238.9,424.7" fill="#8b241e"/>
+<polygon points="157.0,330.7 238.9,424.7 182.8,417.2" fill="#85211b"/>
+<polygon points="260.6,360.7 332.1,340.4 348.2,431.8" fill="#8a231d"/>
+<polygon points="260.6,360.7 348.2,431.8 238.9,424.7" fill="#8e251f"/>
+<polygon points="332.1,340.4 447.2,361.3 348.2,431.8" fill="#83201a"/>
+<polygon points="447.2,361.3 469.8,437.7 348.2,431.8" fill="#91271f"/>
+<polygon points="447.2,361.3 551.2,360.3 534.2,434.2" fill="#8e251f"/>
+<polygon points="447.2,361.3 534.2,434.2 469.8,437.7" fill="#8a231d"/>
+<polygon points="551.2,360.3 609.8,338.8 632.1,407.2" fill="#8b241e"/>
+<polygon points="551.2,360.3 632.1,407.2 534.2,434.2" fill="#8a231d"/>
+<polygon points="609.8,338.8 703.2,361.3 733.5,442.0" fill="#87221c"/>
+<polygon points="609.8,338.8 733.5,442.0 632.1,407.2" fill="#90261f"/>
+<polygon points="703.2,361.3 800,326.1 800,442.9" fill="#8b241e"/>
+<polygon points="703.2,361.3 800,442.9 733.5,442.0" fill="#8a231d"/>
+<polygon points="0,415.7 74.0,427.8 0,509.4" fill="#932820"/>
+<polygon points="74.0,427.8 66.7,520.7 0,509.4" fill="#9a2b21"/>
+<polygon points="74.0,427.8 182.8,417.2 66.7,520.7" fill="#932720"/>
+<polygon points="182.8,417.2 153.3,493.5 66.7,520.7" fill="#952820"/>
+<polygon points="182.8,417.2 238.9,424.7 250.4,498.1" fill="#91271f"/>
+<polygon points="182.8,417.2 250.4,498.1 153.3,493.5" fill="#992b21"/>
+<polygon points="238.9,424.7 348.2,431.8 250.4,498.1" fill="#8f251f"/>
+<polygon points="348.2,431.8 346.6,492.8 250.4,498.1" fill="#982a21"/>
+<polygon points="348.2,431.8 469.8,437.7 416.5,497.5" fill="#942820"/>
+<polygon points="348.2,431.8 416.5,497.5 346.6,492.8" fill="#922720"/>
+<polygon points="469.8,437.7 534.2,434.2 511.0,507.7" fill="#932820"/>
+<polygon points="469.8,437.7 511.0,507.7 416.5,497.5" fill="#9a2b22"/>
+<polygon points="534.2,434.2 632.1,407.2 511.0,507.7" fill="#942820"/>
+<polygon points="632.1,407.2 595.7,532.3 511.0,507.7" fill="#942820"/>
+<polygon points="632.1,407.2 733.5,442.0 595.7,532.3" fill="#9b2b22"/>
+<polygon points="733.5,442.0 717.5,497.4 595.7,532.3" fill="#9d2b22"/>
+<polygon points="733.5,442.0 800,442.9 800,507.0" fill="#9b2c22"/>
+<polygon points="733.5,442.0 800,507.0 717.5,497.4" fill="#952820"/>
+<polygon points="0,509.4 66.7,520.7 108.4,600" fill="#9e2a21"/>
+<polygon points="0,509.4 108.4,600 0,600" fill="#9f2921"/>
+<polygon points="66.7,520.7 153.3,493.5 108.4,600" fill="#a12720"/>
+<polygon points="153.3,493.5 175.9,600 108.4,600" fill="#a02821"/>
+<polygon points="153.3,493.5 250.4,498.1 175.9,600" fill="#9c2c22"/>
+<polygon points="250.4,498.1 243.5,600 175.9,600" fill="#a12720"/>
+<polygon points="250.4,498.1 346.6,492.8 243.5,600" fill="#a12720"/>
+<polygon points="346.6,492.8 346.7,600 243.5,600" fill="#a4251f"/>
+<polygon points="346.6,492.8 416.5,497.5 462.9,600" fill="#9d2b22"/>
+<polygon points="346.6,492.8 462.9,600 346.7,600" fill="#a02921"/>
+<polygon points="416.5,497.5 511.0,507.7 506.6,600" fill="#a22720"/>
+<polygon points="416.5,497.5 506.6,600 462.9,600" fill="#a22620"/>
+<polygon points="511.0,507.7 595.7,532.3 506.6,600" fill="#a12720"/>
+<polygon points="595.7,532.3 623.8,600 506.6,600" fill="#a02821"/>
+<polygon points="595.7,532.3 717.5,497.4 713.5,600" fill="#9d2b22"/>
+<polygon points="595.7,532.3 713.5,600 623.8,600" fill="#a4251f"/>
+<polygon points="717.5,497.4 800,507.0 800,600" fill="#9f2a21"/>
+<polygon points="717.5,497.4 800,600 713.5,600" fill="#9f2921"/>
+</svg>
+</div>
 <div class="card">
     <div class="logo">
-        <h1>▤︎ CaronteApp</h1>
-        <p>{{ nome_istituto }}</p>
+        <img src="{{ url_for('static', filename='img/brand/caronte-icon.png') }}" alt="">
+        <div>
+            <h1>CaronteApp</h1>
+            <p>{{ nome_istituto }}</p>
+        </div>
     </div>
 
     {% if error %}

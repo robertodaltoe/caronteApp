@@ -3,8 +3,8 @@
 
 {% block extra_style %}
 <style>
-.row-conferma { background: #fff7ed !important; }
-.row-conferma td { border-top: 2px solid #f59e0b; border-bottom: 2px solid #f59e0b; }
+.row-conferma { background: var(--giallo-bg) !important; }
+.row-conferma td { border-top: 2px solid var(--giallo); border-bottom: 2px solid var(--giallo); }
 </style>
 {% endblock %}
 
@@ -24,7 +24,7 @@
             <a href="{{ url_for('docenti.lista', anno=a) }}"
                style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
                       text-decoration:none;
-                      {% if a == anno_sel %}background:#1e3a8a; color:white;
+                      {% if a == anno_sel %}background:var(--blu); color:white;
                       {% else %}background:#eef1f5; color:#374151;{% endif %}">
                 {{ a }}
             </a>
@@ -37,18 +37,18 @@
 
 <div style="font-size:.78rem; margin-bottom:14px;">
     {% if mostra_inattivi %}
-    <a href="{{ url_for('docenti.lista', anno=anno_sel) }}" style="color:#6366f1; text-decoration:none;">
+    <a href="{{ url_for('docenti.lista', anno=anno_sel) }}" style="color:var(--bronzo); text-decoration:none;">
         ↑︎ Nascondi i non attivi
     </a>
     {% else %}
-    <a href="{{ url_for('docenti.lista', anno=anno_sel, mostra='inattivi') }}" style="color:#6366f1; text-decoration:none;">
+    <a href="{{ url_for('docenti.lista', anno=anno_sel, mostra='inattivi') }}" style="color:var(--bronzo); text-decoration:none;">
         ⚙︎ Mostra anche i non attivi (docenti usciti, per riattivarli se tornano)
     </a>
     {% endif %}
 </div>
 
 {% if anno_sel != anno_default %}
-<div style="font-size:.78rem; color:#92400e; background:#fff7ed; border:1px solid #fde68a;
+<div style="font-size:.78rem; color:var(--giallo); background:var(--giallo-bg); border:1px solid var(--giallo);
      border-radius:6px; padding:6px 10px; margin-bottom:12px;">
     ⚠︎ Stai visualizzando l'a.s. {{ anno_sel }} (diverso dall'anno corrente {{ anno_default }}).
     Per gli anni futuri l'elenco mostra solo i docenti già noti come in servizio
@@ -58,9 +58,9 @@
 
 <div style="font-size:.78rem; color:var(--grigio); margin-bottom:14px;">
     Docenti: <strong style="color:#1f2937;">Anagrafica docenti</strong> ·
-    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" style="color:#6366f1; text-decoration:none;">Docenti ↔︎ Classi di concorso</a> ·
-    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" style="color:#6366f1; text-decoration:none;">Docenti ↔︎ Materie</a> ·
-    <a href="{{ url_for('attivita_ist.dipartimenti') }}" style="color:#6366f1; text-decoration:none;">Dipartimenti e materie</a>
+    <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" style="color:var(--bronzo); text-decoration:none;">Docenti ↔︎ Classi di concorso</a> ·
+    <a href="{{ url_for('impostazione_anno.docenti_materie') }}" style="color:var(--bronzo); text-decoration:none;">Docenti ↔︎ Materie</a> ·
+    <a href="{{ url_for('attivita_ist.dipartimenti') }}" style="color:var(--bronzo); text-decoration:none;">Dipartimenti e materie</a>
 </div>
 
 {% set conferma_id = request.args.get('conferma_elimina', type=int) %}
@@ -86,8 +86,8 @@
         <td>
             <strong>{{ d.cognome }}</strong>
             {% if d.ruolo == 'itp' %}
-            <span style="display:inline-block; font-size:.68rem; background:#f5f3ff;
-                          color:#7c3aed; border:1px solid #c4b5fd; border-radius:4px;
+            <span style="display:inline-block; font-size:.68rem; background:var(--viola-bg);
+                          color:var(--viola); border:1px solid var(--viola); border-radius:4px;
                           padding:1px 6px; font-weight:700; margin-left:4px;">ITP</span>
             {% elif d.ruolo == 'sostegno' %}
             <span style="display:inline-block; font-size:.68rem; background:#f0fdfa;
@@ -97,7 +97,7 @@
         </td>
         <td style="white-space:nowrap;">
             {% if d.nome %}{{ d.nome }}
-            {% else %}<span style="color:#f59e0b; font-size:.8rem;">⚠︎</span>
+            {% else %}<span style="color:var(--giallo); font-size:.8rem;">⚠︎</span>
             {% endif %}
         </td>
         <td style="color:var(--grigio); font-size:.88rem;">{{ d.materia_effettiva or '—' }}</td>
@@ -106,7 +106,7 @@
             {% if d.tipo_contratto %}
                 <span class="badge badge-grigio">{{ d.tipo_contratto }}</span>
             {% else %}
-                <span style="color:#f59e0b; font-size:.8rem;">⚠︎ da completare</span>
+                <span style="color:var(--giallo); font-size:.8rem;">⚠︎ da completare</span>
             {% endif %}
             {% if d.part_time_effettivo_per_anno(anno_sel) %}
                 <span class="badge" style="background:#e0f2fe; color:#0369a1; margin-left:3px;"
@@ -202,7 +202,7 @@
         </div>
         {% if pensionato %}
         <span style="color:var(--grigio); font-size:.78rem;">Pensionato — solo storico,
-            <a href="{{ url_for('docenti.modifica', id=d.id) }}" style="color:#6366f1;">apri scheda</a>
+            <a href="{{ url_for('docenti.modifica', id=d.id) }}" style="color:var(--bronzo);">apri scheda</a>
         </span>
         {% else %}
         <form method="post" action="{{ url_for('docenti.riattiva', id=d.id) }}"

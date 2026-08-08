@@ -11,13 +11,13 @@
     padding:9px 12px; border-radius:7px; border:1px solid #e5eaf0;
     margin-bottom:6px; background:#fafbfc; text-decoration:none;
     color:var(--blu); font-size:.88rem; font-weight:600; transition:all .1s; }
-.imp-link:hover { background:#f0f4ff; border-color:#b6c8e0; }
+.imp-link:hover { background:var(--blu-light); border-color:#d9b8b3; }
 .imp-link .badge-count { font-size:.72rem; background:#e5eaf0; color:var(--grigio);
     border-radius:10px; padding:1px 8px; font-weight:700; }
 .imp-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 @media(max-width:700px){ .imp-grid { grid-template-columns:1fr; } }
 .kpi-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-.kpi { background:#f0f4ff; border-radius:8px; padding:8px 14px; text-align:center; flex:1; min-width:80px; }
+.kpi { background:var(--blu-light); border-radius:8px; padding:8px 14px; text-align:center; flex:1; min-width:80px; }
 .kpi-n { font-size:1.4rem; font-weight:800; color:var(--blu); }
 .kpi-l { font-size:.68rem; color:var(--grigio); margin-top:1px; }
 </style>
@@ -32,7 +32,7 @@
 <div class="imp-grid">
 
 {# ── CAMBIO ANNO SCOLASTICO ─────────────────────────────────────── #}
-<div class="sez-card" style="grid-column:1/-1; border-left:4px solid #6366f1;">
+<div class="sez-card" style="grid-column:1/-1; border-left:4px solid var(--bronzo);">
     <div class="sez-title">↻︎ Anno scolastico{% if anno_piano %} — {{ anno_piano }}{% endif %}</div>
     <div class="sez-desc">
         Tutto il ciclo di preparazione del nuovo anno: piano di studi, organico richiesto,
@@ -47,14 +47,14 @@
     </div>
     {% endif %}
     <a href="{{ url_for('cambio_anno.index') }}" class="imp-link"
-       style="border-color:#dc2626; background:#fff0f0; font-weight:700;">
+       style="border-color:var(--rosso); background:var(--rosso-bg); font-weight:700;">
         ↻︎ Prepara / Attiva nuovo anno scolastico
-        <span style="color:#dc2626; font-weight:700;">→︎</span>
+        <span style="color:var(--rosso); font-weight:700;">→︎</span>
     </a>
     <a href="{{ url_for('impostazione_anno.index') }}" class="imp-link"
-       style="border-color:#6366f1; background:#f0f0ff;">
+       style="border-color:var(--bronzo); background:var(--bronzo-bg);">
         ▤︎ Hub impostazione anno — 9 passi
-        <span style="color:#6366f1; font-weight:700;">→︎</span>
+        <span style="color:var(--bronzo); font-weight:700;">→︎</span>
     </a>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">
         <a href="{{ url_for('impostazione_anno.docenti_anno') }}" class="imp-link">
@@ -66,7 +66,7 @@
             <span class="badge-count">{{ n_sezioni_attive }} sez.</span>
         </a>
         <a href="{{ url_for('dashboard_anno.index') }}" class="imp-link"
-           style="border-left:4px solid #16a34a;">
+           style="border-left:4px solid var(--verde);">
             ▲︎ Dashboard anno
             <span>→︎</span>
         </a>
