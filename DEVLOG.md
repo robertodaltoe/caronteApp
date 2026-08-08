@@ -4,6 +4,96 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 34 — Restyling completo: font, icona, login, colori sezione per sezione (Cowork)
+
+**Contesto:** seguito diretto della Sessione 33. Dopo il debug critico,
+Roberto ha chiesto di simulare un restyling estetico (skill
+`ui-ux-pro-max` + `stop-slop`) partendo da mockup statici (Artifact) di
+Dashboard, Impostazioni e Assegnazioni, poi di applicarlo davvero al
+codice, sezione per sezione. Due commit: `a461326` (font/icona/sfondo,
+già in Sessione 33) e `1b85523` (colori).
+
+### Mockup e scelte di design (prima del codice)
+- Esplorati due indirizzi tipografici via Artifact: **Fraunces + Karla**
+  (caldo, editoriale) vs **Oswald + IBM Plex Sans** (tecnico, "quaderno
+  Da Vinci" — titoli condensati stile cartiglio tecnico, Plex Sans
+  condivide il disegno con Plex Mono già usato per i numeri). Scelto
+  **Oswald + IBM Plex Sans**.
+- Icona brand (`static/img/brand/caronte-icon.png`): aveva uno sfondo
+  nero pieno dietro al disegno (verificato pixel per pixel, non un
+  problema di visualizzazione). Ripulita: ora solo il tratto rosso,
+  sfondo trasparente.
+- Sfondo pagina: dal crema originale (`#f7f4ef`) a un grigio-azzurro
+  tenue ("carta bollata", `#EDF0EE`) — il bordeaux del brand era già
+  coerente con la nuova direzione, non toccato.
+
+### Font locali, non più Google Fonts (`app.py:14` era gia' su questo, qui `base.html`/`login.html`)
+- Oswald (titoli, tutti gli `h1`/`h2` via regola globale in
+  `base.html`) e IBM Plex Sans (resto dell'interfaccia) scaricati e
+  ospitati in `static/fonts/` — l'app funziona anche offline, niente
+  più dipendenza da una CDN esterna.
+- **Icona invisibile sulla barra**: scoperto e misurato (rapporto di
+  contrasto WCAG) che un rosso scuro su una barra bordeaux e'
+  otticamente illeggibile (~1.2:1) qualunque sfumatura di bordeaux si
+  scelga — non era "il bordeaux sbagliato" ma rosso-su-rosso per
+  definizione. Risolto con un cerchio di sfondo chiaro (`var(--blu-light)`)
+  dietro l'icona in `nav .brand img`, indipendente dalla tonalità.
+
+### Login (`templates/login.html`) — documento a sé, non estende `base.html`
+- Era rimasta sul vecchio blu navy (`#0a1f35`/`#1a4a7a`): riportata al
+  bordeaux del brand (variabili ripetute in chiaro, non essendoci
+  `base.html` da ereditare).
+- **Sfondo low-poly originale**: su richiesta di Roberto di uno stile
+  "sfaccettato" simile a un'immagine stock che pero' non poteva essere
+  usata (asset Adobe Stock a pagamento, watermark visibile) — generata
+  invece una mesh triangolare proceduralmente in Python (126 poligoni,
+  jitter casuale su una griglia, gradiente dal bordeaux scuro in alto
+  al piu' acceso in basso), incorporata come SVG inline. Fallback: il
+  gradiente piatto precedente resta come sfondo del `<body>` sotto
+  l'SVG.
+  Icona reale accanto al nome nel box di login; box reso semi-trasparente
+  (`rgba(255,255,255,.88)` + `backdrop-filter: blur`) per lasciare
+  intravedere la mesh restando leggibile.
+
+### Colori: sezione per sezione (`1b85523`)
+Sostituiti i colori "da SaaS generico" (soprattutto l'indaco `#6366f1`
+e i residui del vecchio brand blu navy, es. `#1e3a5c`/`#1e3a8a`) con i
+token già definiti in `base.html` (`--bronzo`, `--viola`, `--rosso`,
+`--verde`, `--giallo`, `--blu`, `--blu-light`), pagina per pagina:
+Impostazioni, Impostazione Anno, Assegnazioni, Dashboard, Docenti,
+Report, Banca Ore, Aule (lista + mappa + override).
+
+**Lasciati intatti, per scelta**:
+- la palette per indirizzo in Assegnazioni (AFM blu, RIM blu chiaro,
+  CAT ocra, LLI verde, LSC teal, LSP viola, LSU rosa, SOS grigio) e il
+  sistema di colori per passo in Impostazione Anno (1-10, condiviso con
+  `_step_nav.html`) — sono palette categoriali/di orientamento, non
+  colori di brand: ridisegnarle e' una scelta a sé (curare N tonalità
+  ancora distinguibili), non un semplice swap di token. Segnalato a
+  Roberto come possibile prossimo passo, non fatto qui.
+- blu informativi (`#0369a1` e affini), teal (badge SOSTEGNO, export
+  dati GDPR) e bruno scuro (anonimizzazione GDPR): colori funzionali
+  distinti che già si intonano al bordeaux, non residui del vecchio
+  brand.
+
+### Metodo di verifica
+Ogni pagina toccata è stata controllata avviando davvero l'app in
+locale (login incluso) e navigandola nel browser, non solo letta staticamente:
+sintassi Jinja verificata via `app.jinja_env.parse()` prima ancora del
+render completo (dati di test insufficienti in alcuni casi per popolare
+tabelle pivot complesse — es. Assegnazioni con dati reali andrebbe
+ricontrollata da Roberto).
+
+### Cose ancora aperte
+- Pagine minori non ancora toccate: form di dettaglio, export XLSX,
+  moduli di Attività/Recupero/Rientro.
+- Le due palette categoriali (indirizzo, passo) restano da ridisegnare
+  se Roberto vuole completare la coerenza visiva.
+- Verificare a occhio un export PDF vero (Sessione 33: WeasyPrint non
+  testabile in sandbox Cowork, mancano le librerie di sistema).
+
+---
+
 ## Sessione 33 — Debug architetturale critico, sicurezza, pulizia file morti, nav responsive (Cowork)
 
 **Contesto:** su richiesta di Roberto, debug completo e critico
