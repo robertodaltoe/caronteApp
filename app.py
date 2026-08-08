@@ -124,6 +124,8 @@ def create_app():
     app.register_blueprint(orario_sostegno_bp)
     from routes.sync_conflitti import sync_conflitti_bp
     app.register_blueprint(sync_conflitti_bp)
+    from routes.guida import guida_bp
+    app.register_blueprint(guida_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json

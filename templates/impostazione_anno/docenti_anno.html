@@ -28,29 +28,31 @@
 {# ── SEZIONE 1: Uscite TI ─────────────────────────────────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#dc2626; margin-bottom:10px; font-size:.9rem;">
-        ⎋︎ Uscite TI per {{ anno }}
+        ⎋︎ Uscite per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ uscenti|length }})</span>
     </div>
     {% if not uscenti %}
     <div style="font-size:.8rem; color:var(--grigio);">Nessuna uscita segnalata.</div>
     {% else %}
-    {% for d in uscenti %}
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;
-                padding:6px 10px; background:#fef2f2; border-radius:6px;
-                border:1px solid #fecaca; font-size:.82rem;">
-        <span style="flex:1;">{{ d.cognome }} {{ d.nome }}</span>
-        <span style="font-size:.72rem; background:#fee2e2; color:#dc2626;
-                      padding:2px 7px; border-radius:6px; font-weight:700;">
-            {{ d.motivo_uscita or 'uscita' }}</span>
-        <form method="post" style="margin:0;">
-            <input type="hidden" name="azione" value="annulla_uscita">
-            <input type="hidden" name="id_docente" value="{{ d.id }}">
-            <input type="hidden" name="anno_scol" value="{{ anno }}">
-            <button type="submit" title="Annulla uscita"
-                    style="background:none; border:none; cursor:pointer; font-size:.8rem; color:#6b7280;">↩︎</button>
-        </form>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+        {% for d in uscenti %}
+        <div style="display:flex; align-items:center; gap:8px;
+                    padding:6px 10px; background:#fef2f2; border-radius:6px;
+                    border:1px solid #fecaca; font-size:.82rem;">
+            <span style="flex:1;">{{ d.cognome }} {{ d.nome }}</span>
+            <span style="font-size:.72rem; background:#fee2e2; color:#dc2626;
+                          padding:2px 7px; border-radius:6px; font-weight:700;">
+                {{ d.motivo_uscita or 'uscita' }}</span>
+            <form method="post" style="margin:0;">
+                <input type="hidden" name="azione" value="annulla_uscita">
+                <input type="hidden" name="id_docente" value="{{ d.id }}">
+                <input type="hidden" name="anno_scol" value="{{ anno }}">
+                <button type="submit" title="Annulla uscita"
+                        style="background:none; border:none; cursor:pointer; font-size:.8rem; color:#6b7280;">↩︎</button>
+            </form>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
     {% endif %}
 </div>
 
@@ -190,27 +192,30 @@
     </form>
 </div>
 
-{# ── GRIGLIA TI: segna uscite, AP, aspettativa ─────────────────── #}
+{# ── GRIGLIA UNIFICATA: segna uscite (tutti i contratti), AP, aspettativa ─ #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
-        ▤︎ Docenti TI — gestione presenza per {{ anno }}
-        <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ ti_attivi|length }} titolari)</span>
+        ▤︎ Docenti — gestione presenza per {{ anno }}
+        <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ docenti_gestione|length }})</span>
     </div>
     <div style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
-        Per ogni docente TI indica lo status per l'anno {{ anno }}.
-        I docenti senza status segnalato restano "presente" (default).
+        Per ogni docente (TI, TD, supplente o IRC) indica lo status per
+        l'anno {{ anno }}. I docenti senza status segnalato restano
+        "presente" (default). AP e aspettativa si applicano solo ai TI
+        (mobilità sull'organico USR).
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:6px;">
-        {% for d in ti_attivi %}
-        {% set ha_uscita = d.anno_scol_uscita == anno %}
+        {% for d in docenti_gestione %}
         {% set status = d.status_presenza or 'presente' %}
-        {% if not ha_uscita %}
         <div style="display:flex; align-items:center; gap:6px; padding:6px 10px;
                     background:{{ '#fffbeb' if status == 'ap_uscente' else ('#e0f9ff' if status == 'aspettativa' else '#f9fafb') }};
                     border:1px solid {{ '#fde68a' if status == 'ap_uscente' else ('#bae6fd' if status == 'aspettativa' else '#e5e7eb') }};
                     border-radius:6px; font-size:.8rem;">
             <span style="flex:1; font-weight:{{ '600' if status != 'presente' else '400' }};">
                 {{ d.cognome }} {{ d.nome }}
+                {% if d.tipo_contratto != 'TI' %}
+                <span style="font-size:.68rem; color:var(--grigio);">({{ d.tipo_contratto }})</span>
+                {% endif %}
                 {% if status == 'ap_uscente' %}
                 <span style="font-size:.68rem; color:#f59e0b;">→︎ AP uscente</span>
                 {% elif status == 'aspettativa' %}
@@ -221,16 +226,21 @@
                 <input type="hidden" name="id_docente" value="{{ d.id }}">
                 <input type="hidden" name="anno_scol" value="{{ anno }}">
                 {% if status == 'presente' %}
-                {# Opzioni disponibili per un TI presente #}
                 <select name="motivo" style="padding:2px 4px; border:1px solid #d1d5db;
                         border-radius:4px; font-size:.68rem; color:#6b7280;">
                     <option value="trasferimento">trasf.</option>
+                    {% if d.tipo_contratto == 'TI' %}
                     <option value="pensionamento">pens.</option>
+                    {% else %}
+                    <option value="fine_td">fine incarico</option>
+                    {% endif %}
                 </select>
                 <button type="submit" name="azione" value="segna_uscita"
                         style="background:none; border:1px solid #fca5a5; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#dc2626;">
                     ✕︎ Esce</button>
+                {% if d.tipo_contratto == 'TI' %}
+                {# AP/aspettativa: mobilità sull'organico USR, ha senso solo per i TI #}
                 <button type="submit" name="azione" value="segna_ap_uscente"
                         style="background:none; border:1px solid #fde68a; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#b45309;">
@@ -239,6 +249,7 @@
                         style="background:none; border:1px solid #bae6fd; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#0369a1;">
                     ⏸ Asp.</button>
+                {% endif %}
                 {% else %}
                 <button type="submit" name="azione" value="annulla_status"
                         style="background:none; border:1px solid #d1d5db; border-radius:4px;
@@ -247,7 +258,6 @@
                 {% endif %}
             </form>
         </div>
-        {% endif %}
         {% endfor %}
     </div>
 </div>

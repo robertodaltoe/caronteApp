@@ -59,11 +59,20 @@ def index():
     dipartimenti = Dipartimento.query.filter(
         Dipartimento.sigla != '—').order_by(Dipartimento.ordine).all()
 
+    # Classi raggruppate per indirizzo (senza ripetizioni), per le checkbox
+    # multi-classe del form — un indirizzo compare una volta sola come
+    # intestazione di gruppo, non una volta per ogni sezione attiva.
+    from collections import OrderedDict
+    classi_per_indirizzo = OrderedDict()
+    for cs in classi:
+        classi_per_indirizzo.setdefault(cs.indirizzo, []).append(cs)
+
     cat_label, cat_color, categorie = _cat_map()
     return render_template('incarichi/index.html',
         anno=anno, anni_disponibili=anni,
         per_cat=per_cat, tipi=tipi,
         docenti=docenti, classi=classi,
+        classi_per_indirizzo=classi_per_indirizzo,
         dipartimenti=dipartimenti,
         cat_label=cat_label, cat_color=cat_color,
         categorie=categorie)
@@ -71,46 +80,76 @@ def index():
 
 @incarichi_bp.route('/incarichi/salva', methods=['POST'])
 def salva():
-    anno     = request.form.get('anno_scol', get_anno_corrente())
-    id_tipo  = request.form.get('id_tipo', type=int)
-    id_doc   = request.form.get('id_docente', type=int)
-    if not id_tipo or not id_doc:
-        flash('Tipo incarico e docente sono obbligatori.', 'danger')
+    """
+    Salva più incarichi in un colpo solo per UN docente: ogni riga del
+    form (tipo incarico + eventuale contesto) può generare più di una
+    nomina se sono state selezionate più classi per quella riga.
+    """
+    anno   = request.form.get('anno_scol', get_anno_corrente())
+    id_doc = request.form.get('id_docente', type=int)
+    if not id_doc:
+        flash('Seleziona un docente.', 'danger')
         return redirect(url_for('incarichi.index', anno=anno))
+    doc = db.session.get(Docente, id_doc)
 
-    tipo = db.session.get(TipoIncarico, id_tipo)
+    n_righe = request.form.get('n_righe', type=int) or 0
 
-    # Contesto
-    indirizzo   = request.form.get('indirizzo', '').strip() or None
-    anno_corso  = request.form.get('anno_corso', type=int)
-    sezione     = request.form.get('sezione', '').strip() or None
-    id_dip      = request.form.get('id_dipartimento', type=int)
+    salvati = 0
+    duplicati = 0
+    nomi_tipo = []
 
-    # Compenso
-    ore     = request.form.get('ore', type=float)
-    importo = request.form.get('importo', type=float)
-    note    = request.form.get('note', '').strip() or None
+    for idx in range(n_righe):
+        id_tipo = request.form.get(f'id_tipo[{idx}]', type=int)
+        if not id_tipo:
+            continue
+        tipo = db.session.get(TipoIncarico, id_tipo)
 
-    # Evita duplicati
-    esiste = IncaricaDocente.query.filter_by(
-        anno_scol=anno, id_tipo_incarico=id_tipo,
-        id_docente=id_doc,
-        indirizzo=indirizzo, anno_corso=anno_corso,
-        sezione=sezione, id_dipartimento=id_dip).first()
-    if esiste:
-        flash('Incarico già presente.', 'warning')
-        return redirect(url_for('incarichi.index', anno=anno))
+        id_dip  = request.form.get(f'id_dipartimento[{idx}]', type=int)
+        ore     = request.form.get(f'ore[{idx}]', type=float)
+        importo = request.form.get(f'importo[{idx}]', type=float)
+        note    = request.form.get(f'note[{idx}]', '').strip() or None
 
-    db.session.add(IncaricaDocente(
-        anno_scol=anno, id_tipo_incarico=id_tipo,
-        id_docente=id_doc,
-        indirizzo=indirizzo, anno_corso=anno_corso,
-        sezione=sezione, id_dipartimento=id_dip,
-        ore=ore, importo=importo, note=note))
+        # Classi selezionate per questa riga: valori "INDIRIZZO|ANNO|SEZIONE"
+        classi_sel = request.form.getlist(f'classi[{idx}][]')
+
+        # Costruisce l'elenco dei contesti da salvare: una nomina per
+        # ogni classe selezionata, oppure una sola nomina (senza classe)
+        # se l'incarico non è legato a una classe.
+        contesti = []
+        if classi_sel:
+            for val in classi_sel:
+                indirizzo, anno_corso_s, sezione = val.split('|')
+                contesti.append((indirizzo, int(anno_corso_s), sezione))
+        else:
+            contesti.append((None, None, None))
+
+        for indirizzo, anno_corso, sezione in contesti:
+            esiste = IncaricaDocente.query.filter_by(
+                anno_scol=anno, id_tipo_incarico=id_tipo,
+                id_docente=id_doc,
+                indirizzo=indirizzo, anno_corso=anno_corso,
+                sezione=sezione, id_dipartimento=id_dip).first()
+            if esiste:
+                duplicati += 1
+                continue
+            db.session.add(IncaricaDocente(
+                anno_scol=anno, id_tipo_incarico=id_tipo,
+                id_docente=id_doc,
+                indirizzo=indirizzo, anno_corso=anno_corso,
+                sezione=sezione, id_dipartimento=id_dip,
+                ore=ore, importo=importo, note=note))
+            salvati += 1
+        nomi_tipo.append(tipo.nome)
+
     db.session.commit()
 
-    doc = db.session.get(Docente, id_doc)
-    flash(f'{tipo.nome} → {doc.cognome} {doc.nome} salvato.', 'success')
+    if salvati:
+        flash(f'{salvati} incarico/hi salvato/i per {doc.cognome} {doc.nome}'
+              + (f' ({", ".join(nomi_tipo)})' if nomi_tipo else '') + '.', 'success')
+    if duplicati:
+        flash(f'{duplicati} incarico/hi già presente/i, saltato/i.', 'warning')
+    if not salvati and not duplicati:
+        flash('Nessun incarico da salvare: seleziona almeno un tipo incarico.', 'danger')
     return redirect(url_for('incarichi.index', anno=anno))
 
 

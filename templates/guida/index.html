@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Guida{% endblock %}
+{% block extra_style %}
+<style>
+.guida-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+@media(max-width:900px){ .guida-grid { grid-template-columns:1fr 1fr; } }
+@media(max-width:600px){ .guida-grid { grid-template-columns:1fr; } }
+.guida-card { background:white; border-radius:10px; border:1px solid #e5eaf0;
+    padding:18px 20px; text-decoration:none; color:inherit; display:block;
+    transition:all .12s; }
+.guida-card:hover { border-color:var(--blu); box-shadow:0 2px 10px rgba(0,0,0,.06); }
+.guida-ic { font-size:1.6rem; margin-bottom:8px; display:block; }
+.guida-titolo { font-size:1rem; font-weight:800; color:var(--blu); margin-bottom:4px; }
+.guida-riassunto { font-size:.8rem; color:var(--grigio); line-height:1.4; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">❓ Guida — FAQ e manuali d'uso</h1>
+    <p style="font-size:.85rem; color:var(--grigio); max-width:640px;">
+        Una pagina per ogni funzione principale dell'app: come si usa, passo per passo, e le
+        domande più frequenti. Ogni guida è anche scaricabile in PDF, da stampare o inviare
+        via mail a chi ne ha bisogno.
+    </p>
+</div>
+
+<div class="guida-grid">
+    {% for sez in sezioni %}
+    <a href="{{ url_for('guida.sezione', slug=sez.slug) }}" class="guida-card">
+        <span class="guida-ic">{{ sez.icona }}</span>
+        <div class="guida-titolo">{{ sez.titolo }}</div>
+        <div class="guida-riassunto">{{ sez.riassunto }}</div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

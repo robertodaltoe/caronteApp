@@ -1623,15 +1623,30 @@ def docenti_anno():
         return redirect(url_for('impostazione_anno.docenti_anno', anno=anno_f))
 
     # ── Dati per il template ─────────────────────────────────────────
-    # TI presenti (senza uscita segnalata per questo anno)
-    ti_attivi = (Docente.query
+    # Un solo meccanismo di gestione presenza per anno, valido per
+    # QUALUNQUE tipo di contratto (TI e non-TI): un docente compare qui
+    # se è attivo, non è già stato segnalato come uscito per questo
+    # anno (altrimenti è nella sezione "Uscite" sotto) e non è stato
+    # nominato proprio in questo anno (altrimenti è già nella sezione
+    # "TD/Supplenti inseriti per {{anno}}" sotto, che è puramente
+    # informativa — evita di mostrare lo stesso docente in due sezioni).
+    # Prima versione (fino a questo Task): la pagina considerava solo i
+    # TI, i TD/supplenti restavano esclusi "di proposito" — ma questo
+    # rendeva impossibile segnalarne l'uscita quando non più in
+    # servizio (es. caso Cantarella, TD annuale senza anno_scol_inizio
+    # tracciato: non compariva né qui né altrove). Un tentativo
+    # precedente aveva aggiunto una sezione parallela dedicata ai
+    # non-TI — creava due meccanismi sovrapposti per lo stesso scopo;
+    # su richiesta di Roberto, unificato in un solo meccanismo.
+    docenti_gestione = (Docente.query
                  .filter(Docente.attivo == True,
-                         Docente.tipo_contratto == 'TI',
                          db.or_(Docente.anno_scol_uscita == None,
-                                Docente.anno_scol_uscita != anno))
+                                Docente.anno_scol_uscita != anno),
+                         db.or_(Docente.anno_scol_inizio == None,
+                                Docente.anno_scol_inizio != anno))
                  .order_by(Docente.cognome).all())
 
-    # TI con uscita segnalata per questo anno
+    # Uscite segnalate per questo anno (qualunque tipo di contratto)
     uscenti = (Docente.query
                .filter_by(attivo=True, anno_scol_uscita=anno)
                .order_by(Docente.cognome).all())
@@ -1646,7 +1661,9 @@ def docenti_anno():
                    .filter_by(attivo=True, status_presenza='ap_entrante')
                    .order_by(Docente.cognome).all())
 
-    # TD/supplenti/IRC inseriti per questo anno specifico
+    # TD/supplenti/IRC inseriti per questo anno specifico (informativo:
+    # non hanno bisogno del pulsante "Esce" nello stesso anno in cui
+    # sono appena arrivati)
     td_anno = (Docente.query
                .filter(Docente.attivo == True,
                        Docente.anno_scol_inizio == anno,
@@ -1662,7 +1679,7 @@ def docenti_anno():
 
     return render_template('impostazione_anno/docenti_anno.html',
         anno=anno, anni_disponibili=anni_disponibili,
-        ti_attivi=ti_attivi, uscenti=uscenti,
+        docenti_gestione=docenti_gestione, uscenti=uscenti,
         ap_uscenti=ap_uscenti, ap_entranti=ap_entranti,
         td_anno=td_anno)
 

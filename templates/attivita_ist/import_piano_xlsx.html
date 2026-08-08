@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Import Piano Attività da xlsx{% endblock %}
+{% block content %}
+<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:16px;">⇩︎ Import Piano Annuale delle Attività (.xlsx)</h1>
+
+<div class="card" style="padding:20px; max-width:640px;">
+    <p style="margin-bottom:14px; font-size:.9rem; line-height:1.6;">
+        Carica il file .xlsx del Piano Annuale delle Attività dei Docenti, costruito
+        secondo lo standard adottato dalla scuola (banner-giorno colorato,
+        blocchi Consigli/GLO, righe evento per Collegio/Formazione/Incontri).
+        Funziona con qualsiasi anno scolastico — non serve modificare il codice
+        ogni anno.
+    </p>
+    <ul style="font-size:.82rem; color:var(--grigio); margin-bottom:18px; padding-left:20px; line-height:1.8;">
+        <li>Il file viene <strong>letto e analizzato</strong>: prima vedrai un'anteprima con il conteggio degli eventi trovati.</li>
+        <li>Nulla viene salvato finché non confermi esplicitamente dall'anteprima.</li>
+        <li>Gli eventi già presenti (stesso tipo, data, titolo e classe) vengono saltati automaticamente — puoi ricaricare lo stesso file più volte senza duplicati.</li>
+        <li>I partecipanti vengono pre-compilati automaticamente in base al tipo evento; potrai modificarli dopo l'import.</li>
+    </ul>
+    <form method="post" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:14px;">
+        <input type="file" name="file_xlsx" accept=".xlsx" required
+               style="padding:8px; border:2px dashed #cbd5e1; border-radius:8px;">
+        <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary">Analizza file →︎</button>
+            <a href="{{ url_for('attivita_ist.lista') }}" class="btn">Annulla</a>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="padding:14px 18px; max-width:640px; margin-top:14px; font-size:.78rem; color:var(--grigio);">
+    ℹ Per il vecchio import una-tantum del Piano 2025/26 (dati fissi nel codice),
+    vedi <a href="{{ url_for('attivita_ist.import_piano') }}">import legacy</a>.
+</div>
+{% endblock %}

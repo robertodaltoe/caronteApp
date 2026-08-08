@@ -6,6 +6,7 @@ from models.materia import Dipartimento, Materia, DocenteMateria
 from models.docente import Docente
 from models.assenza import Assenza
 from datetime import date, datetime
+import json
 
 attivita_ist_bp = Blueprint('attivita_ist', __name__)
 
@@ -89,9 +90,17 @@ def lista():
         q = q.filter(db.func.strftime('%m', AttivitaIst.data) == mese_f.zfill(2))
     eventi = q.order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all()
 
+    # Separa le attività già svolte (data passata) da quelle future/odierne:
+    # le prime finiscono in una tabella a parte, in fondo alla pagina,
+    # più recenti per prime.
+    eventi_futuri  = [e for e in eventi if e.data >= oggi]
+    eventi_passati = [e for e in eventi if e.data < oggi]
+    eventi_passati.reverse()
+
     dipartimenti = Dipartimento.query.order_by(Dipartimento.ordine).all()
     return render_template('attivita_ist/lista.html',
-        eventi=eventi, oggi=oggi, anno=anno,
+        eventi_futuri=eventi_futuri, eventi_passati=eventi_passati,
+        oggi=oggi, anno=anno,
         tipi=TIPI_ATTIVITA, tipo_f=tipo_f, mese_f=mese_f,
         dipartimenti=dipartimenti,
     )
@@ -352,6 +361,93 @@ def _import_piano_2025_26():
 
     db.session.commit()
     return count
+
+
+# ── IMPORT PIANO ANNUALE DA FILE .XLSX (standard corrente) ─────────────────────
+
+@attivita_ist_bp.route('/attivita-ist/import-xlsx', methods=['GET', 'POST'])
+def import_piano_xlsx():
+    """
+    Importa il Piano Annuale delle Attività da un file .xlsx costruito
+    secondo lo standard adottato dalla scuola (banner-giorno a piena
+    larghezza, righe-slot per Consigli/GLO, righe-evento per Collegio/
+    Formazione/Incontri). Flusso in due passi: anteprima poi conferma,
+    per evitare importazioni accidentali.
+    """
+    from modules.import_piano_xlsx import parse_piano_xlsx
+
+    if request.method == 'POST' and 'eventi_json' in request.form:
+        # ── passo 2: conferma import ──
+        try:
+            eventi = json.loads(request.form['eventi_json'])
+        except Exception:
+            flash('Dati di importazione non validi. Ripeti il caricamento del file.', 'danger')
+            return redirect(url_for('attivita_ist.import_piano_xlsx'))
+
+        n_importati = 0
+        n_duplicati = 0
+        dipartimenti_map = {d.nome.upper(): d.id for d in Dipartimento.query.all()}
+
+        for ev in eventi:
+            data_ev = date.fromisoformat(ev['data'])
+            dup = AttivitaIst.query.filter_by(
+                tipo=ev['tipo'], data=data_ev, titolo=ev['titolo'],
+                classe=ev.get('classe'), ora_inizio=ev.get('ora_ini')).first()
+            if dup:
+                n_duplicati += 1
+                continue
+
+            obj = AttivitaIst(
+                tipo       = ev['tipo'],
+                titolo     = ev['titolo'],
+                data       = data_ev,
+                ora_inizio = ev.get('ora_ini'),
+                ora_fine   = ev.get('ora_fin'),
+                classe     = ev.get('classe'),
+                note       = ev.get('note'),
+                origine    = 'import_piano',
+            )
+            db.session.add(obj)
+            db.session.flush()
+
+            for did in _preset_partecipanti(obj):
+                db.session.add(AttivitaIstPartecipante(
+                    id_attivita=obj.id, id_docente=did, preset=True))
+            n_importati += 1
+
+        db.session.commit()
+        flash(f'Importati {n_importati} eventi. {n_duplicati} già presenti (saltati).', 'success')
+        return redirect(url_for('attivita_ist.lista'))
+
+    if request.method == 'POST':
+        # ── passo 1: caricamento file → anteprima ──
+        f = request.files.get('file_xlsx')
+        if not f or not f.filename:
+            flash('Nessun file selezionato.', 'warning')
+            return redirect(url_for('attivita_ist.import_piano_xlsx'))
+
+        try:
+            risultato = parse_piano_xlsx(f.read())
+        except Exception as e:
+            flash(f'Errore nella lettura del file: {e}', 'danger')
+            return redirect(url_for('attivita_ist.import_piano_xlsx'))
+
+        eventi = risultato['eventi']
+        if not eventi:
+            flash('Nessun evento riconosciuto nel file. Verifica che sia nel formato standard del Piano Annuale.', 'warning')
+            return redirect(url_for('attivita_ist.import_piano_xlsx'))
+
+        conteggio_tipi = {}
+        for ev in eventi:
+            conteggio_tipi[ev['tipo']] = conteggio_tipi.get(ev['tipo'], 0) + 1
+
+        return render_template('attivita_ist/import_piano_xlsx_preview.html',
+            fogli=risultato['fogli'], eventi=eventi, avvisi=risultato['avvisi'],
+            conteggio_tipi=conteggio_tipi, tipi=TIPI_ATTIVITA,
+            eventi_json=json.dumps(eventi),
+        )
+
+    return render_template('attivita_ist/import_piano_xlsx.html')
 
 
 # ── DIPARTIMENTI E MATERIE ────────────────────────────────────────────────────

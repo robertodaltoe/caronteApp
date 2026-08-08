@@ -230,6 +230,7 @@
                     {% set riga = mat.righe_per_anno.get(ac) %}
                     {% set prima_riga = mat.prima_riga %}
                     {% set sigla_mat = prima_riga.materia.nome_breve or prima_riga.materia.sigla if prima_riga.id_materia and prima_riga.materia else '' %}
+                    {% set opzioni_cc = materie_multi_cc.get(prima_riga.id_materia, []) %}
                     <div style="{{ 'margin-top:6px; padding-top:6px; border-top:1px solid #e0e7ff;' if not loop.first else '' }}
                                 display:flex; flex-direction:column; align-items:center; gap:1px;">
                         <span style="font-size:.6rem; font-weight:700; color:{{ '#6366f1' if riga else '#c7d2fe' }};">{{ sigla_mat }}</span>
@@ -239,6 +240,42 @@
                                min="0" max="20"
                                style="width:40px; text-align:center; border:1px solid #d1d5db;
                                       border-radius:4px; padding:2px 3px; font-size:.8rem;">
+                        {# Stesso menu CC + badge atipica del layout "singola materia" —
+                           mancava qui: una CC con più materie (es. A-12 con Lingua e
+                           Storia insieme) cadeva in questo ramo compatto e perdeva sia
+                           la possibilità di cambiare CC sia l'avviso di atipicità,
+                           anche quando riga.atipica era già True nel database. #}
+                        {% if opzioni_cc and opzioni_cc|length > 1 %}
+                        <div style="display:flex; align-items:center; gap:2px;">
+                            <select name="cc_{{ riga.id }}" data-autosave="cc_piano:{{ riga.id }}"
+                                    style="padding:2px 4px; font-size:.68rem;
+                                           border:1px solid {{ '#f59e0b' if riga.atipica else '#e5e7eb' }};
+                                           border-radius:4px;
+                                           background:{{ '#fef3c7' if riga.atipica else 'white' }};">
+                                {% for op in opzioni_cc %}
+                                <option value="{{ op.id }}"
+                                    {% if op.id == riga.id_classe_concorso %}selected{% endif %}>
+                                    {{ op.codice }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if riga.atipica %}
+                            <span title="Atipicità: CC diversa dal default normativo" style="font-size:.65rem;">⚠︎️</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if cc_cod.startswith('B-') %}
+                        <label title="{{ 'Compresenza: esclusa dal monte ore curricolare' if riga.compresenza else 'Segna come compresenza per questo anno' }}"
+                               style="display:flex; align-items:center; gap:3px; cursor:pointer;
+                                      margin-top:2px; font-size:.62rem;
+                                      color:{{ '#92400e' if riga.compresenza else '#9ca3af' }};">
+                            <input type="checkbox"
+                                   data-autosave="compresenza_piano:{{ riga.id }}"
+                                   {% if riga.compresenza %}checked{% endif %}
+                                   style="accent-color:#f59e0b; width:10px; height:10px;">
+                            comp.
+                        </label>
+                        {% endif %}
                         {% else %}
                         <span style="color:#9ca3af; font-size:.78rem;">—</span>
                         {% endif %}

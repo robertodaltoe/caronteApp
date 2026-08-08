@@ -4,6 +4,322 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+**Aggiornamento Task 47 — spostato il link import da Cambio Anno a Impostazioni**:
+su richiesta di Roberto, il link a "Importa Piano delle Attività"
+(`attivita_ist.import_piano_xlsx`) è stato tolto dalla pagina Cambio
+Anno Scolastico e spostato in Impostazioni, nello stesso box
+"◷︎ Orario" dove si trova "Importa / modifica orario"
+(`templates/impostazioni/index.html`). Rimossa anche la dicitura
+"Facoltativo" e il testo esplicativo che l'accompagnava in Cambio
+Anno — resta solo la voce "Importa Piano delle Attività". Verificato
+con richieste GET dirette (su copia isolata, non sul DB reale) che
+`/impostazioni`, `/cambio-anno` e `/attivita-ist/import-xlsx`
+rispondano ancora 200 dopo la modifica.
+
+**Aggiornamento Task 47 — tabella "Attività già svolte" separata**:
+su richiesta di Roberto, in `/attivita-ist` le attività con data
+passata (rispetto a oggi) non compaiono più mescolate a quelle future
+nella tabella principale: `routes/attivita_ist.py::lista()` ora divide
+la query già ordinata in `eventi_futuri` (data ≥ oggi) ed
+`eventi_passati` (data < oggi, mostrati dal più recente), passati
+entrambi al template. `templates/attivita_ist/lista.html` estrae il
+markup della tabella in una macro Jinja `tabella_eventi(eventi,
+svolte=false)` per non duplicare colonne/azioni, e la richiama due
+volte: la tabella principale (invariata) e una seconda sezione in
+fondo alla pagina, "▤︎ Attività già svolte", con card a sfondo grigio
+chiaro e righe a opacità ridotta (classe `.ev-row-svolta`, torna
+opaca al passaggio del mouse). Restano invariate tutte le azioni
+(Presenze/Modifica/Elimina) anche sulle righe svolte. La sezione non
+compare affatto se non ci sono eventi passati. Verificato su copia
+isolata del database reale (sola lettura) che la pagina risponda 200
+e che la sezione "Attività già svolte" compaia correttamente per gli
+eventi di giugno 2026 già trascorsi rispetto alla data odierna.
+
+### Task 47 — Import automatico Piano Annuale delle Attività da .xlsx
+
+Contesto: da Cowork, lavorando prima sul file
+"PIANO DELLE ATTIVITA_2025_26.xlsx" (fuori da questo repo), è stato
+definito un nuovo "standard" grafico/strutturale per il Piano Annuale
+delle Attività (banner-giorno a piena larghezza colorato, blocchi
+Consigli di Classe/GLO con righe-slot, righe-evento per Collegio/
+Formazione/Incontri scuola-famiglia, righe-scadenza), poi generato un
+modello vuoto di partenza e una proposta compilata per il 2026/27.
+Terzo passo concordato con Roberto: verificare che questo standard sia
+leggibile da CaronteApp e collegare l'import alla pagina Cambio Anno,
+sostituendo la necessità di trascrivere a mano ogni anno gli eventi
+nel codice (come fatto finora in `_import_piano_2025_26()`).
+
+- **`modules/import_piano_xlsx.py`** (nuovo) — parser puro (nessun
+  accesso al DB): `parse_piano_xlsx(file_bytes_o_path)` legge ogni
+  foglio mensile riconoscendo i ruoli delle righe dal colore di
+  riempimento della cella colonna "Attività" (banner blu = giorno,
+  banner grigio-blu = titolo sezione Consigli/GLO **solo se** seguito
+  da un banner-giorno, altrimenti banner puramente informativo e
+  ignorato; riga grigia "ORDINE DEL GIORNO" = nota, riattaccata a
+  posteriori a tutti gli slot già raccolti della sezione; riga verde
+  "⚑" = scadenza, ignorata perché senza orario). La data si ricostruisce
+  contando i giorni banner in ordine progressivo, facendo avanzare il
+  mese nei fogli combinati (es. "NOVEMBRE-DICEMBRE") quando il numero
+  del giorno torna indietro. Restituisce `{fogli, eventi, avvisi}`.
+- **`routes/attivita_ist.py`** — nuova route
+  `/attivita-ist/import-xlsx` (GET/POST) in due passi: upload → analisi
+  e anteprima (conteggio eventi per tipo + tabella completa, eventi
+  serializzati in un campo nascosto) → conferma esplicita prima di
+  scrivere qualunque cosa nel DB. Stesso meccanismo di preset
+  partecipanti già usato da `_import_piano_2025_26`. Controllo
+  duplicati su tipo+data+titolo+classe+**ora_inizio** (l'ora_inizio è
+  fondamentale: gli slot dei Consigli sono generici/non assegnati,
+  quindi hanno tutti lo stesso titolo e classe=None nello stesso
+  giorno — senza l'orario nella chiave, il 2°/3°/4° slot dello stesso
+  giorno veniva scambiato per un doppione del 1° e scartato: bug
+  trovato e corretto durante la verifica, prima di consegnare).
+- **`templates/attivita_ist/import_piano_xlsx.html`** (nuovo, form di
+  upload) e **`import_piano_xlsx_preview.html`** (nuovo, anteprima +
+  conferma). Pulsante "Import piano da xlsx" in `lista.html` aggiornato
+  per puntare qui (il vecchio import con dati fissi nel codice resta
+  raggiungibile come "legacy" per il 2025/26, non più linkato dalla
+  navigazione principale).
+- **`templates/cambio_anno/index.html`** — aggiunta una card
+  "Facoltativo — Importa Piano delle Attività" tra le operazioni A e B,
+  con link alla nuova pagina.
+
+**Verifica end-to-end**: eseguita su una copia completa e isolata
+dell'app in `/tmp` (venv del Mac non utilizzabile in sandbox Linux,
+reinstallate le dipendenze con pip nel sandbox), **mai sul
+`database.db` reale**. Caricata la proposta 2026/27 (274 eventi
+attesi): tutti riconosciuti correttamente (158 Consigli, 76 scrutini,
+14 GLO, 6 formazione, 6 incontri famiglia, 5 Collegio, 5 altro/elezioni,
+2 dipartimento/materia, 1 riunione referenti), partecipanti
+pre-compilati, nota ODG allegata agli slot corretti. Verificata anche
+l'idempotenza: ricaricando lo stesso file una seconda volta, tutti i
+274 eventi vengono riconosciuti come già presenti e nessuno viene
+duplicato. `database.db` reale confermato invariato (solo controlli
+di sola lettura + `py_compile` sui file toccati).
+
+**Nota**: questa sessione è stata condotta interamente da Cowork
+(non da Claude Code), agendo sui file del repository via accesso
+diretto alla cartella collegata (`/Users/Roberto/CaronteApp`); Roberto
+non ha ancora verificato la funzionalità di persona sull'app reale.
+
+**Aggiornamento — unificate le due griglie (eliminata la sovrapposizione)**:
+Roberto ha chiarito che l'esclusione dei TD dalla griglia originale
+era una scelta intenzionale in fase di progettazione, non una svista —
+e che la sezione "Altri docenti" aggiunta sopra creava due meccanismi
+paralleli per lo stesso scopo (segnalare un'uscita), col rischio di
+comportamenti incoerenti tra i due. Su sua richiesta, scelta UNA sola
+strada: la griglia "Docenti TI — gestione presenza" è stata allargata
+a `docenti_gestione` (tutti i contratti, non solo TI) ed è stata
+rimossa la sezione parallela "Altri docenti" e la query `altri_docenti`
+introdotte in questo stesso Task. Dentro l'unica griglia risultante,
+i pulsanti "→ AP" e "⏸ Asp." (mobilità sull'organico USR) restano
+visibili solo per i TI, dato che non hanno senso per un TD; per i
+non-TI il motivo di uscita proposto è "fine incarico" (`fine_td`)
+invece di "pensionamento". La sezione "TD/Supplenti inseriti per
+{{anno}}" resta invariata (informativa, per le nuove nomine) e la
+griglia unificata esclude chi vi compare già, evitando di mostrare lo
+stesso docente due volte. Corretta anche l'etichetta della sezione
+"Uscite TI per {{anno}}" in "Uscite per {{anno}}": la query non era
+mai stata limitata ai soli TI, solo il testo era fuorviante.
+
+Verificato di nuovo end-to-end sulla copia di prova: Cantarella (TD)
+compare nell'unica griglia con "fine incarico" tra le opzioni;
+segnata come uscita, sparisce da `_docenti_per_anno`/`/docenti`;
+compare in `/docenti?mostra=inattivi` CON il pulsante "Riattiva"
+(perché il motivo non è pensionamento); un docente TI pensionato
+(Buiarelli) resta invece senza possibilità di riattivazione, come
+previsto. Riattivata Cantarella end-to-end (`POST
+/docenti/<id>/riattiva`): `attivo` torna `True`, `anno_scol_uscita`
+si azzera, `anno_scol_inizio` si aggiorna al nuovo anno di rientro.
+`PRAGMA integrity_check` ok. Nessun riferimento residuo a
+`ti_attivi`/`altri_docenti` nel codice.
+
+**Nota — pagina Agenda irraggiungibile, ora collegata dalla Dashboard**:
+Roberto ha notato (verificato insieme via Claude in Chrome sull'app
+reale) che la pagina `/agenda`, pur completa e funzionante, non era
+collegata da nessun link o pulsante — né in navbar né altrove — quindi
+di fatto irraggiungibile per chiunque usasse l'app normalmente
+(esisteva solo un form nascosto per l'azione di eliminazione gruppo,
+richiamato dalla Dashboard, ma nessun link all'indice). Su richiesta
+di Roberto, aggiunto un pulsante "📅 Agenda" nella riga di azioni della
+Dashboard (`templates/dashboard.html`, accanto a "Prospetto"), non in
+navbar. Aggiornato anche il testo del primo passo nella guida Agenda
+(`modules/guida_content.py`) per riflettere la posizione reale del
+pulsante. Verificato visivamente sull'app reale (Claude in Chrome,
+non in sandbox): il pulsante compare in Dashboard, il click porta
+correttamente a `/agenda` con i dati reali, e la pagina di Guida
+mostra il testo aggiornato.
+
+**Nota — correzione dati reali LSP Matematica 1ª/2ª**: dopo aver
+spostato manualmente (Roberto, dal menu CC del passo 2) Matematica
+1ª e 2ª di LSP da A-27 ad A-26, il badge "atipica" compariva comunque
+— comportamento corretto ma non voluto in questo caso: il flag
+confronta la CC scelta con `id_cc_default`, che restava congelato al
+valore con cui la riga era stata creata (A-27), quindi il sistema la
+vedeva come un'eccezione anche se per Roberto è ormai la norma.
+Backup cifrato (`database_20260807_2010_pre_fix_lsp_atipica.db.enc`)
+e aggiornate a mano le righe `piano_studi` id 117 e 118: `id_cc_default`
+portato a 11 (A-26, come `id_classe_concorso`) e `atipica` a 0. Le
+righe id 119-121 (Matematica 3ª/4ª/5ª LSP, l'eccezione vera e propria)
+non sono state toccate — restano `id_cc_default=12 (A-27)`,
+`atipica=1`, badge visibile. Verificato `PRAGMA integrity_check` ok e,
+con un client di test contro l'app reale, che il badge non compaia più
+per le righe 117/118 e resti presente per 119/120/121.
+
+### Task 37 — Sezione Guida (FAQ + manuali scaricabili)
+
+Richiesta di Roberto: una sezione della navbar dedicata a FAQ e
+manuali d'uso, consultabile come pagine interattive e scaricabile
+come guida PDF vera e propria. Ambito concordato: prima le funzioni
+d'uso quotidiano (Dashboard, Assenze, Supplenze, Indisponibilità,
+Agenda, Cambi quadro), pubblico segreteria/collaboratori (linguaggio
+semplice, passo-passo), un PDF per singola sezione.
+
+- **`modules/guida_content.py`** — unica fonte del contenuto (lista
+  `SEZIONI`, una voce per sezione: slug, titolo, icona, riassunto,
+  "a cosa serve", passi numerati, FAQ, nota "attenzione" opzionale).
+  Sia la pagina HTML che il PDF leggono da qui, per non dover
+  scrivere lo stesso testo due volte in due posti che prima o poi
+  divergerebbero. Aggiungere una nuova sezione in futuro richiede solo
+  di aggiungere una voce a questa lista, non tocca le route.
+- **`routes/guida.py`** — blueprint `guida_bp`: `/guida` (indice a
+  schede), `/guida/<slug>` (pagina interattiva con FAQ ad
+  accordion), `/guida/<slug>/pdf` (genera il PDF con WeasyPrint,
+  stesso pattern già in uso per l'export GDPR di
+  `routes/docenti.py::esporta_dati`, incluso il fallback a HTML grezzo
+  se WeasyPrint non è installato nell'ambiente). Non richiede permessi
+  specifici (non è in `BLUEPRINT_PERMESSI`) — accessibile a chiunque
+  sia loggato, di qualunque ruolo.
+- **`templates/guida/index.html`** — indice a schede (icona +
+  titolo + riassunto), stesso stile a card già in uso in
+  Impostazioni.
+- **`templates/guida/sezione.html`** — pagina di una sezione: menu
+  laterale per passare alle altre, box "a cosa serve", passi numerati,
+  nota di attenzione se presente, FAQ ad accordion (apri/chiudi al
+  clic, senza libreria esterna), pulsante "Scarica PDF".
+- **`templates/guida/pdf_sezione.html`** — versione stampabile
+  (solo HTML/CSS inline, senza navbar) per WeasyPrint.
+- **`templates/base.html`** — voce "Guida" in navbar, subito dopo
+  Impostazioni.
+
+Contenuto scritto verificando riga per riga il comportamento reale
+del codice di ciascuna sezione (routes/assenze.py,
+modules/assenze_registrazione.py, routes/supplenze.py,
+routes/indisponibilita.py, routes/agenda.py, routes/cambi_quadro.py,
+routes/dashboard.py) — non testo generico, ma passi che corrispondono
+esattamente ai pulsanti e ai campi che l'utente vede.
+
+Verificato: tutte le 6 pagine (`/guida`, le 6 sotto-pagine, i 6 PDF)
+restituiscono 200 OK; uno slug inesistente dà 404; il link "Guida"
+compare in navbar; ogni pagina PDF contiene effettivamente il testo
+della sezione corrispondente. L'ambiente sandbox di Cowork non ha
+WeasyPrint installato (stesso limite già noto per l'export GDPR) —
+il fallback restituisce l'HTML stampabile invece di rompersi: nessun
+problema atteso sul Mac di Roberto, dove WeasyPrint è già installato
+e in uso per l'export GDPR.
+
+### Task 36 — Bug reale: badge atipicità assente per CC con più materie insieme
+
+Roberto ha segnalato che in LSP la materia A-12 (Lingua e letteratura
+italiana + Storia insegnate insieme, anni 1-3, invece della A-11
+normativa) non mostrava il badge "⚠︎️ Atipicità" nel passo 2 (Piano di
+Studi), mentre A-26 (Matematica al posto di A-27, anni 3-5) lo
+mostrava correttamente.
+
+Causa: `templates/impostazione_anno/piano_studi.html` ha due layout
+diversi per blocco CC — uno per CC con una sola materia (es. A-26 con
+solo Matematica) che include il menu di cambio CC e il badge atipica,
+e uno più compatto per CC con più materie insieme nella stessa colonna
+(es. A-12 con Lingua + Storia) che NON conteneva affatto quel codice
+— non un controllo sbagliato, proprio l'intero blocco mancava nel
+ramo "multi-materia". Il flag `atipica` era comunque salvato
+correttamente nel database (verificato: `True` su tutte le righe A-12
+di Roberto) — il problema era solo di visualizzazione.
+
+Aggiunto lo stesso menu CC + badge atipica + checkbox compresenza
+anche al ramo multi-materia, identico a quello già presente nel ramo
+a materia singola. Verificato: le 5 righe A-12 di LSP (id 46,47,48,59,60)
+ora mostrano correttamente il select `cc_<id>` e il badge; verificato
+anche che le pagine di altri indirizzi (LSC, CAT) continuino a
+rendere correttamente (200 OK), nessuna regressione sul layout a
+materia singola.
+
+### Task 34 — Bug reale: TD/supplenti storici invisibili al passo 7 (uscite)
+
+Roberto ha segnalato che in `/docenti` con anno 2026-2027 selezionato
+comparivano ancora docenti che non dovrebbero più essere in servizio.
+Primo controllo: la logica di filtro per anno (`_docenti_per_anno`)
+funzionava correttamente — i docenti già segnati come usciti (con
+`anno_scol_uscita`) venivano esclusi come previsto.
+
+Roberto ha però messo il dito sul punto vero: **Cantarella (TD
+annuale) non compariva da nessuna parte nella pagina Impostazione
+Anno → passo 7** (`/impostazione-anno/docenti-anno`), quindi non era
+nemmeno possibile segnarla come uscita da lì. Verificato: la pagina
+costruisce 4 gruppi — TI presenti (`tipo_contratto == 'TI'`), uscite,
+AP uscenti/entranti, e "TD/supplenti inseriti per questo anno"
+(`anno_scol_inizio == anno`). Un docente non-TI assunto in un anno
+precedente (spesso con `anno_scol_inizio` mai valorizzato, come
+Cantarella) non rientra in NESSUno dei 4 gruppi: non è TI, e non è
+stato "inserito per questo anno" — quindi resta strutturalmente
+invisibile in quella pagina, per qualunque anno si selezioni. Risultato:
+impossibile segnalarne l'uscita, e quindi rimane "in servizio" per
+sempre secondo `/docenti` anche quando in realtà se n'è andato.
+Interessa 29 docenti attivi su 93 (TD_annuale, TD_GS, supplente, IRC
+con `anno_scol_inizio` non impostato).
+
+Aggiunta una quinta lista in `routes/impostazione_anno.py::docenti_anno()`
+— `altri_docenti`: non-TI, con `anno_scol_inizio` diverso dall'anno
+selezionato (o NULL) e non già segnati come usciti per quell'anno.
+Nuova sezione in `templates/impostazione_anno/docenti_anno.html`
+("Altri docenti — TD/supplenti/IRC") con lo stesso meccanismo "✕︎
+Esce" già usato per i TI, motivo di default `fine_td` (valore già
+previsto dal modello ma mai esposto nel form).
+
+Verificato in isolamento (harness sull'app reale con database.db
+puntato a una copia in `/tmp`, mai sul file in uso): Cantarella ora
+compare nella nuova sezione del passo 7; segnandola come uscita
+2026-2027/fine_td, sparisce correttamente da `_docenti_per_anno` e da
+`/docenti?anno=2026-2027`, e ricompare in `/docenti?mostra=inattivi`;
+`PRAGMA integrity_check` ok; smoke test `/`, `/docenti`,
+`/impostazione-anno/docenti-anno` tutti 200 OK. Il database reale non
+è stato toccato — nessuna delle 29 anagrafiche coinvolte è stata
+modificata: la decisione su chi segnare come uscito e con quale
+motivo spetta a Roberto, pagina per pagina, dalla nuova sezione.
+
+### Task 33 — Inserimento rapido incarichi: docente unico + multi-classe
+
+Roberto ha segnalato due problemi nella pagina `/incarichi`: il form
+permetteva un solo incarico alla volta anche quando serve assegnarne
+più di uno allo stesso docente, e il menu a tendina dell'indirizzo
+(nel contesto "classe") ripeteva ogni indirizzo una volta per ogni
+sezione attiva (es. "AFM" comparso 3 volte se ci sono tre sezioni AFM).
+
+Ridisegnato il form di `templates/incarichi/index.html` seguendo lo
+stesso pattern multi-riga già usato in "Nuova indisponibilità": il
+docente si seleziona una volta sola in alto, poi si possono aggiungere
+più righe incarico con "+ Aggiungi incarico", ciascuna con il proprio
+tipo, contesto e compenso. Per gli incarichi legati a una classe
+(es. Coordinatore di classe), il contesto non è più una tripla di
+tendine indirizzo/anno/sezione ma un elenco di checkbox delle classi
+attive raggruppate per indirizzo (l'indirizzo compare una sola volta
+come intestazione di gruppo, non ripetuto) — selezionandone più di una
+si genera una nomina per ciascuna in un solo salvataggio.
+
+`routes/incarichi.py::salva()` riscritta per accettare il nuovo formato
+(`id_tipo[i]`, `classi[i][]`, `note[i]`, ecc.) e loopare su tutte le
+righe e tutte le classi selezionate, creando una `IncaricaDocente` per
+ogni combinazione; il controllo duplicati esistente (stesso
+docente+tipo+contesto+anno) resta invariato, ora applicato per ogni
+singola nomina generata.
+
+Verificato in isolamento (harness Flask+SQLAlchemy puntato su una copia
+del database in `/tmp`, mai sul file reale): pagina `/incarichi` non
+contiene più il vecchio `<select name="indirizzo">` (conferma dedup);
+un salvataggio con 1 riga "Coordinatore di classe" e 2 classi selezionate
+genera correttamente 2 nomine distinte; un secondo invio identico non
+crea doppioni (controllo duplicati ancora attivo); `PRAGMA
+integrity_check` ok.
+
 ### Task 27 — Gestione elegante del mismatch CSRF (errorhandler)
 Su ministudio l'errore "Bad Request: The CSRF tokens do not match" si
 è ripresentato una seconda volta, questa volta senza altre schede/Mac

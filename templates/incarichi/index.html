@@ -20,107 +20,38 @@
 {# ── Form aggiunta incarico ───────────────────────────────────────── #}
 <div class="card" style="padding:16px 18px; margin-bottom:20px; border-left:4px solid #1e40af;">
     <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
-        + Assegna incarico
+        + Assegna incarico/hi
     </div>
-    <form method="post" action="{{ url_for('incarichi.salva') }}"
-          style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <form method="post" action="{{ url_for('incarichi.salva') }}" id="form-incarichi">
         <input type="hidden" name="anno_scol" value="{{ anno }}">
+        <input type="hidden" name="n_righe" id="n_righe" value="0">
 
-        <div style="flex:2; min-width:200px;">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Tipo incarico *</div>
-            <select name="id_tipo" id="sel-tipo" required
-                    onchange="aggiornaCampiContesto()"
-                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
-                           border-radius:5px; font-size:.82rem;">
-                <option value="">— seleziona —</option>
-                {% for cat, label in cat_label.items() %}
-                <optgroup label="{{ label }}">
-                    {% for t in tipi if t.categoria == cat %}
-                    <option value="{{ t.id }}"
-                            data-collegato="{{ t.collegato_a or '' }}"
-                            data-compenso="{{ t.compenso_tipo or '' }}"
-                            data-importo="{{ t.importo_default or '' }}">
-                        {{ t.nome }}
-                    </option>
-                    {% endfor %}
-                </optgroup>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div style="flex:2; min-width:180px;">
+        <div style="max-width:260px; margin-bottom:14px;">
             <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Docente *</div>
             <select name="id_docente" required
-                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
-                           border-radius:5px; font-size:.82rem;">
+                    style="width:100%; padding:6px 8px; border:1px solid #d1d5db;
+                           border-radius:5px; font-size:.85rem;">
                 <option value="">— seleziona —</option>
                 {% for d in docenti %}
                 <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
                 {% endfor %}
             </select>
-        </div>
-
-        {# Contesto: classe (se collegato_a == 'classe') #}
-        <div id="ctx-classe" style="display:none; min-width:150px;">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Classe</div>
-            <select name="indirizzo" id="sel-indirizzo"
-                    style="padding:5px 7px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; margin-right:4px;">
-                <option value="">— ind —</option>
-                {% for cs in classi %}
-                <option value="{{ cs.indirizzo }}">{{ cs.indirizzo }}</option>
-                {% endfor %}
-            </select>
-            <select name="anno_corso"
-                    style="padding:5px 7px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:52px; margin-right:4px;">
-                <option value="">—</option>
-                {% for ac in range(1,6) %}
-                <option value="{{ ac }}">{{ ac }}°</option>
-                {% endfor %}
-            </select>
-            <select name="sezione"
-                    style="padding:5px 7px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; width:52px;">
-                <option value="">—</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-            </select>
-        </div>
-
-        {# Contesto: dipartimento #}
-        <div id="ctx-dip" style="display:none; min-width:160px;">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Dipartimento</div>
-            <select name="id_dipartimento"
-                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
-                           border-radius:5px; font-size:.82rem;">
-                <option value="">— seleziona —</option>
-                {% for dip in dipartimenti %}
-                <option value="{{ dip.id }}">{{ dip.sigla }} — {{ dip.nome }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        {# Compenso #}
-        <div id="ctx-compenso" style="display:none;">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;" id="lbl-compenso">Importo €</div>
-            <div style="display:flex; gap:4px; align-items:center;">
-                <input type="number" name="ore" id="inp-ore" step="0.5" min="0"
-                       placeholder="ore" style="width:60px; padding:4px 6px; border:1px solid #d1d5db;
-                              border-radius:5px; font-size:.82rem; display:none;">
-                <input type="number" name="importo" id="inp-importo" step="0.01" min="0"
-                       placeholder="€" style="width:80px; padding:4px 6px; border:1px solid #d1d5db;
-                              border-radius:5px; font-size:.82rem;">
+            <div style="font-size:.7rem; color:var(--grigio); margin-top:3px;">
+                Vale per tutte le righe incarico sotto.
             </div>
         </div>
 
-        <div style="flex:2; min-width:160px;">
-            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Note</div>
-            <input type="text" name="note" placeholder="opzionale"
-                   style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
-                          border-radius:5px; font-size:.82rem;">
-        </div>
+        <div id="righe-incarico-container"></div>
 
-        <button type="submit" class="btn btn-success btn-sm" style="white-space:nowrap;">
-            ✓︎ Assegna
-        </button>
+        <div style="display:flex; gap:10px; margin-top:6px;">
+            <button type="button" class="btn btn-primary btn-sm"
+                    onclick="aggiungiRigaIncarico()">
+                + Aggiungi incarico
+            </button>
+            <button type="submit" class="btn btn-success btn-sm">
+                ✓︎ Salva tutti
+            </button>
+        </div>
     </form>
 </div>
 
@@ -210,20 +141,133 @@
 {% endif %}
 
 <script>
-function aggiornaCampiContesto() {
-    const sel = document.getElementById('sel-tipo');
+// Tipi incarico raggruppati per categoria, con i metadati necessari
+// per mostrare/nascondere i campi di contesto e compenso.
+const CATEGORIE = [
+    {% for cat, label in cat_label.items() %}
+    { cat: "{{ cat }}", label: {{ label|tojson }}, tipi: [
+        {% for t in tipi if t.categoria == cat %}
+        { id: {{ t.id }}, nome: {{ t.nome|tojson }},
+          collegato: {{ (t.collegato_a or '')|tojson }},
+          compenso: {{ (t.compenso_tipo or '')|tojson }},
+          importo: {{ t.importo_default or 'null' }} },
+        {% endfor %}
+    ]},
+    {% endfor %}
+];
+
+// Classi attive raggruppate per indirizzo (ogni indirizzo compare
+// una volta sola come intestazione di gruppo, non ripetuto per sezione).
+const CLASSI_PER_INDIRIZZO = {
+    {% for indirizzo, cs_list in classi_per_indirizzo.items() %}
+    "{{ indirizzo }}": [
+        {% for cs in cs_list %}
+        { val: "{{ cs.indirizzo }}|{{ cs.anno_corso }}|{{ cs.sezione }}",
+          label: {{ cs.etichetta|tojson }} },
+        {% endfor %}
+    ],
+    {% endfor %}
+};
+
+const DIPARTIMENTI = [
+    {% for dip in dipartimenti %}
+    { id: {{ dip.id }}, label: {{ (dip.sigla ~ ' — ' ~ dip.nome)|tojson }} },
+    {% endfor %}
+];
+
+let nRigheIncarico = 0;
+
+function aggiungiRigaIncarico() {
+    const idx = nRigheIncarico++;
+    document.getElementById('n_righe').value = nRigheIncarico;
+
+    const optgroups = CATEGORIE.map(c => `
+        <optgroup label="${c.label}">
+            ${c.tipi.map(t => `<option value="${t.id}"
+                data-collegato="${t.collegato}" data-compenso="${t.compenso}"
+                data-importo="${t.importo ?? ''}">${t.nome}</option>`).join('')}
+        </optgroup>`).join('');
+
+    const classiCheckbox = Object.entries(CLASSI_PER_INDIRIZZO).map(([ind, list]) => `
+        <div style="margin-bottom:4px;">
+            <span style="font-size:.7rem; font-weight:700; color:var(--grigio); margin-right:6px;">${ind}</span>
+            ${list.map(c => `
+                <label style="display:inline-flex; align-items:center; gap:3px; margin-right:8px;
+                               font-size:.78rem; cursor:pointer;">
+                    <input type="checkbox" name="classi[${idx}][]" value="${c.val}">
+                    ${c.label}
+                </label>`).join('')}
+        </div>`).join('');
+
+    const dipOptions = DIPARTIMENTI.map(d =>
+        `<option value="${d.id}">${d.label}</option>`).join('');
+
+    const div = document.createElement('div');
+    div.className = 'riga-incarico';
+    div.id = `riga-incarico-${idx}`;
+    div.style.cssText = 'background:#f8fafc; border:1px solid #e5eaf0; border-radius:8px; padding:12px 14px; margin-bottom:10px; position:relative;';
+    div.innerHTML = `
+        <button type="button" onclick="rimuoviRigaIncarico(${idx})" title="Rimuovi"
+                style="position:absolute; top:8px; right:10px; background:none; border:none;
+                       color:var(--grigio); font-size:1rem; cursor:pointer;">🗑</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:2; min-width:200px;">
+                <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Tipo incarico *</div>
+                <select name="id_tipo[${idx}]" required onchange="aggiornaCampiContesto(${idx})"
+                        style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;">
+                    <option value="">— seleziona —</option>
+                    ${optgroups}
+                </select>
+            </div>
+            <div id="ctx-compenso-${idx}" style="display:none;">
+                <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;" id="lbl-compenso-${idx}">Importo €</div>
+                <div style="display:flex; gap:4px; align-items:center;">
+                    <input type="number" name="ore[${idx}]" id="inp-ore-${idx}" step="0.5" min="0"
+                           placeholder="ore" style="width:60px; padding:4px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem; display:none;">
+                    <input type="number" name="importo[${idx}]" id="inp-importo-${idx}" step="0.01" min="0"
+                           placeholder="€" style="width:80px; padding:4px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;">
+                </div>
+            </div>
+            <div style="flex:2; min-width:160px;">
+                <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Note</div>
+                <input type="text" name="note[${idx}]" placeholder="opzionale"
+                       style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;">
+            </div>
+        </div>
+
+        <div id="ctx-classe-${idx}" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed #e0e0e0;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:4px;">
+                Classi (seleziona una o più — una nomina per ciascuna) *
+            </div>
+            ${classiCheckbox}
+        </div>
+
+        <div id="ctx-dip-${idx}" style="display:none; margin-top:10px; max-width:280px;">
+            <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Dipartimento</div>
+            <select name="id_dipartimento[${idx}]"
+                    style="width:100%; padding:5px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;">
+                <option value="">— seleziona —</option>
+                ${dipOptions}
+            </select>
+        </div>
+    `;
+    document.getElementById('righe-incarico-container').appendChild(div);
+}
+
+function aggiornaCampiContesto(idx) {
+    const sel = document.querySelector(`#riga-incarico-${idx} select[name="id_tipo[${idx}]"]`);
     const opt = sel.options[sel.selectedIndex];
     const collegato = opt ? opt.dataset.collegato : '';
     const compenso  = opt ? opt.dataset.compenso  : '';
     const importo   = opt ? opt.dataset.importo   : '';
 
-    document.getElementById('ctx-classe').style.display    = collegato === 'classe'       ? 'flex' : 'none';
-    document.getElementById('ctx-dip').style.display       = collegato === 'dipartimento' ? 'block': 'none';
-    document.getElementById('ctx-compenso').style.display  = compenso  ? 'block' : 'none';
+    document.getElementById(`ctx-classe-${idx}`).style.display   = collegato === 'classe'       ? 'block' : 'none';
+    document.getElementById(`ctx-dip-${idx}`).style.display      = collegato === 'dipartimento' ? 'block' : 'none';
+    document.getElementById(`ctx-compenso-${idx}`).style.display = compenso  ? 'block' : 'none';
 
-    const inpOre    = document.getElementById('inp-ore');
-    const inpImp    = document.getElementById('inp-importo');
-    const lblComp   = document.getElementById('lbl-compenso');
+    const inpOre  = document.getElementById(`inp-ore-${idx}`);
+    const inpImp  = document.getElementById(`inp-importo-${idx}`);
+    const lblComp = document.getElementById(`lbl-compenso-${idx}`);
 
     if (compenso === 'orario') {
         inpOre.style.display = 'block';
@@ -236,6 +280,13 @@ function aggiornaCampiContesto() {
         if (importo) inpImp.value = importo;
     }
 }
-document.addEventListener('DOMContentLoaded', aggiornaCampiContesto);
+
+function rimuoviRigaIncarico(idx) {
+    const el = document.getElementById(`riga-incarico-${idx}`);
+    if (el) el.remove();
+}
+
+// Prima riga automatica
+aggiungiRigaIncarico();
 </script>
 {% endblock %}

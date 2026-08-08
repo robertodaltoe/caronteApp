@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Guida — {{ sez.titolo }}</title>
+<style>
+    @page { size: A4; margin: 2.2cm 1.8cm; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#1e293b; font-size:11pt; line-height:1.5; }
+    .intestazione { border-bottom:3px solid #1e40af; padding-bottom:10px; margin-bottom:20px; }
+    .intestazione .app { font-size:9pt; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+    .intestazione h1 { font-size:20pt; color:#1e40af; margin:4px 0 0; }
+    h2 { font-size:12.5pt; color:#1e40af; margin:22px 0 8px; border-bottom:1px solid #e2e8f0; padding-bottom:4px; }
+    .a-cosa-serve { background:#f0f4ff; border-left:3px solid #1e40af; padding:10px 14px; font-size:10.5pt; }
+    .passo { margin-bottom:12px; }
+    .passo .num { display:inline-block; width:20px; height:20px; border-radius:50%;
+        background:#1e40af; color:white; text-align:center; line-height:20px;
+        font-size:9.5pt; font-weight:bold; margin-right:8px; }
+    .passo .titolo { font-weight:bold; }
+    .passo .testo { margin:2px 0 0 28px; font-size:10.5pt; color:#374151; }
+    .attenzione { background:#fffbeb; border-left:3px solid #f59e0b; padding:10px 14px;
+        font-size:10.5pt; color:#78350f; }
+    .attenzione .titolo { font-weight:bold; color:#b45309; margin-bottom:3px; }
+    .faq-q { font-weight:bold; font-size:10.5pt; margin-top:10px; }
+    .faq-a { font-size:10.5pt; color:#374151; margin:2px 0 0; }
+    .piede { margin-top:30px; padding-top:10px; border-top:1px solid #e2e8f0;
+        font-size:8.5pt; color:#94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="intestazione">
+    <div class="app">CaronteApp — Guida utente</div>
+    <h1>{{ sez.icona }} {{ sez.titolo }}</h1>
+</div>
+
+<h2>A cosa serve</h2>
+<div class="a-cosa-serve">{{ sez.a_cosa_serve }}</div>
+
+<h2>Passo per passo</h2>
+{% for titolo, testo in sez.passi %}
+<div class="passo">
+    <span class="num">{{ loop.index }}</span><span class="titolo">{{ titolo }}</span>
+    <div class="testo">{{ testo }}</div>
+</div>
+{% endfor %}
+
+{% if sez.attenzione %}
+<div class="attenzione">
+    <div class="titolo">⚠ Attenzione</div>
+    {{ sez.attenzione }}
+</div>
+{% endif %}
+
+{% if sez.faq %}
+<h2>Domande frequenti</h2>
+{% for domanda, risposta in sez.faq %}
+<div class="faq-q">{{ domanda }}</div>
+<div class="faq-a">{{ risposta }}</div>
+{% endfor %}
+{% endif %}
+
+<div class="piede">
+    Guida generata da CaronteApp — IIS "Leonardo da Vinci" Chiavenna.
+    Per la versione sempre aggiornata, consulta la sezione Guida direttamente nell'app.
+</div>
+
+</body>
+</html>

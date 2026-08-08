@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Anteprima import Piano Attività{% endblock %}
+{% block content %}
+<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:6px;">⇩︎ Anteprima import — {{ eventi|length }} eventi trovati</h1>
+<div style="font-size:.82rem; color:var(--grigio); margin-bottom:16px;">
+    Fogli letti: {{ fogli|join(', ') }}
+</div>
+
+{% if avvisi %}
+<div class="card" style="padding:14px 18px; border-left:4px solid #f59e0b; background:#fffbeb; margin-bottom:16px;">
+    <strong style="color:#92400e;">⚠︎ Avvisi durante la lettura ({{ avvisi|length }}):</strong>
+    <ul style="margin:8px 0 0 18px; font-size:.82rem; color:#92400e; line-height:1.7;">
+        {% for a in avvisi %}
+        <li>{{ a }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <div style="font-weight:700; margin-bottom:10px; font-size:.9rem;">Eventi per tipo</div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        {% for tipo, n in conteggio_tipi.items() %}
+        <span style="background:#f1f5f9; border-radius:14px; padding:5px 12px; font-size:.8rem;">
+            {{ tipi.get(tipo, {}).get('emoji', '◆') }} <strong>{{ tipi.get(tipo, {}).get('label', tipo) }}</strong> — {{ n }}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card" style="padding:0; margin-bottom:16px; max-height:480px; overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.8rem;">
+        <thead style="position:sticky; top:0; background:#fff; box-shadow:0 1px 0 #e5e7eb;">
+            <tr style="text-align:left;">
+                <th style="padding:8px 10px;">Data</th>
+                <th style="padding:8px 10px;">Tipo</th>
+                <th style="padding:8px 10px;">Titolo</th>
+                <th style="padding:8px 10px;">Orario</th>
+                <th style="padding:8px 10px;">Classe</th>
+                <th style="padding:8px 10px;">Foglio</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in eventi %}
+            <tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:6px 10px; white-space:nowrap;">{{ e.data }}</td>
+                <td style="padding:6px 10px; white-space:nowrap;">{{ tipi.get(e.tipo, {}).get('emoji','◆') }} {{ tipi.get(e.tipo, {}).get('label', e.tipo) }}</td>
+                <td style="padding:6px 10px; max-width:360px;">{{ e.titolo.split('\n')[0] }}</td>
+                <td style="padding:6px 10px; white-space:nowrap;">{{ e.ora_ini or '—' }}–{{ e.ora_fin or '—' }}</td>
+                <td style="padding:6px 10px;">{{ e.classe or '—' }}</td>
+                <td style="padding:6px 10px; color:var(--grigio);">{{ e.foglio }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="padding:16px 20px; border-left:4px solid #16a34a;">
+    <p style="font-size:.85rem; margin-bottom:12px;">
+        Nulla è stato ancora salvato. Confermando, gli eventi verranno creati
+        (quelli già presenti con stesso tipo/data/titolo/classe vengono saltati automaticamente).
+    </p>
+    <form method="post" action="{{ url_for('attivita_ist.import_piano_xlsx') }}">
+        <textarea name="eventi_json" style="display:none">{{ eventi_json }}</textarea>
+        <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-success">✓︎ Conferma e importa {{ eventi|length }} eventi</button>
+            <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="btn">← Ricarica un altro file</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -9,6 +9,8 @@
 .pill-b  { background:#dcfce7; color:#166534; }
 .pill-no { background:#f3f4f6; color:#6b7280; }
 .ev-row:hover { background:#f8fafc; }
+.ev-row-svolta { opacity:.62; }
+.ev-row-svolta:hover { opacity:1; background:#f8fafc; }
 .tipo-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
 .dot-collegio         { background:#3b82f6; }
 .dot-consiglio_classe { background:#8b5cf6; }
@@ -30,7 +32,7 @@
     <h1 style="font-size:1.4rem; color:var(--blu);">▨︎ Attività Istituzionali</h1>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('attivita_ist.form') }}" class="btn btn-success btn-sm">+ Nuovo evento</a>
-        <a href="{{ url_for('attivita_ist.import_piano') }}" class="btn btn-sm btn-primary">⇩︎ Import piano</a>
+        <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="btn btn-sm btn-primary">⇩︎ Import piano da xlsx</a>
         <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm" style="background:#7c3aed;color:white;">▥︎ Dipartimenti/Materie</a>
         
     </div>
@@ -59,9 +61,7 @@
     </form>
 </div>
 
-<!-- TABELLA EVENTI -->
-<div class="card">
-    {% if eventi %}
+{% macro tabella_eventi(eventi, svolte=false) %}
     <table style="table-layout:auto; width:100%;">
         <thead>
             <tr>
@@ -76,7 +76,7 @@
         </thead>
         <tbody>
         {% for e in eventi %}
-        <tr class="ev-row">
+        <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}">
             <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
                 <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
             </td>
@@ -119,6 +119,12 @@
         {% endfor %}
         </tbody>
     </table>
+{% endmacro %}
+
+<!-- TABELLA EVENTI FUTURI/ODIERNI -->
+<div class="card">
+    {% if eventi_futuri %}
+        {{ tabella_eventi(eventi_futuri) }}
     {% else %}
     <p style="text-align:center; color:var(--grigio); padding:32px;">
         Nessun evento trovato.<br>
@@ -126,4 +132,14 @@
     </p>
     {% endif %}
 </div>
+
+<!-- TABELLA EVENTI GIÀ SVOLTI -->
+{% if eventi_passati %}
+<div style="margin-top:28px;">
+    <h2 style="font-size:1.05rem; color:var(--grigio); margin-bottom:10px;">▤︎ Attività già svolte</h2>
+    <div class="card" style="background:#f8f9fa;">
+        {{ tabella_eventi(eventi_passati, svolte=true) }}
+    </div>
+</div>
+{% endif %}
 {% endblock %}
