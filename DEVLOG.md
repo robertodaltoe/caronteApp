@@ -4,6 +4,69 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 35 — Restyling colori: resto dell'app + export XLSX (Cowork)
+
+**Contesto:** completamento diretto della Sessione 34, stessa
+metodologia (mappatura indaco/viola/rosso/verde/ambra generici -> token
+di `base.html`), estesa a tutte le sezioni rimanenti. Tre commit:
+`e5d71d6`, `e350cf6`, `355fee2`.
+
+### Web — sezioni rimanenti (`e5d71d6`, `e350cf6`)
+Applicata la stessa mappatura già validata nella Sessione 34 a 37 file
+in blocco (stessi pattern di colore ripetuti identici ovunque, quindi
+sostituzione con uno script unico invece che file per file):
+- Attività, Attività Istituzionali, Recupero (agosto/giugno), Rientro,
+  Esami Integrativi, Incarichi, Cambio Anno — 33 file.
+- Form di dettaglio: `assenza_form.html`, `docente_form.html`,
+  `supplenza_form.html`, `modifica_assenza.html` — 4 file
+  (`indisponibilita_form.html`, `cambio_form.html`,
+  `cambio_modifica.html`, `utenti/form.html` non avevano colori da
+  sostituire in questa mappatura).
+
+**Caso particolare** in `docente_form.html`: un `loop.cycle` di 6 colori
+distingue le materie insegnate da un docente — categoriale, come gli
+indirizzi in Assegnazioni. Escluso da questa un colore (`#b45309`) che
+sarebbe altrimenti coinciso con un altro già mappato sullo stesso
+token (`--giallo`), per non ridurre la rotazione a 5 tonalità invece
+di 6.
+
+Verificato: sintassi Jinja corretta su tutti i file (35 nel primo giro,
+via `app.jinja_env.parse()`), app avviata dal vivo più volte (Attività,
+Recupero, Docenti/nuovo, Assenze/nuova, Incarichi) — nessun errore.
+
+### Export XLSX (`355fee2`)
+Gli export Excel (`openpyxl`, non CSS) avevano lo stesso problema dei
+vecchi template: `routes/export_xlsx.py` definiva `BLU = '1e3a5f'`
+(vecchio navy) come colore di default per intestazioni e titoli in
+**tutti e 10** gli export dell'hub Impostazione Anno. Allineato a
+`7a1c17` (lo stesso `--blu` di `base.html`); allineate anche
+`BLU_L`/`VERD`/`VERD_L`/`ROSS`/`GIAL` ai valori esatti della palette
+web.
+
+Lo stesso `1e3a5f` è stato trovato *indipendentemente* (costanti locali
+separate, non condivise) in altri 5 punti: `esami_integrativi.py`,
+`recupero.py`, `recupero_export.py` (×2), `rientro.py`. Corretti tutti.
+
+**Verifica reale, non solo a occhio**: script Python con `urllib` che fa
+login (gestendo il token CSRF), scarica `/export/p1` per davvero, poi
+riapre il file con `openpyxl` e legge il colore effettivo delle celle
+— confermato `7a1c17` sulle intestazioni.
+
+**Lasciata intatta**, in entrambi i giri: la palette categoriale per
+indirizzo/passo (sia nei template web sia nell'export XLSX,
+`export_xlsx.py` righe 327-332) — stessa scelta della Sessione 34, è
+funzionale/di orientamento non di brand.
+
+### Stato del restyling a fine sessione
+Copertura pressoché completa: shell (`base.html`), login, tutte le
+sezioni principali, form di dettaglio, export XLSX. Aperto solo se
+Roberto vuole procedere: ridisegnare le due palette categoriali
+(indirizzi, passi Impostazione Anno) mantenendole distinguibili ma
+coerenti col resto — non ancora affrontato, richiede curare N tonalità
+nuove invece di un semplice swap di token.
+
+---
+
 ## Sessione 34 — Restyling completo: font, icona, login, colori sezione per sezione (Cowork)
 
 **Contesto:** seguito diretto della Sessione 33. Dopo il debug critico,
