@@ -2,7 +2,7 @@ from flask import Flask, redirect, url_for, flash, request
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from models import db
-import os, locale, shutil
+import os, locale, secrets, shutil
 
 # WeasyPrint: su macOS assicura che le librerie Homebrew siano trovate
 import sys as _sys
@@ -11,17 +11,71 @@ if _sys.platform == 'darwin':
         '/opt/homebrew/lib:' + os.environ.get('DYLD_LIBRARY_PATH', ''))
 from datetime import datetime, timedelta
 
-def create_app():
+def _ottieni_secret_key(base_dir):
+    """
+    Ordine di preferenza:
+    1. Variabile d'ambiente CARONTE_SECRET_KEY, se impostata esplicitamente.
+    2. File locale secret_key.txt (creato da questa stessa funzione al
+       primo avvio, MAI committato — è già in .gitignore): letto tale e
+       quale se esiste, cosi' le sessioni sopravvivono ai riavvii.
+    3. Se nessuno dei due esiste ancora (primissimo avvio su una macchina):
+       genera una chiave casuale e la scrive nel file per i prossimi avvii.
+
+    Sostituisce la vecchia chiave fissa 'suplenzeapp-chiave-locale-2025'
+    scritta nel codice sorgente (quindi nota a chiunque avesse accesso al
+    repository): da questo avvio in poi tutte le sessioni già aperte
+    vengono invalidate una tantum (bastera' un nuovo login, le sessioni
+    durano comunque solo 8 ore — vedi PERMANENT_SESSION_LIFETIME).
+    """
+    env = os.environ.get('CARONTE_SECRET_KEY')
+    if env:
+        return env
+
+    percorso = os.path.join(base_dir, 'secret_key.txt')
+    if os.path.exists(percorso):
+        with open(percorso, 'r', encoding='utf-8') as f:
+            chiave = f.read().strip()
+        if chiave:
+            return chiave
+
+    chiave = secrets.token_hex(32)
+    with open(percorso, 'w', encoding='utf-8') as f:
+        f.write(chiave)
+    try:
+        os.chmod(percorso, 0o600)  # leggibile solo dall'utente proprietario
+    except OSError:
+        pass  # es. Windows: chmod non garantisce questa granularità, non bloccante
+    print(f"[INFO] Generata una nuova chiave di sessione locale in {percorso} "
+          "(primo avvio su questa macchina, o file mancante). Non va mai "
+          "committata né condivisa.", flush=True)
+    return chiave
+
+
+def create_app(avvio_con_reloader=True):
+    """
+    avvio_con_reloader: dice a create_app() se il chiamante avvierà poi
+    l'app con il reloader Werkzeug (use_reloader=True in app.run() —
+    il caso normale di questo file, vedi '__main__' in fondo). Serve solo
+    a decidere COME evitare il doppio avvio del thread di sync automatico
+    (vedi sotto): con reloader attivo, Werkzeug esegue create_app() due
+    volte in due processi diversi e va scelto solo quello giusto; senza
+    reloader (es. un ipotetico futuro deploy con gunicorn, che non passa
+    da qui) non c'è alcun doppio avvio da evitare, quindi il thread deve
+    partire subito — un eventuale entrypoint diverso da questo dovrebbe
+    chiamare create_app(avvio_con_reloader=False) esplicitamente.
+    """
     app = Flask(__name__)
 
     base_dir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    # SECRET_KEY: preferisce la variabile d'ambiente CARONTE_SECRET_KEY;
-    # se non impostata, usa il valore storico come fallback (nessuna sessione
-    # esistente viene invalidata da questa modifica).
-    app.config['SECRET_KEY'] = os.environ.get('CARONTE_SECRET_KEY', 'suplenzeapp-chiave-locale-2025')
+    app.config['SECRET_KEY'] = _ottieni_secret_key(base_dir)
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)  # fine giornata lavorativa
+    # Ricarica i template ad ogni richiesta invece di tenerli in cache.
+    # Va impostato esplicitamente perché di default segue app.debug, ora
+    # spento (vedi fondo file) — senza questa riga, con debug=False una
+    # modifica a un template non si vedrebbe più senza riavviare il processo.
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     db.init_app(app)
 
@@ -168,10 +222,15 @@ def create_app():
             return None
 
         # ── BYPASS SOLO PER VERIFICA VISIVA IN LOCALE ──────────────────
-        # Attivo SOLO se CARONTE_SKIP_LOGIN=1 è impostata esplicitamente
-        # prima dell'avvio. Simula login come utente 'dsga'. NON usare in
-        # produzione/rete condivisa: disattivare subito dopo il test.
-        if os.environ.get('CARONTE_SKIP_LOGIN') == '1' and not session.get('utente_id'):
+        # Attivo SOLO se CARONTE_SKIP_LOGIN=1 *e* CARONTE_DEBUG=1 sono
+        # entrambe impostate esplicitamente prima dell'avvio (il secondo
+        # requisito evita che un CARONTE_SKIP_LOGIN=1 dimenticato in una
+        # shell disattivi da solo il login — serve un'intenzione doppia).
+        # Simula login come utente 'dsga'. NON usare in produzione/rete
+        # condivisa: disattivare subito dopo il test.
+        if (os.environ.get('CARONTE_SKIP_LOGIN') == '1'
+                and os.environ.get('CARONTE_DEBUG') == '1'
+                and not session.get('utente_id')):
             from models.utente import Utente
             u_bypass = Utente.query.filter_by(username='dsga', attivo=True).first()
             if u_bypass:
@@ -279,17 +338,22 @@ def create_app():
 
     # Sync automatico additivo in background (ogni 30s, solo su
     # 'assenze'/'supplenze' — vedi modules/auto_sync.py e DEVLOG Task 46).
-    # Guardia contro il doppio avvio: con use_reloader=True (sempre attivo
-    # in questa app, vedi fondo file) Werkzeug esegue create_app() due
-    # volte — una nel processo "guardiano" che si limita a sorvegliare i
-    # file e rilanciare, una in quello che serve davvero le richieste
-    # (quest'ultimo, solo, ha WERKZEUG_RUN_MAIN=true). NOTA: qui non si può
-    # usare app.debug per distinguere i due casi — a questo punto della
-    # funzione è sempre False, perché diventa True solo dentro app.run(),
-    # chiamato DOPO che create_app() è già tornato. Con il debug=True
-    # hardcoded più sotto, il processo "vero" avrà sempre
-    # WERKZEUG_RUN_MAIN=true: ci si affida solo a quello.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if avvio_con_reloader:
+        # Guardia contro il doppio avvio: con use_reloader=True Werkzeug
+        # esegue create_app() due volte — una nel processo "guardiano" che
+        # si limita a sorvegliare i file e rilanciare, una in quello che
+        # serve davvero le richieste (quest'ultimo, solo, ha
+        # WERKZEUG_RUN_MAIN=true). NOTA: qui non si può usare app.debug per
+        # distinguere i due casi — a questo punto della funzione è sempre
+        # False, perché diventa True solo dentro app.run(), chiamato DOPO
+        # che create_app() è già tornato: ci si affida solo a WERKZEUG_RUN_MAIN.
+        avvia_ora = os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
+    else:
+        # Nessun reloader di mezzo (vedi docstring sopra): nessun processo
+        # "guardiano" duplicato da escludere, si parte direttamente.
+        avvia_ora = True
+
+    if avvia_ora:
         from modules.auto_sync import avvia_thread_autosync
         avvia_thread_autosync(app)
         print('[auto_sync] thread avviato — primo giro tra ~10s, poi ogni 30s.', flush=True)
@@ -677,8 +741,22 @@ def _seed_sospensioni():
 if __name__ == '__main__':
     app = create_app()
     if os.environ.get('CARONTE_SKIP_LOGIN') == '1':
-        print('\n' + '=' * 60)
-        print('  ATTENZIONE: CARONTE_SKIP_LOGIN=1 — login DISATTIVATO')
-        print('  Accesso automatico come utente "dsga". Solo per test locali.')
-        print('=' * 60 + '\n')
-    app.run(debug=True, use_reloader=True, host='0.0.0.0', port=5002)
+        if os.environ.get('CARONTE_DEBUG') == '1':
+            print('\n' + '=' * 60)
+            print('  ATTENZIONE: CARONTE_SKIP_LOGIN=1 — login DISATTIVATO')
+            print('  Accesso automatico come utente "dsga". Solo per test locali.')
+            print('=' * 60 + '\n')
+        else:
+            print('\n' + '=' * 60)
+            print('  CARONTE_SKIP_LOGIN=1 impostata ma IGNORATA: serve anche')
+            print('  CARONTE_DEBUG=1 per attivare il bypass del login.')
+            print('=' * 60 + '\n')
+    # Debugger interattivo Werkzeug SPENTO di default: se acceso (debug=True)
+    # e l'app è raggiungibile da altri dispositivi in LAN (host=0.0.0.0,
+    # necessario perché più postazioni — segreteria/DSGA/DS — accedono alla
+    # stessa istanza), chiunque sulla rete può eseguire codice arbitrario
+    # sul server dalla pagina di errore. Per il debug locale: CARONTE_DEBUG=1.
+    # use_reloader resta sempre attivo (riavvio automatico ai salvataggi),
+    # è indipendente dal debugger e non ha questo rischio.
+    debug_attivo = os.environ.get('CARONTE_DEBUG') == '1'
+    app.run(debug=debug_attivo, use_reloader=True, host='0.0.0.0', port=5002)

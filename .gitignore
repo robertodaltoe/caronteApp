@@ -23,6 +23,7 @@ __pycache__/
 # Dati e backup locali
 data/
 backups/
+storico_db/
 *.bak
 *.log
 

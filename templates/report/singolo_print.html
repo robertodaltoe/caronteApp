@@ -4,10 +4,32 @@
 <meta charset="UTF-8">
 <title>Report {{ docente.cognome }} — {{ oggi.strftime('%d/%m/%Y') }}</title>
 <style>
+{# Open Sans incorporato come base64: i template PDF sono renderizzati da
+   WeasyPrint via HTML(string=...), senza base_url — un font caricato da
+   file statico o da Google Fonts non si risolverebbe in modo affidabile.
+   Pesi 400/600/700/800: niente 'light', poco leggibile in stampa. #}
 * { box-sizing:border-box; margin:0; padding:0; }
+@font-face {
+    font-family: 'Open Sans'; font-weight: 400; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_400 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 600; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_600 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 700; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_700 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 800; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_800 }}) format('woff2');
+}
 body { font-family: 'Open Sans', Arial, sans-serif; font-size:10pt;
        color:#1e2939; padding:10px 16px; }
-h1 { font-size:14pt; color:#1a3a5c; margin-bottom:4px; }
+/* Bordeaux del brand (stesso --blu di base.html) al posto del vecchio blu
+   scuro: il report ora si riconosce a colpo d'occhio come CaronteApp. */
+h1 { font-size:14pt; color:#7a1c17; margin-bottom:4px; }
 .sub { font-size:9pt; color:#6b7280; margin-bottom:16px; }
 .testata { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
 .box { border:1px solid #e5eaf0; border-radius:6px; padding:10px 14px;
@@ -19,10 +41,10 @@ h1 { font-size:14pt; color:#1a3a5c; margin-bottom:4px; }
 .giallo { color:#92610a; } .grigio { color:#6b7280; }
 
 table { width:100%; border-collapse:collapse; font-size:9pt; margin-bottom:16px; }
-th { background:#1a3a5c; color:white; padding:6px 8px; text-align:left;
+th { background:#7a1c17; color:white; padding:6px 8px; text-align:left;
      font-weight:600; font-size:8pt; }
 td { padding:5px 8px; border-bottom:1px solid #e5eaf0; }
-tr.totali td { font-weight:700; background:#e8f0f7; }
+tr.totali td { font-weight:700; background:#f3e5e2; }
 
 .badge { display:inline-block; padding:1px 8px; border-radius:10px;
          font-size:7.5pt; font-weight:700; }

@@ -23,10 +23,12 @@ def _genera_pdf_bytes(docente):
     supplenze   = (Supplenza.query.filter_by(id_sostituto=docente.id)
                    .filter(Supplenza.stato == 'assegnata')
                    .order_by(Supplenza.data).all())
+    from modules.pdf_fonts import contesto_open_sans
     html = rt('report/singolo_print.html',
         docente=docente, saldi=saldi,
         saldo_lordo=saldo_lordo, saldo_netto=saldo_netto,
-        storico=storico, supplenze=supplenze, oggi=date.today())
+        storico=storico, supplenze=supplenze, oggi=date.today(),
+        **contesto_open_sans())
     return HTML(string=html).write_pdf()
 
 

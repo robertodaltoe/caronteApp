@@ -4,6 +4,126 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 33 — Debug architetturale critico, sicurezza, pulizia file morti, nav responsive (Cowork)
+
+**Contesto:** su richiesta di Roberto, debug completo e critico
+dell'architettura di CaronteApp da un ambiente Cowork (worktree
+`debug-vicepresident-app-architecture-dbc44f`): file superflui,
+sicurezza, efficacia grafica/logica/produttiva. Lavoro svolto a step,
+con verifica visiva reale avviando l'app nel browser (login,
+dashboard, piantina aule, desktop e mobile) ad ogni modifica, non solo
+analisi statica del codice.
+
+### Sicurezza (`app.py`)
+- **`debug=True` hardcoded → spento di default.** Il debugger
+  interattivo Werkzeug, con `host='0.0.0.0'` (necessario: più
+  postazioni — segreteria/DSGA/DS — accedono alla stessa istanza in
+  LAN), avrebbe permesso esecuzione di codice arbitrario a chiunque
+  sulla rete. Ora attivabile solo con `CARONTE_DEBUG=1`.
+  `use_reloader` resta sempre attivo (indipendente, nessun rischio
+  analogo).
+- **`SECRET_KEY` non più hardcoded nel sorgente.** Nuova
+  `_ottieni_secret_key()`: usa `CARONTE_SECRET_KEY` se impostata,
+  altrimenti legge/genera un `secret_key.txt` locale (permessi `600`,
+  già in `.gitignore`, mai committato) al primo avvio su ogni
+  macchina. Sostituisce la vecchia chiave fissa
+  `'suplenzeapp-chiave-locale-2025'` nota a chiunque avesse accesso al
+  repository. Effetto collaterale unico e voluto: le sessioni aperte
+  con la vecchia chiave sono invalidate una tantum al primo avvio con
+  questa modifica (richiede un nuovo login).
+- **`CARONTE_SKIP_LOGIN=1` ora richiede anche `CARONTE_DEBUG=1`** per
+  bypassare il login (prima bastava da sola): un `SKIP_LOGIN=1`
+  dimenticato in una shell non disattiva più da solo l'autenticazione.
+- **`TEMPLATES_AUTO_RELOAD = True` esplicito** — effetto collaterale
+  scoperto durante il testing: spegnere `debug` di default spegne
+  anche l'auto-reload dei template Jinja (che in Flask segue
+  `app.debug`), quindi una modifica a un `.html` smetteva di vedersi
+  senza riavviare il processo. Va impostato a parte.
+- **Thread di sync automatico ([modules/auto_sync.py](modules/auto_sync.py))
+  reso indipendente da Werkzeug.** La vecchia guardia contro il doppio
+  avvio (`WERKZEUG_RUN_MAIN == 'true'`) funziona solo perché l'app usa
+  sempre il reloader Werkzeug: con un server diverso (es. un ipotetico
+  futuro gunicorn) il thread non sarebbe MAI partito, in silenzio,
+  senza errori — non "duplicato" come inizialmente ipotizzato in
+  fase di analisi, ma proprio assente. `create_app()` ha ora un
+  parametro esplicito `avvio_con_reloader` (default `True`,
+  comportamento identico ad oggi); un ipotetico entrypoint futuro
+  diverso da `python3 app.py` dovrebbe chiamare
+  `create_app(avvio_con_reloader=False)`.
+
+### File superflui rimossi
+- 5 immagini duplicate in `static/img/` (`CC - piano terra.jpg`, `CC -
+  primo piano.jpg`, `CC - secondo piano.jpg`, `SS - sportivo.jpg`,
+  `SS.jpg`) — copie byte-identiche delle versioni effettivamente usate
+  (`cc_piano_terra.jpg` ecc.), non referenziate da nulla.
+- `templates/impostazioni/stub.html` — placeholder orfano, nessuna
+  route lo richiamava.
+- `scripts/legacy/` — script "una tantum" già documentati come non più
+  necessari (vedi README interno alla cartella), rimossi dal working
+  tree (restano nella cronologia git).
+- `storico_db/*.db.enc` — backup cifrati tolti dal tracking git
+  (restano su disco), coerentemente con la policy già dichiarata nel
+  `.gitignore` ("dati e backup locali" non versionati); aggiunta
+  `storico_db/` al `.gitignore`.
+- `CaronteApp_GDPR_Report.docx` spostato in `docs/` (prima nella root
+  del repo insieme al codice sorgente).
+- **Verificato, NON rimosso**: `concorrenza.py` — sembrava a rischio
+  ma è effettivamente usato in `routes/docenti.py` e
+  `routes/supplenze.py` (controllo di concorrenza ottimistica sui
+  salvataggi). Da controllare in futuro solo se si notano
+  sovrascritture silenziose su form non coperti da questo controllo.
+
+### Grafica/UX (`templates/base.html`, `templates/login.html`)
+- **Naming incoerente CaronteApp/SupplenzeApp** corretto: la pagina di
+  login e il titolo di default della scheda browser dicevano ancora
+  "SupplenzeApp"/"Supplenze" mentre l'header interno dice "CaronteApp".
+- **Nav bar troncata a metà parola** ("Impo...") su risoluzioni
+  desktop standard (1280px): corretto. Quando il contenuto della nav è
+  comunque più largo dello spazio disponibile, compare ora una
+  sfumatura sul bordo destro (classe `.nav-overflow`, calcolata via
+  JS) a segnalare che c'è altro da scorrere — prima non c'era alcun
+  indizio visivo.
+- **Nav praticamente inutilizzabile su mobile**: aggiunto un vero menu
+  hamburger (`.nav-toggle` + `.nav-links`, soglia 880px) — sotto la
+  soglia mobile compare un pannello verticale con tutte le voci
+  (Dashboard, Attività, Banca Ore, Report, Orario, Display,
+  Impostazioni, Guida, ricerca, menu utente), prima raggiungibili solo
+  scorrendo alla cieca dentro una striscia orizzontale di 68px senza
+  alcun indizio che si potesse scorrere.
+- **Bug scoperto e corretto durante il test**: il nome istituto lungo
+  nell'header ("CaronteApp — Da Vinci Chiavenna") spingeva l'hamburger
+  fuori dallo schermo su viewport strette (`flex-shrink:0` sul brand);
+  ora si tronca con ellissi sotto gli 880px.
+- Verificato via browser reale: login, dashboard, piantina aule
+  interattiva (`/aule/mappa`, invariata e funzionante), apertura/
+  chiusura menu hamburger e sottomenu (Attività, Orario) sia in
+  viewport desktop (1400px) che mobile (375px).
+
+### Verifiche fatte durante l'analisi (nessuna modifica)
+- Test automatici: **51 funzioni di test in 10 file** sotto `tests/`
+  (non "10 test" come una lettura superficiale del solo conteggio file
+  suggeriva) — concentrati su autenticazione (10), banca ore/anno
+  scolastico (9), bozze recupero agosto/giugno/rientro (6 ciascuno).
+  Restano scoperte Assegnazioni, Export XLSX/PDF, Impostazione Anno.
+
+### Debiti tecnici architetturali identificati, rimandati su richiesta di Roberto
+Discussi ma non affrontati in questa sessione ("possiamo lasciarle lì
+per un momento migliore"), da riprendere quando ci sarà un dolore
+specifico su uno di questi, non per pulizia fine a se stessa:
+1. Route "grasse" — business logic dentro `routes/` invece che in un
+   livello di servizio separato (`impostazione_anno.py` a 1799 righe).
+2. Migrazioni schema manuali — 40+ `ALTER TABLE` in una lista che
+   cresce ad ogni avvio (`app.py::_auto_migrate`), niente Alembic né
+   cronologia versionata.
+3. Copertura di test parziale (vedi sopra).
+4. 423 import fatti dentro le funzioni invece che in testa ai file.
+
+**Nota per sessioni future in Cowork**: aggiornare questo file a fine
+sessione (o quando si chiude un blocco di lavoro coerente), con lo
+stesso stile — contesto, cosa è cambiato e perché, cosa resta aperto.
+
+---
+
 **Aggiornamento Task 47 — spostato il link import da Cambio Anno a Impostazioni**:
 su richiesta di Roberto, il link a "Importa Piano delle Attività"
 (`attivita_ist.import_piano_xlsx`) è stato tolto dalla pagina Cambio

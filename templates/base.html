@@ -60,16 +60,53 @@
         };
     })();
     </script>
-    <title>{% block title %}Supplenze{% endblock %} — IIS Da Vinci</title>
+    <title>{% block title %}CaronteApp{% endblock %} — IIS Da Vinci</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/brand/favicon.png') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
     <style>
+        /* Font ospitati localmente in static/fonts/ (non più da Google Fonts):
+           l'app funziona anche senza connessione internet — importante per
+           una rete scolastica che può avere accesso esterno limitato o
+           assente — ed evita il piccolo ritardo/flash di testo non
+           stilizzato della prima richiesta a un font esterno. */
+        @font-face {
+            font-family: 'Oswald Local';
+            font-weight: 500; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/oswald-500.woff2') }}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Oswald Local';
+            font-weight: 600; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/oswald-600.woff2') }}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Oswald Local';
+            font-weight: 700; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/oswald-700.woff2') }}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plex Sans Local';
+            font-weight: 400; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/plexsans-400.woff2') }}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plex Sans Local';
+            font-weight: 500; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/plexsans-500.woff2') }}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plex Sans Local';
+            font-weight: 600; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/plexsans-600.woff2') }}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Plex Sans Local';
+            font-weight: 700; font-style: normal; font-display: swap;
+            src: url('{{ url_for('static', filename='fonts/plexsans-700.woff2') }}') format('woff2');
+        }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --font:      'Open Sans', 'Segoe UI', Arial, sans-serif;
-            --font-brand: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+            --font:      'Plex Sans Local', 'Segoe UI', Arial, sans-serif;
+            --font-brand: 'Oswald Local', 'Segoe UI', Arial, sans-serif;
             --blu:       #7a1c17;
             --blu-med:   #a5241f;
             --blu-light: #f3e5e2;
@@ -84,7 +121,12 @@
             --bronzo:    #8a5a12;
             --bronzo-bg: #f3e4c8;
             --grigio:    #6b7280;
-            --bg:        #f7f4ef;
+            /* Sfondo "carta bollata": grigio-azzurro tenue invece del
+               crema precedente — stessa direzione validata nei mockup,
+               qui applicata solo allo sfondo pagina (il resto della
+               palette, bordeaux/verde/rosso/ambra, resta invariato ed
+               era già coerente). */
+            --bg:        #EDF0EE;
             --white:     #fffdfa;
             --radius:    8px;
             --shadow:    0 2px 8px rgba(90,20,15,.10);
@@ -98,6 +140,14 @@
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             position: relative;
+        }
+        /* Titoli di pagina/sezione in Oswald ovunque nell'app, senza dover
+           toccare i colori/dimensioni già impostati inline nei singoli
+           template (qui si cambia solo il carattere, non il resto). */
+        h1, h2 {
+            font-family: var(--font-brand);
+            font-weight: 600;
+            letter-spacing: .1px;
         }
         /* Watermark identitario: l'uomo vitruviano del logo d'istituto, fisso
            e molto tenue dietro a tutte le pagine. position:fixed sul body
@@ -128,15 +178,38 @@
             gap: 2px;
             height: 68px;
             box-shadow: 0 2px 6px rgba(0,0,0,.25);
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            scrollbar-width: thin;
+            position: relative;
+        }
+        /* Sfumatura sul bordo destro: appare solo quando i link della nav
+           (.nav-links) sono più larghi dello spazio disponibile e serve a
+           far capire che c'è altro da scorrere — senza, la voce tagliata a
+           metà (es. "Impo...") sembrava un errore di layout invece che
+           un contenuto scorribile. Attivata via JS (classe .nav-overflow),
+           non da CSS puro, perché va ricalcolata al resize. */
+        nav.nav-overflow::after {
+            content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 28px;
+            background: linear-gradient(to right, transparent, var(--blu) 80%);
+            pointer-events: none;
         }
         nav .brand {
             display: flex; flex-direction: row; align-items: center; gap: 11px;
             line-height: 1.15; white-space: nowrap;
             padding-right: 16px; margin-right: 8px;
             border-right: 1px solid rgba(255,255,255,.15);
+            flex-shrink: 0;
+        }
+        /* Hamburger: nascosto di default, compare solo sotto la soglia
+           mobile (vedi @media più sotto) */
+        .nav-toggle {
+            display: none; margin-left: auto; flex-shrink: 0;
+            background: none; border: none; color: white; font-size: 1.5rem;
+            line-height: 1; padding: 8px 10px; cursor: pointer; border-radius: 6px;
+        }
+        .nav-toggle:hover { background: rgba(255,255,255,.15); }
+        .nav-links {
+            display: flex; align-items: center; gap: 2px;
+            flex: 1 1 auto; min-width: 0;
+            overflow-x: auto; scrollbar-width: thin;
         }
         nav .brand img {
             height: 46px; width: 46px; display: block; object-fit: contain;
@@ -296,6 +369,44 @@
     font-size:.9rem; text-decoration:none; white-space:nowrap; border-radius:0; }
 .nav-drop-menu a:hover { background:rgba(255,255,255,.1); }
 .nav-dropdown.open .nav-drop-menu { display:block; }
+
+/* NAV MOBILE — sotto questa soglia la nav non ha spazio per stare su una
+   riga sola (brand + 9 voci + ricerca + utente): compare l'hamburger e
+   .nav-links diventa un pannello a comparsa verticale, invece di restare
+   una striscia orizzontale scorrevole senza alcun indizio visivo (il
+   problema originale su schermi stretti). */
+@media (max-width: 880px) {
+    /* Il nome istituto per esteso ("CaronteApp — Da Vinci Chiavenna") non
+       ci sta su schermi stretti: si accorcia con ellissi invece di spingere
+       l'hamburger fuori dalla viewport (come succedeva prima di questo
+       fix — il bottone restava presente nel DOM ma irraggiungibile). */
+    nav .brand { flex-shrink: 1; min-width: 0; padding-right: 10px; margin-right: 6px; }
+    nav .brand-testi { min-width: 0; overflow: hidden; }
+    nav .brand-nome { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .96rem; }
+    nav .brand-datetime { display: none; }
+    .nav-toggle { display: block; flex-shrink: 0; }
+    .nav-links {
+        display: none;
+        position: absolute; top: 68px; left: 0; right: 0;
+        flex-direction: column; align-items: stretch;
+        background: var(--blu);
+        max-height: calc(100vh - 68px); overflow-y: auto; overflow-x: hidden;
+        box-shadow: 0 8px 16px rgba(0,0,0,.35);
+        padding: 6px 0; gap: 0; z-index: 60;
+    }
+    .nav-links.open { display: flex; }
+    nav.nav-overflow::after { display: none; }
+    .nav-links a { padding: 13px 20px; border-radius: 0; }
+    .nav-links .nav-dropdown { width: 100%; }
+    .nav-links .nav-dropdown > a { display: block; }
+    .nav-links .nav-spacer { display: none; }
+    .nav-links .nav-search { margin: 8px 20px; width: auto; }
+    .nav-links .nav-search input { width: 100%; }
+    .nav-links .nav-search input:focus { width: 100%; }
+    /* I sottomenu (Attività/Orario/utente) restano "posizionati via JS",
+       ma dentro al pannello mobile hanno più senso incassati in linea. */
+    .nav-links .nav-dropdown .nav-drop-menu { min-width: 0; }
+}
 </style>
     {% block extra_style %}{% endblock %}
 </head>
@@ -310,6 +421,9 @@
         </span>
     </span>
 
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Apri/chiudi il menu" aria-expanded="false" aria-controls="nav-links">☰</button>
+
+    <div class="nav-links" id="nav-links">
     <a href="{{ url_for('dashboard.index') }}"><span class="nav-ic">⌂&#xFE0E;</span> Dashboard</a>
     <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">&#x270E;&#xFE0E;</span> Registra assenza</a>
 
@@ -361,6 +475,7 @@
             <a href="{{ url_for('auth.cambia_pin') }}"><span class="nav-ic">&#x26BF;&#xFE0E;</span> Cambia PIN</a>
             <a href="{{ url_for('auth.logout') }}"><span class="nav-ic">⎋&#xFE0E;</span> Esci</a>
         </div>
+    </div>
     </div>
 </nav>
 
@@ -434,6 +549,38 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') chiudiTutti();
     });
+
+    // Hamburger mobile: mostra/nasconde il pannello .nav-links (vedi
+    // @media max-width:880px in cima al file).
+    var navEl      = document.querySelector('nav');
+    var navToggle  = document.getElementById('nav-toggle');
+    var navLinks   = document.getElementById('nav-links');
+    if (navToggle && navLinks) {
+        navToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var aperto = navLinks.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', aperto ? 'true' : 'false');
+            if (!aperto) chiudiTutti();
+        });
+        document.addEventListener('click', function(e) {
+            if (navLinks.classList.contains('open') &&
+                !e.target.closest('.nav-links') && !e.target.closest('.nav-toggle')) {
+                navLinks.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    // Sfumatura di overflow (desktop): mostra il bordo destro solo quando
+    // .nav-links è davvero più largo dello spazio visibile — ricalcolata
+    // al resize e quando cambiano i dati mostrati (es. datetime più lungo).
+    function aggiornaOverflowNav() {
+        if (!navEl || !navLinks) return;
+        var haOverflow = navLinks.scrollWidth > navLinks.clientWidth + 1;
+        navEl.classList.toggle('nav-overflow', haOverflow);
+    }
+    aggiornaOverflowNav();
+    window.addEventListener('resize', aggiornaOverflowNav);
 })();
 </script>
 

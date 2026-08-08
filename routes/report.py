@@ -473,11 +473,13 @@ def singolo_pdf(id):
                  .order_by(Supplenza.data)
                  .all())
 
+    from modules.pdf_fonts import contesto_open_sans
     html_content = render_template('report/singolo_print.html',
         docente=d, saldi=saldi,
         saldo_lordo=saldo_lordo, saldo_netto=saldo_netto,
         storico=storico, supplenze=supplenze,
         oggi=date.today(), anno=anno, anno_corrente=anno_corrente,
+        **contesto_open_sans(),
     )
 
     suffisso_anno = '' if anno == anno_corrente else f'_{anno}'
@@ -793,11 +795,13 @@ def esporta_tutti_pdf():
                              .filter(Supplenza.stato == 'assegnata')
                              .order_by(Supplenza.data)
                              .all())
+                from modules.pdf_fonts import contesto_open_sans
                 html_content = render_template('report/singolo_print.html',
                     docente=d, saldi=saldi,
                     saldo_lordo=saldo_lordo, saldo_netto=saldo_netto,
                     storico=storico, supplenze=supplenze,
                     oggi=date.today(),
+                    **contesto_open_sans(),
                 )
                 pdf_bytes = HTML(string=html_content).write_pdf()
                 if conteggio_cognomi[d.cognome] > 1:
