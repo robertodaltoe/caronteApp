@@ -99,7 +99,7 @@ def _export_copertura_xlsx(righe, titolo):
     ws.title = 'Foglio firme'
 
     # Stili
-    BLU     = '1e3a5f'
+    BLU     = '7a1c17'
     BLU_SEZ = '2F4F8C'
     VERDE   = 'dcfce7'; VERDE_T  = '166534'
     ROSSO   = 'fee2e2'; ROSSO_T  = 'dc2626'

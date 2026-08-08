@@ -512,7 +512,7 @@ def export_xlsx():
 
     GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
 
-    BLU    = PatternFill('solid', start_color='1e3a5f')
+    BLU    = PatternFill('solid', start_color='7a1c17')
     AZZUR  = PatternFill('solid', start_color='dbeafe')
     GRAY   = PatternFill('solid', start_color='f3f4f6')
     BOLD   = Font(bold=True)

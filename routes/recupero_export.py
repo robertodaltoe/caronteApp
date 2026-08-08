@@ -45,7 +45,7 @@ def export_xlsx():
         return f"{GIORNI[d.weekday()]} {d.day} {MESI[d.month]}"
 
     # Stili
-    BLU   = PatternFill('solid', start_color='1e3a5f')
+    BLU   = PatternFill('solid', start_color='7a1c17')
     AZZUR = PatternFill('solid', start_color='dbeafe')
     VERDE = PatternFill('solid', start_color='dcfce7')
     GRAY  = PatternFill('solid', start_color='f3f4f6')
@@ -870,7 +870,7 @@ def agosto_export_xlsx():
     TIPO_LABEL = {'scritto':'Scritto','orale':'Orale',
                   'pratico':'Pratico','scritto_orale':'Scritto+Orale'}
 
-    BLU   = PatternFill('solid', start_color='1e3a5f')
+    BLU   = PatternFill('solid', start_color='7a1c17')
     AZZUR = PatternFill('solid', start_color='dbeafe')
     VERDE = PatternFill('solid', start_color='dcfce7')
     BOLD  = Font(bold=True)

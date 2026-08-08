@@ -13,13 +13,16 @@ from openpyxl.utils import get_column_letter
 export_bp = Blueprint('export_xlsx', __name__)
 
 # ── Stili comuni ────────────────────────────────────────────────────
-BLU   = '1e3a5f'
-BLU_L = 'dbe9f6'
+# Allineati alla palette bordeaux dell'app (--blu/--blu-light/--verde-bg/
+# --giallo-bg in base.html) — prima BLU era il vecchio navy scollegato
+# dal resto dell'app, come nei template prima del restyling.
+BLU   = '7a1c17'
+BLU_L = 'f3e5e2'
 GRIG  = 'f3f4f6'
-VERD  = '166534'
-VERD_L= 'dcfce7'
-ROSS  = 'dc2626'
-GIAL  = 'fef9c3'
+VERD  = '1a7a4a'
+VERD_L= 'd4f0e0'
+ROSS  = 'b91c1c'
+GIAL  = 'fff3cd'
 
 def _hdr(ws, row, cols, color=BLU, font_color='FFFFFF', bold=True, size=10):
     fill = PatternFill('solid', fgColor=color)
