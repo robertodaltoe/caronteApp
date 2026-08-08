@@ -33,20 +33,20 @@
 {# ── Link rapidi (solo in modifica) ───────────────────────────────── #}
 {% if docente %}
 <div class="card" style="padding:10px 16px; margin-bottom:16px; display:flex;
-     align-items:center; gap:10px; flex-wrap:wrap; border-left:4px solid #6366f1;">
+     align-items:center; gap:10px; flex-wrap:wrap; border-left:4px solid var(--bronzo);">
     <div style="flex:1; min-width:200px; font-size:.82rem; color:var(--grigio);">
         {% if docente.id_classe_concorso %}
         CC: <strong style="color:var(--blu);">{{ docente.classe_concorso.codice }}</strong>
         {% else %}
-        <span style="color:#f59e0b;">⚠︎ Nessuna CC assegnata</span>
+        <span style="color:var(--giallo);">⚠︎ Nessuna CC assegnata</span>
         {% endif %}
         &nbsp;·&nbsp;
         Max: <strong style="color:var(--blu);">{{ docente.ore_max_effettive }}h</strong>
     </div>
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="btn btn-sm"
-       style="background:#6366f1; color:white; text-decoration:none;">◆︎ Classi di concorso</a>
+       style="background:var(--bronzo); color:white; text-decoration:none;">◆︎ Classi di concorso</a>
     <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="btn btn-sm"
-       style="background:#be185d; color:white; text-decoration:none;">▥︎ Materie</a>
+       style="background:var(--viola); color:white; text-decoration:none;">▥︎ Materie</a>
 </div>
 {% endif %}
 
@@ -252,25 +252,25 @@
         <div style="display:flex; gap:8px; margin-bottom:10px;">
             <label id="lbl-titolare"
                    style="display:flex; align-items:center; gap:8px; cursor:pointer; flex:1;
-                           padding:10px 12px; border:2px solid {{ '#166534' if ruolo_val=='titolare' else '#e5e7eb' }};
-                           border-radius:8px; background:{{ '#f0fdf4' if ruolo_val=='titolare' else 'white' }};">
+                           padding:10px 12px; border:2px solid {{ 'var(--verde)' if ruolo_val=='titolare' else '#e5e7eb' }};
+                           border-radius:8px; background:{{ 'var(--verde-bg)' if ruolo_val=='titolare' else 'white' }};">
                 <input type="radio" name="ruolo" value="titolare"
                        {% if ruolo_val=='titolare' %}checked{% endif %}
                        onchange="aggiornaRuolo(this)" style="width:15px; height:15px;">
                 <div>
-                    <div style="font-weight:700; font-size:.84rem; color:#166534;">▥︎ Titolare</div>
+                    <div style="font-weight:700; font-size:.84rem; color:var(--verde);">▥︎ Titolare</div>
                     <div style="font-size:.7rem; color:var(--grigio);">Docente principale</div>
                 </div>
             </label>
             <label id="lbl-itp"
                    style="display:flex; align-items:center; gap:8px; cursor:pointer; flex:1;
-                           padding:10px 12px; border:2px solid {{ '#7c3aed' if ruolo_val=='itp' else '#e5e7eb' }};
-                           border-radius:8px; background:{{ '#f5f3ff' if ruolo_val=='itp' else 'white' }};">
+                           padding:10px 12px; border:2px solid {{ 'var(--viola)' if ruolo_val=='itp' else '#e5e7eb' }};
+                           border-radius:8px; background:{{ 'var(--viola-bg)' if ruolo_val=='itp' else 'white' }};">
                 <input type="radio" name="ruolo" value="itp"
                        {% if ruolo_val=='itp' %}checked{% endif %}
                        onchange="aggiornaRuolo(this)" style="width:15px; height:15px;">
                 <div>
-                    <div style="font-weight:700; font-size:.84rem; color:#7c3aed;">⚙︎ ITP</div>
+                    <div style="font-weight:700; font-size:.84rem; color:var(--viola);">⚙︎ ITP</div>
                     <div style="font-size:.7rem; color:var(--grigio);">Compresenza lab</div>
                 </div>
             </label>
@@ -308,13 +308,13 @@
                            placeholder="Es. FISICA"
                            style="flex:1; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.78rem;">
                     <button type="button" onclick="this.closest('.riga-abbinamento').remove()"
-                            style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca;
+                            style="background:var(--rosso-bg); color:var(--rosso); border:1px solid var(--rosso-bg);
                                    border-radius:5px; padding:4px 8px; font-size:.78rem; cursor:pointer;">✕︎</button>
                 </div>
                 {% endfor %}
             </div>
             <button type="button" onclick="aggiungiRigaAbbinamento()"
-                    style="background:#f0f4ff; color:var(--blu); border:1px solid #c7d2fe;
+                    style="background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);
                            border-radius:6px; padding:4px 10px; font-size:.76rem; cursor:pointer;">
                 ＋ Aggiungi abbinamento
             </button>
@@ -333,7 +333,7 @@
                     <input type="text" name="abbinamento_materia[]" placeholder="Es. FISICA"
                            style="flex:1; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.78rem;">
                     <button type="button" onclick="this.closest('.riga-abbinamento').remove()"
-                            style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca;
+                            style="background:var(--rosso-bg); color:var(--rosso); border:1px solid var(--rosso-bg);
                                    border-radius:5px; padding:4px 8px; font-size:.78rem; cursor:pointer;">✕︎</button>
                 </div>
             </template>
@@ -382,7 +382,7 @@
                            class="mat-cb"
                            data-sigla="{{ m.sigla }}"
                            data-nome="{{ m.nome }}"
-                           data-color="{{ loop.cycle('#1e40af','#0369a1','#166534','#92400e','#b45309','#5b21b6') }}"
+                           data-color="{{ loop.cycle('#1e40af','#0369a1','var(--verde)','var(--giallo)','#b45309','#5b21b6') }}"
                            style="width:13px; height:13px; accent-color:var(--blu);">
                     <span>{{ m.nome }}</span>
                     <span style="font-size:.7rem; color:var(--grigio); margin-left:auto; font-family:monospace;">{{ m.sigla }}</span>
@@ -418,7 +418,7 @@
         <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
             {% for inc in incarichi_corrente %}
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;
-                        padding:5px 9px; background:#f0f4ff; border-radius:6px; font-size:.82rem;">
+                        padding:5px 9px; background:var(--blu-light); border-radius:6px; font-size:.82rem;">
                 <span>
                     <strong>{{ inc.tipo.nome }}</strong>
                     {% if inc.label_classe %}<span style="color:var(--grigio);"> — {{ inc.label_classe }}</span>{% endif %}
@@ -564,8 +564,8 @@ function aggiornaRuolo(radio) {
     const blocco = document.getElementById('blocco-titolare-rif');
 
     const stili = {
-        titolare: [lTit, '#166534', '#f0fdf4'],
-        itp:      [lItp, '#7c3aed', '#f5f3ff'],
+        titolare: [lTit, 'var(--verde)', 'var(--verde-bg)'],
+        itp:      [lItp, 'var(--viola)', 'var(--viola-bg)'],
         sostegno: [lSos, '#0d9488', '#f0fdfa'],
     };
     for (const [val, [el, colore, sfondo]] of Object.entries(stili)) {

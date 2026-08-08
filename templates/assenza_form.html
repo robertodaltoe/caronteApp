@@ -136,7 +136,7 @@
 
     <!-- PERMESSO ORARIO PER ATT. ISTITUZIONALI — sezione HH:MM -->
     <div id="sez-ist-orario" style="display:none; margin-top:10px; padding:12px 14px;
-         background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">
+         background:var(--blu-light); border:1px solid #bfdbfe; border-radius:8px;">
         <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:8px;">
             🏫 Permesso per attività istituzionale (orario assoluto)
         </div>
@@ -209,13 +209,13 @@
 
         <!-- Box info dinamico -->
         <div id="info-tipo" style="padding:8px 12px; border-radius:6px; font-size:.8rem;
-             background:var(--giallo-bg); color:var(--giallo); border-left:3px solid #e0a800;"></div>
+             background:var(--giallo-bg); color:var(--giallo); border-left:3px solid var(--giallo);"></div>
 
         <!-- ALERT SOSPENSIONE DIDATTICA -->
         {% if sospensione_oggi %}
-        <div id="alert-sospensione" style="background:#fff7ed; border:1px solid #fed7aa;
+        <div id="alert-sospensione" style="background:var(--giallo-bg); border:1px solid var(--giallo-bg);
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
-            <div style="font-size:.85rem; font-weight:700; color:#92400e;">
+            <div style="font-size:.85rem; font-weight:700; color:var(--giallo);">
                 ⚠️ Giorno di sospensione didattica
             </div>
             <div style="font-size:.8rem; color:#78350f; margin-top:3px;">
@@ -227,13 +227,13 @@
 
         <!-- ALERT ATTIVITÀ ISTITUZIONALI DEL GIORNO -->
         {% if eventi_ist_giorno %}
-        <div id="alert-ist" style="background:#eff6ff; border:1px solid #bfdbfe;
+        <div id="alert-ist" style="background:var(--blu-light); border:1px solid #bfdbfe;
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
             <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:6px;">
                 🏫 Attività istituzionali in programma questo giorno:
             </div>
             {% for ev in eventi_ist_giorno %}
-            <div style="font-size:.8rem; color:#1e3a5f; margin-bottom:3px;">
+            <div style="font-size:.8rem; color:var(--blu); margin-bottom:3px;">
                 <strong>{{ ev.tipo_emoji }} {{ ev.tipo_label }}</strong>
                 — {{ ev.titolo }}
                 {% if ev.ora_inizio %}· {{ ev.ora_inizio }}{% if ev.ora_fine %}–{{ ev.ora_fine }}{% endif %}{% endif %}
@@ -287,7 +287,7 @@
                     <input type="text" name="scambio_cede_classe[]" placeholder="Classe" style="width:90px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem; text-transform:uppercase;">
                 </div>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-                    <span style="font-size:.78rem; font-weight:700; color:#16a34a; min-width:40px;">Riceve</span>
+                    <span style="font-size:.78rem; font-weight:700; color:var(--verde); min-width:40px;">Riceve</span>
                     <select name="scambio_doc_b[]" style="flex:1; min-width:160px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
                         <option value="">— docente B —</option>
                         {% for d in docenti %}
@@ -296,7 +296,7 @@
                     </select>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-                    <span style="font-size:.78rem; font-weight:700; color:#9333ea; min-width:40px;">Recupero</span>
+                    <span style="font-size:.78rem; font-weight:700; color:var(--viola); min-width:40px;">Recupero</span>
                     <input type="date" name="scambio_rec_data[]" style="flex:1; min-width:120px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
                     <select name="scambio_rec_ora[]" style="width:80px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
                         <option value="">—</option>
@@ -317,13 +317,13 @@
                 <span style="font-weight:400; color:var(--grigio); font-size:.76rem;">
                     — non visibili nel display
                     {% if ruolo_utente in ['ds','dsga','segreteria'] %}
-                    · <span style="color:#92400e;">🔒 motivo specifico</span>
+                    · <span style="color:var(--giallo);">🔒 motivo specifico</span>
                     {% endif %}
                 </span>
             </label>
             <textarea name="note_interne" rows="2"
                       placeholder="Es. numero protocollo, riferimento pratica...">{{ assenza.note_interne or '' if assenza }}</textarea>
-            <div style="font-size:.72rem; color:#92400e; margin-top:4px;">
+            <div style="font-size:.72rem; color:var(--giallo); margin-top:4px;">
                 ⚠︎ Non riportare qui diagnosi, prognosi o altri dettagli clinici — solo riferimenti amministrativi (es. numero di protocollo).
             </div>
         </div>
@@ -408,7 +408,7 @@ function setTipo(tipo, btn) {
     const box  = document.getElementById('info-tipo');
     box.innerHTML = (info.banca ? '💰 ' : 'ℹ️ ') + (info.txt || '');
     box.style.background   = info.banca ? 'var(--giallo-bg)' : 'var(--blu-light)';
-    box.style.borderColor  = info.banca ? '#e0a800'          : 'var(--blu-med)';
+    box.style.borderColor  = info.banca ? 'var(--giallo)'          : 'var(--blu-med)';
     box.style.color        = info.banca ? 'var(--giallo)'    : 'var(--blu)';
 
     aggiornaAlert();
@@ -435,7 +435,7 @@ function calcolaDurataIst() {
         const tot = (hf * 60 + mf) - (hi * 60 + mi);
         if (tot > 0) {
             div.textContent = `${Math.floor(tot/60)}h ${tot%60>0 ? tot%60+'m' : ''}`.trim();
-            div.style.color = tot > 120 ? '#dc2626' : '#1e40af';
+            div.style.color = tot > 120 ? 'var(--rosso)' : '#1e40af';
             if (tot > 120) div.textContent += ' ⚠️ supera 2h CCNL';
         } else {
             div.textContent = '';
@@ -533,11 +533,11 @@ function aggiornaAlert() {
     const rim   = l.n - usati;
     if (rim <= 0) {
         box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
-            'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;margin-top:8px;';
+            'background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);margin-top:8px;';
         box.innerHTML = `🚫 <strong>Limite raggiunto</strong> — ${l.nota}. Usati: ${usati}/${l.n} ${l.u}.`;
     } else if (rim === 1) {
         box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
-            'background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin-top:8px;';
+            'background:var(--giallo-bg);color:var(--giallo);border:1px solid var(--giallo);margin-top:8px;';
         box.innerHTML = `⚠️ <strong>Quasi al limite</strong> — rimane 1 ${l.u.slice(0,-1)}. ${l.nota}.`;
     } else { box.style.display = 'none'; }
 }
@@ -546,8 +546,8 @@ function aggiornaAlert() {
 function toggleClasseLibera() {
     const chk = document.getElementById('chk-cl');
     const lbl = document.getElementById('lbl-cl');
-    lbl.style.borderColor = chk.checked ? '#ef4444' : '#e5eaf0';
-    lbl.style.background  = chk.checked ? '#fef2f2' : '#f8fafc';
+    lbl.style.borderColor = chk.checked ? 'var(--rosso)' : '#e5eaf0';
+    lbl.style.background  = chk.checked ? 'var(--rosso-bg)' : '#f8fafc';
 }
 
 // ── FERIE ORA PER ORA ─────────────────────────────────────────
@@ -600,14 +600,14 @@ function verificaSospensione(dataStr) {
     if (!box) {
         box = document.createElement('div');
         box.id = 'alert-sosp-js';
-        box.style.cssText = 'background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none;';
+        box.style.cssText = 'background:var(--rosso-bg);border:1px solid var(--rosso-bg);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none;';
         const tipoBox = document.getElementById('info-tipo');
         if (tipoBox) tipoBox.parentNode.insertBefore(box, tipoBox);
     }
     if (motivo) {
-        box.style.background = '#fff7ed';
-        box.style.border = '1px solid #fed7aa';
-        box.innerHTML = '<strong style="color:#92400e;">⚠️ Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
+        box.style.background = 'var(--giallo-bg)';
+        box.style.border = '1px solid var(--giallo-bg)';
+        box.innerHTML = '<strong style="color:var(--giallo);">⚠️ Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
         box.style.display = 'block';
         document.querySelector('#form-assenza button[type=submit]').disabled = false;
         document.querySelector('#form-assenza button[type=submit]').style.opacity = '1';

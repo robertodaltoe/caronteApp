@@ -6,11 +6,11 @@
 .classe-libera-box {
     display: flex; align-items: center; gap: 12px;
     padding: 12px 16px; border-radius: 8px;
-    background: var(--viola-bg); border: 2px solid #c4b5fd;
+    background: var(--viola-bg); border: 2px solid var(--viola);
     cursor: pointer; margin-bottom: 16px;
     transition: background .15s;
 }
-.classe-libera-box:hover { background: #ddd6fe; }
+.classe-libera-box:hover { background: var(--viola-bg); }
 .classe-libera-box input[type=checkbox] {
     width: 20px; height: 20px; cursor: pointer;
     accent-color: var(--viola); flex-shrink: 0;
@@ -19,7 +19,7 @@
     font-weight: 700; color: var(--viola); font-size: .95rem;
 }
 .classe-libera-box .cl-sub {
-    font-size: .8rem; color: #7c3aed; font-weight: 400; margin-top: 2px;
+    font-size: .8rem; color: var(--viola); font-weight: 400; margin-top: 2px;
 }
 </style>
 {% endblock %}
@@ -68,7 +68,7 @@
             <div class="form-group" style="margin-bottom:0;">
                 <label style="color:var(--viola);">Motivo visibile nel display *</label>
                 <select name="note_display" id="sel-nota-libera"
-                        style="border-color:#c4b5fd;">
+                        style="border-color:var(--viola);">
                     <option value="INGRESSO POSTICIPATO">◷︎ Ingresso posticipato</option>
                     <option value="USCITA ANTICIPATA">◷︎ Uscita anticipata</option>
                     <option value="CLASSE SCOPERTA">● Classe scoperta</option>
@@ -77,7 +77,7 @@
             </div>
             <div id="nota-libera-custom" style="display:none; margin-top:8px;">
                 <input type="text" id="inp-nota-custom" placeholder="Descrizione breve (es. RIENTRO ORE 10:00)"
-                       maxlength="60" style="border-color:#c4b5fd;">
+                       maxlength="60" style="border-color:var(--viola);">
             </div>
         </div>
 
