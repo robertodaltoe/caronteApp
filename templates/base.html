@@ -240,12 +240,12 @@
         nav .brand .brand-nome {
             color: white; font-weight: 700; font-size: 1.08rem; letter-spacing: .2px;
             font-family: var(--font-brand);
-            text-shadow: 0 0 2px rgba(0,0,0,.85), 0 0 5px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.85);
+            text-shadow: 0 1px 2px rgba(0,0,0,.85);
         }
         nav .brand .brand-datetime {
             color: rgba(255,255,255,.55); font-size: .74rem; font-weight: 500;
             margin-top: 2px;
-            text-shadow: 0 0 2px rgba(0,0,0,.85), 0 0 5px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.85);
+            text-shadow: 0 1px 2px rgba(0,0,0,.85);
         }
         /* Ombra leggera sul testo: i link sono in bianco semi-trasparente
            (per gerarchia visiva rispetto al brand), e con la mesh
@@ -253,20 +253,17 @@
            ne riducevano il contrasto in alcuni punti — l'ombra lo
            restituisce ovunque, qualunque faccetta capiti dietro. */
         nav a {
-            color: rgba(255,255,255,.96); text-decoration: none;
+            color: white; text-decoration: none;
             padding: 8px 12px; border-radius: 6px; white-space: nowrap;
             font-size: .93rem; font-weight: 500; transition: background .15s;
-            /* Alone scuro invece di una singola ombra morbida: la mesh
-               sotto è casuale faccetta per faccetta, quindi a seconda
-               della risoluzione/ritaglio una voce può capitare proprio
-               su una faccetta più chiara — un'ombra sola non bastava
-               (segnalato più volte). Più livelli sovrapposti garantiscono
-               contrasto qualunque cosa ci sia dietro, invece di dipendere
-               da quanto è chiara la faccetta in quel punto. */
-            text-shadow:
-                0 0 2px rgba(0,0,0,.9),
-                0 0 5px rgba(0,0,0,.75),
-                0 1px 2px rgba(0,0,0,.9);
+            /* Bianco pieno (non più semi-trasparente) + un'ombra stretta:
+               il "alone" a più livelli con raggio largo (Sessione 44)
+               garantiva contrasto ma sfocava i bordi delle lettere
+               facendole percepire grigie invece che bianche — le icone
+               SVG non ne risentivano (drop-shadow non tocca la forma).
+               Un raggio piccolo basta a leggere il testo su qualunque
+               faccetta, senza "impastare" i glifi. */
+            text-shadow: 0 1px 2px rgba(0,0,0,.85);
         }
         nav a:hover, nav a.active { background: rgba(255,255,255,.15); color: white; }
         nav a.nav-cta {
@@ -289,7 +286,7 @@
         nav .nav-user {
             color: rgba(255,255,255,.55); font-size: .85rem; white-space: nowrap;
             padding: 0 4px;
-            text-shadow: 0 0 2px rgba(0,0,0,.85), 0 0 5px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.85);
+            text-shadow: 0 1px 2px rgba(0,0,0,.85);
         }
         /* Icone di navigazione: SVG a tratto (vedi templates/_icons.html),
            non più glifi tipografici — ereditano il colore del testo del
