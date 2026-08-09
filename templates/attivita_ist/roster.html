@@ -45,8 +45,8 @@
 
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎ Roster Docenti-Materie — {{ anno }}</h1>
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">⚙︎ Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }} Roster Docenti-Materie — {{ anno }}</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('gear') }} Impostazioni</a>
     <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('arrow-left') }} Lista eventi</a>
 </div>
 
@@ -69,7 +69,7 @@
     <button type="button" onclick="apriTutti()" class="btn btn-sm"
             style="background:#f0f4f8;color:var(--blu);font-size:.76rem;padding:3px 10px;">▼ Apri tutti</button>
     <button type="button" onclick="chiudiTutti()" class="btn btn-sm"
-            style="background:#f0f4f8;color:var(--blu);font-size:.76rem;padding:3px 10px;">▲ Chiudi tutti</button>
+            style="background:#f0f4f8;color:var(--blu);font-size:.76rem;padding:3px 10px;">{{ icon('chart') }} Chiudi tutti</button>
 </div>
 
 <form method="post" id="form-roster">
@@ -136,7 +136,7 @@
 <div style="margin-top:16px; display:flex; gap:10px; align-items:center;
             position:sticky; bottom:16px;">
     <button type="submit" class="btn btn-success"
-            style="box-shadow:0 2px 8px rgba(0,0,0,.15);">▤︎ Salva roster</button>
+            style="box-shadow:0 2px 8px rgba(0,0,0,.15);">{{ icon('list') }} Salva roster</button>
     <span style="font-size:.8rem; color:var(--grigio); background:white;
                  padding:4px 10px; border-radius:6px; border:1px solid #e5eaf0;">
         Le modifiche non sono salvate finché non premi il bottone.
@@ -150,14 +150,14 @@ function toggleCard(did) {
     const body = document.getElementById(`body-${did}`);
     const icon = document.getElementById(`icon-${did}`);
     const open = body.classList.toggle('aperto');
-    icon.textContent = open ? '▲' : '▼';
+    icon.textContent = open ? '{{ icon('chart') }}' : '▼';
 }
 function apriTutti() {
     document.querySelectorAll('.doc-card:not([style*="none"])').forEach(card => {
         const did = card.id.replace('card-','');
         const body = document.getElementById(`body-${did}`);
         const icon = document.getElementById(`icon-${did}`);
-        if (body) { body.classList.add('aperto'); icon.textContent = '▲'; }
+        if (body) { body.classList.add('aperto'); icon.textContent = '{{ icon('chart') }}'; }
     });
 }
 function chiudiTutti() {

@@ -493,7 +493,7 @@
 <div class="container">
     {% if g.utente is defined and n_conflitti_sync %}
     <div class="flash warning" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-        <span>⚠️ {{ n_conflitti_sync }} modifica{{ 'e' if n_conflitti_sync != 1 else '' }}
+        <span>{{ icon('warning') }} {{ n_conflitti_sync }} modifica{{ 'e' if n_conflitti_sync != 1 else '' }}
             fatta{{ 'e' if n_conflitti_sync != 1 else '' }} da un'altra postazione
             {{ 'devono' if n_conflitti_sync != 1 else 'deve' }} essere confermat{{ 'e' if n_conflitti_sync != 1 else 'a' }}
             prima di essere unita{{ 'e' if n_conflitti_sync != 1 else '' }} ai dati.</span>

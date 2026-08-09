@@ -69,7 +69,7 @@
 {% block content %}
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">🚫 Nuova indisponibilità</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('forbidden') }} Nuova indisponibilità</h1>
     <a href="{{ url_for('dashboard.index', data=data_sel) }}"
        class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
 </div>
@@ -87,7 +87,7 @@
         + Aggiungi indisponibilità
     </button>
     <button type="submit" class="btn btn-success">
-        ✅ Salva tutte
+        {{ icon('check') }} Salva tutte
     </button>
     <a href="{{ url_for('dashboard.index', data=data_sel) }}"
        class="btn btn-primary">Annulla</a>
@@ -118,7 +118,7 @@ function aggiungiRiga() {
     div.id = `riga-${idx}`;
     div.innerHTML = `
         <button type="button" class="rimuovi-riga"
-                onclick="rimuoviRiga(${idx})" title="Rimuovi">🗑</button>
+                onclick="rimuoviRiga(${idx})" title="Rimuovi">{{ icon('trash') }}</button>
         <div class="riga-num">Riga ${idx + 1}</div>
 
         <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
@@ -147,9 +147,9 @@ function aggiungiRiga() {
                 <label>Modalità</label>
                 <select name="tipo[${idx}]" onchange="cambiaTipo(${idx}, this.value)"
                         style="width:100%;">
-                    <option value="singola">📅 Giorno singolo</option>
+                    <option value="singola">{{ icon('calendar') }} Giorno singolo</option>
                     <option value="intervallo">📆 Più giorni</option>
-                    <option value="settimanale">🔁 Ogni settimana</option>
+                    <option value="settimanale">{{ icon('swap') }} Ogni settimana</option>
                 </select>
             </div>
 

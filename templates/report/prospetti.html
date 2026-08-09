@@ -5,7 +5,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">⎙︎ Storico prospetti supplenze</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('print') }} Storico prospetti supplenze</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             {{ prospetti|length }} file salvati
         </p>
@@ -40,12 +40,12 @@
         </td>
         <td style="text-align:right; padding-right:16px;">
             <a href="{{ url_for('report.scarica_prospetto', nome=p.nome) }}"
-               class="btn btn-success btn-sm">⇩︎ Scarica</a>
+               class="btn btn-success btn-sm">{{ icon('download') }} Scarica</a>
             <form method="post"
                   action="{{ url_for('report.elimina_prospetto', nome=p.nome) }}"
                   onsubmit="return confirm('Eliminare {{ p.nome }}?')"
                   style="display:inline; margin-left:4px;">
-                <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
             </form>
         </td>
     </tr>
@@ -60,7 +60,7 @@
     </p>
     <p style="font-size:.88rem;">
         Genera il primo dalla dashboard cliccando
-        <strong>⎙︎ Prospetto</strong>.
+        <strong>{{ icon('print') }} Prospetto</strong>.
     </p>
 </div>
 {% endif %}

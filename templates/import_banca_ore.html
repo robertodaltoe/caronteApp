@@ -5,7 +5,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">⇩︎ Import banca ore da file Excel</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('download') }} Import banca ore da file Excel</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Anteprima movimenti da importare — i doppioni sono esclusi automaticamente
         </p>
@@ -16,7 +16,7 @@
 {% if non_trovati %}
 <div class="card" style="border-left:4px solid #f59e0b; margin-bottom:16px;">
     <p style="font-weight:700; color:#92400e; margin-bottom:6px;">
-        ⚠︎️ {{ non_trovati|length }} cognomi non trovati nel DB:
+        {{ icon('warning') }} {{ non_trovati|length }} cognomi non trovati nel DB:
     </p>
     <p style="font-size:.85rem; color:var(--grigio);">
         {{ non_trovati | join(', ') }}
@@ -62,9 +62,9 @@
                            onchange="document.querySelectorAll('input[name=sett_sel]').forEach(c=>c.checked=this.checked)">
                 </th>
                 <th>Settimana</th>
-                <th style="text-align:center;">↻︎ Supplenze</th>
-                <th style="text-align:center;">▤︎ Permessi</th>
-                <th style="text-align:center;">▥︎ Civica</th>
+                <th style="text-align:center;">{{ icon('refresh') }} Supplenze</th>
+                <th style="text-align:center;">{{ icon('list') }} Permessi</th>
+                <th style="text-align:center;">{{ icon('layers') }} Civica</th>
                 <th style="text-align:center;">Totale movimenti</th>
             </tr>
         </thead>
@@ -121,7 +121,7 @@
         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
             <input type="checkbox" name="sovrascrivi" value="1" id="sovrascrivi">
             <span style="font-weight:600; color:#92400e;">
-                ↻︎ Sovrascrivi settimane già importate
+                {{ icon('refresh') }} Sovrascrivi settimane già importate
             </span>
         </label>
         <p style="font-size:.82rem; color:#78350f; margin:6px 0 0 26px;">
@@ -134,7 +134,7 @@
 
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button class="btn btn-success" type="submit" id="btn-importa">
-            ✓︎ Importa movimenti selezionati ({{ da_importare|length }})
+            {{ icon('check') }} Importa movimenti selezionati ({{ da_importare|length }})
         </button>
         <a href="{{ url_for('report.index') }}" class="btn btn-primary">Annulla</a>
         <span style="color:var(--grigio); font-size:.82rem;" id="nota-doppioni">
@@ -149,12 +149,12 @@
     if (cb) {
         cb.addEventListener('change', function() {
             if (this.checked) {
-                btn.textContent = '↻︎ Reimporta (sovrascrittura) — ' +
+                btn.textContent = '{{ icon('refresh') }} Reimporta (sovrascrittura) — ' +
                     ({{ da_importare|length }} + {{ doppioni|length }}) + ' movimenti';
                 btn.style.background = '#92400e';
                 nota.textContent = 'I movimenti esistenti per le settimane selezionate verranno eliminati e riscritti.';
             } else {
-                btn.textContent = '✓︎ Importa movimenti selezionati ({{ da_importare|length }})';
+                btn.textContent = '{{ icon('check') }} Importa movimenti selezionati ({{ da_importare|length }})';
                 btn.style.background = '';
                 nota.textContent = 'I doppioni non verranno reimportati.';
             }
@@ -165,7 +165,7 @@
 </form>
 {% else %}
 <div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
-    <p style="font-size:1.1rem; margin-bottom:8px;">✓︎ Tutti i movimenti sono già stati importati.</p>
+    <p style="font-size:1.1rem; margin-bottom:8px;">{{ icon('check') }} Tutti i movimenti sono già stati importati.</p>
     <p style="font-size:.88rem;">
         {{ doppioni|length }} movimenti già presenti nel DB.
     </p>

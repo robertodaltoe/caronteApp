@@ -29,7 +29,7 @@
             {{ icon('arrow-left') }} Report
         </a>
         <h1 style="font-size:1.4rem; color:var(--blu); font-weight:800; margin-top:4px;">
-            ▲︎ Report per il Dirigente
+            {{ icon('chart') }} Report per il Dirigente
         </h1>
         <p style="color:var(--grigio); font-size:.85rem;">
             {{ nome_istituto }} &nbsp;·&nbsp;
@@ -37,7 +37,7 @@
         </p>
     </div>
     <button onclick="window.print()"
-            class="btn btn-primary">⎙︎ Stampa</button>
+            class="btn btn-primary">{{ icon('print') }} Stampa</button>
 </div>
 
 <!-- SITUAZIONE COMPLESSIVA -->
@@ -154,7 +154,7 @@
 <!-- SITUAZIONI CRITICHE -->
 {% if casi_critici %}
 <div class="card" style="margin-bottom:20px; border-left:4px solid var(--rosso);">
-    <h2>⚠︎ Situazioni critiche (debito &gt; 5h)</h2>
+    <h2>{{ icon('warning') }} Situazioni critiche (debito &gt; 5h)</h2>
     <p style="color:var(--grigio); font-size:.83rem; margin-bottom:12px;">
         Questi docenti richiedono un colloquio o una pianificazione di recupero.
     </p>

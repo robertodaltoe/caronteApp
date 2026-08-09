@@ -5,7 +5,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.3rem; color:var(--blu);">▤︎ Cronologia attività</h1>
+        <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('list') }} Cronologia attività</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Accessi e modifiche ai dati (docenti, supplenze, assenze, sospensioni, dati istituto, utenti) — ultimi 300 risultati.
         </p>
@@ -84,9 +84,9 @@
             <td style="font-size:.75rem; color:var(--grigio); text-align:center;">{{ l.ip }}</td>
             <td style="text-align:center;">
                 {% if l.esito == 'ok' %}
-                <span class="badge badge-verde" style="font-size:.65rem;">✓︎</span>
+                <span class="badge badge-verde" style="font-size:.65rem;">{{ icon('check') }}</span>
                 {% else %}
-                <span class="badge badge-rosso" style="font-size:.65rem;">✕︎</span>
+                <span class="badge badge-rosso" style="font-size:.65rem;">{{ icon('close') }}</span>
                 {% endif %}
             </td>
         </tr>

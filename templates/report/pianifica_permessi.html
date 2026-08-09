@@ -46,7 +46,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Pianificazione permessi orari</h1>
+        <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid') }} Pianificazione permessi orari</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Docenti con credito proiettato — giorni in cui conviene proporre il permesso per liberare la fine o l'inizio della giornata
         </p>
@@ -58,7 +58,7 @@
 <!-- CALENDARIO ANNO SCOLASTICO -->
 <div class="card" style="margin-bottom:18px;">
     <h2 style="display:flex; justify-content:space-between; align-items:center;">
-        ▦︎ Calendario {{ anno_corrente }}
+        {{ icon('grid') }} Calendario {{ anno_corrente }}
         {% if risultati is not none %}
         <a href="#" onclick="document.getElementById('form-calendario').style.display='block'; this.style.display='none'; return false;"
            style="font-size:.8rem; font-weight:400;">Modifica</a>
@@ -167,7 +167,7 @@
                     <th style="width:80px;">Giorno</th>
                     <th>Orario del giorno</th>
                     <th class="col-fine">Fine giornata </th>
-                    <th class="col-inizio">Inizio giornata ◷︎</th>
+                    <th class="col-inizio">Inizio giornata {{ icon('clock') }}</th>
                 </tr>
             </thead>
             <tbody>

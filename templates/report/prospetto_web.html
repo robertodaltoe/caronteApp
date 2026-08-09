@@ -42,7 +42,7 @@
         <a href="{{ url_for('report.prospetto_web', data_str=(data_sel + timedelta(days=1)).isoformat()) }}"
            class="btn btn-sm btn-primary">›</a>
         <a href="{{ url_for('report.prospetto', data_str=data_sel.isoformat()) }}"
-           class="btn btn-sm" style="background:#166534; color:white;">⇩︎ XLSX</a>
+           class="btn btn-sm" style="background:#166534; color:white;">{{ icon('download') }} XLSX</a>
         <a href="{{ url_for('dashboard.index', data=data_sel.isoformat()) }}"
            class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Dashboard</a>
     </div>
@@ -52,7 +52,7 @@
 {% if eventi_ist %}
 <div class="sezione-ist">
     <h2 style="font-size:1rem; font-weight:700; color:#7c3aed; margin-bottom:10px;">
-        ▨︎ Attività istituzionali
+        {{ icon('building') }} Attività istituzionali
     </h2>
     {% for ev in eventi_ist %}
     {% set n_pres = ev.presenze | selectattr('stato','eq','presente')    | list | length %}
@@ -80,18 +80,18 @@
         <span class="ist-n">{{ n_part }} doc.</span>
         <span class="ist-presenze">
             {% if ev.presenze %}
-                <span style="color:#16a34a; font-weight:700;">{{ n_pres }}✓︎</span>
-                {% if n_ass %}<span style="color:#dc2626; font-weight:700; margin-left:4px;">{{ n_ass }}✕︎</span>{% endif %}
+                <span style="color:#16a34a; font-weight:700;">{{ n_pres }}{{ icon('check') }}</span>
+                {% if n_ass %}<span style="color:#dc2626; font-weight:700; margin-left:4px;">{{ n_ass }}{{ icon('close') }}</span>{% endif %}
                 {% if n_gius %}<span style="color:#d97706; font-weight:700; margin-left:4px;">{{ n_gius }}~</span>{% endif %}
             {% else %}<span style="color:var(--grigio);">—</span>{% endif %}
         </span>
         <a href="{{ url_for('attivita_ist.presenze', id=ev.id) }}"
            class="btn btn-sm" style="background:#7c3aed; color:white;
-           padding:3px 8px; font-size:.75rem;">✓︎ Presenze</a>
+           padding:3px 8px; font-size:.75rem;">{{ icon('check') }} Presenze</a>
         {% if ev.tipo == 'scrutinio' %}
         <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=ev.id) }}"
            class="btn btn-sm btn-primary" style="padding:3px 8px; font-size:.75rem;"
-           title="Gestisci sostituzioni scrutinio">◍︎ Sostituzioni</a>
+           title="Gestisci sostituzioni scrutinio">{{ icon('person') }} Sostituzioni</a>
         {% endif %}
     </div>
     {% endfor %}
@@ -101,7 +101,7 @@
 {# ── SUPPLENZE ──────────────────────────────────────────────── #}
 <div class="card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-        <h2 style="margin:0;">▤︎ Supplenze
+        <h2 style="margin:0;">{{ icon('list') }} Supplenze
             {% set n_a = supplenze | selectattr('stato','eq','assegnata') | list | length %}
             {% set n_s = supplenze | selectattr('stato','eq','scoperta')  | list | length %}
             <span style="font-size:.8rem; font-weight:400; color:var(--grigio); margin-left:8px;">
@@ -133,7 +133,7 @@
             <td style="font-size:.88rem;">
                 {% if s.sostituto %}<strong>{{ s.sostituto.cognome }}</strong>
                 {% elif s.stato == 'non_assegnabile' %}<span style="color:#7c3aed;">N/A</span>
-                {% else %}<span style="color:#dc2626;">⚠︎ Scoperta</span>{% endif %}
+                {% else %}<span style="color:#dc2626;">{{ icon('warning') }} Scoperta</span>{% endif %}
             </td>
             <td>
                 {% set lbl = {'recupero':'Recupero','pagamento':'Pagamento','scambio':'Scambio',
@@ -142,9 +142,9 @@
             </td>
             <td>
                 {% if s.stato == 'assegnata' %}
-                    <span class="badge badge-verde">✓︎</span>
+                    <span class="badge badge-verde">{{ icon('check') }}</span>
                 {% elif s.stato == 'scoperta' %}
-                    <span class="badge badge-rosso">⚠︎</span>
+                    <span class="badge badge-rosso">{{ icon('warning') }}</span>
                 {% else %}
                     <span class="badge badge-grigio">{{ s.stato }}</span>
                 {% endif %}

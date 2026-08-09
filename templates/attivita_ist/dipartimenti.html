@@ -5,7 +5,7 @@
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Dipartimenti e Materie</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('layers') }} Dipartimenti e Materie</h1>
     <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         <span style="font-size:.7rem; color:var(--grigio);">Referenti per l'anno:</span>
         {% for a in anni_disponibili %}
@@ -46,7 +46,7 @@
         {% set ref = referenti[dip.id] %}
         <span style="font-size:.78rem; color:var(--verde); background:var(--verde-bg);
                      padding:3px 10px; border-radius:6px; border:1px solid var(--verde);">
-            ◍︎ Referente: <strong>{{ ref.cognome }} {{ ref.nome }}</strong>
+            {{ icon('person') }} Referente: <strong>{{ ref.cognome }} {{ ref.nome }}</strong>
         </span>
         {% else %}
         <span style="font-size:.75rem; color:#9ca3af; font-style:italic;">
@@ -55,7 +55,7 @@
         {% endif %}
         <button onclick="toggleEdit('dip-{{ dip.id }}')"
                 class="btn btn-sm btn-primary" style="font-size:.72rem; margin-left:auto;">
-            ✎︎ Modifica dipartimento
+            {{ icon('edit') }} Modifica dipartimento
         </button>
     </div>
 
@@ -84,7 +84,7 @@
                        style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
                               font-size:.82rem; width:60px;">
             </div>
-            <button type="submit" class="btn btn-success btn-sm">✓︎ Salva</button>
+            <button type="submit" class="btn btn-success btn-sm">{{ icon('check') }} Salva</button>
         </div>
     </form>
 
@@ -121,7 +121,7 @@
             <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                 <button onclick="toggleEdit('mat-{{ m.id }}')"
                         class="btn btn-sm btn-primary"
-                        style="font-size:.68rem; padding:2px 7px;">✎︎</button>
+                        style="font-size:.68rem; padding:2px 7px;">{{ icon('edit') }}</button>
 
             </td>
         </tr>
@@ -192,7 +192,7 @@
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success btn-sm" style="font-size:.75rem;">
-                            ✓︎ Salva
+                            {{ icon('check') }} Salva
                         </button>
                         <button type="button" onclick="toggleEdit('mat-{{ m.id }}')"
                                 class="btn btn-sm" style="background:#e5e7eb; color:#6b7280; font-size:.75rem;">
@@ -216,7 +216,7 @@
                 ({{ tutte_materie | length }} ancora da assegnare)
             </span>
             {% else %}
-            <span style="font-size:.72rem; font-weight:400; color:var(--verde);">✓︎ tutte assegnate</span>
+            <span style="font-size:.72rem; font-weight:400; color:var(--verde);">{{ icon('check') }} tutte assegnate</span>
             {% endif %}
         </summary>
         <div style="margin-top:8px; background:#f0f4f8; padding:12px 14px;
@@ -245,7 +245,7 @@
                         {% endif %}
                     </select>
                 </div>
-                <button type="submit" class="btn btn-success btn-sm">✓︎ Assegna</button>
+                <button type="submit" class="btn btn-success btn-sm">{{ icon('check') }} Assegna</button>
             </form>
 
             {# Crea nuova materia (per casi non ancora presenti) #}
@@ -315,7 +315,7 @@
                    style="padding:4px 8px; border:1px solid #d1d5db; border-radius:5px;
                           font-size:.82rem; width:60px;">
         </div>
-        <button type="submit" class="btn btn-success btn-sm">✓︎ Crea</button>
+        <button type="submit" class="btn btn-success btn-sm">{{ icon('check') }} Crea</button>
     </form>
 </div>
 

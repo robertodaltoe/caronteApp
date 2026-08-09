@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Agenda{% endblock %}
 
 {% block extra_style %}
@@ -16,7 +17,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">▦︎ Agenda eventi futuri</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('grid') }} Agenda eventi futuri</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Da oggi in avanti — tutte le voci sono eliminabili
         </p>
@@ -59,7 +60,7 @@
             <td>
                 <div style="display:flex; gap:4px; justify-content:center; flex-wrap:nowrap;">
                 <a href="{{ url_for('indisponibilita.modifica', id=i.prima_id, next=request.url) }}"
-                   class="btn btn-primary btn-sm">✎︎️</a>
+                   class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 <form method="post"
                       action="{{ url_for('agenda.elimina_gruppo_indisp') }}"
                       onsubmit="return confirm('Eliminare {% if i.ids|length > 1 %}{{ i.ids|length }} indisponibilità{% else %}questa indisponibilità{% endif %}?')"
@@ -117,11 +118,11 @@
             <td>
                 <div style="display:flex; gap:4px; justify-content:center;">
                 <a href="{{ url_for('assenze.modifica', id=a.id, next=request.url) }}"
-                   class="btn btn-primary btn-sm">✎︎️</a>
+                   class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('assenze.elimina', id=a.id) }}"
                       onsubmit="return confirm('Eliminare assenza e supplenze collegate?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
                 </div>
             </td>
@@ -139,7 +140,7 @@
 <!-- SUPPLENZE FUTURE -->
 {% if supplenze_future %}
 <div class="card agenda-section">
-    <h2>▤︎ Supplenze future ({{ supplenze_future|length }} voci)</h2>
+    <h2>{{ icon('list') }} Supplenze future ({{ supplenze_future|length }} voci)</h2>
     <table>
         <thead>
             <tr><th style="width:120px;">Data</th><th style="width:40px;text-align:center;">Ora</th><th style="width:80px;text-align:center;">Classe</th>
@@ -161,18 +162,18 @@
             </td>
             <td>
                 {% if s.stato == 'assegnata' %}
-                <span class="badge badge-verde">✓︎ Assegnata</span>
+                <span class="badge badge-verde">{{ icon('check') }} Assegnata</span>
                 {% else %}
-                <span class="badge badge-rosso">⚠︎ Scoperta</span>
+                <span class="badge badge-rosso">{{ icon('warning') }} Scoperta</span>
                 {% endif %}
             </td>
             <td>
                 <div style="display:flex; gap:4px; justify-content:center;">
                 <a href="{{ url_for('supplenze.modifica', id=s.id, next=request.url) }}"
-                   class="btn btn-primary btn-sm">✎︎️</a>
+                   class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('supplenze.annulla', id=s.id) }}"
                       onsubmit="return confirm('Annullare supplenza?')" style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
                 </div>
             </td>
@@ -186,7 +187,7 @@
 <!-- CAMBI QUADRO FUTURI -->
 {% if cambi_futuri %}
 <div class="card agenda-section">
-    <h2>↻︎ Cambi quadro futuri ({{ cambi_futuri|length }} voci)</h2>
+    <h2>{{ icon('refresh') }} Cambi quadro futuri ({{ cambi_futuri|length }} voci)</h2>
     <table>
         <thead>
             <tr>
@@ -227,12 +228,12 @@
             <td style="text-align:right; padding-right:12px;">
                 <div style="display:flex; gap:4px; justify-content:center;">
                     <a href="{{ url_for('cambi.modifica', id=sc.id, next=request.url) }}"
-                       class="btn btn-primary btn-sm">✎︎️</a>
+                       class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                     <form method="post"
                           action="{{ url_for('cambi.annulla', id=sc.id) }}"
                           onsubmit="return confirm('Annullare questo scambio?')"
                           style="display:inline;">
-                        <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                        <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                     </form>
                 </div>
             </td>

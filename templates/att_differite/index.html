@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Attività Differite{% endblock %}
 {% block content %}
 
 <div style="margin-bottom:20px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">▥︎ Attività Differite</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('layers') }} Attività Differite</h1>
     <p style="font-size:.84rem; color:var(--grigio);">
         Attività scolastiche organizzate fuori dal calendario ordinario delle lezioni.
         Scegli l'ambito da gestire.
@@ -15,7 +16,7 @@
     <a href="{{ url_for('recupero.index') }}" class="card"
        style="padding:24px; text-decoration:none; border-left:6px solid #0369a1;
               display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:2.2rem;">▥︎</div>
+        <div style="font-size:2.2rem;">{{ icon('layers') }}</div>
         <div style="font-weight:800; font-size:1.05rem; color:#0369a1;">
             Recuperi
         </div>
@@ -47,7 +48,7 @@
     <a href="{{ url_for('esami_integrativi.index') }}" class="card"
        style="padding:24px; text-decoration:none; border-left:6px solid #7c3aed;
               display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:2.2rem;">◷︎</div>
+        <div style="font-size:2.2rem;">{{ icon('clock') }}</div>
         <div style="font-weight:800; font-size:1.05rem; color:#7c3aed;">
             Esami integrativi
         </div>

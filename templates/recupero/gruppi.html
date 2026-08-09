@@ -5,7 +5,7 @@
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎ Gruppi di recupero</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }} Gruppi di recupero</h1>
     <span style="font-size:.82rem; color:var(--grigio); margin-left:4px;">
         {{ gruppi|length }} gruppi creati
     </span>
@@ -38,7 +38,7 @@
 {% if gruppi %}
 <div style="font-size:.78rem;font-weight:700;color:var(--grigio);
             text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-    ▤︎ Riepilogo gruppi creati ({{ gruppi|length }})
+    {{ icon('list') }} Riepilogo gruppi creati ({{ gruppi|length }})
 </div>
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
     <table>
@@ -69,7 +69,7 @@
             </td>
             <td style="text-align:center;font-size:.84rem;">
                 <span style="font-weight:700;color:var(--blu);">{{ tot_g }}</span>
-                <span style="color:var(--verde);font-weight:700;margin-left:4px;">/ ✓︎{{ ader_g }}</span>
+                <span style="color:var(--verde);font-weight:700;margin-left:4px;">/ {{ icon('check') }}{{ ader_g }}</span>
             </td>
             <td style="text-align:center;font-size:.8rem;color:var(--grigio);">
                 {{ g.max_ore or 10 }}h · {{ g.max_ore_giorno or 2 }}h/g
@@ -85,7 +85,7 @@
                 <td></td>
                 <td style="text-align:center;font-size:.8rem;font-weight:700;">
                     <span style="color:var(--blu);">{{ tot_alunni_gruppi }}</span>
-                    / <span style="color:var(--verde);">✓︎{{ tot_aderenti_gruppi }}</span>
+                    / <span style="color:var(--verde);">{{ icon('check') }}{{ tot_aderenti_gruppi }}</span>
                 </td>
                 <td></td>
                 <td></td>
@@ -98,7 +98,7 @@
 {% if proposte %}
 <div style="font-size:.78rem;font-weight:700;color:var(--grigio);
             text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-    ⚙︎ Proposte automatiche dai recuperi importati
+    {{ icon('gear') }} Proposte automatiche dai recuperi importati
 </div>
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
     <table>
@@ -120,15 +120,15 @@
             <td style="font-size:.76rem;color:var(--grigio);">
                 {{ p.docente_raw[:30] }}
                 {% if p.rd %}
-                <span style="display:block;font-size:.7rem;color:var(--verde);font-weight:700;">✓︎ {{ p.rd.docente.cognome }}</span>
+                <span style="display:block;font-size:.7rem;color:var(--verde);font-weight:700;">{{ icon('check') }} {{ p.rd.docente.cognome }}</span>
                 {% else %}
-                <span style="display:block;font-size:.7rem;color:var(--rosso);">✕︎ non disponibile</span>
+                <span style="display:block;font-size:.7rem;color:var(--rosso);">{{ icon('close') }} non disponibile</span>
                 {% endif %}
             </td>
             <td style="text-align:center;">
                 <span style="font-size:1rem;font-weight:800;color:var(--blu);">{{ p.n_alunni }}</span>
                 {% if p.n_non_risposto %}<span style="display:block;font-size:.68rem;color:var(--rosso);">?{{ p.n_non_risposto }}</span>{% endif %}
-                {% if p.n_non_aderisce %}<span style="display:block;font-size:.68rem;color:#6b7280;">✕︎{{ p.n_non_aderisce }}</span>{% endif %}
+                {% if p.n_non_aderisce %}<span style="display:block;font-size:.68rem;color:#6b7280;">{{ icon('close') }}{{ p.n_non_aderisce }}</span>{% endif %}
             </td>
             <td style="font-size:.78rem;">
                 {% for cls in p.classi %}
@@ -137,7 +137,7 @@
                 <span title="Assegnata a {{ g_cop.docente.cognome if g_cop.docente else '?' }}"
                       style="background:var(--verde-bg);color:var(--verde);padding:1px 5px;border-radius:4px;
                              margin:1px;display:inline-block;font-size:.74rem;font-weight:600;">
-                    ✓︎ {{ cls }}
+                    {{ icon('check') }} {{ cls }}
                     <span style="font-size:.68rem;opacity:.8;">{{ g_cop.docente.cognome[:6] if g_cop.docente else '' }}</span>
                 </span>
                 {% else %}
@@ -191,7 +191,7 @@
                 {% for g in p.gruppi_creati %}
                 <div style="background:var(--verde-bg);border:1px solid var(--verde);border-radius:6px;padding:5px 10px;
                             display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <span style="font-size:.8rem;font-weight:700;color:var(--verde);">✓︎</span>
+                    <span style="font-size:.8rem;font-weight:700;color:var(--verde);">{{ icon('check') }}</span>
                     <span style="font-size:.82rem;">
                         {% if g.docente %}{{ g.docente.cognome }} {{ g.docente.nome[0] if g.docente.nome else '' }}.{% endif %}
                     </span>
@@ -199,18 +199,18 @@
                         {{ g.classi }} ·
                     {% set tot_g, ader_g = aderenti_per_gruppo.get(g.id, (0,0)) %}
                     <span style="color:var(--blu);font-weight:700;">{{ tot_g }}</span> tot
-                    <span style="color:var(--verde);font-weight:700;margin-left:4px;">✓︎{{ ader_g }}</span> aderiscono ·
+                    <span style="color:var(--verde);font-weight:700;margin-left:4px;">{{ icon('check') }}{{ ader_g }}</span> aderiscono ·
                     {{ g.max_ore or 10 }}h/{{ g.max_ore_giorno or 2 }}h/g
                     </span>
                     <div style="margin-left:auto;display:flex;gap:4px;">
                         <button type="button" onclick="toggleEditGruppo({{ g.id }})"
                                 style="background:var(--blu-light);color:var(--blu);border:1px solid var(--bronzo);
-                                       border-radius:5px;padding:2px 7px;font-size:.76rem;cursor:pointer;">✎︎️</button>
+                                       border-radius:5px;padding:2px 7px;font-size:.76rem;cursor:pointer;">{{ icon('edit') }}</button>
                         <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
                             <input type="hidden" name="azione" value="elimina">
                             <input type="hidden" name="id" value="{{ g.id }}">
                             <button class="btn btn-danger btn-sm" type="submit"
-                                    style="font-size:.76rem;padding:2px 6px;">✕︎</button>
+                                    style="font-size:.76rem;padding:2px 6px;">{{ icon('close') }}</button>
                         </form>
                     </div>
                 </div>
@@ -251,9 +251,9 @@
                             <input type="number" name="max_ore_giorno" value="{{ g.max_ore_giorno or 2 }}" min="1" max="6"
                                    style="width:38px;padding:3px 5px;border:1px solid var(--giallo);border-radius:5px;font-size:.82rem;">
                         </div>
-                        <button type="submit" class="btn btn-success btn-sm">▤︎</button>
+                        <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }}</button>
                         <button type="button" onclick="toggleEditGruppo({{ g.id }})"
-                                class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">✕︎</button>
+                                class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">{{ icon('close') }}</button>
                     </form>
                 </div>
                 {% endfor %}
@@ -263,7 +263,7 @@
             <td style="text-align:center;">
                 {% if p.classi_libere %}
                 <button type="submit" form="form-prop-{{ loop.index }}"
-                        class="btn btn-success btn-sm">✚︎ Crea</button>
+                        class="btn btn-success btn-sm">{{ icon('plus') }} Crea</button>
                 {% endif %}
                 {% if p.gruppi_creati %}
                 <button type="button" onclick="toggleAggiungiTurno('turno-{{ loop.index }}')"
@@ -297,9 +297,9 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-success btn-sm">✚︎ Crea turno</button>
+                    <button type="submit" class="btn btn-success btn-sm">{{ icon('plus') }} Crea turno</button>
                     <button type="button" onclick="toggleAggiungiTurno('turno-{{ loop.index }}')"
-                            class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">✕︎</button>
+                            class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -324,7 +324,7 @@
 {% if gruppi_senza_proposta %}
 <div style="font-size:.78rem;font-weight:700;color:var(--grigio);
             text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-    ▤︎ Gruppi aggiuntivi (creati manualmente)
+    {{ icon('list') }} Gruppi aggiuntivi (creati manualmente)
 </div>
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
     {% for g in gruppi_senza_proposta %}
@@ -339,16 +339,16 @@
             </span>
             {% set tot_g, ader_g = aderenti_per_gruppo.get(g.id, (0,0)) %}
             <span style="font-size:.78rem;color:var(--blu);font-weight:700;">{{ tot_g }} tot</span>
-            <span style="font-size:.78rem;color:var(--verde);font-weight:700;">✓︎{{ ader_g }} ader.</span>
+            <span style="font-size:.78rem;color:var(--verde);font-weight:700;">{{ icon('check') }}{{ ader_g }} ader.</span>
             <span style="font-size:.78rem;color:var(--grigio);">{{ g.max_ore or 10 }}h/{{ g.max_ore_giorno or 2 }}h/g</span>
             <div style="margin-left:auto;display:flex;gap:4px;">
                 <button type="button" onclick="toggleEditGruppo({{ g.id }})"
                         style="background:var(--blu-light);color:var(--blu);border:1px solid var(--bronzo);
-                               border-radius:5px;padding:2px 7px;font-size:.76rem;cursor:pointer;">✎︎️</button>
+                               border-radius:5px;padding:2px 7px;font-size:.76rem;cursor:pointer;">{{ icon('edit') }}</button>
                 <form method="post" onsubmit="return confirm('Eliminare?')" style="margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ g.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit" style="font-size:.76rem;padding:2px 6px;">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit" style="font-size:.76rem;padding:2px 6px;">{{ icon('close') }}</button>
                 </form>
             </div>
         </div>
@@ -387,9 +387,9 @@
                     <input type="number" name="max_ore_giorno" value="{{ g.max_ore_giorno or 2 }}" min="1" max="6"
                            style="width:38px;padding:3px 5px;border:1px solid var(--giallo);border-radius:5px;font-size:.82rem;">
                 </div>
-                <button type="submit" class="btn btn-success btn-sm">▤︎</button>
+                <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }}</button>
                 <button type="button" onclick="toggleEditGruppo({{ g.id }})"
-                        class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">✕︎</button>
+                        class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);">{{ icon('close') }}</button>
             </form>
         </div>
     </div>
@@ -400,7 +400,7 @@
 <!-- ══ SEZIONE 3: AGGIUNGI GRUPPO MANUALE ═══════════════════════════ -->
 <div style="font-size:.78rem;font-weight:700;color:var(--grigio);
             text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-    ✚︎ Aggiungi gruppo manualmente
+    {{ icon('plus') }} Aggiungi gruppo manualmente
 </div>
 <div class="card" style="padding:16px 20px;">
     <form method="post">
@@ -441,7 +441,7 @@
                 <input type="number" name="max_ore_giorno" value="2" min="1" max="6"
                        style="width:45px;padding:6px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:.88rem;">
             </div>
-            <button type="submit" class="btn btn-success btn-sm">✚︎ Aggiungi</button>
+            <button type="submit" class="btn btn-success btn-sm">{{ icon('plus') }} Aggiungi</button>
         </div>
     </form>
 </div>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Sincronizzazione orario{% endblock %}
 
 {% block extra_style %}
@@ -16,7 +17,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">↻︎ Sincronizzazione orario</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('refresh') }} Sincronizzazione orario</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Aggiorna l'orario docenti senza perdere dati storici
         </p>
@@ -25,12 +26,12 @@
 
 <!-- STATO ATTUALE -->
 <div class="card" style="margin-bottom:20px;">
-    <h2>▲︎ Stato orario attuale</h2>
+    <h2>{{ icon('chart') }} Stato orario attuale</h2>
     <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
-        <span class="stat-mini">▦︎ {{ slot_count }} slot totali</span>
-        <span class="stat-mini">◍︎ {{ doc_con_orario }} docenti con orario</span>
+        <span class="stat-mini">{{ icon('grid') }} {{ slot_count }} slot totali</span>
+        <span class="stat-mini">{{ icon('person') }} {{ doc_con_orario }} docenti con orario</span>
         <span class="stat-mini">
-            ▧︎ File: <strong>{{ file_corrente or 'nessun file trovato' }}</strong>
+            {{ icon('package') }} File: <strong>{{ file_corrente or 'nessun file trovato' }}</strong>
         </span>
     </div>
 </div>
@@ -52,7 +53,7 @@
             </div>
             <button class="btn btn-success" type="submit"
                     onclick="return confirm('Aggiornare l\'orario? L\'operazione sovrascrive tutti gli slot orario.')">
-                ↻︎ Aggiorna orario
+                {{ icon('refresh') }} Aggiorna orario
             </button>
         </div>
         <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
@@ -64,7 +65,7 @@
 
 <!-- ALIAS DOCENTI -->
 <div class="card" style="margin-bottom:20px;">
-    <h2>◈︎ Alias docenti</h2>
+    <h2>{{ icon('grid-alt') }} Alias docenti</h2>
     <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
         Se il nome nel file Excel non corrisponde esattamente al database,
         crea un alias. Es. "MONTEMANARO" →︎ MONTEMARANO.
@@ -113,7 +114,7 @@
                       action="{{ url_for('sync.elimina_alias', id=a.id) }}"
                       onsubmit="return confirm('Eliminare questo alias?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -131,7 +132,7 @@
 <!-- LOG IMPORTAZIONI -->
 {% if logs %}
 <div class="card">
-    <h2>▤︎ Storico importazioni (ultime 10)</h2>
+    <h2>{{ icon('list') }} Storico importazioni (ultime 10)</h2>
     <table>
         <thead>
             <tr><th>Data/ora</th><th>File</th><th>Slot</th>
@@ -153,18 +154,18 @@
             <td>
                 {% set nr = log.non_riconosciuti | from_json if log.non_riconosciuti else [] %}
                 {% if nr %}
-                    <span class="badge badge-giallo">⚠︎ {{ nr | join(', ') }}</span>
+                    <span class="badge badge-giallo">{{ icon('warning') }} {{ nr | join(', ') }}</span>
                 {% else %}
                     <span style="color:var(--grigio);">—</span>
                 {% endif %}
             </td>
             <td>
                 {% if log.esito == 'ok' %}
-                    <span class="badge badge-verde">✓︎ OK</span>
+                    <span class="badge badge-verde">{{ icon('check') }} OK</span>
                 {% elif log.esito == 'warning' %}
-                    <span class="badge badge-giallo">⚠︎ Warning</span>
+                    <span class="badge badge-giallo">{{ icon('warning') }} Warning</span>
                 {% else %}
-                    <span class="badge badge-rosso">✕︎ Errore</span>
+                    <span class="badge badge-rosso">{{ icon('close') }} Errore</span>
                 {% endif %}
             </td>
         </tr>

@@ -18,7 +18,7 @@
     <!-- AGGIORNA SETTIMANA -->
     <div class="card">
         <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:16px;">
-            ▦︎ Aggiorna settimana specifica
+            {{ icon('grid') }} Aggiorna settimana specifica
         </h2>
         <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
             Compila le colonne supplenze, permessi, civica e delta nel foglio
@@ -40,7 +40,7 @@
                 </select>
             </div>
             <button class="btn btn-primary" type="submit">
-                ✓︎ Aggiorna foglio settimana
+                {{ icon('check') }} Aggiorna foglio settimana
             </button>
         </form>
     </div>
@@ -48,7 +48,7 @@
     <!-- AGGIORNA RIEPILOGO -->
     <div class="card">
         <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:16px;">
-            ▲︎ Aggiorna foglio Riepilogo
+            {{ icon('chart') }} Aggiorna foglio Riepilogo
         </h2>
         <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
             Aggiorna il foglio <strong>Riepilogo</strong> con i saldi totali di tutti
@@ -58,11 +58,11 @@
               onsubmit="return confirm('Aggiornare il Riepilogo con i dati attuali del database?')">
             <input type="hidden" name="azione" value="riepilogo">
             <button class="btn btn-success" type="submit">
-                ✓︎ Aggiorna Riepilogo completo
+                {{ icon('check') }} Aggiorna Riepilogo completo
             </button>
         </form>
         <p style="font-size:.78rem; color:var(--grigio); margin-top:12px;">
-            ⚠︎ Sovrascrive i valori calcolati nel Riepilogo. Le formule Excel
+            {{ icon('warning') }} Sovrascrive i valori calcolati nel Riepilogo. Le formule Excel
             potrebbero essere sostituite da valori fissi.
         </p>
     </div>

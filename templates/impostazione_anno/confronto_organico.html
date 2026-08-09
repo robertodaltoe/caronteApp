@@ -5,7 +5,7 @@
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazione Anno</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">⌕︎ Confronto TI ↔︎ Organico USR — {{ anno }}</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('search') }} Confronto TI ↔︎ Organico USR — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('impostazione_anno.confronto_organico', anno=a) }}"
@@ -37,7 +37,7 @@
 {% if nessun_collegamento %}
 <div class="card" style="padding:14px 18px; margin-bottom:14px; border-left:4px solid #f59e0b;
      background:#fffbeb; font-size:.86rem; color:#92400e;">
-    ⚠︎ <strong>Nessun docente TI è ancora collegato alle classi di concorso.</strong>
+    {{ icon('warning') }} <strong>Nessun docente TI è ancora collegato alle classi di concorso.</strong>
     Il confronto mostrerà 0 TI in app per tutte le CC.<br>
     Vai al <a href="{{ url_for('impostazione_anno.docenti_classi_concorso', anno=anno) }}"
               style="color:#92400e; font-weight:700;">Passo 8 — Docenti ↔︎ CC</a>
@@ -103,9 +103,9 @@
             {{ '+' if r.scarto > 0 else '' }}{{ r.scarto if r.scarto != 0 else '—' }}
         </td>
         <td style="padding:9px 8px; text-align:center; font-size:1rem;">
-            {% if r.semaforo == 'verde' %}✓︎
-            {% elif r.semaforo == 'giallo' %}⚠︎️
-            {% else %}✕︎
+            {% if r.semaforo == 'verde' %}{{ icon('check') }}
+            {% elif r.semaforo == 'giallo' %}{{ icon('warning') }}
+            {% else %}{{ icon('close') }}
             {% endif %}
         </td>
     </tr>
@@ -115,8 +115,8 @@
 </div>
 
 <div style="margin-top:10px; font-size:.78rem; color:var(--grigio);">
-    ✓︎ = TI in app = DOC USR &nbsp;|&nbsp;
-    ⚠︎️ = scarto di 1 (verifica AP/aspettativa) &nbsp;|&nbsp;
-    ✕︎ = scarto > 1 (da verificare)
+    {{ icon('check') }} = TI in app = DOC USR &nbsp;|&nbsp;
+    {{ icon('warning') }} = scarto di 1 (verifica AP/aspettativa) &nbsp;|&nbsp;
+    {{ icon('close') }} = scarto > 1 (da verificare)
 </div>
 {% endblock %}

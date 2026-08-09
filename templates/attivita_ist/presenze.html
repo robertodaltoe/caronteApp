@@ -25,7 +25,7 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
     <div>
-        <h1 style="font-size:1.3rem; color:var(--blu);">✓︎ Presenze — {{ evento.tipo_emoji }} {{ evento.titolo }}</h1>
+        <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('check') }} Presenze — {{ evento.tipo_emoji }} {{ evento.titolo }}</h1>
         <p style="font-size:.84rem; color:var(--grigio);">
             {{ evento.data.strftime('%A %d/%m/%Y') | capitalize }}
             {% if evento.ora_inizio %} · {{ evento.ora_inizio }}{% if evento.ora_fine %}–{{ evento.ora_fine }}{% endif %}{% endif %}
@@ -60,7 +60,7 @@
     {% if n_parz > 0 %}
     <div class="cnt-box" style="background:var(--giallo-bg);">
         <div style="font-size:1.6rem; font-weight:800; color:var(--giallo);">{{ n_parz }}</div>
-        <div style="font-size:.78rem; color:var(--giallo);">⚑︎ Parziali</div>
+        <div style="font-size:.78rem; color:var(--giallo);">{{ icon('star') }} Parziali</div>
     </div>
     {% endif %}
 </div>
@@ -103,7 +103,7 @@
                    style="width:80px; padding:3px 5px; border:1px solid #e5eaf0;
                           border-radius:5px; font-size:.75rem; color:var(--blu);">
             {% if p.ora_inizio_eff or p.ora_fine_eff %}
-            <span style="color:var(--giallo); font-weight:700;" title="Presenza parziale">⚑︎</span>
+            <span style="color:var(--giallo); font-weight:700;" title="Presenza parziale">{{ icon('star') }}</span>
             {% endif %}
         </span>
     </div>
@@ -111,7 +111,7 @@
 </div>
 
 <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
-    <button type="submit" class="btn btn-success">▤︎ Salva presenze</button>
+    <button type="submit" class="btn btn-success">{{ icon('list') }} Salva presenze</button>
     <span style="font-size:.8rem; color:var(--grigio);">Le assenze collegate al registro assenze sono pre-compilate ma modificabili.</span>
 </div>
 </form>

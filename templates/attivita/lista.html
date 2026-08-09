@@ -76,16 +76,16 @@
         <td>
             <div style="display:flex; gap:4px; justify-content:flex-end;">
                 <a href="{{ url_for('attivita.modifica', id=a.id) }}"
-                   class="btn btn-primary btn-sm">✎︎️</a>
+                   class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 {% if a.tipo in ('fsl','progetto') %}
                 <a href="{{ url_for('attivita.calendario_fsl', id=a.id) }}"
                    class="btn btn-sm" style="background:#0369a1; color:white;"
-                   title="Calendario ore per accompagnatore">▦︎</a>
+                   title="Calendario ore per accompagnatore">{{ icon('grid') }}</a>
                 {% endif %}
                 <form method="post" action="{{ url_for('attivita.annulla', id=a.id) }}"
                       onsubmit="return confirm('Annullare questa attività?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </div>
         </td>
@@ -100,7 +100,7 @@
 {# ── IN CORSO / FUTURE ─────────────────────────────────────── #}
 {% if future %}
 <h2 style="font-size:1rem; font-weight:700; color:var(--blu); margin-bottom:8px;">
-    ▦︎ In corso e programmate
+    {{ icon('grid') }} In corso e programmate
     <span style="font-size:.8rem; font-weight:400; color:var(--grigio); margin-left:6px;">
         {{ future|length }} attivit{{ 'à' if future|length == 1 else 'à' }}
     </span>
@@ -116,7 +116,7 @@
 {# ── PASSATE ───────────────────────────────────────────────── #}
 {% if passate %}
 <h2 style="font-size:1rem; font-weight:700; color:var(--grigio); margin-bottom:8px;">
-    ▧︎ Concluse
+    {{ icon('package') }} Concluse
     <span style="font-size:.8rem; font-weight:400; margin-left:6px;">{{ passate|length }}</span>
 </h2>
 <div style="opacity:.6;">

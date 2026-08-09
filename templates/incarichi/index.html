@@ -14,7 +14,7 @@
                   color:{{ 'white' if a == anno else '#374151' }};">{{ a }}</a>
         {% endfor %}
         <a href="{{ url_for('incarichi.tipi') }}" class="btn btn-sm"
-           style="background:#f3f4f6; color:#374151; font-size:.76rem;">⚙︎ Gestisci tipi</a>
+           style="background:#f3f4f6; color:#374151; font-size:.76rem;">{{ icon('gear') }} Gestisci tipi</a>
     </div>
 </div>
 
@@ -50,7 +50,7 @@
                 + Aggiungi incarico
             </button>
             <button type="submit" class="btn btn-success btn-sm">
-                ✓︎ Salva tutti
+                {{ icon('check') }} Salva tutti
             </button>
         </div>
     </form>
@@ -121,7 +121,7 @@
                               onsubmit="return confirm('Eliminare questa nomina?')">
                             <button type="submit"
                                     style="background:none; border:none; cursor:pointer;
-                                           color:var(--rosso); font-size:.8rem;">✕︎</button>
+                                           color:var(--rosso); font-size:.8rem;">{{ icon('close') }}</button>
                         </form>
                     </td>
                 </tr>
@@ -210,7 +210,7 @@ function aggiungiRigaIncarico() {
     div.innerHTML = `
         <button type="button" onclick="rimuoviRigaIncarico(${idx})" title="Rimuovi"
                 style="position:absolute; top:8px; right:10px; background:none; border:none;
-                       color:var(--grigio); font-size:1rem; cursor:pointer;">🗑</button>
+                       color:var(--grigio); font-size:1rem; cursor:pointer;">{{ icon('trash') }}</button>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
             <div style="flex:2; min-width:200px;">
                 <div style="font-size:.72rem; color:var(--grigio); margin-bottom:2px;">Tipo incarico *</div>

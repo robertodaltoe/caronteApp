@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Nuova attività fuori aula{% endblock %}
 
 {% block extra_style %}
@@ -196,13 +197,13 @@
                 <input type="radio" name="ricorrenza" value="giornaliera"
                        {% if not attivita or attivita.ricorrenza == 'giornaliera' %}checked{% endif %}
                        onchange="cambiaRicorrenza('giornaliera')">
-                📅 Tutti i giorni del periodo
+                {{ icon('calendar') }} Tutti i giorni del periodo
             </label>
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600;">
                 <input type="radio" name="ricorrenza" value="settimanale"
                        {% if attivita and attivita.ricorrenza == 'settimanale' %}checked{% endif %}
                        onchange="cambiaRicorrenza('settimanale')">
-                🔁 Solo certi giorni della settimana
+                {{ icon('swap') }} Solo certi giorni della settimana
             </label>
         </div>
         <div id="sez-settimanale" class="sez">
@@ -299,7 +300,7 @@
                             <label style="font-size:.78rem; font-weight:700; color:var(--grigio);">Tipo</label>
                             <select name="gruppo_tipo" style="width:100%; padding:6px 10px; border-radius:5px; border:1px solid #d1d5db; font-size:.85rem;">
                                 <option value="progetto">📐 Progetto</option>
-                                <option value="fsl">🏫 FSL</option>
+                                <option value="fsl">{{ icon('school') }} FSL</option>
                                 <option value="migrazione_gruppo">🔀 Migrazione Gruppo</option>
                             </select>
                         </div>
@@ -335,7 +336,7 @@
             📍 Pianificazione migrazione per ora:
         </p>
         <p style="font-size:.78rem; color:var(--giallo); margin-bottom:12px;">
-            Per ogni ora indica la classe in cui migra il gruppo. La ✅ associa automaticamente
+            Per ogni ora indica la classe in cui migra il gruppo. La {{ icon('check') }} associa automaticamente
             il docente di quella classe in quell'ora — si disattiva se è assente/indisponibile.
         </p>
 
@@ -351,7 +352,7 @@
         <!-- GRIGLIA MIGRAZIONE: righe = ore, colonne = giorni dell'attività -->
         <div id="mig-griglia-container" style="overflow-x:auto;">
             <div id="mig-griglia-loading" style="color:var(--giallo); font-size:.82rem; font-style:italic;">
-                ⏳ Compila le date e le classi dell'attività per vedere la griglia...
+                {{ icon('hourglass') }} Compila le date e le classi dell'attività per vedere la griglia...
             </div>
             <div id="mig-griglia" style="display:none;"></div>
         </div>
@@ -361,7 +362,7 @@
 
         <p style="font-size:.76rem; color:var(--giallo); margin-top:10px;">
             ℹ️ Il gruppo non genera supplenze scoperte in nessuna ora.
-            Le classi con ✅ auto ricevono una nota di sorveglianza nel registro.
+            Le classi con {{ icon('check') }} auto ricevono una nota di sorveglianza nel registro.
         </p>
     </div>
 
@@ -373,7 +374,7 @@
             <input type="checkbox" name="riconosci_ore_acc" value="1" id="chk-ore-acc"
                    {% if not attivita or attivita.riconosci_ore_acc %}checked{% endif %}
                    style="width:16px; height:16px;" onchange="toggleOreAcc()">
-            ✅ Riconosci ore fuori servizio agli accompagnatori come credito banca ore
+            {{ icon('check') }} Riconosci ore fuori servizio agli accompagnatori come credito banca ore
         </label>
         <div id="sez-ore-acc-dettaglio" style="margin-top:12px;">
             <p style="font-size:.8rem; color:var(--verde); margin-bottom:12px;">
@@ -391,7 +392,7 @@
     </div>
 
     <div style="display:flex; gap:10px;">
-        <button class="btn btn-success" type="submit">{% if attivita %}✅ Salva modifiche{% else %}✅ Registra attività{% endif %}</button>
+        <button class="btn btn-success" type="submit">{% if attivita %}{{ icon('check') }} Salva modifiche{% else %}{{ icon('check') }} Registra attività{% endif %}</button>
         <a href="{{ url_for('attivita.lista') }}" class="btn btn-primary">Annulla</a>
     </div>
 
@@ -528,7 +529,7 @@ async function migInputChange(input) {
 
     const autoDiv = document.getElementById('mig-auto-' + key);
     if (autoDiv && cl.length >= 2) {
-        autoDiv.innerHTML = '<span style="font-size:.72rem; color:#9ca3af;">⏳</span>';
+        autoDiv.innerHTML = '<span style="font-size:.72rem; color:#9ca3af;">{{ icon('hourglass') }}</span>';
         // Chiama API per trovare il docente
         const idAtt = {% if attivita %}{{ attivita.id }}{% else %}null{% endif %};
         const params = new URLSearchParams({classe:cl, ora, giorno:wd, data, ...(idAtt ? {id_attivita:idAtt} : {})});

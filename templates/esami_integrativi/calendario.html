@@ -4,13 +4,13 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('esami_integrativi.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Esami Integrativi</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Commissione e calendario</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid') }} Commissione e calendario</h1>
 </div>
 
 <div class="card" style="padding:14px 18px; margin-bottom:16px; border-left:4px solid var(--rosso);">
     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <div style="flex:1; min-width:260px;">
-            <strong style="color:var(--rosso); font-size:.9rem;">✕︎ Azzera calendario</strong>
+            <strong style="color:var(--rosso); font-size:.9rem;">{{ icon('close') }} Azzera calendario</strong>
             <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                 Rimuove data/orario di tutti gli esami (le commissioni restano impostate).
             </div>
@@ -18,26 +18,26 @@
         <form method="post" onsubmit="return confirm('Azzerare tutte le date/orari degli esami?')">
             <input type="hidden" name="azione" value="azzera_tutto">
             <button type="submit" class="btn btn-sm" style="background:var(--rosso); color:white;
-                    white-space:nowrap;">✕︎ Azzera tutto</button>
+                    white-space:nowrap;">{{ icon('close') }} Azzera tutto</button>
         </form>
     </div>
     <hr style="border:none; border-top:1px solid #e5eaf0; margin:12px 0;">
     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <div style="flex:1; min-width:260px;">
-            <strong style="color:#0369a1; font-size:.9rem;">⇩︎ Esporta XLSX</strong>
+            <strong style="color:#0369a1; font-size:.9rem;">{{ icon('download') }} Esporta XLSX</strong>
             <div style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
                 Calendario completo per giornata, con candidato, materia e docenti esaminatori.
             </div>
         </div>
         <a href="{{ url_for('esami_integrativi.export_xlsx') }}" class="btn btn-sm"
-           style="background:#0369a1; color:white; white-space:nowrap; text-decoration:none;">⇩︎ Esporta XLSX</a>
+           style="background:#0369a1; color:white; white-space:nowrap; text-decoration:none;">{{ icon('download') }} Esporta XLSX</a>
     </div>
 </div>
 
 {% if conflitti %}
 <div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid var(--rosso); background:var(--rosso-bg);">
     <div style="font-size:.9rem; font-weight:700; color:var(--rosso); margin-bottom:8px;">
-        ⚠︎ {{ conflitti|length }} conflitt{{ 'o' if conflitti|length==1 else 'i' }} rilevat{{ 'o' if conflitti|length==1 else 'i' }}
+        {{ icon('warning') }} {{ conflitti|length }} conflitt{{ 'o' if conflitti|length==1 else 'i' }} rilevat{{ 'o' if conflitti|length==1 else 'i' }}
     </div>
     {% for cf in conflitti %}
     <div style="font-size:.8rem; margin-bottom:4px; color:#374151;">{{ cf.msg }}</div>
@@ -61,7 +61,7 @@
 
     {% if not r.materie %}
     <div style="font-size:.78rem; color:var(--rosso);">
-        ⚠︎ Nessuna materia impostata per questo candidato.
+        {{ icon('warning') }} Nessuna materia impostata per questo candidato.
     </div>
     {% endif %}
 
@@ -81,7 +81,7 @@
                 {% if mat.data %}
                 <span style="font-size:.76rem; background:var(--verde-bg); color:var(--verde); padding:2px 8px;
                              border-radius:8px; font-weight:700; margin-left:6px;">
-                    ✓︎ {{ mat.data.strftime('%d/%m') }} {{ mat.ora_inizio }}–{{ mat.ora_fine }}
+                    {{ icon('check') }} {{ mat.data.strftime('%d/%m') }} {{ mat.ora_inizio }}–{{ mat.ora_fine }}
                 </span>
                 {% else %}
                 <span style="font-size:.76rem; color:#9ca3af; margin-left:6px;">— non calendarizzato —</span>
@@ -96,7 +96,7 @@
                        style="width:80px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.78rem;">
                 <input type="time" name="ora_fine" value="{{ mat.ora_fine or '' }}"
                        style="width:80px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.78rem;">
-                <button type="submit" class="btn btn-sm" style="background:var(--verde);color:white;">▤︎</button>
+                <button type="submit" class="btn btn-sm" style="background:var(--verde);color:white;">{{ icon('list') }}</button>
             </form>
         </div>
 
@@ -115,7 +115,7 @@
                         {% if mat.docente_1 %}
                         <option value="{{ mat.docente_1.id }}" selected>
                             {{ mat.docente_1.cognome }} {{ mat.docente_1.nome }}
-                            {% if m.disponibile_1 == False %}(⚠︎ non disponibile){% endif %}
+                            {% if m.disponibile_1 == False %}({{ icon('warning') }} non disponibile){% endif %}
                         </option>
                         {% endif %}
                         {% for d in m.docenti_idonei %}
@@ -140,7 +140,7 @@
                         {% if mat.docente_2 %}
                         <option value="{{ mat.docente_2.id }}" selected>
                             {{ mat.docente_2.cognome }} {{ mat.docente_2.nome }}
-                            {% if m.disponibile_2 == False %}(⚠︎ non disponibile){% endif %}
+                            {% if m.disponibile_2 == False %}({{ icon('warning') }} non disponibile){% endif %}
                         </option>
                         {% endif %}
                         {% for d in m.docenti_idonei %}

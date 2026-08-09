@@ -4,7 +4,7 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('rientro.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Rientro</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎ Candidati al colloquio di rientro</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }} Candidati al colloquio di rientro</h1>
 </div>
 
 <div class="card" style="padding:14px 18px; margin-bottom:16px;">
@@ -42,7 +42,7 @@
     </div>
     {% else %}
     <div style="font-size:.74rem; color:var(--rosso); margin-top:8px;">
-        ⚠︎ Nessuna classe ha ancora le materie impostate — vai prima in "Materie per classe".
+        {{ icon('warning') }} Nessuna classe ha ancora le materie impostate — vai prima in "Materie per classe".
     </div>
     {% endif %}
 </div>
@@ -76,7 +76,7 @@
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ c.id }}">
                     <button type="submit" style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
-                            border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">✕︎</button>
+                            border-radius:5px;padding:2px 7px;font-size:.78rem;cursor:pointer;">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>

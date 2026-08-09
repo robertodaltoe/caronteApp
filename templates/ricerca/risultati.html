@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Ricerca{% endblock %}
 {% block content %}
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.3rem; color:var(--blu);">⌕︎ Ricerca</h1>
+        <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('search') }} Ricerca</h1>
         {% if q %}
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             {{ n_totale }} risultat{{ 'o' if n_totale == 1 else 'i' }} per «{{ q }}»
@@ -34,7 +35,7 @@
 
 {% if risultati.docenti %}
 <div class="card" style="margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">◍︎ Docenti ({{ risultati.docenti|length }})</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">{{ icon('person') }} Docenti ({{ risultati.docenti|length }})</h3>
     <table style="width:100%; font-size:.85rem;">
         {% for d in risultati.docenti %}
         <tr>
@@ -51,7 +52,7 @@
 
 {% if risultati.supplenze %}
 <div class="card" style="margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">↻︎ Supplenze ({{ risultati.supplenze|length }})</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">{{ icon('refresh') }} Supplenze ({{ risultati.supplenze|length }})</h3>
     <table style="width:100%; font-size:.85rem;">
         {% for s in risultati.supplenze %}
         <tr>
@@ -73,7 +74,7 @@
 
 {% if risultati.assenze %}
 <div class="card" style="margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">▤︎ Assenze ({{ risultati.assenze|length }})</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">{{ icon('list') }} Assenze ({{ risultati.assenze|length }})</h3>
     <table style="width:100%; font-size:.85rem;">
         {% for a in risultati.assenze %}
         <tr>
@@ -112,7 +113,7 @@
 
 {% if risultati.sospensioni %}
 <div class="card" style="margin-bottom:16px;">
-    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">▦︎ Sospensioni didattiche ({{ risultati.sospensioni|length }})</h3>
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">{{ icon('grid') }} Sospensioni didattiche ({{ risultati.sospensioni|length }})</h3>
     <table style="width:100%; font-size:.85rem;">
         {% for s in risultati.sospensioni %}
         <tr>

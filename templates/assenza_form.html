@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Registra assenza / variazione{% endblock %}
 {% block extra_style %}
 <style>
@@ -57,9 +58,9 @@
     <div class="form-group">
         <label>Durata</label>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="durata-btn attivo" onclick="setDurata('singolo', this)">📅 Un giorno</button>
-            <button type="button" class="durata-btn" onclick="setDurata('range', this)">📅 Più giorni</button>
-            <button type="button" class="durata-btn" onclick="setDurata('periodico', this)">🔁 Periodico</button>
+            <button type="button" class="durata-btn attivo" onclick="setDurata('singolo', this)">{{ icon('calendar') }} Un giorno</button>
+            <button type="button" class="durata-btn" onclick="setDurata('range', this)">{{ icon('calendar') }} Più giorni</button>
+            <button type="button" class="durata-btn" onclick="setDurata('periodico', this)">{{ icon('swap') }} Periodico</button>
         </div>
     </div>
 
@@ -138,7 +139,7 @@
     <div id="sez-ist-orario" style="display:none; margin-top:10px; padding:12px 14px;
          background:var(--blu-light); border:1px solid #bfdbfe; border-radius:8px;">
         <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:8px;">
-            🏫 Permesso per attività istituzionale (orario assoluto)
+            {{ icon('school') }} Permesso per attività istituzionale (orario assoluto)
         </div>
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div>
@@ -177,7 +178,7 @@
                style="margin-top:2px; width:16px; height:16px; flex-shrink:0;">
         <div>
             <div style="font-weight:700; font-size:.86rem;">
-                🚫 Classe libera <span style="font-weight:400; color:var(--grigio);">— entra dopo / esce prima</span>
+                {{ icon('forbidden') }} Classe libera <span style="font-weight:400; color:var(--grigio);">— entra dopo / esce prima</span>
             </div>
             <div style="font-size:.74rem; color:var(--grigio); margin-top:2px;">
                 NON ASSEGNABILE. Nel display compare "ENTRA DOPO" o "ESCE PRIMA".
@@ -216,7 +217,7 @@
         <div id="alert-sospensione" style="background:var(--giallo-bg); border:1px solid var(--giallo-bg);
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
             <div style="font-size:.85rem; font-weight:700; color:var(--giallo);">
-                ⚠️ Giorno di sospensione didattica
+                {{ icon('warning') }} Giorno di sospensione didattica
             </div>
             <div style="font-size:.8rem; color:#78350f; margin-top:3px;">
                 {{ sospensione_oggi }} — le supplenze in classe non verranno generate,
@@ -230,7 +231,7 @@
         <div id="alert-ist" style="background:var(--blu-light); border:1px solid #bfdbfe;
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
             <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:6px;">
-                🏫 Attività istituzionali in programma questo giorno:
+                {{ icon('school') }} Attività istituzionali in programma questo giorno:
             </div>
             {% for ev in eventi_ist_giorno %}
             <div style="font-size:.8rem; color:var(--blu); margin-bottom:3px;">
@@ -242,7 +243,7 @@
             {% endfor %}
             <div style="font-size:.74rem; color:#6b7280; margin-top:5px;">
                 Se il docente era previsto a questa riunione, selezionando
-                <strong>🏫 Att. ist.</strong> la sua presenza verrà marcata come
+                <strong>{{ icon('school') }} Att. ist.</strong> la sua presenza verrà marcata come
                 <em>giustificato</em> automaticamente.
             </div>
         </div>
@@ -324,13 +325,13 @@
             <textarea name="note_interne" rows="2"
                       placeholder="Es. numero protocollo, riferimento pratica...">{{ assenza.note_interne or '' if assenza }}</textarea>
             <div style="font-size:.72rem; color:var(--giallo); margin-top:4px;">
-                ⚠︎ Non riportare qui diagnosi, prognosi o altri dettagli clinici — solo riferimenti amministrativi (es. numero di protocollo).
+                {{ icon('warning') }} Non riportare qui diagnosi, prognosi o altri dettagli clinici — solo riferimenti amministrativi (es. numero di protocollo).
             </div>
         </div>
     </div>
 
     <div style="display:flex; gap:10px;">
-        <button class="btn btn-success" type="submit">✅ Registra</button>
+        <button class="btn btn-success" type="submit">{{ icon('check') }} Registra</button>
         <a href="{{ url_for('dashboard.index', data=data_sel) }}" class="btn btn-primary">Annulla</a>
     </div>
 
@@ -354,10 +355,10 @@ const TIPI_INFO = {
     permesso_sindacale:  {ico:'🗣', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
     permesso_orario:     {ico:'📋', txt:'Aggiorna banca ore (–ore). Genera supplenza assegnabile.', banca:true},
     ferie:               {ico:'🏖', txt:'Nessun impatto banca ore. Sostituto nominato per ogni ora.', banca:false},
-    classe_libera:       {ico:'🚫', txt:'NON ASSEGNABILE. "ENTRA DOPO" / "ESCE PRIMA" nel display.', banca:false},
+    classe_libera:       {ico:'{{ icon('forbidden') }}', txt:'NON ASSEGNABILE. "ENTRA DOPO" / "ESCE PRIMA" nel display.', banca:false},
     ed_civica:           {ico:'📚', txt:'Aggiorna banca ore colonna Ed. Civica (–ore).', banca:true},
     formazione:          {ico:'🎓', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
-    attivita_istituzionale:{ico:'🏫', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
+    attivita_istituzionale:{ico:'{{ icon('school') }}', txt:'Nessun impatto banca ore. Genera supplenza assegnabile.', banca:false},
     scambio_orario:      {ico:'🔄', txt:'Non impatta banca ore. Sostituto già nominato.', banca:false},
 };
 
@@ -436,7 +437,7 @@ function calcolaDurataIst() {
         if (tot > 0) {
             div.textContent = `${Math.floor(tot/60)}h ${tot%60>0 ? tot%60+'m' : ''}`.trim();
             div.style.color = tot > 120 ? 'var(--rosso)' : '#1e40af';
-            if (tot > 120) div.textContent += ' ⚠️ supera 2h CCNL';
+            if (tot > 120) div.textContent += ' {{ icon('warning') }} supera 2h CCNL';
         } else {
             div.textContent = '';
         }
@@ -534,11 +535,11 @@ function aggiornaAlert() {
     if (rim <= 0) {
         box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
             'background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);margin-top:8px;';
-        box.innerHTML = `🚫 <strong>Limite raggiunto</strong> — ${l.nota}. Usati: ${usati}/${l.n} ${l.u}.`;
+        box.innerHTML = `{{ icon('forbidden') }} <strong>Limite raggiunto</strong> — ${l.nota}. Usati: ${usati}/${l.n} ${l.u}.`;
     } else if (rim === 1) {
         box.style.cssText = 'display:block;padding:8px 12px;border-radius:6px;font-size:.8rem;' +
             'background:var(--giallo-bg);color:var(--giallo);border:1px solid var(--giallo);margin-top:8px;';
-        box.innerHTML = `⚠️ <strong>Quasi al limite</strong> — rimane 1 ${l.u.slice(0,-1)}. ${l.nota}.`;
+        box.innerHTML = `{{ icon('warning') }} <strong>Quasi al limite</strong> — rimane 1 ${l.u.slice(0,-1)}. ${l.nota}.`;
     } else { box.style.display = 'none'; }
 }
 
@@ -582,7 +583,7 @@ function aggiungiSlotScambio() {
     div.className = 'scambio-slot';
     div.style.cssText = 'border:1px solid #e5eaf0;border-radius:8px;padding:10px 14px;margin-bottom:8px;';
     div.innerHTML = cont.querySelector('.scambio-slot').innerHTML;
-    div.innerHTML += '<button type="button" onclick="this.closest(\'.scambio-slot\').remove()" style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:.8rem;margin-top:6px;">🗑 Rimuovi</button>';
+    div.innerHTML += '<button type="button" onclick="this.closest(\'.scambio-slot\').remove()" style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:.8rem;margin-top:6px;">{{ icon('trash') }} Rimuovi</button>';
     // Reset valori
     div.querySelectorAll('input[type=date]').forEach(i => i.value = '');
     div.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
@@ -607,7 +608,7 @@ function verificaSospensione(dataStr) {
     if (motivo) {
         box.style.background = 'var(--giallo-bg)';
         box.style.border = '1px solid var(--giallo-bg)';
-        box.innerHTML = '<strong style="color:var(--giallo);">⚠️ Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
+        box.innerHTML = '<strong style="color:var(--giallo);">{{ icon('warning') }} Sospensione didattica</strong><br><span style="font-size:.8rem;color:#78350f;">' + motivo + " — le supplenze in classe non verranno generate.</span>";
         box.style.display = 'block';
         document.querySelector('#form-assenza button[type=submit]').disabled = false;
         document.querySelector('#form-assenza button[type=submit]').style.opacity = '1';

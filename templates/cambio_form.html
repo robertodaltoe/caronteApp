@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Nuovo cambio orario{% endblock %}
 
 {% block extra_style %}
@@ -119,7 +120,7 @@
 
     <div style="border-top:1px solid #e5eaf0; padding-top:16px; display:flex; gap:10px;">
         <button class="btn btn-success" type="submit">
-            ✓︎ Registra tutti gli scambi
+            {{ icon('check') }} Registra tutti gli scambi
         </button>
         <a href="{{ url_for('cambi.lista') }}" class="btn btn-primary">Annulla</a>
     </div>

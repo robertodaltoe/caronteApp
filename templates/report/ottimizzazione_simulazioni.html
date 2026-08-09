@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Ottimizzazione simulazioni{% endblock %}
 
 {% block extra_style %}
@@ -54,7 +55,7 @@
 {% for data_sim, dati in prospetto.items() %}
 <div class="giorno-section">
     <div class="giorno-header">
-        <span>▦︎ {{ data_sim.strftime('%A %d %B %Y') }}</span>
+        <span>{{ icon('grid') }} {{ data_sim.strftime('%A %d %B %Y') }}</span>
         <span style="font-size:.85rem; font-weight:400;">
             {{ dati.righe|length }} supplenze da coprire
         </span>
@@ -64,7 +65,7 @@
         <!-- SUPPLENZE DA ASSEGNARE -->
         <div>
             <h3 style="font-size:.88rem; font-weight:700; color:var(--blu); margin-bottom:12px;">
-                ↻︎ Supplenze — sostituti suggeriti per saldo
+                {{ icon('refresh') }} Supplenze — sostituti suggeriti per saldo
             </h3>
             <div class="card-sups" style="overflow-x:auto;">
             <table>
@@ -101,7 +102,7 @@
                         {% if not loop.last %}<span style="color:#e5e7eb;">·</span>{% endif %}
                         {% endfor %}
                         {% if not riga.candidati %}
-                        <span style="color:#f59e0b; font-size:.78rem;">⚠︎ Nessun disponibile</span>
+                        <span style="color:#f59e0b; font-size:.78rem;">{{ icon('warning') }} Nessun disponibile</span>
                         {% endif %}
                     </td>
                 </tr>

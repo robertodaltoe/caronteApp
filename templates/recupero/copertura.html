@@ -4,10 +4,10 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ back_url or url_for('recupero.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Indietro</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">✓︎ {{ titolo or 'Verifica copertura recuperi' }}</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('check') }} {{ titolo or 'Verifica copertura recuperi' }}</h1>
     <a href="{{ url_for('recupero.copertura', export='xlsx') }}"
        class="btn btn-sm" style="margin-left:auto;background:var(--verde);color:white;white-space:nowrap;">
-        ⇩︎ Esporta XLSX (foglio firme)
+        {{ icon('download') }} Esporta XLSX (foglio firme)
     </a>
 </div>
 
@@ -26,15 +26,15 @@
 
 <!-- Riepilogo stati GIUGNO -->
 <div style="font-size:.76rem; font-weight:700; color:var(--grigio); text-transform:uppercase;
-            letter-spacing:.05em; margin-bottom:6px;">▥︎ Stato corso di giugno</div>
+            letter-spacing:.05em; margin-bottom:6px;">{{ icon('layers') }} Stato corso di giugno</div>
 <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px;">
     <div class="card" style="text-align:center; padding:14px; background:var(--verde-bg);">
         <div style="font-size:1.8rem; font-weight:800; color:var(--verde);">{{ n_ok }}</div>
-        <div style="font-size:.78rem; color:var(--verde);">✓︎ Ok — gruppo assegnato</div>
+        <div style="font-size:.78rem; color:var(--verde);">{{ icon('check') }} Ok — gruppo assegnato</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:var(--rosso-bg);">
         <div style="font-size:1.8rem; font-weight:800; color:var(--rosso);">{{ n_no_gruppo }}</div>
-        <div style="font-size:.78rem; color:var(--rosso);">✕︎ No gruppo</div>
+        <div style="font-size:.78rem; color:var(--rosso);">{{ icon('close') }} No gruppo</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:var(--rosso-bg);">
         <div style="font-size:1.8rem; font-weight:800; color:var(--rosso);">{{ n_no_iscritto }}</div>
@@ -42,11 +42,11 @@
     </div>
     <div class="card" style="text-align:center; padding:14px; background:#fef9c3;">
         <div style="font-size:1.8rem; font-weight:800; color:var(--giallo);">{{ n_no_corso }}</div>
-        <div style="font-size:.78rem; color:var(--giallo);">▥︎ No corso (studio ind.)</div>
+        <div style="font-size:.78rem; color:var(--giallo);">{{ icon('layers') }} No corso (studio ind.)</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:#f3f4f6;">
         <div style="font-size:1.8rem; font-weight:800; color:#6b7280;">{{ n_non_aderisce }}</div>
-        <div style="font-size:.78rem; color:#6b7280;">✕︎ Non aderisce</div>
+        <div style="font-size:.78rem; color:#6b7280;">{{ icon('close') }} Non aderisce</div>
     </div>
 </div>
 
@@ -56,25 +56,25 @@
         Tutti ({{ righe|length }})
     </button>
     <button onclick="filtra('giu-ok')"          class="btn btn-sm" style="background:var(--verde-bg);color:var(--verde);border:1px solid var(--verde);">
-        Giu ✓︎ Ok ({{ n_ok }})
+        Giu {{ icon('check') }} Ok ({{ n_ok }})
     </button>
     <button onclick="filtra('giu-no_gruppo')"   class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);">
-        Giu ✕︎ No gruppo ({{ n_no_gruppo }})
+        Giu {{ icon('close') }} No gruppo ({{ n_no_gruppo }})
     </button>
     <button onclick="filtra('giu-non_iscritto')" class="btn btn-sm" style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);">
         Giu ? Non iscritto ({{ n_no_iscritto }})
     </button>
     <button onclick="filtra('giu-no_corso')"    class="btn btn-sm" style="background:#fef9c3;color:var(--giallo);border:1px solid #fde68a;">
-        Giu ▥︎ No corso ({{ n_no_corso }})
+        Giu {{ icon('layers') }} No corso ({{ n_no_corso }})
     </button>
     <button onclick="filtra('giu-non_aderisce')" class="btn btn-sm" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">
-        Giu ✕︎ Non aderisce ({{ n_non_aderisce }})
+        Giu {{ icon('close') }} Non aderisce ({{ n_non_aderisce }})
     </button>
     <button onclick="filtra('ago-ok')" class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;">
-        Ago ✓︎ Calendarizzata
+        Ago {{ icon('check') }} Calendarizzata
     </button>
     <button onclick="filtra('ago-no_gruppo')" class="btn btn-sm" style="background:#fde68a;color:var(--giallo);border:1px solid var(--giallo);">
-        Ago ✕︎ Da calendarizzare
+        Ago {{ icon('close') }} Da calendarizzare
     </button>
 </div>
 
@@ -102,34 +102,34 @@
             <td style="text-align:center;">
                 {% if r.stato_giugno == 'ok' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
-                             background:var(--verde-bg); color:var(--verde);" title="{{ r.gruppo_giugno.materia if r.gruppo_giugno else '' }}">✓︎ ok</span>
+                             background:var(--verde-bg); color:var(--verde);" title="{{ r.gruppo_giugno.materia if r.gruppo_giugno else '' }}">{{ icon('check') }} ok</span>
                 {% elif r.stato_giugno == 'no_gruppo' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
-                             background:var(--rosso-bg); color:var(--rosso);">✕︎ no gruppo</span>
+                             background:var(--rosso-bg); color:var(--rosso);">{{ icon('close') }} no gruppo</span>
                 {% elif r.stato_giugno == 'non_iscritto' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
                              background:var(--rosso-bg); color:var(--rosso);">? non risp.</span>
                 {% elif r.stato_giugno == 'no_corso' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
-                             background:#fef9c3; color:var(--giallo);">▥︎ studio ind.</span>
+                             background:#fef9c3; color:var(--giallo);">{{ icon('layers') }} studio ind.</span>
                 {% elif r.stato_giugno == 'non_aderisce' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
-                             background:#f3f4f6; color:#6b7280;">✕︎ non aderisce</span>
+                             background:#f3f4f6; color:#6b7280;">{{ icon('close') }} non aderisce</span>
                 {% endif %}
             </td>
             <td style="text-align:center;">
                 {% if r.stato_agosto == 'ok' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
                              background:#dbeafe; color:#1e40af;" title="{{ r.gruppo_agosto.materia if r.gruppo_agosto else '' }} — {{ r.n_lezioni_agosto }} lezioni">
-                    ✓︎ {{ r.n_lezioni_agosto }} lez.
+                    {{ icon('check') }} {{ r.n_lezioni_agosto }} lez.
                 </span>
                 {% elif r.stato_agosto == 'no_gruppo' %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
-                             background:#fde68a; color:var(--giallo);">✕︎ da fare</span>
+                             background:#fde68a; color:var(--giallo);">{{ icon('close') }} da fare</span>
                 {% else %}
                 <span style="padding:2px 7px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
                              background:#f3f4f6; color:#6b7280;" title="Stato agosto non riconosciuto: {{ r.stato_agosto }}">
-                    ⚠︎ {{ r.stato_agosto }}
+                    {{ icon('warning') }} {{ r.stato_agosto }}
                 </span>
                 {% endif %}
             </td>

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Organizza Corsi di Recupero{% endblock %}
 {% block content %}
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">▥︎ Organizza Corsi di Recupero — {{ anno }}</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('layers') }} Organizza Corsi di Recupero — {{ anno }}</h1>
         <p style="font-size:.84rem; color:var(--grigio);">Periodo: 18 giugno – 1 luglio 2026</p>
     </div>
 </div>
@@ -57,22 +58,22 @@
 </div>
 
 <div style="display:flex; flex-direction:column; gap:8px;">
-    {{ step('1', '#0369a1', '◍︎▨︎', 'Seleziona docenti disponibili',
+    {{ step('1', '#0369a1', icon('person') ~ icon('building'), 'Seleziona docenti disponibili',
         'recupero.docenti',
         'Aggiungi i docenti che hanno dato disponibilità per i corsi') }}
-    {{ step('2', 'var(--viola)', '▦︎', 'Imposta disponibilità oraria docenti',
+    {{ step('2', 'var(--viola)', icon('grid'), 'Imposta disponibilità oraria docenti',
         'recupero.vincoli',
         'Giorni e fasce orarie (facoltativo — default: lun–ven 08:00–13:00)') }}
-    {{ step('3', 'var(--blu)', '◈︎', 'Abbina gruppi e docenti',
+    {{ step('3', 'var(--blu)', icon('grid-alt'), 'Abbina gruppi e docenti',
         'recupero.gruppi',
         'Proposte automatiche dai recuperi + creazione e modifica manuale gruppi') }}
-    {{ step('4', 'var(--verde)', '▦︎', 'Pianifica il calendario',
+    {{ step('4', 'var(--verde)', icon('grid'), 'Pianifica il calendario',
         'recupero.calendario',
         'Genera la bozza anti-sovrapposizioni o inserisci le lezioni manualmente') }}
-    {{ step('5', 'var(--giallo)', '▲︎', 'Esporta XLSX',
+    {{ step('5', 'var(--giallo)', icon('chart'), 'Esporta XLSX',
         'recupero.export_xlsx',
         'Una scheda per materia — versione famiglie e versione docenti (uso interno)') }}
-    {{ step('6', 'var(--viola)', '▧︎', 'Schede docenti (ZIP)',
+    {{ step('6', 'var(--viola)', icon('package'), 'Schede docenti (ZIP)',
         'recupero.export_schede_docenti',
         'Un file XLSX per ogni docente — calendario individuale + alunni e stato adesione', last=true) }}
 </div>

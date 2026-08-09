@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Modifica cambio quadro{% endblock %}
 {% block content %}
 
 <h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:20px;">
-    ✎︎️ Modifica cambio quadro
+    {{ icon('edit') }} Modifica cambio quadro
 </h1>
 
 <div class="card" style="max-width:620px;">
@@ -141,7 +142,7 @@
     </div>
 
     <div style="display:flex; gap:10px; margin-top:8px;">
-        <button class="btn btn-success" type="submit">✓︎ Salva</button>
+        <button class="btn btn-success" type="submit">{{ icon('check') }} Salva</button>
         <a href="{{ next or url_for('cambi.lista') }}"
            class="btn btn-primary">Annulla</a>
     </div>

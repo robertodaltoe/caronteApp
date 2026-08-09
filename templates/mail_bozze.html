@@ -33,7 +33,7 @@ textarea { width:100%; border:1px solid #d1d5db; border-radius:8px;
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">✉︎ Prepara bozze email — Banca ore</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('mail') }} Prepara bozze email — Banca ore</h1>
         <p style="font-size:.83rem; color:var(--grigio); margin-top:3px;">
             Seleziona i docenti, scrivi oggetto e testo, poi clicca
             <strong>Crea bozze in Mail.app</strong>. Ogni bozza si apre con il PDF allegato — tu la rivedi e la invii.
@@ -43,7 +43,7 @@ textarea { width:100%; border:1px solid #d1d5db; border-radius:8px;
 </div>
 
 <div class="card" style="margin-bottom:16px; padding:16px 20px;">
-    <h2 style="margin-bottom:12px;">✎︎ Oggetto e testo (uguali per tutti i selezionati)</h2>
+    <h2 style="margin-bottom:12px;">{{ icon('edit') }} Oggetto e testo (uguali per tutti i selezionati)</h2>
 
     <div class="form-group" style="margin-bottom:12px;">
         <label style="font-weight:700; font-size:.88rem;">Oggetto *</label>
@@ -72,11 +72,11 @@ Segreteria — {{ nome_istituto }}</textarea>
 
 <div class="card" style="padding:14px 14px;">
     <div class="barra-azioni">
-        <button class="btn btn-sm btn-primary" onclick="selezionaTutti()">✓︎ Seleziona tutti</button>
+        <button class="btn btn-sm btn-primary" onclick="selezionaTutti()">{{ icon('check') }} Seleziona tutti</button>
         <button class="btn btn-sm" style="background:#6b7280;color:white;"
                 onclick="deselezionaTutti()">☐︎ Deseleziona tutti</button>
         <button class="btn btn-sm" style="background:#374151;color:white;"
-                onclick="selezionaSoloConEmail()">✉︎ Solo con email</button>
+                onclick="selezionaSoloConEmail()">{{ icon('mail') }} Solo con email</button>
         <span class="contatore" id="contatore">0 selezionati</span>
         <div id="btn-group" style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
             <!-- Mac: AppleScript con allegato -->
@@ -93,7 +93,7 @@ Segreteria — {{ nome_istituto }}</textarea>
             <button id="btn-eml" class="btn"
                     style="background:#6366f1; color:white; display:none;"
                     onclick="creaBozze('eml')">
-                ▧︎ Scarica .eml + PDF (ZIP)
+                {{ icon('package') }} Scarica .eml + PDF (ZIP)
             </button>
         </div>
     </div>
@@ -103,9 +103,9 @@ Segreteria — {{ nome_istituto }}</textarea>
                 background:#f8fafc; border-radius:6px; border:1px solid #e5eaf0;">
         <strong>• Mail.app</strong> Mac — apre ogni bozza con PDF allegato, invii manualmente &nbsp;·&nbsp;
         <strong>⧉︎ Script .ps1</strong> Windows Outlook — scarica e lancia lo script per aprire le bozze &nbsp;·&nbsp;
-        <strong>▧︎ ZIP .eml</strong> Tutti — doppio click su ogni .eml nel tuo client di posta
+        <strong>{{ icon('package') }} ZIP .eml</strong> Tutti — doppio click su ogni .eml nel tuo client di posta
     </div>
-    <h2 style="margin-bottom:10px;">◍︎ Docenti ({{ docenti|length }})</h2>
+    <h2 style="margin-bottom:10px;">{{ icon('person') }} Docenti ({{ docenti|length }})</h2>
 
     <div class="docenti-grid">
         {% for d in docenti %}
@@ -121,7 +121,7 @@ Segreteria — {{ nome_istituto }}</textarea>
                 <div class="doc-nome">{{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}</div>
                 <div class="doc-email">
                     {% if d.email %}{{ d.email }}
-                    {% else %}<span style="color:#b91c1c;">⚠︎ email mancante</span>{% endif %}
+                    {% else %}<span style="color:#b91c1c;">{{ icon('warning') }} email mancante</span>{% endif %}
                 </div>
             </div>
         </label>
@@ -204,7 +204,7 @@ function setBtnLoading(tipo, loading) {
     if (!btn) return;
     btn.disabled = loading;
     if (loading) btn.dataset.orig = btn.innerHTML;
-    btn.innerHTML = loading ? '⏳ Generazione...' : btn.dataset.orig;
+    btn.innerHTML = loading ? '{{ icon('hourglass') }} Generazione...' : btn.dataset.orig;
 }
 
 function mostraLog(data) {
@@ -217,7 +217,7 @@ function mostraLog(data) {
         data.risultati.forEach(r => {
             html += `<span style="font-size:.78rem;padding:2px 8px;border-radius:10px;
                 background:${r.ok?'#dcfce7':'#fee2e2'};color:${r.ok?'#166534':'#b91c1c'};">
-                ${r.ok?'✓︎':'✕︎'} ${r.cognome||r.id}${r.msg?' — '+r.msg:''}</span>`;
+                ${r.ok?'{{ icon('check') }}':'{{ icon('close') }}'} ${r.cognome||r.id}${r.msg?' — '+r.msg:''}</span>`;
         });
         html += '</div>';
     }
@@ -230,7 +230,7 @@ async function creaBozze(tipo) {
     setBtnLoading(tipo, true);
     const log = document.getElementById('log-risultati');
     const desc = {mac:'Apertura bozze in Mail.app', ps1:'Generazione script PowerShell', eml:'Creazione archivio .eml + PDF'};
-    log.innerHTML = `<p style="color:var(--grigio);">⏳ ${desc[tipo]} — attendi...</p>`;
+    log.innerHTML = `<p style="color:var(--grigio);">{{ icon('hourglass') }} ${desc[tipo]} — attendi...</p>`;
 
     const endpoint = {mac:'/mail-bozze/invia-mac', ps1:'/mail-bozze/scarica-ps1', eml:'/mail-bozze/scarica-eml'}[tipo];
 
@@ -258,7 +258,7 @@ async function creaBozze(tipo) {
                 URL.revokeObjectURL(url);
                 const n = d.ids.length;
                 log.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:#f0fdf4;
-                    border:1px solid #bbf7d0;"><strong>✓︎ ${fname} scaricato — ${n} file generati.</strong>
+                    border:1px solid #bbf7d0;"><strong>{{ icon('check') }} ${fname} scaricato — ${n} file generati.</strong>
                     ${tipo==='eml' ? '<br><small>Estrai lo ZIP, fai doppio click su ogni .eml per aprirlo nel tuo client di posta e invia.</small>' :
                     '<br><small>Esegui lo script con: <code>powershell -ExecutionPolicy Bypass -File ${fname}</code></small>'}
                     </div>`;

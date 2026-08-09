@@ -4,8 +4,8 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p3') }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◈︎ Materie ↔︎ Classi di concorso</h1>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p3') }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">{{ icon('download') }} Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid-alt') }} Materie ↔︎ Classi di concorso</h1>
 </div>
 
 {% include 'impostazione_anno/_step_nav.html' %}
@@ -21,7 +21,7 @@
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px;">
-    <input type="text" id="filtro-materie" placeholder="⌕︎ Filtra per nome materia..."
+    <input type="text" id="filtro-materie" placeholder="{{ icon('search') }} Filtra per nome materia..."
            style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:.86rem;"
            oninput="filtraMaterie(this.value)">
 </div>
@@ -34,7 +34,7 @@
     <div style="min-width:260px;">
         {# Nome ministeriale (sola lettura) #}
         <div style="font-size:.7rem; color:var(--grigio); margin-bottom:2px;">
-            ▤︎ {{ m.nome }}
+            {{ icon('list') }} {{ m.nome }}
             <span style="opacity:.6; margin-left:4px;">({{ m.sigla }})</span>
         </div>
         {# Nome breve ed alias — editabili #}
@@ -74,9 +74,9 @@
             {% if r.fonte == 'normativa' %}
             <input type="hidden" name="cc_materia_{{ m.id }}" value="{{ r.id_classe_concorso }}">
             {% endif %}
-            {% if r.fonte == 'eccezione_istituto' %}⚠︎{% endif %} {{ r.classe_concorso.codice }}
+            {% if r.fonte == 'eccezione_istituto' %}{{ icon('warning') }}{% endif %} {{ r.classe_concorso.codice }}
             {% if r.fonte == 'normativa' %}
-            <span onclick="rimuoviBadge(this)" style="cursor:pointer; color:#9ca3af; font-weight:900;" title="Rimuovi">✕︎</span>
+            <span onclick="rimuoviBadge(this)" style="cursor:pointer; color:#9ca3af; font-weight:900;" title="Rimuovi">{{ icon('close') }}</span>
             {% endif %}
         </span>
         {% endfor %}
@@ -92,7 +92,7 @@
 </div>
 {% endfor %}
 
-<button type="submit" class="btn btn-success btn-sm" style="margin-top:10px;">▤︎ Salva tutti i collegamenti normativi</button>
+<button type="submit" class="btn btn-success btn-sm" style="margin-top:10px;">{{ icon('list') }} Salva tutti i collegamenti normativi</button>
 </form>
 
 <script>
@@ -121,7 +121,7 @@ function aggiungiBadge(idMateria, select) {
         'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;';
     span.innerHTML = '<input type="hidden" name="cc_materia_' + idMateria + '" value="' + ccId + '">' +
         codice +
-        ' <span onclick="rimuoviBadge(this)" style="cursor:pointer;color:#9ca3af;font-weight:900;" title="Rimuovi">✕︎</span>';
+        ' <span onclick="rimuoviBadge(this)" style="cursor:pointer;color:#9ca3af;font-weight:900;" title="Rimuovi">{{ icon('close') }}</span>';
     box.appendChild(span);
     select.value = '';
 }

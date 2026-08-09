@@ -4,12 +4,12 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◈︎ Proposte gruppi di recupero</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid-alt') }} Proposte gruppi di recupero</h1>
 </div>
 
 {% if not proposte %}
 <div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
-    <div style="font-size:2rem; margin-bottom:12px;">⇩︎</div>
+    <div style="font-size:2rem; margin-bottom:12px;">{{ icon('download') }}</div>
     <strong>Nessun dato importato.</strong><br>
     <span style="font-size:.84rem;">Vai prima in <a href="{{ url_for('recupero.alunni') }}">Alunni</a>
     e importa il file dal registro elettronico.</span>
@@ -46,11 +46,11 @@
                 {{ p.docente_raw[:40] }}
                 {% if p.rd_suggerito %}
                 <span style="display:block; font-size:.72rem; color:var(--verde); font-weight:700;">
-                    ✓︎ trovato: {{ p.rd_suggerito.docente.cognome }}
+                    {{ icon('check') }} trovato: {{ p.rd_suggerito.docente.cognome }}
                 </span>
                 {% else %}
                 <span style="display:block; font-size:.72rem; color:var(--rosso);">
-                    ✕︎ non disponibile
+                    {{ icon('close') }} non disponibile
                 </span>
                 {% endif %}
             </td>
@@ -60,7 +60,7 @@
                 <span style="display:block;font-size:.68rem;color:var(--rosso);">?{{ p.n_non_risposto }}</span>
                 {% endif %}
                 {% if p.n_non_aderisce %}
-                <span style="display:block;font-size:.68rem;color:#6b7280;">✕︎{{ p.n_non_aderisce }}</span>
+                <span style="display:block;font-size:.68rem;color:#6b7280;">{{ icon('close') }}{{ p.n_non_aderisce }}</span>
                 {% endif %}
             </td>
             <td style="font-size:.84rem;">{{ p.classi }}</td>
@@ -106,13 +106,13 @@
                 <button type="submit" form="form-{{ loop.index }}"
                         class="btn btn-success btn-sm"
                         {% if not p.rd_suggerito %}style="opacity:.6;"{% endif %}>
-                    ✚︎ Crea
+                    {{ icon('plus') }} Crea
                 </button>
                 {% else %}
                 <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
                     <span style="font-size:.78rem; background:var(--verde-bg); color:var(--verde);
                                  padding:2px 8px; border-radius:8px; font-weight:700;">
-                        ✓︎ Creato
+                        {{ icon('check') }} Creato
                     </span>
                     <button type="button"
                             onclick="toggleTurno('turno-{{ loop.index }}')"
@@ -174,9 +174,9 @@
                        style="width:45px; padding:5px 6px; border:1px solid #7dd3fc;
                               border-radius:6px; font-size:.82rem;">
             </div>
-            <button type="submit" class="btn btn-success btn-sm">✚︎ Crea turno</button>
+            <button type="submit" class="btn btn-success btn-sm">{{ icon('plus') }} Crea turno</button>
             <button type="button" onclick="toggleTurno('turno-{{ loop.index }}')"
-                    class="btn btn-sm" style="background:var(--rosso-bg); color:var(--rosso);">✕︎</button>
+                    class="btn btn-sm" style="background:var(--rosso-bg); color:var(--rosso);">{{ icon('close') }}</button>
         </form>
     </div>
     {% endif %}
@@ -189,7 +189,7 @@
     {% set n_no_doc = proposte|rejectattr('rd_suggerito')|list|length %}
     {% if n_no_doc > 0 %}
     <span style="color:var(--giallo); margin-left:8px;">
-        ⚠︎ {{ n_no_doc }} materie senza docente disponibile — aggiungi il docente dalla sezione
+        {{ icon('warning') }} {{ n_no_doc }} materie senza docente disponibile — aggiungi il docente dalla sezione
         <a href="{{ url_for('recupero.docenti') }}">Docenti disponibili</a>.
     </span>
     {% endif %}

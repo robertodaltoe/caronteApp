@@ -4,8 +4,8 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazione Anno</a>
-    <a href="{{ url_for('export_xlsx.export_passo', passo='p7', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">⇩︎ Excel</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎ Docenti per anno — {{ anno }}</h1>
+    <a href="{{ url_for('export_xlsx.export_passo', passo='p7', anno=anno) }}" title="Esporta in Excel" class="btn btn-sm" style="background:#16a34a; color:white; font-size:.76rem; text-decoration:none; padding:4px 10px; white-space:nowrap;">{{ icon('download') }} Excel</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }} Docenti per anno — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('impostazione_anno.docenti_anno', anno=a) }}"
@@ -49,7 +49,7 @@
                 <input type="hidden" name="id_docente" value="{{ d.id }}">
                 <input type="hidden" name="anno_scol" value="{{ anno }}">
                 <button type="submit" title="Annulla uscita"
-                        style="background:none; border:none; cursor:pointer; font-size:.8rem; color:#6b7280;">↩︎</button>
+                        style="background:none; border:none; cursor:pointer; font-size:.8rem; color:#6b7280;">{{ icon('undo') }}</button>
             </form>
         </div>
         {% endfor %}
@@ -60,7 +60,7 @@
 {# ── SEZIONE 2: AP Uscenti (titolari qui, insegnano altrove) ──── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#f59e0b; margin-bottom:10px; font-size:.9rem;">
-        ↻︎ AP Uscenti — titolari qui, insegnano altrove
+        {{ icon('refresh') }} AP Uscenti — titolari qui, insegnano altrove
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ ap_uscenti|length }})</span>
     </div>
     <div style="font-size:.75rem; color:var(--grigio); margin-bottom:8px;">
@@ -79,7 +79,7 @@
             <input type="hidden" name="id_docente" value="{{ d.id }}">
             <input type="hidden" name="anno_scol" value="{{ anno }}">
             <button type="submit" style="background:none; border:none; cursor:pointer;
-                    font-size:.72rem; color:#6b7280;">↩︎ ripristina</button>
+                    font-size:.72rem; color:#6b7280;">{{ icon('undo') }} ripristina</button>
         </form>
     </div>
     {% endfor %}
@@ -89,7 +89,7 @@
 {# ── SEZIONE 3: AP Entranti (titolari altrove, insegnano qui) ─── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#0891b2; margin-bottom:10px; font-size:.9rem;">
-        ↻︎ AP Entranti — titolari altrove, insegnano qui
+        {{ icon('refresh') }} AP Entranti — titolari altrove, insegnano qui
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ ap_entranti|length }})</span>
     </div>
     <div style="font-size:.75rem; color:var(--grigio); margin-bottom:8px;">
@@ -109,7 +109,7 @@
             <input type="hidden" name="id_docente" value="{{ d.id }}">
             <input type="hidden" name="anno_scol" value="{{ anno }}">
             <button type="submit" style="background:none; border:none; cursor:pointer;
-                    font-size:.72rem; color:#6b7280;">↩︎ ripristina</button>
+                    font-size:.72rem; color:#6b7280;">{{ icon('undo') }} ripristina</button>
         </form>
     </div>
     {% endfor %}
@@ -119,7 +119,7 @@
 {# ── SEZIONE 4: TD/Supplenti inseriti per questo anno ─────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#16a34a; margin-bottom:10px; font-size:.9rem;">
-        ▤︎ TD / Supplenti inseriti per {{ anno }}
+        {{ icon('list') }} TD / Supplenti inseriti per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ td_anno|length }})</span>
     </div>
     {% if not td_anno %}
@@ -196,7 +196,7 @@
 {# ── GRIGLIA UNIFICATA: segna uscite (tutti i contratti), AP, aspettativa ─ #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:var(--blu); margin-bottom:10px; font-size:.9rem;">
-        ▤︎ Docenti — gestione presenza per {{ anno }}
+        {{ icon('list') }} Docenti — gestione presenza per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ docenti_gestione|length }})</span>
     </div>
     <div style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
@@ -239,7 +239,7 @@
                 <button type="submit" name="azione" value="segna_uscita"
                         style="background:none; border:1px solid #fca5a5; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#dc2626;">
-                    ✕︎ Esce</button>
+                    {{ icon('close') }} Esce</button>
                 {% if d.tipo_contratto == 'TI' %}
                 {# AP/aspettativa: mobilità sull'organico USR, ha senso solo per i TI #}
                 <button type="submit" name="azione" value="segna_ap_uscente"
@@ -255,7 +255,7 @@
                 <button type="submit" name="azione" value="annulla_status"
                         style="background:none; border:1px solid #d1d5db; border-radius:4px;
                                cursor:pointer; padding:2px 6px; font-size:.68rem; color:#6b7280;">
-                    ↩︎ Ripristina</button>
+                    {{ icon('undo') }} Ripristina</button>
                 {% endif %}
             </form>
         </div>

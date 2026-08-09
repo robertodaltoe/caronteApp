@@ -82,7 +82,7 @@
             <td style="text-align:center; color:#7c3aed; font-weight:700;">{{ r.ore }}</td>
             <td style="font-size:.78rem; color:var(--grigio);">{{ r.note or '—' }}</td>
             <td style="text-align:center;">
-                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ r.id }})" title="Modifica">✎︎️</button>
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ r.id }})" title="Modifica">{{ icon('edit') }}</button>
             </td>
         </tr>
         <tr id="edit-{{ r.id }}" style="display:none; background:#f5f0ff;">
@@ -94,7 +94,7 @@
                         <input type="number" name="ore" value="{{ r.ore }}" min="0" style="width:65px; padding:4px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
                     <div style="flex:1; min-width:200px;"><label style="font-size:.72rem; color:var(--grigio);">Note</label><br>
                         <input type="text" name="note" value="{{ r.note or '' }}" style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;"></div>
-                    <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+                    <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }} Salva</button>
                     <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
                             onclick="toggleEdit({{ r.id }})">Annulla</button>
                 </form>
@@ -102,7 +102,7 @@
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ r.id }}">
                     <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
-                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">✕︎ Elimina</button>
+                            border-radius:5px;padding:4px 10px;font-size:.78rem;cursor:pointer;">{{ icon('close') }} Elimina</button>
                 </form>
             </td>
         </tr>

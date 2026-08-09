@@ -26,7 +26,7 @@
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Agosto</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◈︎ Gruppi prove di recupero — Agosto</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid-alt') }} Gruppi prove di recupero — Agosto</h1>
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
@@ -38,7 +38,7 @@
 </div>
 
 <!-- ══ SEZIONE 2: GRUPPI CREATI ══════════════════════════════════ -->
-<h2 style="font-size:1rem; color:var(--blu); margin:22px 0 8px;">✓︎ Gruppi creati</h2>
+<h2 style="font-size:1rem; color:var(--blu); margin:22px 0 8px;">{{ icon('check') }} Gruppi creati</h2>
 
 {% if not gruppi %}
 <div class="card" style="text-align:center; padding:24px; color:var(--grigio);">
@@ -68,7 +68,7 @@
             <button type="submit"
                     style="background:var(--rosso-bg);color:var(--rosso);border:1px solid var(--rosso-bg);
                            border-radius:5px;padding:2px 8px;font-size:.76rem;cursor:pointer;">
-                ✕︎ Elimina
+                {{ icon('close') }} Elimina
             </button>
         </form>
     </div>
@@ -118,7 +118,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+            <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }} Salva</button>
         </div>
     </form>
 </div>
@@ -197,7 +197,7 @@
             <div id="libero-classi" style="display:flex; flex-wrap:wrap; gap:3px;"></div>
         </div>
 
-        <button type="submit" class="btn btn-success btn-sm">✚︎ Crea gruppo libero</button>
+        <button type="submit" class="btn btn-success btn-sm">{{ icon('plus') }} Crea gruppo libero</button>
     </form>
 </div>
 
@@ -290,14 +290,14 @@ function aggiornaClassiLibero() {
             label.style.borderColor = this.checked ? 'var(--viola)' : '#d1d5db';
         };
         label.appendChild(input);
-        label.appendChild(document.createTextNode(cls + (giaCoperta ? ' ✓︎' : '')));
+        label.appendChild(document.createTextNode(cls + (giaCoperta ? ' {{ icon('check') }}' : '')));
         box.appendChild(label);
     });
 }
 </script>
 
 <!-- ══ SEZIONE 1: PROPOSTE PER DOCENTE ASSEGNANTE ══════════════════ -->
-<h2 style="font-size:1rem; color:var(--blu); margin:18px 0 8px;">▤︎ Proposte (per docente assegnante)</h2>
+<h2 style="font-size:1rem; color:var(--blu); margin:18px 0 8px;">{{ icon('list') }} Proposte (per docente assegnante)</h2>
 
 {% for p in proposte %}
 {% if p.classi_libere %}
@@ -314,7 +314,7 @@ function aggiornaClassiLibero() {
                 <span style="font-size:.78rem; background:#dbeafe; color:#1e40af;
                              padding:1px 7px; border-radius:8px; font-weight:700; margin-left:6px;"
                       title="Alunni coinvolti nelle classi ancora libere">
-                    ◍︎ {{ p.n_alunni_libere }}{% if p.n_alunni_libere != p.n_alunni_totale %} / {{ p.n_alunni_totale }}{% endif %}
+                    {{ icon('person') }} {{ p.n_alunni_libere }}{% if p.n_alunni_libere != p.n_alunni_totale %} / {{ p.n_alunni_totale }}{% endif %}
                 </span>
                 <span style="font-size:.8rem; color:var(--grigio); margin-left:6px;">
                     {{ p.cognome_doc }} {{ p.nome_ini_doc }}.
@@ -322,16 +322,16 @@ function aggiornaClassiLibero() {
                 </span>
                 {% if p.n_classi_coperte > 0 %}
                 <span style="font-size:.7rem; color:var(--verde); margin-left:6px;">
-                    ✓︎ {{ p.n_classi_coperte }} class{{ 'e' if p.n_classi_coperte != 1 else 'e' }} già in un gruppo
+                    {{ icon('check') }} {{ p.n_classi_coperte }} class{{ 'e' if p.n_classi_coperte != 1 else 'e' }} già in un gruppo
                 </span>
                 {% endif %}
             </div>
             {% if p.rd_suggerito %}
             <span style="font-size:.72rem; color:var(--verde); font-weight:700;">
-                ✓︎ titolare: {{ p.rd_suggerito.docente.cognome }} {{ p.rd_suggerito.docente.nome[:1] }}.
+                {{ icon('check') }} titolare: {{ p.rd_suggerito.docente.cognome }} {{ p.rd_suggerito.docente.nome[:1] }}.
             </span>
             {% else %}
-            <span style="font-size:.72rem; color:var(--rosso);">⚠︎ docente non trovato tra i disponibili</span>
+            <span style="font-size:.72rem; color:var(--rosso);">{{ icon('warning') }} docente non trovato tra i disponibili</span>
             {% endif %}
         </div>
 
@@ -380,7 +380,7 @@ function aggiornaClassiLibero() {
                 </select>
             </div>
             <button type="submit" class="btn btn-success btn-sm" {{ 'disabled' if not p.rd_suggerito else '' }}>
-                ✚︎ Crea gruppo
+                {{ icon('plus') }} Crea gruppo
             </button>
         </div>
     </form>

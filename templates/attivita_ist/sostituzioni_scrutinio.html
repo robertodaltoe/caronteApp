@@ -29,7 +29,7 @@
             margin-bottom:16px; flex-wrap:wrap; gap:10px;">
     <div>
         <h1 style="font-size:1.3rem; color:var(--blu);">
-            ◍︎ Sostituzioni scrutinio
+            {{ icon('person') }} Sostituzioni scrutinio
         </h1>
         <p style="font-size:.84rem; color:var(--grigio);">
             {{ evento.tipo_emoji }} {{ evento.titolo }}
@@ -48,7 +48,7 @@
 
 {% if not righe %}
 <div class="card" style="text-align:center; padding:32px; color:var(--grigio);">
-    <div style="font-size:2rem; margin-bottom:8px;">✓︎</div>
+    <div style="font-size:2rem; margin-bottom:8px;">{{ icon('check') }}</div>
     Nessun docente assente a questo scrutinio.
     <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}"
        class="btn btn-sm btn-primary" style="margin-left:10px;">Registra presenze</a>
@@ -71,7 +71,7 @@
                 margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <div>
             <strong style="font-size:1rem; color:var(--rosso);">
-                ✕︎ {{ riga.assente.cognome }}{% if riga.assente.nome %} {{ riga.assente.nome[0] }}.{% endif %}
+                {{ icon('close') }} {{ riga.assente.cognome }}{% if riga.assente.nome %} {{ riga.assente.nome[0] }}.{% endif %}
             </strong>
             <span style="font-size:.78rem; color:var(--grigio); margin-left:8px;">
                 {{ riga.presenza.stato }}
@@ -81,7 +81,7 @@
         {% if riga.sostituzione and riga.sostituzione.id_sostituto %}
         <div style="font-size:.82rem; background:var(--verde-bg); color:var(--verde);
                     border-radius:6px; padding:4px 12px; font-weight:700;">
-            ✓︎ Nominato: {{ riga.sostituzione.sostituto.cognome }}
+            {{ icon('check') }} Nominato: {{ riga.sostituzione.sostituto.cognome }}
             {% if riga.sostituzione.n_protocollo %}
             · Prot. {{ riga.sostituzione.n_protocollo }}
             {% endif %}
@@ -163,7 +163,7 @@
             </div>
             <div>
                 <button type="submit" class="btn btn-success btn-sm"
-                        style="white-space:nowrap;">▤︎ Salva nomina</button>
+                        style="white-space:nowrap;">{{ icon('list') }} Salva nomina</button>
             </div>
         </div>
     </form>

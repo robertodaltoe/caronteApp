@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Conflitti sync{% endblock %}
 {% block content %}
 
@@ -13,7 +14,7 @@
 
 {% if not conflitti %}
 <div class="card" style="padding:20px; color:var(--grigio);">
-    Nessuna modifica in sospeso al momento. ✓
+    Nessuna modifica in sospeso al momento. {{ icon('check') }}
 </div>
 {% endif %}
 

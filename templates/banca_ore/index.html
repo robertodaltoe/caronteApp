@@ -30,7 +30,7 @@
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Aggiornamento: {{ oggi.strftime('%d/%m/%Y') }}
             {% if anno != anno_corrente %}
-            <span class="saldo-pill pill-giallo" style="margin-left:8px;">▧︎ Archivio {{ anno }}</span>
+            <span class="saldo-pill pill-giallo" style="margin-left:8px;">{{ icon('package') }} Archivio {{ anno }}</span>
             {% endif %}
         </p>
     </div>
@@ -47,17 +47,17 @@
             </select>
         </div>
         <a href="{{ url_for('report.globale_xlsx') }}" class="btn btn-sm btn-success">
-            ⇩︎ Scarica tutto (XLSX)
+            {{ icon('download') }} Scarica tutto (XLSX)
         </a>
         <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">
-            ▲︎ Altri report
+            {{ icon('chart') }} Altri report
         </a>
     </div>
 </div>
 
 {% if anno != anno_corrente %}
 <div class="card" style="border-left:4px solid var(--giallo); background:var(--giallo-bg); margin-bottom:16px; padding:14px 20px;">
-    <strong>▧︎ Stai consultando l'archivio dell'anno {{ anno }}.</strong>
+    <strong>{{ icon('package') }} Stai consultando l'archivio dell'anno {{ anno }}.</strong>
     I saldi qui sotto sono quelli storici di quell'anno, non modificabili.
     <a href="{{ url_for('banca_ore.index') }}" style="margin-left:8px;">→︎ Torna all'anno corrente ({{ anno_corrente }})</a>
 </div>
@@ -86,7 +86,7 @@
                 <th style="text-align:center;width:76px;">Previsto</th>
                 <th style="text-align:center;width:76px;">Proiett.</th>
                 <th style="text-align:center;width:40px;" title="Stato">St.</th>
-                <th style="text-align:center;width:60px;">✎︎️</th>
+                <th style="text-align:center;width:60px;">{{ icon('edit') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -164,11 +164,11 @@
                 <div class="azione-wrap">
                     <button class="btn btn-sm btn-primary"
                             style="padding:3px 10px; font-size:.82rem;"
-                            >⌕︎</button>
+                            >{{ icon('search') }}</button>
                     <div class="azione-menu">
-                        <a href="{{ url_for('banca_ore.singolo', id=d.id, anno=anno) }}" class="azione-item">⌕︎ Dettaglio</a>
-                        <a href="{{ url_for('report.singolo_xlsx', id=d.id, anno=anno) }}" class="azione-item">▲︎ Scarica XLSX</a>
-                        <a href="{{ url_for('report.singolo_pdf', id=d.id, anno=anno) }}" class="azione-item">▥︎ Scarica PDF</a>
+                        <a href="{{ url_for('banca_ore.singolo', id=d.id, anno=anno) }}" class="azione-item">{{ icon('search') }} Dettaglio</a>
+                        <a href="{{ url_for('report.singolo_xlsx', id=d.id, anno=anno) }}" class="azione-item">{{ icon('chart') }} Scarica XLSX</a>
+                        <a href="{{ url_for('report.singolo_pdf', id=d.id, anno=anno) }}" class="azione-item">{{ icon('layers') }} Scarica PDF</a>
                     </div>
                 </div>
             </td>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Dashboard — {{ data_sel.strftime('%d/%m/%Y') }}{% endblock %}
 
 {% block extra_style %}
@@ -85,11 +86,11 @@
         </a>
         <a href="{{ url_for('report.prospetto_web', data_str=data_sel.isoformat()) }}"
            class="btn btn-sm" style="background:var(--verde); color:white;">
-            ▤︎ Prospetto
+            {{ icon('list') }} Prospetto
         </a>
         <a href="{{ url_for('agenda.index') }}"
            class="btn btn-sm" style="background:var(--viola); color:white;">
-            📅 Agenda
+            {{ icon('calendar') }} Agenda
         </a>
     </div>
 </div>
@@ -125,7 +126,7 @@
 
 <!-- SUPPLENZE — PRIMO BOX -->
 <div class="card">
-    <h2>▤︎ Registro supplenze</h2>
+    <h2>{{ icon('list') }} Registro supplenze</h2>
     {% if supplenze %}
     <table style="table-layout:fixed; width:100%;">
         <thead>
@@ -161,7 +162,7 @@
                         </select>
                         <select name="tipo" id="sel-tipo-{{ s.id }}" style="width:100%; max-width:120px;">
                             <option value="">— tipo —</option>
-                            <option value="recupero">↻︎ Recupero</option>
+                            <option value="recupero">{{ icon('refresh') }} Recupero</option>
                             <option value="pagamento">€ Pagamento</option>
                             <option value="scambio">SO Scambio ore</option>
                             <option value="completamento">C Completamento</option>
@@ -169,7 +170,7 @@
                             <option value="disposizione">D Disposizione</option>
                         </select>
                         <div class="btn-row">
-                        <button class="btn btn-success btn-sm" type="submit">✓︎</button>
+                        <button class="btn btn-success btn-sm" type="submit">{{ icon('check') }}</button>
                         <button type="button" class="btn-suggerisci"
                             onclick="apriSuggerimenti({{ s.id }}, {{ s.ora }},
                                 {{ s.id_assente or 'null' }}, '{{ data_sel.isoformat() }}',
@@ -198,9 +199,9 @@
                     <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}"
                           style="cursor:pointer;" title="Click per cambiare tipo"
                           onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this, '{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}')">
-                        {{ lbl.get(s.tipo, s.tipo)|upper }} ✎︎
+                        {{ lbl.get(s.tipo, s.tipo)|upper }} {{ icon('edit') }}
                     </span>
-                    <span class="badge badge-verde" style="margin-left:2px;">✓︎</span>
+                    <span class="badge badge-verde" style="margin-left:2px;">{{ icon('check') }}</span>
                 {% elif s.stato == 'scoperta' %}
                     {% set tb = {'recupero':'badge-giallo','pagamento':'badge-rosso',
                         'completamento':'badge-grigio','potenziamento':'badge-verde',
@@ -211,9 +212,9 @@
                     <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}"
                           style="cursor:pointer;" title="Click per cambiare tipo"
                           onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this, '{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}')">
-                        {{ lbl.get(s.tipo, s.tipo)|upper }} ✎︎
+                        {{ lbl.get(s.tipo, s.tipo)|upper }} {{ icon('edit') }}
                     </span>
-                    <span class="badge badge-rosso" style="margin-left:2px;">⚠︎</span>
+                    <span class="badge badge-rosso" style="margin-left:2px;">{{ icon('warning') }}</span>
                 {% else %}
                     <span class="badge badge-grigio">Annullata</span>
                 {% endif %}
@@ -225,14 +226,14 @@
                 {% if s.stato not in ('annullata',) %}
                 <div style="display:flex; gap:4px; white-space:nowrap; justify-content:center; flex-wrap:wrap;">
                     <a href="{{ url_for('supplenze.modifica', id=s.id, next=request.url) }}"
-                       class="btn btn-primary btn-sm">✎︎️</a>
+                       class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                     <a href="{{ url_for('aule.override', id_supplenza=s.id, next=request.url) }}"
                        class="btn btn-sm" style="background:#0369a1; color:white;"
-                       title="Cambia aula per questa supplenza">▨︎</a>
+                       title="Cambia aula per questa supplenza">{{ icon('building') }}</a>
                     <form method="post" action="{{ url_for('supplenze.annulla', id=s.id) }}"
                           onsubmit="return confirm('Annullare?')" style="display:inline;">
                         <input type="hidden" name="versione" value="{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}">
-                        <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                        <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                     </form>
                 </div>
                 {% endif %}
@@ -255,7 +256,7 @@
 {% if eventi_ist %}
 <div class="card" style="margin-bottom:16px; border-left:4px solid var(--viola);">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-        <h2 style="margin:0;">▨︎ Attività istituzionali</h2>
+        <h2 style="margin:0;">{{ icon('building') }} Attività istituzionali</h2>
         <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm"
            style="background:var(--viola-bg); color:var(--viola); font-size:.78rem;">Vai al modulo →︎</a>
     </div>
@@ -302,8 +303,8 @@
             <td style="text-align:center;">
                 {% if ev.presenze %}
                 <span style="font-size:.78rem;">
-                    <span style="color:var(--verde); font-weight:700;">{{ n_pres }}✓︎</span>
-                    {% if n_ass %}<span style="color:var(--rosso); font-weight:700; margin-left:4px;">{{ n_ass }}✕︎</span>{% endif %}
+                    <span style="color:var(--verde); font-weight:700;">{{ n_pres }}{{ icon('check') }}</span>
+                    {% if n_ass %}<span style="color:var(--rosso); font-weight:700; margin-left:4px;">{{ n_ass }}{{ icon('close') }}</span>{% endif %}
                     {% if n_gius %}<span style="color:var(--giallo); font-weight:700; margin-left:4px;">{{ n_gius }}~</span>{% endif %}
                 </span>
                 {% else %}
@@ -314,12 +315,12 @@
                 <div style="display:flex; gap:3px; justify-content:center; flex-wrap:nowrap;">
                 <a href="{{ url_for('attivita_ist.presenze', id=ev.id) }}"
                    class="btn btn-sm" style="background:var(--viola); color:white;
-                   padding:3px 6px; font-size:.72rem;" title="Presenze">✓︎</a>
+                   padding:3px 6px; font-size:.72rem;" title="Presenze">{{ icon('check') }}</a>
                 {% if ev.tipo == 'scrutinio' %}
                 <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=ev.id) }}"
                    class="btn btn-sm btn-primary"
                    style="padding:3px 6px; font-size:.72rem;"
-                   title="Sostituzioni">◍︎</a>
+                   title="Sostituzioni">{{ icon('person') }}</a>
                 {% endif %}
                 </div>
             </td>
@@ -344,7 +345,7 @@
         </div>
         <button type="button" onclick="toggleBox('box-assenti', this)"
                 style="background:none; border:1px solid #e5eaf0; border-radius:6px;
-                       padding:2px 10px; cursor:pointer; font-size:.8rem; color:var(--grigio);">▲</button>
+                       padding:2px 10px; cursor:pointer; font-size:.8rem; color:var(--grigio);">{{ icon('chart') }}</button>
     </div>
     <div id="box-assenti">
     <table style="table-layout:fixed;width:100%;"><thead><tr><th style="width:130px;">Docente</th><th style="width:90px;">Ore</th><th style="width:130px;">Tipo</th><th style="width:300px;">Note interne</th><th style="width:160px;text-align:center;">Azioni</th></tr>
@@ -377,11 +378,11 @@
                     <td>
                         <div style="display:flex;gap:4px;justify-content:center;">
                         <a href="{{ url_for('assenze.modifica', id=ns.first_id, next=request.url) }}"
-                           class="btn btn-primary btn-sm">✎︎️</a>
+                           class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                         <form method="post" action="{{ url_for('assenze.elimina', id=ns.first_id) }}"
                               onsubmit="return confirm('Eliminare assenza e supplenze collegate?')"
                               style="display:inline;">
-                            <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                            <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                         </form>
                         </div>
                     </td>
@@ -418,11 +419,11 @@
             <td>
                 <div style="display:flex;gap:4px;justify-content:center;">
                 <a href="{{ url_for('assenze.modifica', id=ns.first_id, next=request.url) }}"
-                   class="btn btn-primary btn-sm">✎︎️</a>
+                   class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('assenze.elimina', id=ns.first_id) }}"
                       onsubmit="return confirm('Eliminare assenza e supplenze collegate?')"
                       style="display:inline;">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
                 </div>
             </td>
@@ -444,7 +445,7 @@
         </div>
         <button type="button" onclick="toggleBox('box-indisp', this)"
                 style="background:none; border:1px solid #e5eaf0; border-radius:6px;
-                       padding:2px 10px; cursor:pointer; font-size:.8rem; color:var(--grigio);">▲</button>
+                       padding:2px 10px; cursor:pointer; font-size:.8rem; color:var(--grigio);">{{ icon('chart') }}</button>
     </div>
     <div id="box-indisp">
     <table style="table-layout:fixed;width:100%;"><thead><tr><th style="width:130px;">Docente</th><th style="width:90px;">Ore</th><th style="width:130px;">Motivo</th><th style="width:300px;">Note</th><th style="width:110px;text-align:center;">Azioni</th></tr>
@@ -465,7 +466,7 @@
                       onsubmit="return confirm('Rimuovere indisponibilità?')"
                       style="display:inline;">
                     <input type="hidden" name="ids" value="{{ i.ids | join(',') }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -484,7 +485,7 @@
                 style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;">×</button>
     </div>
     <div class="pann-body" id="pann-body">
-        <div id="pann-loading" style="display:none;">⏳ Caricamento...</div>
+        <div id="pann-loading" style="display:none;">{{ icon('hourglass') }} Caricamento...</div>
         <div id="pann-empty"   style="display:none;">Nessun candidato disponibile.</div>
         <div id="pann-content"></div>
     </div>
@@ -492,7 +493,7 @@
         <div style="font-size:.8rem; color:var(--grigio); margin-bottom:8px;" id="pann-info"></div>
         <button class="btn btn-success" style="width:100%;"
                 onclick="confermaSuggerimento()" id="btn-conferma" disabled>
-            ✓︎ Assegna selezionato
+            {{ icon('check') }} Assegna selezionato
         </button>
     </div>
 </div>
@@ -552,12 +553,12 @@ function renderSuggerimenti(data) {
             const badgeClasse = doc.docente_classe
                 ? `<span style="font-size:.68rem; background:#dbeafe; color:#1e40af;
                     border-radius:3px; padding:1px 5px; font-weight:700;
-                    margin-left:4px;">▥︎ sua classe</span>`
+                    margin-left:4px;">{{ icon('layers') }} sua classe</span>`
                 : '';
             const badgeCompresenza = doc.compresenza
                 ? `<span style="font-size:.68rem; background:var(--giallo-bg); color:var(--giallo);
                     border-radius:3px; padding:1px 5px; font-weight:700;
-                    margin-left:4px;">⚑︎ compresenza</span>`
+                    margin-left:4px;">{{ icon('star') }} compresenza</span>`
                 : '';
             const badgeITP = (doc.ruolo === 'itp')
                 ? `<span style="font-size:.68rem; background:var(--viola-bg); color:var(--viola);
@@ -572,7 +573,7 @@ function renderSuggerimenti(data) {
             const avvisoSede = doc.fuori_sede
                 ? `<div style="font-size:.68rem; color:var(--giallo); background:var(--giallo-bg);
                     border-radius:3px; padding:1px 6px; margin-top:2px;">
-                    ⚠︎ oggi non in sede (${doc.altra_scuola})</div>`
+                    {{ icon('warning') }} oggi non in sede (${doc.altra_scuola})</div>`
                 : '';
             row.dataset.partnerIds = (doc.partner_ids || []).join(',');
             row.innerHTML = `<div style="flex:1;"><div class="cand-nome">${doc.cognome}${doc.nome ? ' '+doc.nome[0]+'.' : ''}${badgeClasse}${badgeCompresenza}${badgeITP}${badgePT}</div>${avvisoSede}<div class="cand-dettaglio">${doc.dettaglio}${doc.materia ? ' · '+doc.materia : ''}</div></div><span class="cand-saldo ${sc}">${doc.saldo_label}</span>`;
@@ -632,7 +633,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') chiudiSugger
 
 // ── CAMBIA TIPO INLINE ─────────────────────────────────────
 const TIPI_LISTA = [
-    {v:'recupero',     l:'↻︎ Recupero'},
+    {v:'recupero',     l:'{{ icon('refresh') }} Recupero'},
     {v:'pagamento',    l:'€ Pagamento'},
     {v:'scambio',      l:'SO Scambio ore'},
     {v:'completamento',l:'C Completamento'},
@@ -719,7 +720,7 @@ function toggleBox(id, btn) {
     const box = document.getElementById(id);
     const open = box.style.display !== 'none';
     box.style.display = open ? 'none' : '';
-    btn.textContent = open ? '▼' : '▲';
+    btn.textContent = open ? '▼' : '{{ icon('chart') }}';
 }
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">▦︎️ Gestione periodi</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid') }} Gestione periodi</h1>
 </div>
 
 <div style="font-size:.78rem; color:var(--grigio); margin-bottom:14px;">
@@ -111,12 +111,12 @@
             <td style="font-size:.86rem; white-space:nowrap;"><strong>{{ p.data_fine.strftime('%d/%m/%Y') }}</strong></td>
             <td style="font-size:.84rem; white-space:nowrap;">{{ p.ora_inizio }} – {{ p.ora_fine }}</td>
             <td style="text-align:center; white-space:nowrap;">
-                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ p.id }})" title="Modifica">✎︎️</button>
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ p.id }})" title="Modifica">{{ icon('edit') }}</button>
                 <form method="post" onsubmit="return confirm('Eliminare questo periodo?')"
                       style="display:inline; margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ p.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -152,7 +152,7 @@
                                style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
                     </div>
                     <div style="display:flex; gap:6px;">
-                        <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+                        <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }} Salva</button>
                         <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
                                 onclick="toggleEdit({{ p.id }})">Annulla</button>
                     </div>

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Orario sostegno{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <h1 style="font-size:1.3rem; color:var(--blu);">◐︎ Orario docenti di sostegno</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('support') }} Orario docenti di sostegno</h1>
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid #0d9488;">
@@ -13,9 +14,9 @@
 
 {% if not docenti_sostegno %}
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:#92400e; background:#fffbeb; border-left:4px solid #d97706;">
-    ⚠︎ Nessun docente con ruolo "Sostegno" trovato. Vai su
+    {{ icon('warning') }} Nessun docente con ruolo "Sostegno" trovato. Vai su
     <a href="{{ url_for('docenti.lista') }}">Docenti</a> e imposta il ruolo didattico
-    "◐︎ Sostegno" per i docenti interessati prima di inserire il loro orario qui.
+    "{{ icon('support') }} Sostegno" per i docenti interessati prima di inserire il loro orario qui.
 </div>
 {% else %}
 
@@ -153,7 +154,7 @@
                 <th style="width:60px; text-align:center;">Ora</th>
                 <th style="width:80px;">Classe</th>
                 <th>Note</th>
-                <th style="width:70px; text-align:center;">✕︎</th>
+                <th style="width:70px; text-align:center;">{{ icon('close') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -165,11 +166,11 @@
             <td style="font-size:.86rem;"><strong>{{ s.classe }}</strong></td>
             <td style="font-size:.84rem; color:var(--grigio);">{{ s.note or '—' }}</td>
             <td style="text-align:center; white-space:nowrap;">
-                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ s.id }})" title="Modifica">✎︎️</button>
+                <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ s.id }})" title="Modifica">{{ icon('edit') }}</button>
                 <form method="post" onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ s.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -206,7 +207,7 @@
                                style="width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
                     </div>
                     <div style="display:flex; gap:6px;">
-                        <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+                        <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }} Salva</button>
                         <button type="button" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);"
                                 onclick="toggleEdit({{ s.id }})">Annulla</button>
                     </div>

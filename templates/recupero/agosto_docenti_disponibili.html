@@ -4,7 +4,7 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Prove agosto</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">◍︎▨︎ Docenti disponibili per le prove di agosto</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }}{{ icon('building') }} Docenti disponibili per le prove di agosto</h1>
 </div>
 
 <div class="card" style="padding:14px 18px; margin-bottom:16px; border-left:4px solid var(--blu);">
@@ -25,15 +25,15 @@
 <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
     <div class="card" style="text-align:center; padding:14px; background:var(--verde-bg);">
         <div style="font-size:1.8rem; font-weight:800; color:var(--verde);">{{ n_completamente_liberi }}</div>
-        <div style="font-size:.78rem; color:var(--verde);">✓︎ Completamente liberi</div>
+        <div style="font-size:.78rem; color:var(--verde);">{{ icon('check') }} Completamente liberi</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:#fef9c3;">
         <div style="font-size:1.8rem; font-weight:800; color:var(--giallo);">{{ n_con_assenze }}</div>
-        <div style="font-size:.78rem; color:var(--giallo);">⚠︎ Con alcune assenze</div>
+        <div style="font-size:.78rem; color:var(--giallo);">{{ icon('warning') }} Con alcune assenze</div>
     </div>
     <div class="card" style="text-align:center; padding:14px; background:var(--rosso-bg);">
         <div style="font-size:1.8rem; font-weight:800; color:var(--rosso);">{{ n_non_disponibili }}</div>
-        <div style="font-size:.78rem; color:var(--rosso);">✕︎ Non disponibili (assenti tutto il periodo)</div>
+        <div style="font-size:.78rem; color:var(--rosso);">{{ icon('close') }} Non disponibili (assenti tutto il periodo)</div>
     </div>
 </div>
 
@@ -71,13 +71,13 @@
             <td style="text-align:center;">
                 {% if r.completamente_assente %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:var(--rosso-bg); color:var(--rosso);">✕︎ non disp.</span>
+                             background:var(--rosso-bg); color:var(--rosso);">{{ icon('close') }} non disp.</span>
                 {% elif r.completamente_libero %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:var(--verde-bg); color:var(--verde);">✓︎ libero</span>
+                             background:var(--verde-bg); color:var(--verde);">{{ icon('check') }} libero</span>
                 {% else %}
                 <span style="padding:2px 8px; border-radius:8px; font-size:.74rem; font-weight:700; white-space:nowrap;
-                             background:#fef9c3; color:var(--giallo);">⚠︎ parziale</span>
+                             background:#fef9c3; color:var(--giallo);">{{ icon('warning') }} parziale</span>
                 {% endif %}
             </td>
         </tr>

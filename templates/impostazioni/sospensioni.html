@@ -4,7 +4,7 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Sospensioni didattiche</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid') }} Sospensioni didattiche</h1>
 </div>
 
 <div style="font-size:.78rem; color:var(--grigio); margin-bottom:14px;">
@@ -19,7 +19,7 @@
 
 {% if n_anno_corrente == 0 %}
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:#92400e; background:#fffbeb; border-left:4px solid #d97706;">
-    ⚠︎ Nessuna sospensione registrata per l'anno scolastico <strong>{{ anno_corrente }}</strong>.
+    {{ icon('warning') }} Nessuna sospensione registrata per l'anno scolastico <strong>{{ anno_corrente }}</strong>.
     Questo elenco non si aggiorna automaticamente da un anno all'altro: ricordati di inserire qui vacanze,
     ponti e festività dell'anno in corso, altrimenti verranno ignorati nel calcolo di supplenze e permessi.
 </div>
@@ -71,7 +71,7 @@
                 <th style="width:110px;">Al</th>
                 <th>Descrizione</th>
                 <th style="width:180px;">Tipo</th>
-                <th style="width:44px; text-align:center;">✕︎</th>
+                <th style="width:44px; text-align:center;">{{ icon('close') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -109,12 +109,12 @@
             </td>
             <td style="text-align:center; white-space:nowrap;">
                 <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ s.id }})"
-                        title="Modifica">✎︎️</button>
+                        title="Modifica">{{ icon('edit') }}</button>
                 <form method="post" onsubmit="return confirm('Eliminare?')"
                       style="display:inline; margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ s.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -152,7 +152,7 @@
                         </select>
                     </div>
                     <div style="display:flex; gap:6px;">
-                        <button type="submit" class="btn btn-success btn-sm">▤︎ Salva</button>
+                        <button type="submit" class="btn btn-success btn-sm">{{ icon('list') }} Salva</button>
                         <button type="button" class="btn btn-sm"
                                 style="background:#e5eaf0; color:var(--blu);"
                                 onclick="toggleEdit({{ s.id }})">Annulla</button>

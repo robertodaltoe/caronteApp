@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Indisponibilità ricorrenti{% endblock %}
 {% block content %}
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">🔁 Indisponibilità ricorrenti</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('swap') }} Indisponibilità ricorrenti</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Valide per tutto l'anno scolastico — escluse automaticamente dai suggerimenti
         </p>

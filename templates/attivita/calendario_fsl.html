@@ -82,7 +82,7 @@
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div>
         <h1 style="font-size:1.3rem; color:var(--blu);">
-            ▨︎ Calendario FSL — {{ attivita.descrizione or attivita.tipo_label }}
+            {{ icon('building') }} Calendario FSL — {{ attivita.descrizione or attivita.tipo_label }}
         </h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             {{ attivita.classi_list | join(', ') }} ·
@@ -90,7 +90,7 @@
         </p>
     </div>
     <div style="display:flex; gap:8px;">
-        <button id="btn-salva" class="btn btn-success">✓︎ Salva calendario</button>
+        <button id="btn-salva" class="btn btn-success">{{ icon('check') }} Salva calendario</button>
         <a href="{{ url_for('attivita.lista') }}" class="btn btn-primary">{{ icon('arrow-left') }} Attività</a>
     </div>
 </div>
@@ -127,7 +127,7 @@
                                padding:2px 7px; white-space:nowrap; flex-shrink:0;"
                         onclick="copiaRiga({{ doc.id }})"
                         title="Propaga il pattern di questo docente a tutte le settimane">
-                    ↻︎
+                    {{ icon('refresh') }}
                 </button>
             </div>
         </td>
@@ -170,9 +170,9 @@
         {% endfor %}
     </div>
     <div class="ore-btn-row">
-        <button class="btn btn-success btn-sm" onclick="confermaCella()">✓︎ Ok</button>
-        <button class="btn btn-danger btn-sm" onclick="svuotaCella()">✕︎ Rimuovi</button>
-        <button class="btn btn-primary btn-sm" onclick="chiudiPopup()">✕︎</button>
+        <button class="btn btn-success btn-sm" onclick="confermaCella()">{{ icon('check') }} Ok</button>
+        <button class="btn btn-danger btn-sm" onclick="svuotaCella()">{{ icon('close') }} Rimuovi</button>
+        <button class="btn btn-primary btn-sm" onclick="chiudiPopup()">{{ icon('close') }}</button>
     </div>
 </div>
 
@@ -318,7 +318,7 @@ function copiaRiga(docId) {
     // Feedback visivo
     const btn = event.target;
     const orig = btn.textContent;
-    btn.textContent = `✓︎ ${copiate} celle`;
+    btn.textContent = `{{ icon('check') }} ${copiate} celle`;
     btn.style.background = 'var(--verde-bg)';
     btn.style.color = 'var(--verde)';
     setTimeout(() => {
@@ -355,10 +355,10 @@ document.getElementById('btn-salva').addEventListener('click', async () => {
     const data = await res.json();
 
     if (data.ok) {
-        btn.textContent = '✓︎ Salvato!';
+        btn.textContent = '{{ icon('check') }} Salvato!';
         btn.style.background = 'var(--verde)';
         setTimeout(() => {
-            btn.textContent = '✓︎ Salva calendario';
+            btn.textContent = '{{ icon('check') }} Salva calendario';
             btn.style.background = '';
             btn.disabled = false;
         }, 2000);

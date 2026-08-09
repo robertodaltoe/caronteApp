@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Dashboard anno — {{ anno }}{% endblock %}
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">▲︎ Dashboard {{ anno }}</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">{{ icon('chart') }} Dashboard {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
         <a href="{{ url_for('dashboard_anno.index', anno=a) }}"
@@ -31,21 +32,21 @@
     {% if url %}</a>{% endif %}
     {% endmacro %}
 
-    {{ kpi('▨︎', 'Classi attive', n_classi,
+    {{ kpi(icon('building'), 'Classi attive', n_classi,
            indirizzi|join(' · '),
            url=url_for('impostazione_anno.classi_attive')) }}
 
-    {{ kpi('◍︎', 'Docenti in organico', n_docenti,
+    {{ kpi(icon('person'), 'Docenti in organico', n_docenti,
            'TI: ' ~ n_ti ~ ' · TD: ' ~ n_td,
            url=url_for('impostazione_anno.docenti_anno')) }}
 
     {% if n_ap_entrante or n_ap_uscente or n_aspettativa %}
-    {{ kpi('↻︎', 'Movimenti', (n_ap_entrante + n_ap_uscente + n_aspettativa),
+    {{ kpi(icon('refresh'), 'Movimenti', (n_ap_entrante + n_ap_uscente + n_aspettativa),
            ('Entranti: '~n_ap_entrante~' · Uscenti: '~n_ap_uscente~' · Asp: '~n_aspettativa),
            color='#d97706', bg='#fffbeb') }}
     {% endif %}
 
-    {{ kpi('▤︎', 'Assegnazioni', n_assegnazioni,
+    {{ kpi(icon('list'), 'Assegnazioni', n_assegnazioni,
            (n_cc_assegnate|string~'/'~n_cc_totali~' CC coperte ('~perc_assegnazioni~'%)'),
            color=('#16a34a' if perc_assegnazioni==100 else '#d97706' if perc_assegnazioni>50 else '#dc2626'),
            bg=('#f0fdf4' if perc_assegnazioni==100 else '#fffbeb' if perc_assegnazioni>50 else '#fef2f2'),
@@ -65,7 +66,7 @@
     {% endif %}
 
     {% if n_materie_no_mat %}
-    {{ kpi('⚠︎', 'Materie non collegate', n_materie_no_mat,
+    {{ kpi(icon('warning'), 'Materie non collegate', n_materie_no_mat,
            'Righe piano studi senza materia ufficiale',
            color='#dc2626', bg='#fef2f2',
            url=url_for('impostazione_anno.piano_studi')) }}
@@ -78,7 +79,7 @@
 
     <div class="card" style="padding:14px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
-            ▨︎ Classi attive — schede
+            {{ icon('building') }} Classi attive — schede
         </div>
 <div style="font-size:.8rem; color:var(--grigio); margin-bottom:8px;">
             Clicca su una classe per aprire la scheda docenti e incarichi.
@@ -101,17 +102,17 @@
         </div>
         {% if n_coord_mancanti == 0 and n_ref_mancanti == 0 %}
         <div style="color:#16a34a; font-size:.84rem; font-weight:600;">
-            ✓︎ Coordinatori e referenti dipartimento tutti assegnati
+            {{ icon('check') }} Coordinatori e referenti dipartimento tutti assegnati
         </div>
         {% else %}
         {% if n_coord_mancanti %}
         <div style="color:#dc2626; font-size:.82rem; margin-bottom:6px;">
-            ⚠︎ {{ n_coord_mancanti }} coordinatori di classe mancanti
+            {{ icon('warning') }} {{ n_coord_mancanti }} coordinatori di classe mancanti
         </div>
         {% endif %}
         {% if n_ref_mancanti %}
         <div style="color:#dc2626; font-size:.82rem; margin-bottom:6px;">
-            ⚠︎ {{ n_ref_mancanti }} referenti di dipartimento mancanti
+            {{ icon('warning') }} {{ n_ref_mancanti }} referenti di dipartimento mancanti
         </div>
         {% endif %}
         {% endif %}
@@ -161,28 +162,28 @@
 {# ── Link rapidi ───────────────────────────────────────────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
-        ◈︎ Azioni rapide
+        {{ icon('grid-alt') }} Azioni rapide
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-sm btn-primary">
-            ⚙︎ Hub impostazione anno
+            {{ icon('gear') }} Hub impostazione anno
         </a>
         <a href="{{ url_for('assegnazioni.index', anno=anno) }}" class="btn btn-sm btn-primary">
-            ▤︎ Assegnazioni classi
+            {{ icon('list') }} Assegnazioni classi
         </a>
         <a href="{{ url_for('incarichi.index', anno=anno) }}" class="btn btn-sm btn-primary">
             ✦︎ Incarichi
         </a>
         <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm btn-primary">
-            ▥︎ Dipartimenti
+            {{ icon('layers') }} Dipartimenti
         </a>
         <a href="{{ url_for('export_xlsx.tutte_classi', anno=anno) }}"
            class="btn btn-sm" style="background:#16a34a; color:white;">
-            ⇩︎ Tutte le classi XLSX
+            {{ icon('download') }} Tutte le classi XLSX
         </a>
         <a href="{{ url_for('export_xlsx.export_passo', passo='p9', anno=anno) }}"
            class="btn btn-sm" style="background:#16a34a; color:white;">
-            ⇩︎ Assegnazioni XLSX
+            {{ icon('download') }} Assegnazioni XLSX
         </a>
     </div>
 </div>

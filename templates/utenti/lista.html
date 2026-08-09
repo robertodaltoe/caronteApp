@@ -5,11 +5,11 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">◍︎ Gestione Utenti</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('person') }} Gestione Utenti</h1>
         <p style="color:var(--grigio); font-size:.85rem;">Accesso al sistema — ruoli e permessi</p>
     </div>
     <div style="display:flex; gap:8px;">
-        <a href="{{ url_for('auth.log_accessi') }}" class="btn btn-primary btn-sm">▤︎ Log accessi</a>
+        <a href="{{ url_for('auth.log_accessi') }}" class="btn btn-primary btn-sm">{{ icon('list') }} Log accessi</a>
         <a href="{{ url_for('auth.nuovo_utente') }}" class="btn btn-success btn-sm">+ Nuovo utente</a>
     </div>
 </div>
@@ -55,12 +55,12 @@
             <td style="text-align:center;">
                 <div style="display:flex; gap:4px; justify-content:center;">
                     <a href="{{ url_for('auth.modifica_utente', id=u.id) }}"
-                       class="btn btn-primary btn-sm">✎︎️</a>
+                       class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                     {% if u.id != session.get('utente_id') %}
                     <form method="post" action="{{ url_for('auth.elimina_utente', id=u.id) }}"
                           onsubmit="return confirm('Eliminare {{ u.username }}?')"
                           style="display:inline;">
-                        <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                        <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                     </form>
                     {% endif %}
                 </div>

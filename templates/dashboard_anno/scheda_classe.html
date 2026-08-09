@@ -6,7 +6,7 @@
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
     <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">
-        ▨︎ Classe {{ anno_corso }}{{ sezione }} {{ indirizzo }}
+        {{ icon('building') }} Classe {{ anno_corso }}{{ sezione }} {{ indirizzo }}
         <span style="font-size:.85rem; font-weight:400; color:var(--grigio);">— {{ anno }}</span>
     </h1>
     {% if aula %}
@@ -17,7 +17,7 @@
     {% endif %}
     <div style="margin-left:auto; display:flex; gap:6px;">
         <a href="{{ url_for('export_xlsx.export_classe', label=label, anno=anno) }}"
-           class="btn btn-sm" style="background:#16a34a; color:white;">⇩︎ Excel</a>
+           class="btn btn-sm" style="background:#16a34a; color:white;">{{ icon('download') }} Excel</a>
     </div>
 </div>
 
@@ -27,7 +27,7 @@
 <div>
 <div class="card" style="padding:14px 18px; margin-bottom:14px;">
     <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
-        ◍︎ Docenti assegnati
+        {{ icon('person') }} Docenti assegnati
     </div>
     {% if doc_map %}
     <table style="width:100%; border-collapse:collapse; font-size:.84rem;">
@@ -67,7 +67,7 @@
 {# ── Piano studi di riferimento ────────────────────────────────── #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
-        ▥︎ Piano studi (riferimento)
+        {{ icon('layers') }} Piano studi (riferimento)
     </div>
     <table style="width:100%; border-collapse:collapse; font-size:.8rem;">
         <thead>

@@ -2,14 +2,14 @@
 {% from '_icons.html' import icon %}
 {% block title %}Anteprima import Piano Attività{% endblock %}
 {% block content %}
-<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:6px;">⇩︎ Anteprima import — {{ eventi|length }} eventi trovati</h1>
+<h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:6px;">{{ icon('download') }} Anteprima import — {{ eventi|length }} eventi trovati</h1>
 <div style="font-size:.82rem; color:var(--grigio); margin-bottom:16px;">
     Fogli letti: {{ fogli|join(', ') }}
 </div>
 
 {% if avvisi %}
 <div class="card" style="padding:14px 18px; border-left:4px solid var(--giallo); background:var(--giallo-bg); margin-bottom:16px;">
-    <strong style="color:var(--giallo);">⚠︎ Avvisi durante la lettura ({{ avvisi|length }}):</strong>
+    <strong style="color:var(--giallo);">{{ icon('warning') }} Avvisi durante la lettura ({{ avvisi|length }}):</strong>
     <ul style="margin:8px 0 0 18px; font-size:.82rem; color:var(--giallo); line-height:1.7;">
         {% for a in avvisi %}
         <li>{{ a }}</li>
@@ -23,7 +23,7 @@
     <div style="display:flex; flex-wrap:wrap; gap:8px;">
         {% for tipo, n in conteggio_tipi.items() %}
         <span style="background:#f1f5f9; border-radius:14px; padding:5px 12px; font-size:.8rem;">
-            {{ tipi.get(tipo, {}).get('emoji', '◆') }} <strong>{{ tipi.get(tipo, {}).get('label', tipo) }}</strong> — {{ n }}
+            {{ tipi.get(tipo, {}).get('emoji', icon('diamond')) }} <strong>{{ tipi.get(tipo, {}).get('label', tipo) }}</strong> — {{ n }}
         </span>
         {% endfor %}
     </div>
@@ -45,7 +45,7 @@
             {% for e in eventi %}
             <tr style="border-top:1px solid #f1f5f9;">
                 <td style="padding:6px 10px; white-space:nowrap;">{{ e.data }}</td>
-                <td style="padding:6px 10px; white-space:nowrap;">{{ tipi.get(e.tipo, {}).get('emoji','◆') }} {{ tipi.get(e.tipo, {}).get('label', e.tipo) }}</td>
+                <td style="padding:6px 10px; white-space:nowrap;">{{ tipi.get(e.tipo, {}).get('emoji', icon('diamond')) }} {{ tipi.get(e.tipo, {}).get('label', e.tipo) }}</td>
                 <td style="padding:6px 10px; max-width:360px;">{{ e.titolo.split('\n')[0] }}</td>
                 <td style="padding:6px 10px; white-space:nowrap;">{{ e.ora_ini or '—' }}–{{ e.ora_fin or '—' }}</td>
                 <td style="padding:6px 10px;">{{ e.classe or '—' }}</td>
@@ -64,7 +64,7 @@
     <form method="post" action="{{ url_for('attivita_ist.import_piano_xlsx') }}">
         <textarea name="eventi_json" style="display:none">{{ eventi_json }}</textarea>
         <div style="display:flex; gap:10px;">
-            <button type="submit" class="btn btn-success">✓︎ Conferma e importa {{ eventi|length }} eventi</button>
+            <button type="submit" class="btn btn-success">{{ icon('check') }} Conferma e importa {{ eventi|length }} eventi</button>
             <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="btn">{{ icon('arrow-left') }} Ricarica un altro file</a>
         </div>
     </form>

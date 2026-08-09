@@ -30,7 +30,7 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Disponibilità docenti per i recuperi</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid') }} Disponibilità docenti per i recuperi</h1>
 </div>
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem;
      color:var(--grigio); border-left:4px solid var(--viola);">
@@ -63,7 +63,7 @@
             {% else %}
             <span style="font-size:.72rem; background:var(--giallo-bg); color:var(--giallo);
                          padding:1px 7px; border-radius:8px; margin-left:8px;">
-                ⚠︎ nessun vincolo
+                {{ icon('warning') }} nessun vincolo
             </span>
             {% endif %}
         </div>
@@ -75,7 +75,7 @@
                 <input type="hidden" name="id_rec_docente" value="{{ rd.id }}">
                 <button type="submit" class="btn btn-sm"
                         style="background:var(--rosso-bg); color:var(--rosso); border:1px solid #fca5a5;
-                               font-size:.74rem;">✕︎</button>
+                               font-size:.74rem;">{{ icon('close') }}</button>
             </form>
             {% endif %}
             <span class="toggle-arrow" style="font-size:.9rem; color:var(--grigio); user-select:none;">▶</span>
@@ -96,7 +96,7 @@
                 <th style="width:130px;">Classi</th>
                 <th style="width:130px;">Materia</th>
                 <th>Note</th>
-                <th style="width:44px; text-align:center;">✕︎</th>
+                <th style="width:44px; text-align:center;">{{ icon('close') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -118,11 +118,11 @@
             <td style="text-align:center; display:flex; gap:3px; justify-content:center;">
                 <button type="button" onclick="toggleModifica({{ v.id }})"
                         style="background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);
-                               border-radius:5px; padding:2px 7px; font-size:.78rem; cursor:pointer;">✎︎️</button>
+                               border-radius:5px; padding:2px 7px; font-size:.78rem; cursor:pointer;">{{ icon('edit') }}</button>
                 <form method="post" style="margin:0;">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="id" value="{{ v.id }}">
-                    <button class="btn btn-danger btn-sm" type="submit">✕︎</button>
+                    <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>
@@ -169,9 +169,9 @@
                         <input type="text" name="note" value="{{ v.note or '' }}"
                                style="width:120px; padding:3px 5px; border:1px solid #7dd3fc; border-radius:5px; font-size:.78rem;">
                     </div>
-                    <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0; white-space:nowrap;">▤︎</button>
+                    <button type="submit" class="btn btn-success btn-sm" style="flex-shrink:0; white-space:nowrap;">{{ icon('list') }}</button>
                     <button type="button" onclick="toggleModifica({{ v.id }})"
-                            class="btn btn-sm" style="flex-shrink:0; background:var(--rosso-bg); color:var(--rosso);">✕︎</button>
+                            class="btn btn-sm" style="flex-shrink:0; background:var(--rosso-bg); color:var(--rosso);">{{ icon('close') }}</button>
                 </form>
             </td>
         </tr>

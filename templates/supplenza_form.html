@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Nuova supplenza{% endblock %}
 
 {% block extra_style %}
@@ -69,10 +70,10 @@
                 <label style="color:var(--viola);">Motivo visibile nel display *</label>
                 <select name="note_display" id="sel-nota-libera"
                         style="border-color:var(--viola);">
-                    <option value="INGRESSO POSTICIPATO">◷︎ Ingresso posticipato</option>
-                    <option value="USCITA ANTICIPATA">◷︎ Uscita anticipata</option>
+                    <option value="INGRESSO POSTICIPATO">{{ icon('clock') }} Ingresso posticipato</option>
+                    <option value="USCITA ANTICIPATA">{{ icon('clock') }} Uscita anticipata</option>
                     <option value="CLASSE SCOPERTA">● Classe scoperta</option>
-                    <option value="ALTRO">◆︎ Altro (specifica sotto)</option>
+                    <option value="ALTRO">{{ icon('diamond') }} Altro (specifica sotto)</option>
                 </select>
             </div>
             <div id="nota-libera-custom" style="display:none; margin-top:8px;">
@@ -104,7 +105,7 @@
             <div class="form-group" id="row-tipo">
                 <label>Tipo supplenza</label>
                 <select name="tipo">
-                    <option value="recupero">↻︎ Recupero</option>
+                    <option value="recupero">{{ icon('refresh') }} Recupero</option>
                     <option value="pagamento">€ Pagamento</option>
                     <option value="completamento">C Completamento</option>
                     <option value="potenziamento">P Potenziamento</option>

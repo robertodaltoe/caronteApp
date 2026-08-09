@@ -59,7 +59,7 @@
         <label style="font-size:.72rem; color:var(--grigio); display:block; margin-bottom:3px;">Modalità</label>
         <div class="modo-toggle">
             <a href="?anno={{ anno }}&modo=visualizza" class="{{ 'attivo' if modo=='visualizza' else '' }}">◉︎ Visualizza</a>
-            <a href="?anno={{ anno }}&modo=assegna" class="{{ 'attivo' if modo=='assegna' else '' }}">✎︎️ Assegna</a>
+            <a href="?anno={{ anno }}&modo=assegna" class="{{ 'attivo' if modo=='assegna' else '' }}">{{ icon('edit') }} Assegna</a>
         </div>
     </div>
     <div style="font-size:.78rem; color:var(--grigio); max-width:340px;">
@@ -144,7 +144,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <strong id="pop-titolo" style="color:var(--blu);"></strong>
         <button onclick="chiudiPopover()" style="background:none; border:none; cursor:pointer;
-                font-size:1rem; color:var(--grigio);">✕︎</button>
+                font-size:1rem; color:var(--grigio);">{{ icon('close') }}</button>
     </div>
     <div id="pop-sede" style="font-size:.74rem; color:var(--grigio); margin-bottom:10px;"></div>
 
@@ -163,7 +163,7 @@
             {% endfor %}
         </select>
         <button onclick="assegnaAula()" class="btn btn-success btn-sm" style="width:100%;">
-            ▤︎ Assegna
+            {{ icon('list') }} Assegna
         </button>
     </div>
     {% endif %}
