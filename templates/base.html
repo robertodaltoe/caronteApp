@@ -179,7 +179,16 @@
             height: 68px;
             box-shadow: 0 2px 6px rgba(0,0,0,.25);
             position: relative;
+            overflow: hidden;
         }
+        /* Mesh low-poly di sfondo, stessa tecnica di login/display: va
+           inserita come primo figlio di <nav> e SENZA z-index negativo
+           (un z-index:-1 su un elemento position:fixed/absolute finisce
+           dietro il colore di sfondo di nav invece che sopra, in questo
+           motore — vedi il fix dello sfondo Display). L'ordine nel DOM
+           basta a tenerla dietro a brand/link, dichiarati dopo. */
+        .nav-lowpoly { position:absolute; inset:0; opacity:.5; pointer-events:none; }
+        .nav-lowpoly svg { width:100%; height:100%; display:block; }
         /* Sfumatura sul bordo destro: appare solo quando i link della nav
            (.nav-links) sono più larghi dello spazio disponibile e serve a
            far capire che c'è altro da scorrere — senza, la voce tagliata a
@@ -422,6 +431,7 @@
 <body>
 {% from '_icons.html' import icon %}
 <nav>
+    <div class="nav-lowpoly">{% include '_nav_bg.html' %}</div>
     <span class="brand">
         <img src="{{ url_for('static', filename='img/brand/caronte-icon.png') }}" alt="">
         <span class="brand-testi">
