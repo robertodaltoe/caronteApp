@@ -4,6 +4,45 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 36 — Icone SVG: sostituzione globale glifi/emoji (Cowork)
+
+**Contesto:** completamento della sostituzione icone iniziata in
+precedenza (nav, H1 dei restyling, `docenti.html`/`docente_form.html`)
+con un giro finale su tutti i glifi/emoji ancora presenti nell'app.
+Un commit: `92ef3bf`.
+
+Aggiunte 10 icone a `_icons.html` (chevron-down, package, plus,
+hourglass, print, mail, school, forbidden, undo, swap) e sostituiti
+687 glifi/emoji in 94 file con uno script di regex globale.
+
+**Bug scoperto e corretto:** la sostituzione automatica aveva inserito
+`{{ icon('x') }}` dentro stringhe che erano già argomenti di
+un'espressione Jinja attiva (tuple di `<option>`, ternari, argomenti
+di macro come `kpi()`/`step()`, dizionari letterali, fallback di
+`.get()`) — Jinja non ammette `{{ }}` annidato dentro un altro
+`{{ }}`/`{% %}`. 12 file coinvolti, corretti singolarmente:
+- `cambio_modifica.html`, `modifica_supplenza.html`,
+  `recupero/alunni.html` (opzione `<option>`): ripristinato il testo
+  semplice, perché `<option>` non può contenere HTML/SVG.
+- `attivita_ist/form.html`, `utenti/form.html`: ternario riscritto con
+  l'operatore `~` per la concatenazione.
+- `attivita_ist/import_piano_xlsx_preview.html`: `icon()` passata
+  direttamente come valore di default a `.get('emoji', ...)` invece
+  che dentro una stringa.
+- `dashboard_anno/index.html`, `recupero/agosto_index.html`,
+  `recupero/giugno_index.html`: `icon('x')` passata come argomento
+  reale alle macro `kpi()`/`step()` invece che incorporata in una
+  stringa tra virgolette.
+- `rientro/calendario.html`, `recupero/agosto_calendario.html`,
+  `recupero/calendario.html`: ternari di etichetta riscritti con `~`.
+- `recupero/alunni.html` (dizionario `STATO_LABEL`): valori `icon()`
+  diretti invece che stringhe con `{{ }}` annidato.
+
+Verificato: tutti i 108 template passano `app.jinja_env.parse()`
+(zero errori), rendering completo via `test_client()` con bypass di
+login locale su tutte le pagine corrette (icone SVG presenti nel body,
+19–29 per pagina a seconda del contenuto).
+
 ## Sessione 35 — Restyling colori: resto dell'app + export XLSX (Cowork)
 
 **Contesto:** completamento diretto della Sessione 34, stessa
