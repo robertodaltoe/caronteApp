@@ -4,6 +4,19 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 42 — Testo nav bar sopra la mesh sfaccettata (Cowork)
+
+**Contesto:** dopo la Sessione 41, il testo della nav in alcuni punti
+risultava "opacizzato" — il bianco semi-trasparente scelto per la
+gerarchia visiva (brand-datetime, nav a, nav-user) perdeva contrasto
+dove la mesh sottostante era più chiara. Un commit: `1fc847f`.
+
+Aggiunta un'ombra leggera (`text-shadow: 0 1px 3px rgba(0,0,0,.55)`) a
+brand-nome, brand-datetime, nav a e nav-user: il testo resta nitido
+qualunque faccetta capiti dietro, senza toccare i colori/opacità già
+scelti per la gerarchia (bianco pieno per il brand, più trasparente per
+sottotitoli e link secondari).
+
 ## Sessione 41 — Nav bar sfaccettata + regolazioni Display (Cowork)
 
 **Contesto:** a seguire della Sessione 40, tre richieste: box del
