@@ -4,6 +4,29 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 47 — Checkbox rotta e link di ritorno mancante in utenti/modifica (Cowork)
+
+**Contesto:** segnalati due problemi su `/utenti/<id>/modifica`: la
+checkbox "Utente attivo" non rispettava i bordi, e la pagina non aveva
+un modo per tornare all'elenco utenti. Un commit: `4ec672e`.
+
+- La checkbox: causa era la regola globale `.form-group input`
+  ([base.html](templates/base.html)) — pensata per campi di testo
+  (width:100%, padding, bordo, border-radius) ma applicata a QUALUNQUE
+  `input` dentro `.form-group`, checkbox incluse, gonfiandola in un
+  riquadro enorme che sbordava dalla label "Utente attivo". Verificato
+  che nessun'altra pagina con checkbox in `.form-group` era colpita
+  (solo utenti/form.html ha quella struttura). Aggiunta un'eccezione
+  CSS per `input[type=checkbox/radio]` che ripristina l'aspetto
+  nativo — vale per tutta l'app, non solo per questa pagina.
+- Link di ritorno: la pagina aveva solo un "Annulla" in fondo al form
+  (facile da perdere, specie con la checkbox rotta che faceva sembrare
+  la pagina troncata). Aggiunto il link "← Utenti" in cima, stesso
+  pattern usato nel resto dell'app.
+
+Verificato: 109/109 template passano il parser Jinja; controllo
+visivo su utenti/1/modifica — checkbox nativa, link di ritorno visibile.
+
 ## Sessione 46 — Nav bar: omologato il riempimento di "Registra assenza" (Cowork)
 
 **Contesto:** il pulsante "Registra assenza" aveva un pill rosso pieno
