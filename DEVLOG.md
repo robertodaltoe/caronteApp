@@ -4,6 +4,33 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 37 — Allineamento verticale icone SVG (Cowork)
+
+**Contesto:** su segnalazione dell'utente ("alcuni simboli non sono
+allineati correttamente con il testo"), verifica sistematica
+dell'allineamento di tutte le 47 icone di `_icons.html`. Un commit:
+`697deba`.
+
+Misurato per ciascuna icona lo scarto tra il fondo visivo
+dell'inchiostro SVG e il fondo del bounding box (rendering su canvas +
+scansione pixel non trasparenti). La maggioranza (cerchi, rettangoli,
+triangoli) ha l'inchiostro quasi a contatto col bordo del viewBox
+16x16, quindi il `vertical-align:-2px` condiviso le allinea bene alla
+base del testo. 5 icone — forme simmetriche centrate nel box (frecce
+orizzontali `arrow`/`arrow-left`, `check`, `chevron-down`,
+`chevron-up`) — hanno invece l'inchiostro che si ferma 4-5px sopra il
+bordo, e con lo stesso vertical-align sembravano "fluttuare" sopra la
+riga di testo.
+
+Corretto aumentando il vertical-align negativo solo per queste 5
+(da -2px a valori tra -3.3px e -5.3px, calcolati per compensare lo
+spazio vuoto interno di ciascuna). Le altre 42 non sono state toccate.
+
+Verificato: 108/108 template passano il parser Jinja; pagina di test
+con tutte le icone accanto a una riga di base (marker DOM span 0x0
+con `vertical-align:baseline`) per confronto visivo prima/dopo;
+controllo dal vivo su `docenti.html` e `cambi-quadro/nuovo`.
+
 ## Sessione 36 — Icone SVG: sostituzione globale glifi/emoji (Cowork)
 
 **Contesto:** completamento della sostituzione icone iniziata in
