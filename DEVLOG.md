@@ -4,6 +4,26 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 43 — Testo e icone nav bar ancora più solidi (Cowork)
+
+**Contesto:** l'ombra della Sessione 42 non bastava — l'utente notava
+che le voci con menù a tendina (Attività, Orario, utente) sembravano
+più "piene" delle altre. Causa reale: le icone SVG (tratti, non testo)
+non ricevono `text-shadow`, quindi restavano senza protezione di
+contrasto, a un'opacità effettiva di ~74% (90% propria × 82% ereditata
+dal colore del link). La differenza percepita tra voci era probabile
+solo un effetto della mesh che varia punto per punto, non uno stile
+diverso. Un commit: `e830b5e`.
+
+- `nav a`: colore da 82% a 96% di opacità, text-shadow rinforzata.
+- `.nav-ic`: rimossa l'opacity:.9 propria, aggiunto un
+  `filter:drop-shadow` equivalente alla text-shadow (le icone SVG non
+  la ricevono altrimenti).
+
+Verificato: 109/109 template passano il parser Jinja; controllo
+visivo — tutte le voci nav, con o senza dropdown, ora uniformemente
+leggibili.
+
 ## Sessione 42 — Testo nav bar sopra la mesh sfaccettata (Cowork)
 
 **Contesto:** dopo la Sessione 41, il testo della nav in alcuni punti
