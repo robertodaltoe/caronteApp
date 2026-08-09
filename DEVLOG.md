@@ -4,6 +4,44 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 39 — Risolta la sovrapposizione "Incarichi docenti" / "Incarichi per docente" (Cowork)
+
+**Contesto:** l'utente ha notato due voci quasi identiche in
+Impostazioni che aprivano pagine diverse. Un commit: `79094cd`.
+
+Analisi: non erano duplicati, ma due viste sugli stessi dati
+(`IncaricaDocente`) — `incarichi.index` è la gestione (assegna/elimina,
+raggruppata per categoria), `dashboard_anno.incarichi_docenti` era una
+vista di sola lettura raggruppata per docente. Il problema era la UI:
+stessa icona, nomi quasi identici, stesso livello in Impostazioni.
+
+Scelta (tra 3 opzioni proposte, l'utente ha scelto una combinazione):
+spostata la vista di sola lettura da Impostazioni a Report (dove
+concettualmente appartiene, essendo un report e non un'impostazione),
+mantenendola raggiungibile come voce secondaria sia dalla pagina di
+gestione sia viceversa:
+- Route: `/incarichi-docenti` (dashboard_anno) → `/report/incarichi-docenti`
+  (report). Verificato prima di spostare che tutti i ruoli con accesso
+  a dashboard_anno (nessuna restrizione) hanno anche `report_r` —
+  nessuna perdita di accesso per nessun ruolo.
+- Rimossa la voce duplicata da Impostazioni (resta solo "Incarichi
+  docenti" → gestione).
+- Aggiunti link incrociati: "Vista per docente" nella pagina di
+  gestione, "Gestisci incarichi" nella vista di sola lettura.
+- Aggiunta una card nella tab "Report Segreteria".
+
+**Bug scoperto per caso**: verificando la card "Esporta tutti i report
+PDF" in report/index.html, un `onclick="this.textContent='{{ icon(...)
+}} ...'"` inseriva l'SVG (con i suoi doppi apici) dentro un attributo
+HTML già delimitato da doppi apici, troncandolo a metà — il resto del
+markup "sbordava" come testo visibile nel pulsante. Bug preesistente,
+non introdotto da questa modifica. Corretto rimuovendo l'icona da
+quel punto (un attributo onclick non può contenere HTML/SVG).
+
+Verificato: 108/108 template passano il parser Jinja; rendering via
+test_client su tutte le pagine toccate; controllo visivo dei link
+incrociati in entrambe le direzioni.
+
 ## Sessione 38 — Allineamento nav bar + ultimi glifi/emoji (Cowork)
 
 **Contesto:** su ulteriore segnalazione ("anche in nav bar non sembrano
