@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Docenti{% endblock %}
 
 {% block extra_style %}
@@ -38,11 +39,11 @@
 <div style="font-size:.78rem; margin-bottom:14px;">
     {% if mostra_inattivi %}
     <a href="{{ url_for('docenti.lista', anno=anno_sel) }}" style="color:var(--bronzo); text-decoration:none;">
-        ↑︎ Nascondi i non attivi
+        {{ icon('chevron-up') }} Nascondi i non attivi
     </a>
     {% else %}
     <a href="{{ url_for('docenti.lista', anno=anno_sel, mostra='inattivi') }}" style="color:var(--bronzo); text-decoration:none;">
-        ⚙︎ Mostra anche i non attivi (docenti usciti, per riattivarli se tornano)
+        {{ icon('gear') }} Mostra anche i non attivi (docenti usciti, per riattivarli se tornano)
     </a>
     {% endif %}
 </div>
@@ -50,7 +51,7 @@
 {% if anno_sel != anno_default %}
 <div style="font-size:.78rem; color:var(--giallo); background:var(--giallo-bg); border:1px solid var(--giallo);
      border-radius:6px; padding:6px 10px; margin-bottom:12px;">
-    ⚠︎ Stai visualizzando l'a.s. {{ anno_sel }} (diverso dall'anno corrente {{ anno_default }}).
+    {{ icon('warning') }} Stai visualizzando l'a.s. {{ anno_sel }} (diverso dall'anno corrente {{ anno_default }}).
     Per gli anni futuri l'elenco mostra solo i docenti già noti come in servizio
     ({{ 'TI senza uscita segnalata + TD/AP già inseriti' if anno_sel > anno_default else '' }}).
 </div>
@@ -97,7 +98,7 @@
         </td>
         <td style="white-space:nowrap;">
             {% if d.nome %}{{ d.nome }}
-            {% else %}<span style="color:var(--giallo); font-size:.8rem;">⚠︎</span>
+            {% else %}<span style="color:var(--giallo); font-size:.8rem;">{{ icon('warning') }}</span>
             {% endif %}
         </td>
         <td style="color:var(--grigio); font-size:.88rem;">{{ d.materia_effettiva or '—' }}</td>
@@ -106,7 +107,7 @@
             {% if d.tipo_contratto %}
                 <span class="badge badge-grigio">{{ d.tipo_contratto }}</span>
             {% else %}
-                <span style="color:var(--giallo); font-size:.8rem;">⚠︎ da completare</span>
+                <span style="color:var(--giallo); font-size:.8rem;">{{ icon('warning') }} da completare</span>
             {% endif %}
             {% if d.part_time_effettivo_per_anno(anno_sel) %}
                 <span class="badge" style="background:#e0f2fe; color:#0369a1; margin-left:3px;"
@@ -140,14 +141,14 @@
             {% else %}
             <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">
             <a href="{{ url_for('docenti.modifica', id=d.id) }}"
-               class="btn btn-primary btn-sm">✎︎️</a>
+               class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
             <a href="{{ url_for('docenti.esporta_dati', id=d.id) }}"
                class="btn btn-sm" style="background:#0d9488; color:white;"
-               title="Esporta dati personali (art.15 GDPR)">⇩︎</a>
+               title="Esporta dati personali (art.15 GDPR)">{{ icon('download') }}</a>
             <form method="post" action="{{ url_for('docenti.elimina', id=d.id) }}"
                   style="display:inline;"
                   onsubmit="return confirm('Eliminare {{ d.cognome }}?')">
-                <button class="btn btn-danger btn-sm" type="submit" title="Elimina">✕︎</button>
+                <button class="btn btn-danger btn-sm" type="submit" title="Elimina">{{ icon('close') }}</button>
             </form>
             {% if g.utente is defined and g.utente.ruolo == 'ds' %}
             <form method="post" action="{{ url_for('docenti.anonimizza', id=d.id) }}"
@@ -155,7 +156,7 @@
                   onsubmit="return confirm('Anonimizzare {{ d.cognome }}? I dati anagrafici saranno rimossi, i dati operativi conservati (art.17 GDPR).')">
                 <button class="btn btn-sm" type="submit"
                         style="background:#78350f; color:white; font-size:.75rem;"
-                        title="Anonimizza (GDPR art.17)">⚿︎</button>
+                        title="Anonimizza (GDPR art.17)">{{ icon('key') }}</button>
             </form>
             {% endif %}
             </div>

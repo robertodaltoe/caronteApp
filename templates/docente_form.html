@@ -23,9 +23,9 @@
         <span class="btn btn-sm" style="background:#e5eaf0; color:#9ca3af; cursor:default;">{{ icon('arrow-left') }} Prec.</span>
         {% endif %}
         {% if id_next %}
-        <a href="{{ url_for('docenti.modifica', id=id_next) }}" class="btn btn-primary btn-sm">Succ. →︎</a>
+        <a href="{{ url_for('docenti.modifica', id=id_next) }}" class="btn btn-primary btn-sm">Succ. {{ icon('arrow') }}</a>
         {% else %}
-        <span class="btn btn-sm" style="background:#e5eaf0; color:#9ca3af; cursor:default;">Succ. →︎</span>
+        <span class="btn btn-sm" style="background:#e5eaf0; color:#9ca3af; cursor:default;">Succ. {{ icon('arrow') }}</span>
         {% endif %}
     </div>
     {% endif %}
@@ -39,15 +39,15 @@
         {% if docente.id_classe_concorso %}
         CC: <strong style="color:var(--blu);">{{ docente.classe_concorso.codice }}</strong>
         {% else %}
-        <span style="color:var(--giallo);">⚠︎ Nessuna CC assegnata</span>
+        <span style="color:var(--giallo);">{{ icon('warning') }} Nessuna CC assegnata</span>
         {% endif %}
         &nbsp;·&nbsp;
         Max: <strong style="color:var(--blu);">{{ docente.ore_max_effettive }}h</strong>
     </div>
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="btn btn-sm"
-       style="background:var(--bronzo); color:white; text-decoration:none;">◆︎ Classi di concorso</a>
+       style="background:var(--bronzo); color:white; text-decoration:none;">{{ icon('diamond') }} Classi di concorso</a>
     <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="btn btn-sm"
-       style="background:var(--viola); color:white; text-decoration:none;">▥︎ Materie</a>
+       style="background:var(--viola); color:white; text-decoration:none;">{{ icon('layers') }} Materie</a>
 </div>
 {% endif %}
 
@@ -63,7 +63,7 @@
     {# ── 1. Dati anagrafici ───────────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
-            ◍︎ Dati anagrafici
+            {{ icon('person') }} Dati anagrafici
         </div>
         <div style="display:flex; gap:12px; margin-bottom:10px;">
             <div class="form-group" style="flex:2; margin-bottom:0;">
@@ -90,7 +90,7 @@
     {# ── 2. Contratto ─────────────────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
-            ▤︎ Contratto
+            {{ icon('list') }} Contratto
         </div>
         <div style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-end;">
             <div class="form-group" style="flex:2; margin-bottom:0;">
@@ -247,7 +247,7 @@
     {# ── 3. Ruolo didattico ───────────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
-            ▨︎ Ruolo didattico
+            {{ icon('building') }} Ruolo didattico
         </div>
         {% set ruolo_val = docente.ruolo if docente and docente.ruolo else 'titolare' %}
         <div style="display:flex; gap:8px; margin-bottom:10px;">
@@ -259,7 +259,7 @@
                        {% if ruolo_val=='titolare' %}checked{% endif %}
                        onchange="aggiornaRuolo(this)" style="width:15px; height:15px;">
                 <div>
-                    <div style="font-weight:700; font-size:.84rem; color:var(--verde);">▥︎ Titolare</div>
+                    <div style="font-weight:700; font-size:.84rem; color:var(--verde);">{{ icon('layers') }} Titolare</div>
                     <div style="font-size:.7rem; color:var(--grigio);">Docente principale</div>
                 </div>
             </label>
@@ -271,7 +271,7 @@
                        {% if ruolo_val=='itp' %}checked{% endif %}
                        onchange="aggiornaRuolo(this)" style="width:15px; height:15px;">
                 <div>
-                    <div style="font-weight:700; font-size:.84rem; color:var(--viola);">⚙︎ ITP</div>
+                    <div style="font-weight:700; font-size:.84rem; color:var(--viola);">{{ icon('gear') }} ITP</div>
                     <div style="font-size:.7rem; color:var(--grigio);">Compresenza lab</div>
                 </div>
             </label>
@@ -283,7 +283,7 @@
                        {% if ruolo_val=='sostegno' %}checked{% endif %}
                        onchange="aggiornaRuolo(this)" style="width:15px; height:15px;">
                 <div>
-                    <div style="font-weight:700; font-size:.84rem; color:#0d9488;">◐︎ Sostegno</div>
+                    <div style="font-weight:700; font-size:.84rem; color:#0d9488;">{{ icon('support') }} Sostegno</div>
                     <div style="font-size:.7rem; color:var(--grigio);">Orario a parte, in Orario sostegno</div>
                 </div>
             </label>
@@ -310,7 +310,7 @@
                            style="flex:1; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.78rem;">
                     <button type="button" onclick="this.closest('.riga-abbinamento').remove()"
                             style="background:var(--rosso-bg); color:var(--rosso); border:1px solid var(--rosso-bg);
-                                   border-radius:5px; padding:4px 8px; font-size:.78rem; cursor:pointer;">✕︎</button>
+                                   border-radius:5px; padding:4px 8px; font-size:.78rem; cursor:pointer;">{{ icon('close') }}</button>
                 </div>
                 {% endfor %}
             </div>
@@ -335,7 +335,7 @@
                            style="flex:1; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.78rem;">
                     <button type="button" onclick="this.closest('.riga-abbinamento').remove()"
                             style="background:var(--rosso-bg); color:var(--rosso); border:1px solid var(--rosso-bg);
-                                   border-radius:5px; padding:4px 8px; font-size:.78rem; cursor:pointer;">✕︎</button>
+                                   border-radius:5px; padding:4px 8px; font-size:.78rem; cursor:pointer;">{{ icon('close') }}</button>
                 </div>
             </template>
         </div>
@@ -360,7 +360,7 @@
     {# ── 4. Materie insegnate ─────────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:8px;">
-            ▥︎ Materie insegnate (a.s. corrente)
+            {{ icon('layers') }} Materie insegnate (a.s. corrente)
         </div>
         <div id="mat-badges" style="display:flex; flex-wrap:wrap; gap:4px; min-height:20px; margin-bottom:8px;"></div>
         <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:240px; overflow-y:auto; background:#fafbfc;">
@@ -406,9 +406,9 @@
     <div class="card" style="padding:16px 18px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <div style="font-weight:700; color:var(--blu); font-size:.9rem;">
-                ⚑︎ Incarichi
+                {{ icon('star') }} Incarichi
             </div>
-            <a href="{{ url_for('incarichi.index') }}" style="font-size:.74rem; color:var(--blu);">Gestisci incarichi →︎</a>
+            <a href="{{ url_for('incarichi.index') }}" style="font-size:.74rem; color:var(--blu);">Gestisci incarichi {{ icon('arrow') }}</a>
         </div>
 
         <div style="font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
@@ -463,7 +463,7 @@
     {# ── 5. Colloqui settimanali ──────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
-            ◍︎◍︎◍︎ Colloqui settimanali fissi
+            {{ icon('person') }}{{ icon('person') }}{{ icon('person') }} Colloqui settimanali fissi
             <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
                 — esclusi dai suggerimenti supplenze
             </span>
@@ -504,14 +504,14 @@
     {% if docente and docente.colloqui_giorno is not none %}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:6px;">
-            ▦︎ Eccezioni colloqui
+            {{ icon('grid') }} Eccezioni colloqui
             <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
                 — periodi con colloqui al pomeriggio/online
             </span>
         </div>
         <div style="font-size:.76rem; color:var(--grigio); margin-bottom:10px;">
             <a href="{{ url_for('docenti.eccezioni_istituto') }}" target="_blank"
-               style="color:var(--blu);">→︎ Gestisci per tutto l'istituto</a>
+               style="color:var(--blu);">{{ icon('arrow') }} Gestisci per tutto l'istituto</a>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px;
                      margin-bottom:6px; font-size:.74rem; font-weight:700; color:var(--grigio);">
@@ -527,7 +527,7 @@
                        value="{{ e.data_fine.isoformat() if e.data_fine else '' }}">
                 <input type="text" name="eccezione_note[]" value="{{ e.note or '' }}" placeholder="Es. online">
                 <button type="button" onclick="this.closest('.eccezione-riga').remove()"
-                        style="background:none; border:none; color:var(--rosso); cursor:pointer; font-size:1rem;">✕︎</button>
+                        style="background:none; border:none; color:var(--rosso); cursor:pointer; font-size:1rem;">{{ icon('close') }}</button>
             </div>
             {% endfor %}
         </div>
@@ -596,7 +596,7 @@ function aggiungiEccezione() {
         <input type="date" name="eccezione_data_fine[]">
         <input type="text" name="eccezione_note[]" placeholder="Es. online">
         <button type="button" onclick="this.closest('.eccezione-riga').remove()"
-                style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:1rem;">✕︎</button>`;
+                style="background:none;border:none;color:var(--rosso);cursor:pointer;font-size:1rem;">{{ icon('close') }}</button>`;
     container.appendChild(div);
     div.querySelector('input[type=date]').focus();
 }
@@ -612,7 +612,7 @@ function aggiornaBadgeMaterie() {
         badge.style.cssText = `display:inline-flex;align-items:center;gap:3px;padding:2px 8px;
             border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;
             background:${color};color:white;`;
-        badge.innerHTML = cb.dataset.sigla + ' <span style="opacity:.7;font-size:.65rem;">✕︎</span>';
+        badge.innerHTML = cb.dataset.sigla + ' <span style="opacity:.7;font-size:.65rem;">{{ icon('close') }}</span>';
         badge.addEventListener('click', () => { cb.checked = false; aggiornaBadgeMaterie(); });
         container.appendChild(badge);
     });
