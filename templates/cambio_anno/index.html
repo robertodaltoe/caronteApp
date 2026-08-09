@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Cambio Anno Scolastico{% endblock %}
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">↻︎ Cambio Anno Scolastico</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('refresh') }} Cambio Anno Scolastico</h1>
 </div>
 
 {# ── STATO ATTUALE ─────────────────────────────────────────────── #}

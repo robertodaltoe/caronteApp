@@ -1,3 +1,4 @@
+{% from '_icons.html' import icon %}
 {# ── Barra navigazione a passi — inclusa in ogni pagina della sezione ──
    Riceve `nav_steps` (dal context processor di routes/impostazione_anno.py)
    e usa `anno` se la pagina corrente lo definisce, così lo spostamento tra
@@ -19,7 +20,7 @@
     {% set p = own_steps[idx.cur - 1] %}
     <a href="{{ url_for(p.endpoint, **p.kwargs) }}"
        style="border:1px solid #e5e7eb; background:white; border-radius:6px; padding:5px 10px;
-              font-size:.76rem; color:#374151; text-decoration:none;">←︎ {{ p.num }}. {{ p.label }}</a>
+              font-size:.76rem; color:#374151; text-decoration:none;">{{ icon('arrow-left') }} {{ p.num }}. {{ p.label }}</a>
     {% endif %}
     <div style="flex:1;"></div>
     {% if idx.cur > -1 and idx.cur < own_steps|length - 1 %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Sostituzioni scrutinio — {{ evento.titolo }}{% endblock %}
 
 {% block extra_style %}
@@ -39,7 +40,7 @@
     </div>
     <div style="display:flex; gap:6px;">
         <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}"
-           class="btn btn-primary btn-sm">←︎ Presenze</a>
+           class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Presenze</a>
         <a href="{{ url_for('attivita_ist.lista') }}"
            class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">Lista</a>
     </div>

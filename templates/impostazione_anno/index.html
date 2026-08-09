@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Impostazione Anno Scolastico{% endblock %}
 {% block content %}
 <div style="font-size:.78rem; color:var(--grigio); margin-bottom:8px;">
@@ -6,8 +7,8 @@
     <span style="color:#1f2937; font-weight:600;"> Impostazione Anno</span>
 </div>
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">▦︎️ Impostazione Anno Scolastico</h1>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('grid') }} Impostazione Anno Scolastico</h1>
 </div>
 
 <div class="card" style="padding:10px 14px; margin-bottom:14px; font-size:.82rem; color:var(--grigio); border-left:4px solid var(--bronzo);">
@@ -52,18 +53,18 @@
 <div style="display:flex; flex-direction:column; gap:8px;">
     <a href="{{ url_for('impostazione_anno.classi_concorso') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #0369a1;">
-        <div style="font-size:1.6rem;">◆︎️</div>
+        <div style="font-size:1.6rem;">{{ icon('diamond', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#0369a1;">1. Classi di concorso</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Anagrafica delle classi di concorso (A026, AS2B, ecc.) — stabile negli anni
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
 <a href="{{ url_for('impostazione_anno.piano_studi', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
-        <div style="font-size:1.6rem;">▥︎</div>
+        <div style="font-size:1.6rem;">{{ icon('layers', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#7c3aed;">2. Piano di studi</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
@@ -71,99 +72,99 @@
                 i loro nomi ufficiali e il collegamento alle classi di concorso
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.materie_classi_concorso') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid var(--bronzo);">
-        <div style="font-size:1.6rem;">◈︎</div>
+        <div style="font-size:1.6rem;">{{ icon('grid-alt', 22) }}</div>
         <div>
             <div style="font-weight:700; color:var(--bronzo);">3. Materie ↔︎ Classi di concorso</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Abbina le materie del piano di studi alle classi di concorso abilitate a insegnarle
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.classi_attive', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #0891b2;">
-        <div style="font-size:1.6rem;">▨︎</div>
+        <div style="font-size:1.6rem;">{{ icon('building', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#0891b2;">4. Classi attive</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Sezioni attivate per anno scolastico — il dato variabile da confermare ogni anno
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('aule.lista') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #0891b2;">
-        <div style="font-size:1.6rem;">⎋︎</div>
+        <div style="font-size:1.6rem;">{{ icon('door', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#0891b2;">4b. Aule per classe</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Assegna le aule alle classi — si aggiorna dalle classi attive dell'anno
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.calcolo_organico', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #0891b2;">
-        <div style="font-size:1.6rem;">⊞︎</div>
+        <div style="font-size:1.6rem;">{{ icon('chart', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#0891b2;">5. Calcolo organico richiesto</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 COI / COE / ore residue per classe di concorso — base per la richiesta all'USR
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.organico', anno=anno_piano, tipo='diritto') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #166534;">
-        <div style="font-size:1.6rem;">▤︎</div>
+        <div style="font-size:1.6rem;">{{ icon('list', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#166534;">6. Organico USR (diritto / di fatto)</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Bollettini USR: organico di diritto, di fatto 1°, di fatto 2°, assegnazioni agosto
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.cattedre_potenziamento', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
-        <div style="font-size:1.6rem;">●</div>
+        <div style="font-size:1.6rem;">{{ icon('star', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#7c3aed;">6b. Cattedre di potenziamento</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Ore POT per classe di concorso e anno — la base da cui Assegnazioni distribuisce le ore ai docenti
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.docenti_anno', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #dc2626;">
-        <div style="font-size:1.6rem;">◍︎</div>
+        <div style="font-size:1.6rem;">{{ icon('person', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#dc2626;">7. Docenti per anno scolastico</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Segnala uscite TI (trasferimento/pensionamento) e aggiungi nuovi TD quando arriva la nomina
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #b45309;">
-        <div style="font-size:1.6rem;">◍︎</div>
+        <div style="font-size:1.6rem;">{{ icon('graduation', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#b45309;">8. Docenti ↔︎ Classe di concorso</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Assegna a ciascun docente la sua abilitazione
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.confronto_organico', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #7c3aed;">
-        <div style="font-size:1.6rem;">⌕︎</div>
+        <div style="font-size:1.6rem;">{{ icon('search', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#7c3aed;">8b. Verifica TI ↔︎ Organico USR</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
@@ -171,29 +172,29 @@
                 ore richieste, tipo organico e KPI riassuntivi
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('assegnazioni.index', anno=anno_piano) }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid var(--bronzo);">
-        <div style="font-size:1.6rem;">▤︎</div>
+        <div style="font-size:1.6rem;">{{ icon('grid', 22) }}</div>
         <div>
-            <div style="font-weight:700; color:var(--bronzo);">9. Assegnazioni classi →︎ docenti</div>
+            <div style="font-weight:700; color:var(--bronzo);">9. Assegnazioni classi {{ icon('arrow') }} docenti</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Assegnazione nominativa con controllo ore max, budget USR e placeholder supplenti
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
     <a href="{{ url_for('impostazione_anno.docenti_materie') }}" class="card" style="padding:14px 18px;
        text-decoration:none; display:flex; align-items:center; gap:12px; border-left:4px solid #be185d;">
-        <div style="font-size:1.6rem;">▥︎</div>
+        <div style="font-size:1.6rem;">{{ icon('layers', 22) }}</div>
         <div>
             <div style="font-weight:700; color:#be185d;">10. Docenti ↔︎ Materie</div>
             <div style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
                 Materie insegnate da ciascun docente, filtrate per la sua classe di concorso
             </div>
         </div>
-        <div style="margin-left:auto; color:var(--grigio);">→︎</div>
+        <div style="margin-left:auto; color:var(--grigio);">{{ icon('arrow') }}</div>
     </a>
 </div>
 {% endblock %}

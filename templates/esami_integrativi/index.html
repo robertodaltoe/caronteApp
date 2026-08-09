@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Esami Integrativi{% endblock %}
 {% block content %}
 <div style="margin-bottom:6px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">◷︎ Esami Integrativi — {{ anno }}</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('clock') }} Esami Integrativi — {{ anno }}</h1>
     <p style="font-size:.84rem; color:var(--grigio);">
         Passaggi e trasferimenti di settembre: esame nelle materie non coincidenti con il percorso
         di provenienza. A differenza del rientro dall'estero, ogni candidato ha materie proprie,

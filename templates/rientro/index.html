@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Colloqui di Rientro{% endblock %}
 {% block content %}
 <div style="margin-bottom:6px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">⊕︎ Colloqui di Rientro dall'estero — {{ anno }}</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('plus-circle') }} Colloqui di Rientro dall'estero — {{ anno }}</h1>
     <p style="font-size:.84rem; color:var(--grigio);">
         Studenti che hanno svolto l'anno (o il secondo semestre) all'estero: colloquio non selettivo
         davanti a una commissione di 4 docenti + 1 membro DS/vicario, prima dello scrutinio del 31/8.

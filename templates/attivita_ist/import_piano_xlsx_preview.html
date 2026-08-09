@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Anteprima import Piano Attività{% endblock %}
 {% block content %}
 <h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:6px;">⇩︎ Anteprima import — {{ eventi|length }} eventi trovati</h1>
@@ -64,7 +65,7 @@
         <textarea name="eventi_json" style="display:none">{{ eventi_json }}</textarea>
         <div style="display:flex; gap:10px;">
             <button type="submit" class="btn btn-success">✓︎ Conferma e importa {{ eventi|length }} eventi</button>
-            <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="btn">← Ricarica un altro file</a>
+            <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="btn">{{ icon('arrow-left') }} Ricarica un altro file</a>
         </div>
     </form>
 </div>

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Attività fuori aula{% endblock %}
 {% block content %}
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">⌖︎ Attività fuori aula</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('compass') }} Attività fuori aula</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Gite, progetti, FSL — generano automaticamente assenze e disponibilità
         </p>

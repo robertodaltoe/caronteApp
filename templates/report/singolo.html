@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Report {{ docente.cognome }}{% endblock %}
 
 {% block extra_style %}
@@ -40,7 +41,7 @@
     <div>
         <a href="{{ url_for('report.index') }}"
            style="color:var(--grigio); font-size:.85rem; text-decoration:none;">
-            ←︎ Tutti i report
+            {{ icon('arrow-left') }} Tutti i report
         </a>
         <h1 style="font-size:1.5rem; color:var(--blu); font-weight:800; margin-top:4px;">
             {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}

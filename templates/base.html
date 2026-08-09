@@ -263,14 +263,13 @@
             color: rgba(255,255,255,.55); font-size: .85rem; white-space: nowrap;
             padding: 0 4px;
         }
-        /* Icone di navigazione: glifi tipografici (non emoji a colori) che
-           ereditano il colore del testo del link — restano eleganti e
-           coerenti con la palette del brand invece di introdurre colori
-           estranei (giallo/verde/blu delle emoji standard). */
+        /* Icone di navigazione: SVG a tratto (vedi templates/_icons.html),
+           non più glifi tipografici — ereditano il colore del testo del
+           link via currentColor, restano coerenti col resto dell'app
+           invece di dipendere dal font di sistema per il loro aspetto. */
         nav .nav-ic {
-            display: inline-block; width: 1.1em; text-align: center;
-            opacity: .85; font-weight: 400;
-            font-variant-emoji: text; font-style: normal;
+            display: inline-flex; align-items: center; justify-content: center;
+            opacity: .9;
         }
         .nav-avatar {
             display: inline-flex; align-items: center; justify-content: center;
@@ -421,7 +420,7 @@
     {% block extra_style %}{% endblock %}
 </head>
 <body>
-
+{% from '_icons.html' import icon %}
 <nav>
     <span class="brand">
         <img src="{{ url_for('static', filename='img/brand/caronte-icon.png') }}" alt="">
@@ -431,34 +430,36 @@
         </span>
     </span>
 
-    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Apri/chiudi il menu" aria-expanded="false" aria-controls="nav-links">☰</button>
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Apri/chiudi il menu" aria-expanded="false" aria-controls="nav-links">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
 
     <div class="nav-links" id="nav-links">
-    <a href="{{ url_for('dashboard.index') }}"><span class="nav-ic">⌂&#xFE0E;</span> Dashboard</a>
-    <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">&#x270E;&#xFE0E;</span> Registra assenza</a>
+    <a href="{{ url_for('dashboard.index') }}"><span class="nav-ic">{{ icon('home') }}</span> Dashboard</a>
+    <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">{{ icon('edit') }}</span> Registra assenza</a>
 
     <div class="nav-dropdown">
-        <a><span class="nav-ic">▤&#xFE0E;</span> Attività</a>
+        <a><span class="nav-ic">{{ icon('list') }}</span> Attività</a>
         <div class="nav-drop-menu">
-            <a href="{{ url_for('attivita.lista') }}"><span class="nav-ic">↗︎&#xFE0E;</span> Attività fuori aula</a>
-            <a href="{{ url_for('attivita_ist.lista') }}"><span class="nav-ic">▥&#xFE0E;</span> Attività istituzionali</a>
-            <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">◷&#xFE0E;</span> Attività differite</a>
+            <a href="{{ url_for('attivita.lista') }}"><span class="nav-ic">{{ icon('compass') }}</span> Attività fuori aula</a>
+            <a href="{{ url_for('attivita_ist.lista') }}"><span class="nav-ic">{{ icon('building') }}</span> Attività istituzionali</a>
+            <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
         </div>
     </div>
 
-    <a href="{{ url_for('banca_ore.index') }}"><span class="nav-ic">€</span> Banca Ore</a>
-    <a href="{{ url_for('report.index') }}"><span class="nav-ic">▲&#xFE0E;</span> Report</a>
+    <a href="{{ url_for('banca_ore.index') }}"><span class="nav-ic">{{ icon('coin') }}</span> Banca Ore</a>
+    <a href="{{ url_for('report.index') }}"><span class="nav-ic">{{ icon('chart') }}</span> Report</a>
     <div class="nav-dropdown">
-        <a><span class="nav-ic">▦&#xFE0E;</span> Orario</a>
+        <a><span class="nav-ic">{{ icon('grid') }}</span> Orario</a>
         <div class="nav-drop-menu">
-            <a href="{{ url_for('sync.orario_globale') }}"><span class="nav-ic">▦&#xFE0E;</span> Orario globale</a>
-            <a href="{{ url_for('orario_sostegno.index') }}"><span class="nav-ic">◐&#xFE0E;</span> Orario sostegno</a>
+            <a href="{{ url_for('sync.orario_globale') }}"><span class="nav-ic">{{ icon('grid') }}</span> Orario globale</a>
+            <a href="{{ url_for('orario_sostegno.index') }}"><span class="nav-ic">{{ icon('support') }}</span> Orario sostegno</a>
         </div>
     </div>
-    <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">⧉&#xFE0E;</span> Display</a>
+    <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">{{ icon('monitor') }}</span> Display</a>
 
-    <a href="{{ url_for('impostazioni.index') }}"><span class="nav-ic">&#x2699;&#xFE0E;</span> Impostazioni</a>
-    <a href="{{ url_for('guida.index') }}"><span class="nav-ic">?&#xFE0E;</span> Guida</a>
+    <a href="{{ url_for('impostazioni.index') }}"><span class="nav-ic">{{ icon('gear') }}</span> Impostazioni</a>
+    <a href="{{ url_for('guida.index') }}"><span class="nav-ic">{{ icon('help') }}</span> Guida</a>
 
     <span class="nav-spacer"></span>
 
@@ -482,8 +483,8 @@
                 {{ g.utente.ruolo_label }}
             </span>
             {% endif %}
-            <a href="{{ url_for('auth.cambia_pin') }}"><span class="nav-ic">&#x26BF;&#xFE0E;</span> Cambia PIN</a>
-            <a href="{{ url_for('auth.logout') }}"><span class="nav-ic">⎋&#xFE0E;</span> Esci</a>
+            <a href="{{ url_for('auth.cambia_pin') }}"><span class="nav-ic">{{ icon('key') }}</span> Cambia PIN</a>
+            <a href="{{ url_for('auth.logout') }}"><span class="nav-ic">{{ icon('logout') }}</span> Esci</a>
         </div>
     </div>
     </div>

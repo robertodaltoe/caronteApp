@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Esami Integrativi — Commissione e calendario{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('esami_integrativi.index') }}" class="btn btn-primary btn-sm">←︎ Esami Integrativi</a>
+    <a href="{{ url_for('esami_integrativi.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Esami Integrativi</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Commissione e calendario</h1>
 </div>
 

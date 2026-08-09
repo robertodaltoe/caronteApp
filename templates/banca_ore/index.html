@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Banca Ore{% endblock %}
 
 {% block extra_style %}
@@ -25,7 +26,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">€ Banca Ore</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('coin') }} Banca Ore</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Aggiornamento: {{ oggi.strftime('%d/%m/%Y') }}
             {% if anno != anno_corrente %}

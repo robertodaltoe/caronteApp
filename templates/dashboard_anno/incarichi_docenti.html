@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Incarichi per docente — {{ anno }}{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">←︎ Dashboard</a>
+    <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
     <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">✦︎ Incarichi per docente — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}

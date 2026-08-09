@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Gestione Aule{% endblock %}
 
 {% block extra_style %}
@@ -90,8 +91,8 @@
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">←︎ Impostazione Anno</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">⎋︎ Aule — {{ anno }}</h1>
+    <a href="{{ url_for('impostazione_anno.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazione Anno</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('door') }} Aule — {{ anno }}</h1>
     <a href="{{ url_for('aule.mappa', anno=anno) }}" class="btn btn-success btn-sm">⌖︎️ Piantina interattiva</a>
     <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         {% for a in anni_disponibili %}

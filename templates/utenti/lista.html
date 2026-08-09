@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Gestione Utenti{% endblock %}
 {% block content %}
 
@@ -17,7 +18,7 @@
     Sistema: <strong style="color:#1f2937;">Gestione utenti</strong> ·
     <a href="{{ url_for('auth.cambia_pin') }}" style="color:#6366f1; text-decoration:none;">Cambia PIN</a> ·
     <a href="{{ url_for('impostazioni.backup') }}" style="color:#6366f1; text-decoration:none;">Backup database</a> ·
-    <a href="{{ url_for('impostazioni.index') }}" style="color:#6366f1; text-decoration:none;">← Impostazioni</a>
+    <a href="{{ url_for('impostazioni.index') }}" style="color:#6366f1; text-decoration:none;">{{ icon('arrow-left') }} Impostazioni</a>
 </div>
 
 <div class="card" style="padding:0; overflow:hidden;">

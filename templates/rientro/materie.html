@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Rientro — Materie per classe{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('rientro.index') }}" class="btn btn-primary btn-sm">←︎ Rientro</a>
+    <a href="{{ url_for('rientro.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Rientro</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Materie per classe</h1>
 </div>
 

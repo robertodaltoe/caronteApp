@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Export Excel banca ore{% endblock %}
 {% block content %}
 
@@ -9,7 +10,7 @@
             Aggiorna il file Banca_Ore_Docenti_v3.xlsm con i dati del database
         </p>
     </div>
-    <a href="{{ url_for('report.index') }}" class="btn btn-primary btn-sm">←︎ Report</a>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Report</a>
 </div>
 
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Prepara bozze email — Banca ore{% endblock %}
 
 {% block extra_style %}
@@ -38,7 +39,7 @@ textarea { width:100%; border:1px solid #d1d5db; border-radius:8px;
             <strong>Crea bozze in Mail.app</strong>. Ogni bozza si apre con il PDF allegato — tu la rivedi e la invii.
         </p>
     </div>
-    <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">←︎ Report</a>
+    <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Report</a>
 </div>
 
 <div class="card" style="margin-bottom:16px; padding:16px 20px;">

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Periodi eccezione colloqui — Istituto{% endblock %}
 {% block content %}
 
@@ -10,7 +11,7 @@
             I docenti senza colloqui fissi configurati non vengono modificati.
         </p>
     </div>
-    <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary">←︎ Docenti</a>
+    <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary">{{ icon('arrow-left') }} Docenti</a>
 </div>
 
 <!-- DOCENTI COINVOLTI -->

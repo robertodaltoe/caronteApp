@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Calendario Recupero{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">←︎ Recupero</a>
+    <a href="{{ url_for('recupero.giugno_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Recupero</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">▦︎ Calendario lezioni di recupero</h1>
     <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('recupero.export_xlsx') }}" class="btn btn-sm"

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Verifica copertura recuperi{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ back_url or url_for('recupero.index') }}" class="btn btn-primary btn-sm">←︎ Indietro</a>
+    <a href="{{ back_url or url_for('recupero.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Indietro</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">✓︎ {{ titolo or 'Verifica copertura recuperi' }}</h1>
     <a href="{{ url_for('recupero.copertura', export='xlsx') }}"
        class="btn btn-sm" style="margin-left:auto;background:var(--verde);color:white;white-space:nowrap;">

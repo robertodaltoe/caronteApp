@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Dipartimenti e Materie{% endblock %}
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">←︎ Impostazioni</a>
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">▥︎ Dipartimenti e Materie</h1>
     <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         <span style="font-size:.7rem; color:var(--grigio);">Referenti per l'anno:</span>

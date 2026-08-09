@@ -112,9 +112,21 @@
 
         footer { position:fixed; bottom:0; left:0; right:0; background:rgba(10,31,53,.96); border-top:1px solid rgba(255,255,255,.07); padding:8px 40px; display:flex; justify-content:space-between; align-items:center; font-size:.72rem; color:rgba(255,255,255,.28); backdrop-filter:blur(8px); }
         .divider { border:none; border-top:1px solid rgba(255,255,255,.05); margin:0 40px; }
+
+        /* Sfondo low-poly, stessa idea del login ma molto più tenue: qui
+           il monitor va letto da lontano in un corridoio, quindi la
+           texture serve solo a dare "famiglia" con le altre pagine senza
+           mai competere con il testo. Mesh generata proceduralmente
+           (stessa tecnica del login), tonalità quasi identiche allo
+           sfondo così restano percepibili solo da vicino. */
+        .bg-lowpoly { position:fixed; inset:0; z-index:-1; opacity:.7; }
+        .bg-lowpoly svg { width:100%; height:100%; display:block; }
     </style>
 </head>
 <body>
+<div class="bg-lowpoly">
+{% include '_display_bg.html' %}
+</div>
 
 <header>
     <div class="header-left">

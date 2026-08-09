@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Report Dirigente{% endblock %}
 
 {% block extra_style %}
@@ -25,7 +26,7 @@
     <div>
         <a href="{{ url_for('report.index') }}"
            style="color:var(--grigio); font-size:.85rem; text-decoration:none;">
-            ←︎ Report
+            {{ icon('arrow-left') }} Report
         </a>
         <h1 style="font-size:1.4rem; color:var(--blu); font-weight:800; margin-top:4px;">
             ▲︎ Report per il Dirigente

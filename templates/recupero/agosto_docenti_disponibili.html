@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Docenti disponibili - Prove agosto{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">←︎ Prove agosto</a>
+    <a href="{{ url_for('recupero.agosto_index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Prove agosto</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">◍︎▨︎ Docenti disponibili per le prove di agosto</h1>
 </div>
 

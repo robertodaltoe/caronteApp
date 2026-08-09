@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Import banca ore{% endblock %}
 {% block content %}
 
@@ -9,7 +10,7 @@
             Anteprima movimenti da importare — i doppioni sono esclusi automaticamente
         </p>
     </div>
-    <a href="{{ url_for('report.index') }}" class="btn btn-primary btn-sm">←︎ Report</a>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Report</a>
 </div>
 
 {% if non_trovati %}

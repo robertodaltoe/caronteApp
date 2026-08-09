@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Classe {{ label }} — {{ anno }}{% endblock %}
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">←︎ Dashboard</a>
+    <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
     <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">
         ▨︎ Classe {{ anno_corso }}{{ sezione }} {{ indirizzo }}
         <span style="font-size:.85rem; font-weight:400; color:var(--grigio);">— {{ anno }}</span>

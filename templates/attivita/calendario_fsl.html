@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Calendario FSL — {{ attivita.descrizione }}{% endblock %}
 
 {% block extra_style %}
@@ -90,7 +91,7 @@
     </div>
     <div style="display:flex; gap:8px;">
         <button id="btn-salva" class="btn btn-success">✓︎ Salva calendario</button>
-        <a href="{{ url_for('attivita.lista') }}" class="btn btn-primary">←︎ Attività</a>
+        <a href="{{ url_for('attivita.lista') }}" class="btn btn-primary">{{ icon('arrow-left') }} Attività</a>
     </div>
 </div>
 

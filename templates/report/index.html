@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Report{% endblock %}
 
 {% block extra_style %}
@@ -52,7 +53,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:12px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">▲︎ Report</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('chart') }} Report</h1>
         <p style="color:var(--grigio); font-size:.85rem; margin-top:3px;">
             Aggiornamento: {{ oggi.strftime('%d/%m/%Y') }}
         </p>

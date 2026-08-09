@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Pianificazione permessi{% endblock %}
 
 {% block extra_style %}
@@ -50,7 +51,7 @@
             Docenti con credito proiettato — giorni in cui conviene proporre il permesso per liberare la fine o l'inizio della giornata
         </p>
     </div>
-    <a href="{{ url_for('report.index') }}" class="btn btn-primary">←︎ Report</a>
+    <a href="{{ url_for('report.index') }}" class="btn btn-primary">{{ icon('arrow-left') }} Report</a>
 </div>
 
 {% if data_fine_lezioni is not none or risultati is none %}

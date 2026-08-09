@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}{{ 'Modifica' if docente else 'Nuovo' }} docente{% endblock %}
 
 {% block content %}
 
 {# ── Header ────────────────────────────────────────────────────────── #}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary btn-sm">←︎ Lista docenti</a>
+    <a href="{{ url_for('docenti.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Lista docenti</a>
     <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">
         {{ 'Modifica' if docente else 'Nuovo docente' }}
         {% if docente %}
@@ -17,9 +18,9 @@
     {% if docente %}
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% if id_prev %}
-        <a href="{{ url_for('docenti.modifica', id=id_prev) }}" class="btn btn-primary btn-sm">←︎ Prec.</a>
+        <a href="{{ url_for('docenti.modifica', id=id_prev) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Prec.</a>
         {% else %}
-        <span class="btn btn-sm" style="background:#e5eaf0; color:#9ca3af; cursor:default;">←︎ Prec.</span>
+        <span class="btn btn-sm" style="background:#e5eaf0; color:#9ca3af; cursor:default;">{{ icon('arrow-left') }} Prec.</span>
         {% endif %}
         {% if id_next %}
         <a href="{{ url_for('docenti.modifica', id=id_next) }}" class="btn btn-primary btn-sm">Succ. →︎</a>

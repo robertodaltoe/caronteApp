@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Guida — {{ sez.titolo }}{% endblock %}
 {% block extra_style %}
 <style>
@@ -29,7 +30,7 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
     <div>
-        <a href="{{ url_for('guida.index') }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">← Guida</a>
+        <a href="{{ url_for('guida.index') }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">{{ icon('arrow-left') }} Guida</a>
         <h1 style="font-size:1.4rem; color:var(--blu); margin-top:2px;">{{ sez.icona }} {{ sez.titolo }}</h1>
     </div>
     <a href="{{ url_for('guida.sezione_pdf', slug=sez.slug) }}" class="btn btn-sm"
