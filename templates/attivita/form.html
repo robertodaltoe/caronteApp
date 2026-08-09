@@ -509,7 +509,7 @@ function _migAutoHtml(key, st) {
     const chk = st.usaAuto ? 'checked' : '';
     return `<label style="display:flex;align-items:center;gap:4px;cursor:${disp?'pointer':'not-allowed'}">` +
         `<input type="checkbox" data-mig-key="${key}" ${chk} ${dis} onchange="migCheckChange(this.dataset.migKey,this)">` +
-        `<span style="font-size:.71rem;color:${color};font-weight:700">${title}${disp?'':' ❌'}</span>` +
+        `<span style="font-size:.71rem;color:${color};font-weight:700">${title}${disp?'':' {{ icon("close", 10) }}'}</span>` +
         '</label>';
 }
 

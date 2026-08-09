@@ -4,7 +4,7 @@
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
     <a href="{{ url_for('recupero.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Recupero</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }}△︎ Alunni con giudizio sospeso</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('person') }}{{ icon('triangle') }} Alunni con giudizio sospeso</h1>
     <a href="{{ url_for('recupero.copertura') }}" class="btn btn-sm"
        style="background:var(--verde); color:white; margin-left:auto;">{{ icon('check') }} Verifica copertura</a>
 </div>

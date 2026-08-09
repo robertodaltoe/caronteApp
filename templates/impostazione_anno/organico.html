@@ -24,7 +24,7 @@
     <div style="display:flex; gap:4px;">
         <a href="{{ url_for('impostazione_anno.organico', anno=anno, tipo='diritto') }}"
            class="btn btn-sm" style="background:{{ '#0369a1' if tipo=='diritto' else '#e5eaf0' }};
-                  color:{{ 'white' if tipo=='diritto' else 'var(--blu)' }};">△︎ Diritto</a>
+                  color:{{ 'white' if tipo=='diritto' else 'var(--blu)' }};">{{ icon('triangle') }} Diritto</a>
         <a href="{{ url_for('impostazione_anno.organico', anno=anno, tipo='fatto') }}"
            class="btn btn-sm" style="background:{{ '#166534' if tipo=='fatto' else '#e5eaf0' }};
                   color:{{ 'white' if tipo=='fatto' else 'var(--blu)' }};">{{ icon('check') }} Fatto</a>

@@ -67,7 +67,7 @@
 
 <div class="tab-nav">
     <a href="{{ url_for('report.index', tab='cruscotto') }}" class="tab-link {% if tab=='cruscotto' %}active{% endif %}">{{ icon('chart') }} Cruscotto</a>
-    <a href="{{ url_for('report.index', tab='dirigente') }}" class="tab-link {% if tab=='dirigente' %}active{% endif %}">△︎ Report Dirigente</a>
+    <a href="{{ url_for('report.index', tab='dirigente') }}" class="tab-link {% if tab=='dirigente' %}active{% endif %}">{{ icon('triangle') }} Report Dirigente</a>
     <a href="{{ url_for('report.index', tab='docenti') }}" class="tab-link {% if tab=='docenti' %}active{% endif %}">{{ icon('person') }} Report Docenti</a>
     <a href="{{ url_for('report.index', tab='segreteria') }}" class="tab-link {% if tab=='segreteria' %}active{% endif %}">{{ icon('package') }} Report Segreteria</a>
 </div>

@@ -86,7 +86,7 @@
         <span style="flex-shrink:0; font-size:.7rem; padding:1px 6px; border-radius:4px; font-weight:700;
                      background:{{ 'var(--giallo-bg)' if cf.tipo=='docente' else 'var(--rosso-bg)' }};
                      color:{{ 'var(--giallo)' if cf.tipo=='docente' else 'var(--rosso)' }};">
-            {{ (icon('person') ~ icon('building') ~ ' docente') if cf.tipo=='docente' else (icon('person') ~ '△︎ alunno') }}
+            {{ (icon('person') ~ icon('building') ~ ' docente') if cf.tipo=='docente' else (icon('person') ~ icon('triangle') ~ ' alunno') }}
         </span>
         <span style="color:#374151;">
             <strong>{{ cf.data.strftime('%d/%m') }}</strong> — {{ cf.msg }}

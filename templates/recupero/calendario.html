@@ -90,7 +90,7 @@
     <div style="font-size:.8rem; margin-bottom:4px; display:flex; gap:8px; align-items:flex-start;">
         <span style="flex-shrink:0; font-size:.7rem; padding:1px 6px; border-radius:4px; font-weight:700;
                      background:{% if cf.tipo=='docente' %}var(--giallo-bg); color:var(--giallo){% else %}var(--rosso-bg); color:var(--rosso){% endif %};">
-            {{ (icon('person') ~ icon('building') ~ ' docente') if cf.tipo=='docente' else (icon('person') ~ '△︎ alunno') }}
+            {{ (icon('person') ~ icon('building') ~ ' docente') if cf.tipo=='docente' else (icon('person') ~ icon('triangle') ~ ' alunno') }}
         </span>
         <span style="color:#374151;">
             <strong>{{ cf.data.strftime('%d/%m') }}</strong> — {{ cf.msg }}

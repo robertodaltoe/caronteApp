@@ -52,7 +52,7 @@
            bg=('#f0fdf4' if perc_assegnazioni==100 else '#fffbeb' if perc_assegnazioni>50 else '#fef2f2'),
            url=url_for('assegnazioni.index', anno=anno)) }}
 
-    {{ kpi('✦︎', 'Incarichi assegnati', n_incarichi,
+    {{ kpi(icon('star'), 'Incarichi assegnati', n_incarichi,
            'Coord. mancanti: '~n_coord_mancanti~' · Ref. dip. mancanti: '~n_ref_mancanti,
            color=('#16a34a' if (n_coord_mancanti+n_ref_mancanti)==0 else '#d97706'),
            bg=('#f0fdf4' if (n_coord_mancanti+n_ref_mancanti)==0 else '#fffbeb'),
@@ -98,7 +98,7 @@
 
     <div class="card" style="padding:14px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:10px;">
-            ✦︎ Incarichi — riepilogo
+            {{ icon('star') }} Incarichi — riepilogo
         </div>
         {% if n_coord_mancanti == 0 and n_ref_mancanti == 0 %}
         <div style="color:#16a34a; font-size:.84rem; font-weight:600;">
@@ -172,7 +172,7 @@
             {{ icon('list') }} Assegnazioni classi
         </a>
         <a href="{{ url_for('incarichi.index', anno=anno) }}" class="btn btn-sm btn-primary">
-            ✦︎ Incarichi
+            {{ icon('star') }} Incarichi
         </a>
         <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm btn-primary">
             {{ icon('layers') }} Dipartimenti

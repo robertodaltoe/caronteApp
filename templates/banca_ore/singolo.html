@@ -173,7 +173,7 @@
             </div>
             <div style="font-size:.72rem; color:var(--grigio); margin-top:4px;">
                 {% if ore_ist.A >= ore_ist.limite %}
-                ⊘︎ Limite raggiunto
+                {{ icon('forbidden') }} Limite raggiunto
                 {% elif ore_ist.A >= ore_ist.limite * 0.8 %}
                 {{ icon('warning') }} Rimangono {{ (ore_ist.limite - ore_ist.A) | round(1) }}h
                 {% else %}
@@ -199,7 +199,7 @@
             </div>
             <div style="font-size:.72rem; color:var(--grigio); margin-top:4px;">
                 {% if ore_ist.B >= ore_ist.limite %}
-                ⊘︎ Limite raggiunto
+                {{ icon('forbidden') }} Limite raggiunto
                 {% elif ore_ist.B >= ore_ist.limite * 0.8 %}
                 {{ icon('warning') }} Rimangono {{ (ore_ist.limite - ore_ist.B) | round(1) }}h
                 {% else %}
