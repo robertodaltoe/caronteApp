@@ -4,6 +4,52 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 48 — Audit larghezze colonne su tutte le tabelle dell'app (Cowork)
+
+**Contesto:** segnalato che in `/utenti` la colonna "Nome" occupava
+troppo spazio senza motivo; richiesta poi allargata a una verifica
+sistematica di tutte le tabelle dell'app: colonne larghe adeguate al
+contenuto, evitare il testo a capo dove non serve, distribuzione
+equa dello spazio in eccesso. Un commit: `75d080a`.
+
+Causa del problema originale: in `utenti/lista.html` la colonna
+"Nome" era l'unica senza `width` esplicita tra colonne tutte
+fissate — assorbiva tutto lo spazio residuo della riga. Sistemata
+dando larghezze esplicite a tutte le colonne.
+
+Per l'audit completo: lanciata un'esplorazione dedicata su tutte le
+53 tabelle dell'app (grep `<table`), per classificare ogni colonna —
+larghezza già impostata o no, contenuto breve o testo libero
+(note/descrizioni/elenchi) che deve poter andare su più righe.
+
+Cambio di base ([base.html](templates/base.html)): le celle di
+tabella ora hanno `white-space:nowrap` di default (prima l'ellipsis
+era dichiarata ma senza `nowrap` non aveva alcun effetto — il testo
+andava comunque a capo). Aggiunta la classe di escape `.wrap` per le
+colonne che devono restare multi-riga.
+
+Applicato in ~25 file: `.wrap` sulle colonne di testo libero (note,
+descrizioni, elenchi di classi/materie/accompagnatori), larghezza
+esplicita sulle colonne corte che assorbivano lo spazio al posto
+della colonna giusta (stesso bug della segnalazione iniziale:
+Nome/Cognome docenti, Docente, Nome classe di concorso).
+
+Lasciate invariate le celle già con troncamento manuale
+(`dashboard.html`, `agenda.html`, `recupero/agosto_calendario.html`)
+e i 3 template standalone che non estendono base.html (`privacy.html`,
+`docenti/esporta_dati.html`, `report/singolo_print.html`), su cui la
+nuova regola CSS non ha effetto comunque.
+
+**Caso critico trovato durante l'audit**: `ricerca/risultati.html` ha
+5 tabelle con una sola cella per riga contenente l'intera riga di
+risultato composta — senza `.wrap` la nuova regola di default
+avrebbe troncato quasi tutto il contenuto a una riga. Corretto.
+
+Verificato: 109/109 template passano il parser Jinja; rendering via
+test_client su tutte le pagine toccate; controllo visivo su
+`/utenti`, `/docenti`, `/attivita`, `/ricerca` (caso critico),
+`/impostazione-anno/organico`, `/recupero/gruppi`.
+
 ## Sessione 47 — Checkbox rotta e link di ritorno mancante in utenti/modifica (Cowork)
 
 **Contesto:** segnalati due problemi su `/utenti/<id>/modifica`: la
