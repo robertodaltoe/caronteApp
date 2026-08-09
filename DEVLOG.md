@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 40 — Bug dietro lo sfondo sfaccettato "blando" del Display (Cowork)
+
+**Contesto:** l'utente ha segnalato che lo sfondo low-poly del Display
+restava troppo blando anche con i box informativi sopra (verificato sul
+28/05/2026 con dati reali). Un commit: `05a6aae`.
+
+Non era un problema di taratura colori: `.bg-lowpoly` usava
+`position:fixed; z-index:-1`, e in questo motore browser un elemento a
+z-index negativo viene dipinto SOTTO lo sfondo solido di `html, body`
+(`background:var(--bg)`), che lo copriva quasi interamente — si vedeva
+solo una sottile striscia residua. Confermato rendendo temporaneamente
+trasparente `html/body`: il pattern è apparso interamente, in modo
+vivido. Cambiare colori/opacità del pattern (provate più iterazioni:
+v2, v3, v4 con distribuzioni di colore diverse) non poteva risolverlo
+da solo, perché il layer restava comunque sotto un canvas opaco.
+
+Fix strutturale: rimosso lo z-index negativo. Essendo `.bg-lowpoly` il
+primo figlio di `<body>` e restando `position:fixed`, l'ordine del DOM
+da solo lo mette dietro a header/banner/contenuto/footer (dichiarati
+dopo) — non serve z-index negativo, che in questo motore finisce sotto
+il canvas invece che sopra.
+
+Rigenerata anche la mesh (era concentrata per il 90% nei toni più
+scuri, con il gradiente vivace schiacciato in una striscia) con una
+distribuzione di colore uniforme su tutta la superficie. Opacità
+tarata a `.28` bilanciando con i box informativi (sfondi rgba al
+10-12%, quindi semi-trasparenti): a opacità più alta (testate .9, .5,
+.4, .2) il testo nei box perdeva leggibilità.
+
+Verificato: 108/108 template passano il parser Jinja; controllo
+visivo sul 28/05/2026 con dati reali (copia locale del database),
+sia nella parte alta della pagina dove finiscono i box sia scorrendo
+più in basso.
+
 ## Sessione 39 — Risolta la sovrapposizione "Incarichi docenti" / "Incarichi per docente" (Cowork)
 
 **Contesto:** l'utente ha notato due voci quasi identiche in
