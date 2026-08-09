@@ -240,15 +240,23 @@
         nav .brand .brand-nome {
             color: white; font-weight: 700; font-size: 1.08rem; letter-spacing: .2px;
             font-family: var(--font-brand);
+            text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
         nav .brand .brand-datetime {
             color: rgba(255,255,255,.55); font-size: .74rem; font-weight: 500;
             margin-top: 2px;
+            text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
+        /* Ombra leggera sul testo: i link sono in bianco semi-trasparente
+           (per gerarchia visiva rispetto al brand), e con la mesh
+           sfaccettata dietro (vedi .nav-lowpoly) le faccette più chiare
+           ne riducevano il contrasto in alcuni punti — l'ombra lo
+           restituisce ovunque, qualunque faccetta capiti dietro. */
         nav a {
             color: rgba(255,255,255,.82); text-decoration: none;
             padding: 8px 12px; border-radius: 6px; white-space: nowrap;
             font-size: .93rem; font-weight: 500; transition: background .15s;
+            text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
         nav a:hover, nav a.active { background: rgba(255,255,255,.15); color: white; }
         nav a.nav-cta {
@@ -271,6 +279,7 @@
         nav .nav-user {
             color: rgba(255,255,255,.55); font-size: .85rem; white-space: nowrap;
             padding: 0 4px;
+            text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
         /* Icone di navigazione: SVG a tratto (vedi templates/_icons.html),
            non più glifi tipografici — ereditano il colore del testo del
