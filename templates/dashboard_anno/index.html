@@ -118,10 +118,10 @@
         {% endif %}
         <div style="margin-top:10px;">
             <a href="{{ url_for('incarichi.index', anno=anno) }}"
-               class="btn btn-sm btn-primary">→︎ Gestisci incarichi</a>
-            <a href="{{ url_for('dashboard_anno.incarichi_docenti', anno=anno) }}"
+               class="btn btn-sm btn-primary">{{ icon('arrow') }} Gestisci incarichi</a>
+            <a href="{{ url_for('report.incarichi_docenti', anno=anno) }}"
                class="btn btn-sm" style="background:#f3f4f6; color:#374151; margin-left:6px;">
-                →︎ Vista per docente
+                {{ icon('arrow') }} Vista per docente
             </a>
         </div>
     </div>

@@ -362,7 +362,7 @@
         </div>
         <a href="{{ url_for('report.esporta_tutti_pdf') }}"
            class="btn btn-sm" style="background:var(--rosso); color:white; white-space:nowrap;"
-           onclick="this.textContent='{{ icon('hourglass') }} Generazione...'; this.style.pointerEvents='none';">
+           onclick="this.textContent='Generazione...'; this.style.pointerEvents='none';">
             {{ icon('download') }} Scarica tutti PDF
         </a>
     </div>
@@ -392,6 +392,15 @@
             <p>Tutti i prospetti generati — scarica o elimina singoli file.</p>
         </div>
         <a href="{{ url_for('report.lista_prospetti') }}" class="btn btn-primary">Apri storico</a>
+    </div>
+
+    <div class="report-card">
+        <div class="report-icon">{{ icon('star') }}</div>
+        <div class="report-info">
+            <h3>Incarichi per docente</h3>
+            <p>Vista di sola lettura: per ogni docente, tutti gli incarichi dell'anno in un colpo d'occhio. Per assegnare o eliminare incarichi vai in Impostazioni.</p>
+        </div>
+        <a href="{{ url_for('report.incarichi_docenti') }}" class="btn btn-primary">Apri</a>
     </div>
 </div>
 {% endif %}

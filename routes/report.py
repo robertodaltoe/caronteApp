@@ -1180,6 +1180,35 @@ def pianifica_permessi():
         ore_ultimo_giorno=calc['ore_ultimo_giorno'])
 
 
+# ── INCARICHI PER DOCENTE (vista di sola lettura) ────────────
+@report_bp.route('/report/incarichi-docenti')
+def incarichi_docenti():
+    """Vista trasversale di sola lettura: per ogni docente, tutti gli
+    incarichi dell'anno. La gestione (assegna/elimina) resta in incarichi.index."""
+    from models.incarico import IncaricaDocente
+    from config_anno import get_anno_corrente
+    anno = request.args.get('anno', get_anno_corrente())
+
+    nomine = (IncaricaDocente.query
+              .filter_by(anno_scol=anno)
+              .join(Docente, IncaricaDocente.id_docente == Docente.id)
+              .order_by(Docente.cognome, Docente.nome)
+              .all())
+
+    # Raggruppa per docente
+    from collections import defaultdict
+    per_doc = defaultdict(list)
+    for n in nomine:
+        per_doc[n.docente].append(n)
+
+    anni = sorted({r.anno_scol for r in IncaricaDocente.query.all()}, reverse=True)
+    if not anni:
+        anni = [anno]
+
+    return render_template('report/incarichi_docenti.html',
+        anno=anno, anni_disponibili=anni, per_doc=per_doc)
+
+
 # ── STORICO PROSPETTI ────────────────────────────────────────
 @report_bp.route('/prospetti')
 def lista_prospetti():

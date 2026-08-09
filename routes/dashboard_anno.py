@@ -192,28 +192,3 @@ def scheda_classe(label):
         label=label, anno_corso=anno_corso,
         sezione=sezione, indirizzo=indirizzo,
         aula=aula, doc_map=doc_map, incarichi=incarichi, piano=piano)
-
-
-@dashboard_anno_bp.route('/incarichi-docenti')
-def incarichi_docenti():
-    """Vista trasversale: per ogni docente, tutti gli incarichi dell'anno."""
-    anno = request.args.get('anno', get_anno_corrente())
-
-    nomine = (IncaricaDocente.query
-              .filter_by(anno_scol=anno)
-              .join(Docente, IncaricaDocente.id_docente == Docente.id)
-              .order_by(Docente.cognome, Docente.nome)
-              .all())
-
-    # Raggruppa per docente
-    from collections import defaultdict
-    per_doc = defaultdict(list)
-    for n in nomine:
-        per_doc[n.docente].append(n)
-
-    anni = sorted({r.anno_scol for r in IncaricaDocente.query.all()}, reverse=True)
-    if not anni:
-        anni = [anno]
-
-    return render_template('dashboard_anno/incarichi_docenti.html',
-        anno=anno, anni_disponibili=anni, per_doc=per_doc)

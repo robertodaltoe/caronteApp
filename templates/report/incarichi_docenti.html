@@ -3,11 +3,11 @@
 {% block title %}Incarichi per docente — {{ anno }}{% endblock %}
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-    <a href="{{ url_for('dashboard_anno.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
+    <a href="{{ url_for('report.index', tab='segreteria') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Report</a>
     <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">{{ icon('star') }} Incarichi per docente — {{ anno }}</h1>
     <div style="margin-left:auto; display:flex; gap:6px;">
         {% for a in anni_disponibili %}
-        <a href="{{ url_for('dashboard_anno.incarichi_docenti', anno=a) }}"
+        <a href="{{ url_for('report.incarichi_docenti', anno=a) }}"
            style="padding:4px 10px; border-radius:6px; font-size:.78rem; text-decoration:none;
                   background:{{ '#1e40af' if a==anno else '#f3f4f6' }};
                   color:{{ 'white' if a==anno else '#374151' }};">{{ a }}</a>
@@ -47,7 +47,7 @@
 {% else %}
 <div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
     Nessun incarico assegnato per {{ anno }}.
-    <a href="{{ url_for('incarichi.index', anno=anno) }}" style="color:var(--blu);">→︎ Assegna incarichi</a>
+    <a href="{{ url_for('incarichi.index', anno=anno) }}" style="color:var(--blu);">{{ icon('arrow') }} Assegna incarichi</a>
 </div>
 {% endif %}
 {% endblock %}
