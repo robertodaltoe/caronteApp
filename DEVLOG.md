@@ -4,6 +4,30 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 41 — Nav bar sfaccettata + regolazioni Display (Cowork)
+
+**Contesto:** a seguire della Sessione 40, tre richieste: box del
+Display meno trasparenti, sfondo Display ancora più discreto (.28→.18),
+e uno sfondo sfaccettato anche sulla nav bar (come login) per dare
+tridimensionalità. Un commit: `c47ad71`.
+
+- Box Display: opacità del fondo colorato portata da 10-12% a 22-24%
+  — leggono come pannelli pieni invece che velature (è uno schermo
+  da corridoio, va letto a distanza). Sfondo low-poly abbassato a
+  `.18` per dare risalto ai box ora più solidi.
+- Nav bar: nuova mesh low-poly (`_nav_bg.html`), stessa tecnica di
+  login/display ma range cromatico più stretto e opacità `.5` — un
+  rilievo discreto, non un pattern che compete con testo/icone.
+  Applicato subito il fix imparato nella Sessione 40: niente z-index
+  negativo, la mesh è il primo figlio di `<nav>` e l'ordine del DOM
+  basta a tenerla dietro a brand/link. Aggiunto `overflow:hidden` su
+  nav; verificato che i menu a tendina (position:fixed, non absolute)
+  non vengono ritagliati da quell'overflow.
+
+Verificato: 109/109 template passano il parser Jinja; controllo
+visivo su dashboard-anno (mesh nav visibile, dropdown "Attività"
+aperto e non tagliato) e su display?data=2026-05-28.
+
 ## Sessione 40 — Bug dietro lo sfondo sfaccettato "blando" del Display (Cowork)
 
 **Contesto:** l'utente ha segnalato che lo sfondo low-poly del Display
