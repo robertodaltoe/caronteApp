@@ -4,6 +4,15 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 46 — Nav bar: omologato il riempimento di "Registra assenza" (Cowork)
+
+**Contesto:** il pulsante "Registra assenza" aveva un pill rosso pieno
+(`background: rgba(220,38,38,.35)`) che lo faceva risaltare troppo
+rispetto al resto della barra, ora sfaccettata. Un commit: `4544b80`.
+
+Rimosso lo sfondo dedicato, resta solo il grassetto per l'enfasi (è
+l'azione più frequente) — stesso comportamento hover delle altre voci.
+
 ## Sessione 45 — Nav bar: testo bianco pieno, non più "impastato" (Cowork)
 
 **Contesto:** l'utente ha precisato meglio il problema della Sessione
