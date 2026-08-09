@@ -4,6 +4,28 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 45 — Nav bar: testo bianco pieno, non più "impastato" (Cowork)
+
+**Contesto:** l'utente ha precisato meglio il problema della Sessione
+44: le icone SVG erano bianche e nitide, ma il testo risultava grigio.
+Un commit: `26b65ca`.
+
+Causa: l'alone a più livelli (text-shadow con raggio fino a 5px)
+risolveva il contrasto ma, a dimensione piccola (.93rem), lo
+sfocamento si fondeva con i bordi anti-aliasati delle lettere — le
+icone non ne risentivano perché `filter:drop-shadow` non tocca la
+forma (sfoca una copia della sagoma dietro, non i bordi del disegno
+stesso, a differenza di `text-shadow` che sfoca "dentro" al glifo).
+
+Semplificato: colore portato a bianco pieno (era rgba(255,255,255,.96)
+— la trasparenza residua contribuiva anch'essa all'effetto lavato),
+text-shadow ridotta a un solo livello stretto (`0 1px 2px`, niente più
+bagliore a raggio largo). Stesso trattamento per brand-nome,
+brand-datetime, nav-user. Icone (.nav-ic) invariate.
+
+Verificato: 109/109 template passano il parser Jinja; controllo
+visivo a 1600px — testo nitido e bianco come le icone.
+
 ## Sessione 44 — Nav bar: alone scuro invece di ombra singola (Cowork)
 
 **Contesto:** le Sessioni 42-43 non bastavano — l'utente vedeva ancora
