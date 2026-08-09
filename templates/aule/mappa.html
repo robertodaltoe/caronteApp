@@ -121,14 +121,14 @@
 <div class="card tabella-aule">
     <table>
         <thead>
-            <tr><th>N° Aula</th><th>Classe</th><th>Sede</th></tr>
+            <tr><th style="width:90px;">N° Aula</th><th>Classe</th><th style="width:160px;">Sede</th></tr>
         </thead>
         <tbody>
             {% for a in tutte_aule %}
             {% set classi_qui = occupazione.get(a.numero, []) %}
             <tr class="{{ 'occupata-riga' if classi_qui else '' }}">
                 <td><strong>{{ a.numero }}</strong></td>
-                <td>{% if classi_qui %}{{ classi_qui | join(', ') }}{% else %}<span class="cella-vuota">—</span>{% endif %}</td>
+                <td class="wrap">{% if classi_qui %}{{ classi_qui | join(', ') }}{% else %}<span class="cella-vuota">—</span>{% endif %}</td>
                 <td style="font-size:.72rem; color:var(--grigio);">{{ a.sede }}</td>
             </tr>
             {% endfor %}

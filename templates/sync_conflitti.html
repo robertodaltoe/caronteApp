@@ -50,8 +50,8 @@
             {% for riga in c.confronto %}
             <tr style="border-top:1px solid #eee;">
                 <td style="padding:6px 8px 6px 0; color:var(--grigio);">{{ riga.label }}</td>
-                <td style="padding:6px 8px; font-weight:600;">{{ riga.locale if riga.locale is not none else '—' }}</td>
-                <td style="padding:6px 8px; font-weight:600; color:#3730a3;">{{ riga.remoto if riga.remoto is not none else '—' }}</td>
+                <td class="wrap" style="padding:6px 8px; font-weight:600;">{{ riga.locale if riga.locale is not none else '—' }}</td>
+                <td class="wrap" style="padding:6px 8px; font-weight:600; color:#3730a3;">{{ riga.remoto if riga.remoto is not none else '—' }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -91,7 +91,7 @@
         <tbody>
             {% for r in risolti_recenti %}
             <tr style="border-top:1px solid #eee;">
-                <td style="padding:6px 8px 6px 0;">{{ r.descrizione }}</td>
+                <td class="wrap" style="padding:6px 8px 6px 0;">{{ r.descrizione }}</td>
                 <td style="padding:6px 8px;">{{ 'Locale' if r.scelta == 'locale' else 'Da Drive' }}</td>
                 <td style="padding:6px 8px;">{{ r.risolto_da or '—' }}</td>
                 <td style="padding:6px 8px;">{{ r.risolto_il.strftime('%d/%m %H:%M') if r.risolto_il else '' }}</td>

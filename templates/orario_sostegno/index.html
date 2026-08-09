@@ -164,7 +164,7 @@
             <td style="font-size:.86rem;">{{ s.giorno_nome }}</td>
             <td style="text-align:center; font-size:.86rem;">{{ s.ora }}ª</td>
             <td style="font-size:.86rem;"><strong>{{ s.classe }}</strong></td>
-            <td style="font-size:.84rem; color:var(--grigio);">{{ s.note or '—' }}</td>
+            <td class="wrap" style="font-size:.84rem; color:var(--grigio);">{{ s.note or '—' }}</td>
             <td style="text-align:center; white-space:nowrap;">
                 <button class="btn btn-primary btn-sm" onclick="toggleEdit({{ s.id }})" title="Modifica">{{ icon('edit') }}</button>
                 <form method="post" onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">

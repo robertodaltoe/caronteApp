@@ -58,8 +58,8 @@
         <thead>
             <tr>
                 <th style="width:90px;">Classe</th>
-                <th>Cognome</th>
-                <th>Nome</th>
+                <th style="width:170px;">Cognome</th>
+                <th style="width:140px;">Nome</th>
                 <th>Note</th>
                 <th style="width:50px;"></th>
             </tr>
@@ -70,7 +70,7 @@
             <td style="font-size:.84rem;">{{ c.classe }}</td>
             <td style="font-size:.88rem;"><strong>{{ c.cognome }}</strong></td>
             <td style="font-size:.88rem;">{{ c.nome }}</td>
-            <td style="font-size:.78rem; color:var(--grigio);">{{ c.note or '—' }}</td>
+            <td class="wrap" style="font-size:.78rem; color:var(--grigio);">{{ c.note or '—' }}</td>
             <td style="text-align:center;">
                 <form method="post" onsubmit="return confirm('Rimuovere {{ c.cognome }} {{ c.nome }}?')">
                     <input type="hidden" name="azione" value="elimina">

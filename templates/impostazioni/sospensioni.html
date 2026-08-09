@@ -97,7 +97,7 @@
                 {% if s.is_singolo %}—
                 {% else %}<strong>{{ s.data_fine.strftime('%d/%m/%Y') }}</strong>{% endif %}
             </td>
-            <td style="font-size:.88rem;">
+            <td class="wrap" style="font-size:.88rem;">
                 {{ s.descrizione }}
                 {% if passata %}<span style="font-size:.7rem; color:var(--grigio); margin-left:6px;">passata</span>{% endif %}
             </td>

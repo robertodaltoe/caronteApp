@@ -177,7 +177,7 @@
         <thead>
             <tr>
                 <th style="width:100px;">Orario</th>
-                <th>Materia</th>
+                <th style="width:200px;">Materia</th>
                 <th style="width:160px;">Docente</th>
                 <th>Classi</th>
                 <th style="width:70px; text-align:center;">Alunni</th>
@@ -192,11 +192,11 @@
                 {{ l.ora_inizio }}–{{ l.ora_fine }}
                 <span style="font-size:.72rem; color:var(--grigio);">({{ l.durata_ore }}h)</span>
             </td>
-            <td><strong>{{ g.materia }}</strong></td>
+            <td class="wrap"><strong>{{ g.materia }}</strong></td>
             <td style="font-size:.86rem;">
                 {% if g.docente %}{{ g.docente.cognome }}{% if g.docente.nome %} {{ g.docente.nome[0] }}.{% endif %}{% endif %}
             </td>
-            <td style="font-size:.84rem;">{{ g.classi }}</td>
+            <td class="wrap" style="font-size:.84rem;">{{ g.classi }}</td>
             <td style="text-align:center; font-size:.84rem;">{{ g.alunni|length or '—' }}</td>
             <td style="font-size:.84rem;">{{ l.aula or '—' }}</td>
             <td style="text-align:center; display:flex; gap:3px; justify-content:center;">

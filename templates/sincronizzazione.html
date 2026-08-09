@@ -144,14 +144,14 @@
             <td style="font-size:.85rem;">
                 {{ log.data_ora.strftime('%d/%m/%Y %H:%M') if log.data_ora }}
             </td>
-            <td style="font-size:.82rem; color:var(--grigio);">{{ log.file_nome }}</td>
+            <td class="wrap" style="font-size:.82rem; color:var(--grigio);">{{ log.file_nome }}</td>
             <td style="text-align:center;">{{ log.slot_totali }}</td>
             <td style="text-align:center;">
                 {% if log.docenti_nuovi > 0 %}
                     <span class="badge badge-verde">+{{ log.docenti_nuovi }}</span>
                 {% else %}—{% endif %}
             </td>
-            <td>
+            <td class="wrap">
                 {% set nr = log.non_riconosciuti | from_json if log.non_riconosciuti else [] %}
                 {% if nr %}
                     <span class="badge badge-giallo">{{ icon('warning') }} {{ nr | join(', ') }}</span>

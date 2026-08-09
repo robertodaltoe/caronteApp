@@ -63,7 +63,7 @@
                 <span style="display:block;font-size:.68rem;color:#6b7280;">{{ icon('close') }}{{ p.n_non_aderisce }}</span>
                 {% endif %}
             </td>
-            <td style="font-size:.84rem;">{{ p.classi }}</td>
+            <td class="wrap" style="font-size:.84rem;">{{ p.classi }}</td>
             <td>
                 {% if not p.gruppo_esistente %}
                 <form method="post" action="{{ url_for('recupero.crea_da_proposta') }}"

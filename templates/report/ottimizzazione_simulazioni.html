@@ -87,7 +87,7 @@
                     <td style="color:var(--grigio); font-size:.78rem;">
                         {{ riga.assente.cognome if riga.assente else '?' }}
                     </td>
-                    <td>
+                    <td class="wrap">
                         {% for c in riga.candidati %}
                         <span class="candidato">
                             <span class="cand-nome">{{ c.cognome }}</span>

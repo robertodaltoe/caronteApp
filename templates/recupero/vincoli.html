@@ -112,9 +112,9 @@
                 {{ v.data_inizio.strftime('%d/%m') }}–{{ v.data_fine.strftime('%d/%m') }}
                 {% else %}—{% endif %}
             </td>
-            <td style="font-size:.8rem; color:var(--grigio);">{{ v.classi_vincolo or '—' }}</td>
-            <td style="font-size:.8rem; color:var(--grigio);">{{ v.materia_vincolo or '—' }}</td>
-            <td style="font-size:.82rem; color:var(--grigio);">{{ v.note or '—' }}</td>
+            <td class="wrap" style="font-size:.8rem; color:var(--grigio);">{{ v.classi_vincolo or '—' }}</td>
+            <td class="wrap" style="font-size:.8rem; color:var(--grigio);">{{ v.materia_vincolo or '—' }}</td>
+            <td class="wrap" style="font-size:.82rem; color:var(--grigio);">{{ v.note or '—' }}</td>
             <td style="text-align:center; display:flex; gap:3px; justify-content:center;">
                 <button type="button" onclick="toggleModifica({{ v.id }})"
                         style="background:var(--blu-light); color:var(--blu); border:1px solid var(--bronzo);

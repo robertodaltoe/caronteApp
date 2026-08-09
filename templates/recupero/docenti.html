@@ -42,11 +42,11 @@
     <table>
         <thead>
             <tr>
-                <th>Docente</th>
+                <th style="width:170px;">Docente</th>
                 <th style="width:150px;">Materia principale</th>
                 <th>Altre materie (roster)</th>
                 <th style="width:170px;">Materie extra recupero</th>
-                <th style="width:110px;">Note</th>
+                <th style="width:150px;">Note</th>
                 <th style="width:100px; text-align:center;">Disponibilità</th>
                 <th style="width:60px; text-align:center;">{{ icon('close') }}</th>
             </tr>
@@ -56,7 +56,7 @@
         <tr>
             <td><strong>{{ rd.docente.cognome }}{% if rd.docente.nome %} {{ rd.docente.nome[0] }}.{% endif %}</strong></td>
             <td style="font-size:.86rem;">{{ rd.docente.materia_effettiva or '—' }}</td>
-            <td style="font-size:.82rem; color:var(--grigio);">
+            <td class="wrap" style="font-size:.82rem; color:var(--grigio);">
                 {% set altre = rd.docente.materie_ist %}
                 {% if altre %}
                     {% for dm in altre %}
@@ -65,11 +65,11 @@
                     {% endfor %}
                 {% else %}—{% endif %}
             </td>
-            <td style="font-size:.82rem;">
+            <td class="wrap" style="font-size:.82rem;">
                 {% if rd.materie_extra %}{% for m in rd.materie_extra.split(',') %}<span style="background:var(--giallo-bg);color:var(--giallo);padding:1px 6px;border-radius:4px;margin:1px;font-size:.78rem;display:inline-block;">{{ m.strip() }}</span>{% endfor %}{% else %}<span style="color:#d1d5db;font-size:.78rem;">—</span>{% endif %}
                 <button type="button" onclick="toggleEditDocente({{ rd.id }})" style="background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--grigio);padding:1px 4px;">{{ icon('edit') }}</button>
             </td>
-            <td style="font-size:.82rem; color:var(--grigio);">{{ rd.note or '—' }}</td>
+            <td class="wrap" style="font-size:.82rem; color:var(--grigio);">{{ rd.note or '—' }}</td>
             <td style="text-align:center;">
                 <a href="{{ url_for('recupero.vincoli') }}#docente-{{ rd.id }}"
                    class="btn btn-sm"

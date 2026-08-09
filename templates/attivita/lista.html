@@ -36,8 +36,8 @@
         <td style="white-space:nowrap;">
             <span class="badge badge-grigio">{{ a.tipo_label }}</span>
         </td>
-        <td>{{ a.descrizione or '—' }}</td>
-        <td>
+        <td class="wrap">{{ a.descrizione or '—' }}</td>
+        <td class="wrap">
             {% for c in a.classi %}
             <span class="badge badge-blu" style="background:var(--blu-light);color:var(--blu);margin:1px;white-space:nowrap;">
                 {{ c.classe }}
@@ -50,7 +50,7 @@
             </span>
             {% endif %}
         </td>
-        <td style="font-size:.85rem;">
+        <td class="wrap" style="font-size:.85rem;">
             {% if a.accompagnatori %}
                 {% for d in a.accompagnatori %}{{ d.cognome }}{% if not loop.last %}, {% endif %}{% endfor %}
             {% else %}

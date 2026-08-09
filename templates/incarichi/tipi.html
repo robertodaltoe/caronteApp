@@ -116,7 +116,7 @@
         <tbody>
         {% for t in tipi_cat %}
         <tr style="border-bottom:1px solid #f0f0f0;">
-            <td style="padding:6px 14px; font-weight:600;">{{ t.nome }}</td>
+            <td class="wrap" style="padding:6px 14px; font-weight:600;">{{ t.nome }}</td>
             <td style="padding:6px 10px; color:var(--grigio); font-size:.78rem;">{{ t.collegato_a or '—' }}</td>
             <td style="padding:6px 10px; font-size:.78rem;">
                 {% if t.compenso_tipo %}<span style="background:var(--verde-bg); color:#065f46; padding:1px 6px; border-radius:4px; font-size:.72rem;">{{ t.compenso_tipo }}</span>{% else %}—{% endif %}

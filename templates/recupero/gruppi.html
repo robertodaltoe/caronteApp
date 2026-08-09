@@ -59,7 +59,7 @@
             <td style="font-size:.82rem;">
                 {% if g.docente %}{{ g.docente.cognome }} {{ g.docente.nome[0] if g.docente.nome else '' }}.{% endif %}
             </td>
-            <td style="font-size:.78rem;">
+            <td class="wrap" style="font-size:.78rem;">
                 {% for cls in g.classi.split(',') %}
                 <span style="background:var(--blu-light);color:var(--blu);padding:1px 5px;
                              border-radius:4px;margin:1px;display:inline-block;font-size:.72rem;">
@@ -130,7 +130,7 @@
                 {% if p.n_non_risposto %}<span style="display:block;font-size:.68rem;color:var(--rosso);">?{{ p.n_non_risposto }}</span>{% endif %}
                 {% if p.n_non_aderisce %}<span style="display:block;font-size:.68rem;color:#6b7280;">{{ icon('close') }}{{ p.n_non_aderisce }}</span>{% endif %}
             </td>
-            <td style="font-size:.78rem;">
+            <td class="wrap" style="font-size:.78rem;">
                 {% for cls in p.classi %}
                 {% set g_cop = p.copertura_classi.get(cls) %}
                 {% if g_cop %}

@@ -41,7 +41,7 @@
     <table>
         <thead>
             <tr>
-                <th>Docente</th>
+                <th style="width:200px;">Docente</th>
                 <th style="width:120px;">Contratto</th>
                 <th style="width:140px; text-align:center;">Giorni liberi</th>
                 <th>Assenze nel periodo</th>
@@ -56,7 +56,7 @@
             <td style="text-align:center; font-size:.84rem;">
                 {{ r.n_giorni_liberi }} / {{ r.n_giorni_totali }}
             </td>
-            <td style="font-size:.78rem; color:#374151;">
+            <td class="wrap" style="font-size:.78rem; color:#374151;">
                 {% if r.assenze %}
                     {% for a in r.assenze %}
                         <span style="display:inline-block; margin:1px 4px 1px 0; padding:1px 6px;

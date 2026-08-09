@@ -80,7 +80,7 @@
             </td>
             <td style="font-size:.8rem; color:var(--grigio);">{{ l.ruolo }}</td>
             <td style="font-size:.82rem;">{{ l.azione }}</td>
-            <td style="font-size:.8rem; color:var(--grigio);">{{ l.dettaglio or '—' }}</td>
+            <td class="wrap" style="font-size:.8rem; color:var(--grigio);">{{ l.dettaglio or '—' }}</td>
             <td style="font-size:.75rem; color:var(--grigio); text-align:center;">{{ l.ip }}</td>
             <td style="text-align:center;">
                 {% if l.esito == 'ok' %}

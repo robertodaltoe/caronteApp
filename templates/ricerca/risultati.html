@@ -39,7 +39,7 @@
     <table style="width:100%; font-size:.85rem;">
         {% for d in risultati.docenti %}
         <tr>
-            <td style="padding:5px 0;">
+            <td class="wrap" style="padding:5px 0;">
                 <a href="{{ url_for('docenti.modifica', id=d.id) }}"><strong>{{ d.cognome }} {{ d.nome }}</strong></a>
                 {% if d.materia_effettiva %}<span style="color:var(--grigio); margin-left:8px;">{{ d.materia_effettiva }}</span>{% endif %}
                 {% if not d.attivo %}<span style="color:#dc2626; font-size:.75rem; margin-left:8px;">(non attivo)</span>{% endif %}
@@ -56,7 +56,7 @@
     <table style="width:100%; font-size:.85rem;">
         {% for s in risultati.supplenze %}
         <tr>
-            <td style="padding:5px 0;">
+            <td class="wrap" style="padding:5px 0;">
                 <a href="{{ url_for('supplenze.modifica', id=s.id) }}">
                     <strong>{{ s.data.strftime('%d/%m/%Y') }}</strong> ora {{ s.ora }} — cl. {{ s.classe or '—' }}
                 </a>
@@ -78,7 +78,7 @@
     <table style="width:100%; font-size:.85rem;">
         {% for a in risultati.assenze %}
         <tr>
-            <td style="padding:5px 0;">
+            <td class="wrap" style="padding:5px 0;">
                 <a href="{{ url_for('assenze.modifica', id=a.id) }}">
                     <strong>{{ a.data.strftime('%d/%m/%Y') }}</strong> — {{ a.docente.cognome }} {{ a.docente.nome }}
                 </a>
@@ -96,7 +96,7 @@
     <table style="width:100%; font-size:.85rem;">
         {% for m in risultati.movimenti %}
         <tr>
-            <td style="padding:5px 0;">
+            <td class="wrap" style="padding:5px 0;">
                 <a href="{{ url_for('banca_ore.singolo', id=m.id_docente) }}">
                     <strong>{{ m.data.strftime('%d/%m/%Y') }}</strong> — {{ m.docente.cognome }} {{ m.docente.nome }}
                 </a>
@@ -117,7 +117,7 @@
     <table style="width:100%; font-size:.85rem;">
         {% for s in risultati.sospensioni %}
         <tr>
-            <td style="padding:5px 0;">
+            <td class="wrap" style="padding:5px 0;">
                 <a href="{{ url_for('impostazioni.sospensioni') }}">
                     <strong>{{ s.data_inizio.strftime('%d/%m/%Y') }}</strong>
                     {% if not s.is_singolo %} – {{ s.data_fine.strftime('%d/%m/%Y') }}{% endif %}

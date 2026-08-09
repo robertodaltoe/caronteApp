@@ -651,7 +651,13 @@ th.sort-asc::after  { content: ' ↑︎'; opacity: .9; font-size: .8em; }
 th.sort-desc::after { content: ' ↓︎'; opacity: .9; font-size: .8em; }
 table thead th { vertical-align: middle; }
         table { table-layout: auto; width: 100%; }
-        table td, table th { overflow: hidden; text-overflow: ellipsis; }
+        /* Di norma le celle non vanno a capo: un contenuto lungo viene
+           troncato con "…" invece di allargare la riga o spezzarsi su
+           più righe (più pulito nelle tabelle dati fitte dell'app).
+           Le colonne che DEVONO poter avere testo lungo su più righe
+           (note, descrizioni) usano la classe .wrap per disattivarlo. */
+        table td, table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        table td.wrap, table th.wrap { white-space: normal; }
 </style>
 <script>
 (function() {
