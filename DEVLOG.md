@@ -4,6 +4,37 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 38 — Allineamento nav bar + ultimi glifi/emoji (Cowork)
+
+**Contesto:** su ulteriore segnalazione ("anche in nav bar non sembrano
+ben allineati") e richiesta di proseguire con le sostituzioni rimaste.
+Due commit: `a74ea98`, `2f1f391`.
+
+### Allineamento nav bar (`a74ea98`)
+`.nav-ic` centra l'icona nello span con `align-items:center`, ma lo
+span stesso (inline-flex) viene posizionato dal browser secondo il suo
+`vertical-align` di default (baseline) rispetto al testo del link — non
+rispetto all'altezza maiuscola (cap-height) del testo. Misurato: il
+centro dell'icona cadeva ~2.6px più in alto del centro reale delle
+lettere maiuscole della nav (14.88px). Corretto con
+`transform: translateY(2px)` su `.nav-ic`, portando lo scarto sotto 1px
+(verificato via marker DOM). Interessa sia le voci di primo livello sia
+le sottovoci dei menu a tendina (stessa classe).
+
+### Ultimi glifi/emoji (`2f1f391`)
+Aggiunte 2 icone (`triangle`, `pause`); sostituiti a mano gli ultimi 34
+glifi in 18 file (✦→star, ⊘→forbidden, △→triangle, ⏸→pause), verificando
+per ciascuno il contesto prima di applicare la modifica invece di una
+regex globale (per non ripetere l'errore della Sessione 36). Lasciati
+intenzionalmente: i glifi dentro `<option>` (non possono contenere SVG)
+e il toggle ▶/▼ di `recupero/vincoli.html` (dinamico via JS, come già
+per `dashboard.html`). Il `❌` di `attivita/form.html`, incorporato in
+una stringa JS lato client, sostituito con `{{ icon('close', 10) }}`
+inline nel template (processato comunque da Jinja lato server).
+
+Verificato: 108/108 template passano il parser Jinja; rendering via
+`test_client()` su tutte le pagine toccate.
+
 ## Sessione 37 — Allineamento verticale icone SVG (Cowork)
 
 **Contesto:** su segnalazione dell'utente ("alcuni simboli non sono
