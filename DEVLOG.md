@@ -4,6 +4,32 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 44 — Nav bar: alone scuro invece di ombra singola (Cowork)
+
+**Contesto:** le Sessioni 42-43 non bastavano — l'utente vedeva ancora
+alcune voci (Display, Impostazioni, Guida) più sbiadite delle altre.
+Un commit: `0b74525`.
+
+Verificato che il CSS calcolato era identico per tutte le voci (stesso
+colore, stessa ombra) — non era uno stile diverso. Causa reale: la
+mesh sotto è casuale faccetta per faccetta, e `preserveAspectRatio=
+"xMidYMid slice"` la ritaglia diversamente a seconda della risoluzione
+dello schermo — a seconda della larghezza, una voce diversa può
+capitare proprio sopra una faccetta più chiara. Confermato provando a
+1440px/1920px: il pattern di quali voci sembravano sbiadite cambiava
+ogni volta, non erano mai le stesse.
+
+Una singola ombra morbida non poteva bastare contro un caso peggiore
+imprevedibile. Sostituita con un vero alone (più livelli di
+text-shadow/drop-shadow sovrapposti, alta opacità, raggio piccolo) su
+`nav a`, `.brand-nome`, `.brand-datetime`, `.nav-user` e `.nav-ic` —
+garantisce contrasto qualunque cosa capiti dietro, invece di sperare
+che la faccetta in quel punto sia abbastanza scura.
+
+Verificato: 109/109 template passano il parser Jinja; controllo
+visivo a tre larghezze (1440/1600/1920px) — voci uniformemente
+leggibili in tutte.
+
 ## Sessione 43 — Testo e icone nav bar ancora più solidi (Cowork)
 
 **Contesto:** l'ombra della Sessione 42 non bastava — l'utente notava
