@@ -3,8 +3,9 @@
 {% block title %}{{ 'Modifica' if utente else 'Nuovo' }} Utente{% endblock %}
 {% block content %}
 
-<div style="margin-bottom:20px;">
-    <h1 style="font-size:1.3rem; color:var(--blu);">
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('auth.lista_utenti') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Utenti</a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin:0;">
         {{ (icon('edit') ~ ' Modifica utente') if utente else '+ Nuovo utente' }}
     </h1>
 </div>

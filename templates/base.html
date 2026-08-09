@@ -383,6 +383,13 @@
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none; border-color: var(--blu-med); box-shadow: 0 0 0 3px rgba(45,95,138,.15);
         }
+        /* Checkbox/radio dentro .form-group non devono ereditare
+           width:100%+bordo+padding della regola sopra (pensata per
+           input di testo): altrimenti una checkbox nativa si gonfia in
+           un riquadro enorme che sbrodola oltre la sua label. */
+        .form-group input[type="checkbox"], .form-group input[type="radio"] {
+            width: auto; padding: 0; border: none; border-radius: 0; background: transparent;
+        }
 
         /* STATS */
         .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
