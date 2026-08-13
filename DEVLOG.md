@@ -4,6 +4,36 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 51 — Sostituzioni scrutinio: niente doppie nomine + riunione prec./succ. (Cowork)
+
+**Contesto:** in Attività istituzionali, nulla impediva di nominare lo
+stesso docente come sostituto di due assenti diversi nello stesso
+scrutinio/collegio (fisicamente impossibile). Chiesto anche di vedere,
+per i candidati liberi in quella riunione, se hanno la riunione
+immediatamente precedente o successiva lo stesso giorno — utile per
+scegliere chi è comunque già a scuola in quella fascia. Un commit:
+`fa201bf`.
+
+- `routes/attivita_ist.py::sostituzione_scrutinio()`: candidati
+  suggeriti e menu a tendina ora calcolati per riga (per assente),
+  escludendo i docenti già nominati sostituto di un ALTRO assente nella
+  stessa attività — restano selezionabili per la propria riga già
+  assegnata. Controllo anche lato server al salvataggio (non solo nel
+  menu, per non essere scavalcato da due form aperti insieme): un
+  tentativo di doppia nomina viene rifiutato con messaggio esplicito.
+- Per ogni candidato, se ha un'altra riunione istituzionale lo stesso
+  giorno immediatamente prima o dopo lo scrutinio in corso, viene
+  mostrata con orario e classe (es. "08:45 2A AFM →"). Non cambia
+  l'ordine dei candidati (il punteggio esistente resta invariato), è
+  solo un'informazione in più.
+
+Verificato: 110/110 template passano il parser Jinja; test end-to-end
+con dati reali (copia locale del database) — nominato un sostituto per
+un assente, confermato che sparisce dal menu del secondo restando
+selezionato nel proprio; forzato un tentativo di doppia nomina via POST
+diretto, rifiutato correttamente; confermata la visualizzazione
+"riunione successiva" per un candidato con un altro scrutinio a seguire.
+
 ## Sessione 50 — Avviso per sezioni future non collegate ai permessi (Cowork)
 
 **Contesto:** l'utente ha chiesto se le sezioni aggiunte in futuro
