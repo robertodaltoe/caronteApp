@@ -194,66 +194,11 @@ def create_app(avvio_con_reloader=True):
     ROUTE_PUBBLICHE = {'display.display', 'auth.login', 'auth.logout',
                         'auth.privacy', 'static'}
 
-    # Blueprint riservati DSGA (+ DS, storicamente incluso nel nome
-    # 'dsga_only' anche se non del tutto letterale): import dell'orario
-    # generale e risoluzione conflitti — cancellano/ricreano dati, troppo
-    # rischiosi per essere configurabili dalla matrice permessi.
-    BLUEPRINT_DSGA_ONLY = {'sync', 'sync_conflitti'}
-
-    # Mappa blueprint -> sezione (vedi models/permesso_ruolo.py per le
-    # sezioni e la matrice ruolo x sezione, configurabile dal DS in
-    # Impostazioni > Sistema > Permessi). Un blueprint può contenere
-    # route di sezioni diverse: ENDPOINT_SEZIONE sotto ha la precedenza.
-    # Blueprint assenti da entrambe le mappe (dashboard, guida, ricerca,
-    # display, export_xlsx) restano aperti a chiunque sia loggato, come
-    # sempre — non contengono azioni sensibili specifiche di un ruolo.
-    BLUEPRINT_SEZIONE = {
-        'assenze':            'assenze',
-        'indisponibilita':    'assenze',
-        'supplenze':          'supplenze',
-        'cambi':              'supplenze',
-        'agenda':             'supplenze',
-        'attivita':           'attivita',
-        'attivita_ist':       'attivita',
-        'att_differite':      'attivita',
-        'banca_ore':          'banca_ore',
-        'import_banca':       'banca_ore',
-        'report':             'report',
-        'mail_bozze':         'report',
-        'orario_sostegno':    'orario',
-        'recupero':           'recupero',
-        'rientro':            'recupero',
-        'esami_integrativi':  'recupero',
-        'impostazione_anno':  'organico',
-        'dashboard_anno':     'organico',
-        'docenti':            'docenti',
-        'cambio_anno':        'cambio_anno',
-        'impostazioni':       'istituto',
-        'incarichi':          'incarichi',
-        'assegnazioni':       'assegnazioni',
-        'aule':               'assegnazioni',
-    }
-    ENDPOINT_SEZIONE = {
-        'attivita_ist.dipartimenti':               'docenti',
-        'attivita_ist.salva_dipartimento':         'docenti',
-        'attivita_ist.salva_materia':              'docenti',
-        'attivita_ist.assegna_materia_dipartimento': 'docenti',
-        'impostazioni.sospensioni':                'calendario',
-        'impostazioni.periodi':                    'calendario',
-        'incarichi.tipi':                          'istituto',
-        'incarichi.salva_tipo':                    'istituto',
-        'incarichi.salva_categoria':                'istituto',
-        # None = nessun cancello di sezione: ha un controllo interno suo
-        # (riservato letteralmente al ruolo 'ds', vedi routes/impostazioni.py)
-        # e non deve dipendere dalla sezione 'istituto' del blueprint, che
-        # per design è esclusa per il DS stesso.
-        'impostazioni.permessi':                   None,
-        # L'hub /impostazioni resta sempre raggiungibile: mostra solo le
-        # card a cui l'utente ha accesso (filtrate nel template), non deve
-        # ereditare 'istituto' (esclusa di default) solo perché è nello
-        # stesso blueprint delle pagine davvero sensibili.
-        'impostazioni.index':                      None,
-    }
+    # Mappe blueprint/endpoint -> sezione: vivono in models/permesso_ruolo.py
+    # (non qui) cosi' la pagina Permessi può segnalare le sezioni non ancora
+    # collegate leggendo la stessa fonte usata dal controllo reale sotto,
+    # invece di duplicarla e rischiare che le due si disallineino.
+    from models.permesso_ruolo import BLUEPRINT_DSGA_ONLY, BLUEPRINT_SEZIONE, ENDPOINT_SEZIONE
 
     def _nega_accesso(u, endpoint, messaggio):
         from flask import flash, request

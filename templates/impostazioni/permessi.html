@@ -14,6 +14,15 @@
     la pagina Display e nient'altro, sempre — nessuna delle due cose è modificabile da questa pagina.
 </div>
 
+{% if non_mappati %}
+<div class="card" style="padding:10px 14px; margin-bottom:16px; font-size:.82rem; color:#92400e; background:#fffbeb; border-left:4px solid #d97706;">
+    {{ icon('warning') }} Queste parti dell'app sono state aggiunte dopo questa pagina e non sono
+    ancora collegate a nessuna sezione della matrice, quindi restano <strong>aperte a chiunque sia
+    loggato</strong>, qualunque ruolo: <code>{{ non_mappati|join(', ') }}</code>.
+    Segnalalo per farle rientrare in una sezione esistente o in una nuova.
+</div>
+{% endif %}
+
 <div class="card" style="padding:0; overflow:hidden;">
     <form method="post">
         <div style="overflow-x:auto;">

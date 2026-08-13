@@ -69,6 +69,77 @@ DEFAULT_MATRICE = {
 }
 
 
+# ── Mappa blueprint/endpoint -> sezione, usata da app.py::check_auth ──
+# Vive qui (non in app.py) cosi' la pagina Permessi può fare la diagnostica
+# "sezioni non collegate" leggendo la STESSA fonte usata per il controllo
+# reale, invece di duplicarla e rischiare che le due si disallineino.
+#
+# Blueprint riservati DSGA (+ DS): cancellano/ricreano dati (import
+# orario, risoluzione conflitti), troppo rischiosi per essere
+# configurabili dalla matrice.
+BLUEPRINT_DSGA_ONLY = {'sync', 'sync_conflitti'}
+
+# Blueprint intenzionalmente aperti a chiunque sia loggato, qualunque
+# ruolo: non contengono azioni specifiche di un ruolo (home, aiuto,
+# ricerca, la pagina display stessa, export in sola lettura di dati già
+# visibili altrove) oppure sono già gestiti internamente ('auth', via i
+# singoli @login_required(...) sulle route sensibili).
+BLUEPRINT_APERTI = {'dashboard', 'guida', 'ricerca', 'display', 'export_xlsx', 'auth'}
+
+BLUEPRINT_SEZIONE = {
+    'assenze':            'assenze',
+    'indisponibilita':    'assenze',
+    'supplenze':          'supplenze',
+    'cambi':              'supplenze',
+    'agenda':             'supplenze',
+    'attivita':           'attivita',
+    'attivita_ist':       'attivita',
+    'att_differite':      'attivita',
+    'banca_ore':          'banca_ore',
+    'import_banca':       'banca_ore',
+    'report':             'report',
+    'mail_bozze':         'report',
+    'orario_sostegno':    'orario',
+    'recupero':           'recupero',
+    'rientro':            'recupero',
+    'esami_integrativi':  'recupero',
+    'impostazione_anno':  'organico',
+    'dashboard_anno':     'organico',
+    'docenti':            'docenti',
+    'cambio_anno':        'cambio_anno',
+    'impostazioni':       'istituto',
+    'incarichi':          'incarichi',
+    'assegnazioni':       'assegnazioni',
+    'aule':               'assegnazioni',
+}
+ENDPOINT_SEZIONE = {
+    'attivita_ist.dipartimenti':                 'docenti',
+    'attivita_ist.salva_dipartimento':           'docenti',
+    'attivita_ist.salva_materia':                'docenti',
+    'attivita_ist.assegna_materia_dipartimento': 'docenti',
+    'impostazioni.sospensioni':                  'calendario',
+    'impostazioni.periodi':                      'calendario',
+    'incarichi.tipi':                            'istituto',
+    'incarichi.salva_tipo':                      'istituto',
+    'incarichi.salva_categoria':                 'istituto',
+    # None = nessun cancello di sezione: ha un controllo interno suo.
+    'impostazioni.permessi':                     None,
+    'impostazioni.index':                        None,
+}
+
+
+def blueprint_non_mappati(app):
+    """Blueprint registrati nell'app ma assenti da tutte le mappe sopra
+    (BLUEPRINT_SEZIONE, BLUEPRINT_DSGA_ONLY, BLUEPRINT_APERTI) — quindi
+    di fatto aperti a chiunque sia loggato senza che sia una scelta
+    esplicita. Usata solo per l'avviso in Impostazioni > Permessi: una
+    sezione nuova aggiunta in futuro non entra qui da sola, va collegata
+    a mano (vedi commento in cima a questo file)."""
+    conosciuti = (set(BLUEPRINT_SEZIONE) | BLUEPRINT_DSGA_ONLY | BLUEPRINT_APERTI)
+    registrati = set(app.blueprints.keys())
+    return sorted(registrati - conosciuti)
+
+
 class PermessoRuolo(db.Model):
     __tablename__ = 'permessi_ruolo'
 
