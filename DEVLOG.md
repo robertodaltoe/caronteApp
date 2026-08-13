@@ -4,6 +4,28 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 50 — Avviso per sezioni future non collegate ai permessi (Cowork)
+
+**Contesto:** l'utente ha chiesto se le sezioni aggiunte in futuro
+entrano da sole nella matrice permessi. Risposta onesta: no — resta un
+passo manuale (registrare la sezione + mappare blueprint/endpoint), e
+se me lo dimentico la parte nuova resta aperta a chiunque sia loggato
+senza che sia visibile a nessuno. Un commit: `0d77a7a`.
+
+Spostate le mappe blueprint/endpoint → sezione da `app.py` a
+`models/permesso_ruolo.py` (unica fonte, non più duplicata) e aggiunta
+`blueprint_non_mappati(app)`: confronta i blueprint registrati nell'app
+con quelli conosciuti dalle mappe (sezione configurabile, dsga_only, o
+intenzionalmente aperti) e restituisce quelli rimasti fuori. La pagina
+Permessi mostra un avviso con l'elenco, se non vuoto — non risolve da
+solo il collegamento mancante, ma lo rende visibile al DS invece che
+silenzioso.
+
+Verificato: 110/110 template passano il parser Jinja; con l'app reale
+la lista risulta vuota; simulato un blueprint fittizio non collegato e
+confermato che compare nell'avviso, sia via codice sia con controllo
+visivo della pagina.
+
 ## Sessione 49 — Matrice permessi configurabile dal DS (Cowork)
 
 **Contesto:** dopo l'audit ruoli/permessi (chiesto di "fare il punto"
