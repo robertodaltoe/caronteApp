@@ -4,6 +4,63 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 49 — Matrice permessi configurabile dal DS (Cowork)
+
+**Contesto:** dopo l'audit ruoli/permessi (chiesto di "fare il punto"
+sui profili previsti e sulla possibilità di visualizzare/modificare i
+dati), emerso che il controllo esistente era per-blueprint intero (un
+solo permesso per l'intera sezione, niente distinzione lettura/
+scrittura) e che 13 sezioni non avevano alcun controllo di ruolo.
+Presentata una matrice di correzione (ds/dsga/collaboratore/segreteria
+× sezione → visualizza/modifica/esclusa); l'utente ha proposto di non
+fissarla nel codice ma di renderla una pagina di configurazione in
+Impostazioni, riservata al DS. Un commit: `5985f85` (rebasato sopra il
+lavoro in parallelo di un'altra sessione, Task 47/etichette
+tipo_contratto — nessun conflitto).
+
+- Nuova tabella `permessi_ruolo` (`models/permesso_ruolo.py`): 14
+  sezioni × 3 ruoli configurabili (ds, collaboratore, segreteria) × 3
+  livelli. DSGA resta bypass hardcoded (accesso pieno sempre, come
+  già era con `'tutto'` in `PERMESSI`); ruolo `display` non passa da
+  questa matrice — redirect fisso a `/display` sia dopo il login sia
+  da `check_auth` per qualunque altro endpoint, "vede solo quella
+  pagina e nient'altro" come richiesto esplicitamente. Nessuno dei due
+  è modificabile dalla pagina, apposta: evita che una configurazione
+  sbagliata blocchi l'intera app o l'unico ruolo che potrebbe
+  correggerla.
+- `app.py` `check_auth`: la vecchia mappa blueprint→permesso (un solo
+  permesso, nessuna distinzione GET/POST) sostituita da
+  blueprint→sezione + una manciata di override per endpoint dove un
+  blueprint contiene più sezioni concettuali (es. `attivita_ist` ha
+  sia "Attività istituzionali" che "Dipartimenti"; `incarichi` ha sia
+  "Assegna incarichi" che, per due route, "Dati istituto"). A parità
+  di sezione, il livello "visualizza" ora blocca davvero le richieste
+  non-GET — prima poteva comunque scrivere, il controllo non
+  distingueva. `sync`/`sync_conflitti` restano hardcoded dsga_only
+  (cancellano/ricreano dati).
+- Pagina `/impostazioni/permessi`: riservata **letteralmente** al
+  ruolo `ds` (non tramite il sistema di permessi normale — nemmeno il
+  DSGA può aprirla, scelta esplicita dell'utente). Matrice mostrata
+  come tabella con un `<select>` colorato per cella.
+- Voci di nav e card di Impostazioni nascoste per sezione (nuovo
+  helper Jinja `puo_vedere(sezione)`) — non è il controllo di sicurezza
+  (quello resta `check_auth`, vale anche per URL digitati a mano), ma
+  evita che un ruolo veda in menu qualcosa che non può aprire. Bug
+  trovato e corretto in verifica: l'hub `/impostazioni` stesso
+  ereditava di default la sezione "istituto" (esclusa) dal suo
+  blueprint, bloccando l'accesso alla pagina anche solo per vederne le
+  card permesse — serviva un override esplicito a "nessun cancello".
+
+Verificato: 110/110 template passano il parser Jinja; test end-to-end
+via `test_client` per ognuno dei 4 ruoli configurabili + dsga +
+display (login, redirect display, blocco GET/POST secondo livello,
+hub Impostazioni raggiungibile da tutti, pagina Permessi riservata al
+solo ds anche per il dsga); salvataggio della matrice con effetto
+immediato verificato nella stessa sessione (un cambio da "visualizza"
+a "modifica" sblocca subito la POST corrispondente); controllo visivo
+della pagina Permessi e della nav filtrata con un utente di prova
+ruolo ds.
+
 **Aggiornamento Task 47 — IRC incluso in CONTRATTI_OK, rinomina
 etichette tipo_contratto, controllo indisponibilità in Presenze**:
 Roberto ha corretto tre punti dopo la voce precedente.
