@@ -98,12 +98,9 @@
                 <select name="tipo_contratto">
                     <option value="">— non spec. —</option>
                     {% set tc = docente.tipo_contratto if docente else '' %}
-                    <option value="TI"            {% if tc=='TI' %}selected{% endif %}>TI — Indeterminato</option>
-                    <option value="IRC"           {% if tc=='IRC' %}selected{% endif %}>IRC — Religione</option>
-                    <option value="TD_annuale"    {% if tc=='TD_annuale' %}selected{% endif %}>TD annuale</option>
-                    <option value="TD_GS"         {% if tc=='TD_GS' %}selected{% endif %}>TD fino a GS</option>
-                    <option value="supplente"     {% if tc=='supplente' %}selected{% endif %}>Supplente breve</option>
-                    <option value="potenziamento" {% if tc=='potenziamento' %}selected{% endif %}>Potenziamento</option>
+                    {% for valore, etichetta in tipo_contratto_labels.items() %}
+                    <option value="{{ valore }}" {% if tc==valore %}selected{% endif %}>{{ etichetta }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="form-group" style="flex:1; margin-bottom:0;">

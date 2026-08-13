@@ -1,6 +1,29 @@
 from models import db
 from datetime import datetime
 
+# Etichette leggibili per Docente.tipo_contratto — unica fonte di verità,
+# usata da tutti i form e le pagine che mostrano il tipo di contratto.
+# Nota (chiarito da Roberto, sessione Task 47): i valori memorizzati non
+# cambiano (nessuna migrazione sui dati esistenti), è cambiata solo
+# l'etichetta mostrata, perché due punti dell'app la mostravano diversa
+# e comunque imprecisa:
+#   - valore 'TD_GS'     -> è un TD con contratto fisso fino al 30 giugno
+#                            (nessuna proroga), NON fino al giorno scrutini
+#                            come il nome lasciava intendere.
+#   - valore 'supplente' -> è in realtà il supplente breve la cui supplenza,
+#                            se rientra nell'art. 37 CCNL, viene prorogata
+#                            d'ufficio dal termine delle lezioni fino al
+#                            giorno conclusivo degli scrutini (GS).
+TIPO_CONTRATTO_LABELS = {
+    'TI':            'TI — Indeterminato',
+    'IRC':           'IRC — Religione',
+    'TD_annuale':    'TD annuale',
+    'TD_GS':         'TD 30 giugno',
+    'supplente':     'TD fino a GS',
+    'potenziamento': 'Potenziamento',
+}
+
+
 class Docente(db.Model):
     __tablename__ = 'docenti'
 
@@ -33,6 +56,10 @@ class Docente(db.Model):
     ore_contratto_pt  = db.Column(db.Integer, nullable=True)  # ore effettive contratto PT
     # Orario spezzato: JSON es. {'0':3,'3':2} = lun dalla 3a, gio dalla 2a va all'altra sede
     ora_uscita_json   = db.Column(db.String(60), nullable=True)
+
+    @property
+    def tipo_contratto_label(self):
+        return TIPO_CONTRATTO_LABELS.get(self.tipo_contratto, self.tipo_contratto)
 
     @property
     def ora_uscita_map(self):

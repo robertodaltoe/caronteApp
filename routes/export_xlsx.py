@@ -265,7 +265,7 @@ def _export_p7(anno):
         status_map = {'presente': 'Presente', 'ap_entrante': 'AP Entrante',
                       'ap_uscente': 'AP Uscente', 'aspettativa': 'Aspettativa'}
         bg = GIAL if d.status_presenza in ('ap_uscente', 'aspettativa') else None
-        r = _row(ws, r, [d.cognome, d.nome, d.tipo_contratto or '',
+        r = _row(ws, r, [d.cognome, d.nome, d.tipo_contratto_label if d.tipo_contratto else '',
                           status_map.get(d.status_presenza or 'presente', ''),
                           d.ore_max_effettive, cc.codice if cc else '', d.scuola_ap or ''],
                  bg=bg)
@@ -701,7 +701,7 @@ def _export_p10(anno):
         if not materie:
             continue
         nomi = ', '.join(m.materia.nome_breve or m.materia.nome for m in materie)
-        r = _row(ws, r, [f'{d.cognome} {d.nome}', d.tipo_contratto or '', nomi])
+        r = _row(ws, r, [f'{d.cognome} {d.nome}', d.tipo_contratto_label if d.tipo_contratto else '', nomi])
     _border_all(ws, 4, r-1, 1, 3)
     return wb
 

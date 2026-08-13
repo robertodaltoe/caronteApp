@@ -128,7 +128,7 @@
     {% for d in td_anno %}
     <div style="font-size:.8rem; padding:3px 0; color:#374151;">
         {{ d.cognome }} {{ d.nome }}
-        <span style="font-size:.72rem; color:var(--grigio);">({{ d.tipo_contratto }})</span>
+        <span style="font-size:.72rem; color:var(--grigio);">({{ d.tipo_contratto_label }})</span>
     </div>
     {% endfor %}
     {% endif %}
@@ -166,8 +166,8 @@
                 <option value="TI">TI — Tempo indeterminato</option>
                 <option value="IRC">IRC — Religione</option>
                 <option value="TD_annuale">TD annuale</option>
-                <option value="TD_GS">TD graduatoria</option>
-                <option value="supplente">Supplente breve</option>
+                <option value="TD_GS">TD 30 giugno</option>
+                <option value="supplente">TD fino a GS</option>
                 <option value="ap_entrante">AP Entrante (titolare altrove)</option>
             </select>
         </div>
@@ -215,7 +215,7 @@
             <span style="flex:1; font-weight:{{ '600' if status != 'presente' else '400' }};">
                 {{ d.cognome }} {{ d.nome }}
                 {% if d.tipo_contratto != 'TI' %}
-                <span style="font-size:.68rem; color:var(--grigio);">({{ d.tipo_contratto }})</span>
+                <span style="font-size:.68rem; color:var(--grigio);">({{ d.tipo_contratto_label }})</span>
                 {% endif %}
                 {% if status == 'ap_uscente' %}
                 <span style="font-size:.68rem; color:#f59e0b;">→︎ AP uscente</span>

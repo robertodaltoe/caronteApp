@@ -15,7 +15,7 @@ DATA_FINE   = date(2026, 7, 4)
 
 ANNO_AGO     = _get_anno()
 PERIODO_AGO  = 'prove_agosto'
-CONTRATTI_OK = ('TI', 'TD_annuale')  # solo tempo indeterminato + tempo determinato annuale
+CONTRATTI_OK = ('TI', 'TD_annuale', 'IRC')  # in servizio fino al 31 agosto (IRC ha contratto fino al 31/8)
 
 TIPO_PROVA_LABEL = {
     'scritto':       '✎︎️ Scritto',

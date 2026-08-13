@@ -164,6 +164,10 @@ def create_app(avvio_con_reloader=True):
     # Globale (non solo sul blueprint impostazione_anno): serve anche nelle
     # pagine "4b. Aule" e "9. Assegnazioni", che vivono in altri blueprint.
     app.context_processor(lambda: dict(nav_steps=_nav_steps))
+    # Etichette tipo_contratto — unica fonte di verità (models/docente.py),
+    # usata dai dropdown in più blueprint (docenti, impostazione_anno).
+    from models.docente import TIPO_CONTRATTO_LABELS
+    app.context_processor(lambda: dict(tipo_contratto_labels=TIPO_CONTRATTO_LABELS))
     from routes.recupero import recupero_bp
     app.register_blueprint(recupero_bp)
     from routes.rientro import rientro_bp

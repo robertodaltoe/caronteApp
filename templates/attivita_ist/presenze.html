@@ -17,6 +17,10 @@
 .btn-giustificato.attivo { background:var(--giallo); color:white; border-color:var(--giallo); }
 .badge-assenza { font-size:.68rem; background:var(--rosso-bg); color:var(--rosso);
     border-radius:4px; padding:1px 6px; margin-left:4px; }
+.badge-non-servizio { font-size:.68rem; background:#fef3c7; color:#92400e;
+    border-radius:4px; padding:1px 6px; margin-left:4px; font-weight:700; }
+.badge-indisponibile { font-size:.68rem; background:#e0e7ff; color:#3730a3;
+    border-radius:4px; padding:1px 6px; margin-left:4px; font-weight:700; }
 .contatore { display:flex; gap:16px; margin-bottom:16px; }
 .cnt-box { padding:10px 16px; border-radius:8px; text-align:center; flex:1; }
 </style>
@@ -69,11 +73,26 @@
 <div class="card" style="padding:16px 20px;">
     {% for p in evento.presenze | sort(attribute='docente.cognome') %}
     {% set assenza = assenze_giorno.get(p.id_docente) %}
+    {% set indisp_list = indisponibilita_giorno.get(p.id_docente) %}
     <div class="pres-row">
         <div style="flex:1; font-weight:700; font-size:.9rem;">
             {{ p.docente.cognome }}{% if p.docente.nome %} {{ p.docente.nome[0] }}.{% endif %}
             {% if assenza %}
             <span class="badge-assenza">{{ assenza.motivo }}</span>
+            {% endif %}
+            {% if indisp_list %}
+            <span class="badge-indisponibile" title="Indisponibilità dichiarata per questa data: verifica un possibile conflitto.">
+                {{ icon('calendar') }} indisponibile — {{ indisp_list | map(attribute='motivo') | join(', ') }}
+            </span>
+            {% endif %}
+            {% if p.id_docente in non_in_servizio_ids %}
+            <span class="badge-non-servizio" title="Non risulta più in servizio: verifica se va nominato un sostituto.">
+                {{ icon('warning') }} non più in servizio
+            </span>
+            {% if evento.tipo == 'scrutinio' %}
+            <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=evento.id) }}"
+               style="font-size:.7rem; margin-left:4px;">→︎ nomina sostituto</a>
+            {% endif %}
             {% endif %}
         </div>
         <div style="display:flex; gap:6px;">

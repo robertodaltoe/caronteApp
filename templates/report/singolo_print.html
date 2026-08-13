@@ -78,7 +78,7 @@ tr.totali td { font-weight:700; background:#f3e5e2; }
 <div class="sub">
     {% if docente.materia_effettiva %}{{ docente.materia_effettiva }} · {% endif %}
     {{ docente.ore_contratto }}h/sett
-    {% if docente.tipo_contratto %} · {{ docente.tipo_contratto }}{% endif %}
+    {% if docente.tipo_contratto %} · {{ docente.tipo_contratto_label }}{% endif %}
     &nbsp;—&nbsp; Aggiornato il {{ oggi.strftime('%d/%m/%Y') }}
 </div>
 

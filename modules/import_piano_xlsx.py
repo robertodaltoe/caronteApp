@@ -93,6 +93,34 @@ def _classify_sezione(titolo):
     return 'altro'
 
 
+_ROMANI = {'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8}
+
+
+def _normalizza_classe_romana(classe_v):
+    """
+    Converte l'anno-corso da numero romano ad arabo, come usato in Caronte
+    (es. 'II A' -> '2A', 'III' -> '3'). Lascia invariati i valori già in
+    numeri arabi o non riconosciuti (es. '3A' resta '3A').
+    """
+    if not classe_v:
+        return classe_v
+    s = str(classe_v).strip()
+    toks = s.split()
+    if not toks:
+        return s
+    primo = toks[0].upper()
+    if primo not in _ROMANI:
+        return s
+    numero = _ROMANI[primo]
+    resto = toks[1:]
+    if resto and re.fullmatch(r'[A-Za-z]', resto[0]):
+        sezione = resto[0].upper()
+        coda = ' '.join(resto[1:])
+        return f'{numero}{sezione}' + (f' {coda}' if coda else '')
+    coda = ' '.join(resto)
+    return f'{numero}' + (f' {coda}' if coda else '')
+
+
 def _classify_evento(label):
     l = label.upper()
     if 'COLLEGIO' in l:
@@ -242,7 +270,7 @@ def parse_piano_xlsx(file_bytes_or_path):
                     r += 1
                     continue
                 indirizzo = ws.cell(r, col_indirizzo).value
-                classe_v  = ws.cell(r, col_classe).value
+                classe_v  = _normalizza_classe_romana(ws.cell(r, col_classe).value)
                 classe = None
                 parts = [str(x).strip() for x in (classe_v, indirizzo) if x]
                 if parts:

@@ -15,10 +15,55 @@ def _anno_scolastico(d=None):
     return f'{d.year}-{d.year+1}' if d.month >= 9 else f'{d.year-1}-{d.year}'
 
 
+def _non_in_servizio_per_data(data_evento):
+    """
+    Docenti non disponibili per un evento in una data specifica.
+    Due controlli distinti, applicati insieme:
+
+    1. Non in servizio nell'anno scolastico dell'evento (uscita già
+       segnalata, AP uscente, aspettativa) — vedi
+       routes/docenti.py::_docenti_non_in_servizio.
+
+    2. SOLO per eventi di luglio/agosto: il contratto potrebbe essere
+       già scaduto pur restando nello stesso anno scolastico. I supplenti
+       brevi e i TD "fino a GS" (giorno degli scrutini, CCNL — contratto
+       prorogato fino al termine delle operazioni di scrutinio, fine
+       giugno) NON sono in servizio a luglio/agosto; solo TI e TD annuale
+       lo sono, fino al 31 agosto compreso. Stessa regola già in uso in
+       routes/recupero_costanti.py::CONTRATTI_OK per le prove di recupero
+       di agosto — riusata qui invece di reinventarla.
+    """
+    from routes.docenti import _docenti_non_in_servizio
+    anno_evento = _anno_scolastico(data_evento)
+    esclusi = {d.id for d in _docenti_non_in_servizio(anno_evento)}
+
+    if data_evento.month in (7, 8):
+        from routes.recupero_costanti import CONTRATTI_OK
+        esclusi |= {d.id for d in Docente.query.filter(
+            Docente.attivo == True,
+            db.or_(Docente.tipo_contratto == None,
+                   ~Docente.tipo_contratto.in_(CONTRATTI_OK))
+        ).all()}
+
+    return esclusi
+
+
 
 def _preset_partecipanti(attivita):
-    """Genera lista docenti attivi previsti per l'evento in base al tipo."""
-    docenti_attivi = Docente.query.filter_by(attivo=True).all()
+    """
+    Genera lista docenti previsti per l'evento in base al tipo, escludendo
+    chi non è in servizio alla data dell'evento — vedi
+    _non_in_servizio_per_data() (uscita già segnalata, AP uscente/
+    aspettativa, e per luglio/agosto anche il tipo di contratto scaduto:
+    supplenti brevi e TD fino a GS). Senza questo controllo, un docente
+    non più disponibile continuerebbe a comparire come partecipante
+    previsto anche dopo che ha lasciato la scuola o dopo la scadenza del
+    contratto.
+    """
+    esclusi_ids = _non_in_servizio_per_data(attivita.data)
+
+    docenti_attivi = [d for d in Docente.query.filter_by(attivo=True).all()
+                      if d.id not in esclusi_ids]
     tipo = attivita.tipo
 
     if tipo in ('collegio', 'incontro_famiglie', 'formazione'):
@@ -28,7 +73,7 @@ def _preset_partecipanti(attivita):
         from models.orario_docente import OrarioDocente
         ids = {s.id_docente for s in OrarioDocente.query.filter_by(
             classe=attivita.classe).all()}
-        return list(ids)
+        return [i for i in ids if i not in esclusi_ids]
 
     if tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \
             and attivita.id_dipartimento:
@@ -36,12 +81,11 @@ def _preset_partecipanti(attivita):
         # riunione di dipartimento programmata per marzo 2027 deve
         # guardare le materie del 2026-2027, indipendentemente da
         # quando la si sta creando.
-        anno_evento = _anno_scolastico(attivita.data)
         ids = {dm.id_docente for dm in DocenteMateria.query.join(Materia).filter(
             Materia.id_dipartimento == attivita.id_dipartimento,
-            DocenteMateria.anno_scol == anno_evento
+            DocenteMateria.anno_scol == _anno_scolastico(attivita.data)
         ).all()}
-        return list(ids)
+        return [i for i in ids if i not in esclusi_ids]
 
     if tipo == 'glo':
         return []  # solo manuale
@@ -222,12 +266,32 @@ def presenze(id):
 
     assenze_giorno = {a.id_docente: a for a in
                       Assenza.query.filter_by(data=evento.data).all()}
+
+    # Indisponibilità dichiarate per la stessa data (impegni già noti:
+    # colloqui, uscite, gare, formazione, ecc.) — non escludono di per sé
+    # dalla convocazione (a differenza delle assenze), ma vanno segnalate
+    # perché indicano un possibile conflitto da verificare.
+    from models.indisponibilita import Indisponibilita
+    indisponibilita_giorno = {}
+    for i in Indisponibilita.query.filter_by(data=evento.data).all():
+        indisponibilita_giorno.setdefault(i.id_docente, []).append(i)
+
     docenti_extra = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     presenze_map  = {p.id_docente: p for p in evento.presenze}
+
+    # Docenti convocati (già presenti in elenco) ma non più in servizio alla
+    # data dell'evento: segnalati con un avviso per ricordare di nominare un
+    # sostituto (per gli scrutini si può usare la funzione "Sostituzioni").
+    # Include anche, per gli eventi di luglio/agosto, chi ha un contratto già
+    # scaduto (supplenti brevi, TD fino a GS) — vedi _non_in_servizio_per_data.
+    non_in_servizio_ids = _non_in_servizio_per_data(evento.data)
+
     return render_template('attivita_ist/presenze.html',
         evento=evento, presenze_map=presenze_map,
         assenze_giorno=assenze_giorno,
+        indisponibilita_giorno=indisponibilita_giorno,
         docenti_extra=docenti_extra,
+        non_in_servizio_ids=non_in_servizio_ids,
     )
 
 

@@ -43,7 +43,7 @@
     <tr><td>Email</td><td>{{ docente.email or '—' }}</td></tr>
     <tr><td>Ruolo didattico</td><td>{{ docente.ruolo or '—' }}</td></tr>
     <tr><td>Materia / classe di concorso</td><td>{{ docente.materia_effettiva or '—' }}</td></tr>
-    <tr><td>Tipo contratto</td><td>{{ docente.tipo_contratto or '—' }}</td></tr>
+    <tr><td>Tipo contratto</td><td>{{ docente.tipo_contratto_label if docente.tipo_contratto else '—' }}</td></tr>
     <tr><td>Ore di contratto</td><td>{{ docente.ore_contratto or '—' }}</td></tr>
     <tr><td>Part-time</td><td>{{ 'Sì (' ~ (docente.ore_contratto_pt or '?') ~ ' ore)' if docente.part_time else 'No' }}</td></tr>
     <tr><td>Altra scuola di servizio</td><td>{{ docente.altra_scuola or '—' }}</td></tr>

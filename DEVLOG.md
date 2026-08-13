@@ -4,6 +4,160 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+**Aggiornamento Task 47 — IRC incluso in CONTRATTI_OK, rinomina
+etichette tipo_contratto, controllo indisponibilità in Presenze**:
+Roberto ha corretto tre punti dopo la voce precedente.
+
+1. **IRC ha contratto fino al 31 agosto.** L'aggiunta di IRC a
+   `CONTRATTI_OK` nella voce precedente non era un effetto collaterale
+   da valutare: è corretta. Confermato, nessuna ulteriore modifica
+   necessaria (il valore era già stato aggiunto). Beneficio indiretto:
+   la stessa costante è condivisa con `routes/recupero_agosto.py`
+   (disponibilità docenti per le prove di recupero di agosto), quindi
+   corregge lo stesso problema anche lì.
+
+2. **Le etichette "Supplente breve" e "TD fino a GS" erano scambiate.**
+   Il valore interno `supplente` è in realtà il contratto prorogato
+   d'ufficio (CCNL) fino al giorno degli scrutini → va etichettato
+   "TD fino a GS". Il valore interno `TD_GS` è invece il contratto a
+   termine che si ferma esattamente al 30 giugno, senza proroga → va
+   etichettato "TD 30 giugno". **Scelta deliberata: solo le etichette
+   mostrate in interfaccia sono cambiate, i valori salvati nel database
+   (`supplente`, `TD_GS`) restano identici** — non serve nessuna
+   migrazione dati, perché nessun docente reale cambia categoria: è
+   sempre stato solo un problema di come veniva scritto in schermo il
+   nome del contratto, non di quali docenti vi appartenessero. Creato
+   `models/docente.py::TIPO_CONTRATTO_LABELS` come unica fonte di
+   verità (dict valore→etichetta) e proprietà `Docente.tipo_contratto_label`;
+   iniettato globalmente via context processor in `app.py`. Aggiornati
+   tutti i punti che mostravano l'etichetta grezza: `templates/docenti.html`,
+   `templates/docente_form.html` (dropdown ora generato dal dict),
+   `templates/impostazione_anno/docenti_anno.html` (dropdown con opzione
+   aggiuntiva `ap_entrante` non nel dict condiviso, corretto a mano),
+   `templates/docenti/esporta_dati.html`, `templates/report/singolo.html`,
+   `templates/report/singolo_print.html`, `templates/banca_ore/singolo.html`,
+   `routes/export_xlsx.py` (due export xlsx). Verificato su copia
+   isolata: `/docenti` e `/docenti/nuovo` mostrano "TD 30 giugno" e
+   "TD fino a GS" correttamente.
+
+3. **Controllo indisponibilità in Attività Istituzionali — mancava
+   davvero.** Verificato che assenze e permessi sono già coperti (in
+   Caronte i permessi sono righe di `Assenza` con `motivo` specifico:
+   permesso_orario/personale/sindacale/retribuito — la query esistente
+   su `Assenza.query.filter_by(data=evento.data)` li intercetta già,
+   sia in `_auto_presenze()` che in `presenze()`). Il modello
+   `Indisponibilita` (colloqui/consiglio/uscita/progetto/gara/
+   formazione/altro), invece, pur usato in molti altri moduli
+   dell'app, non era mai stato collegato ad Attività Istituzionali.
+   Aggiunta in `routes/attivita_ist.py::presenze()` una query
+   `Indisponibilita.query.filter_by(data=evento.data)` (dict
+   `indisponibilita_giorno`, per gestire eventuali indisponibilità
+   multiple nello stesso giorno), passata al template. In
+   `presenze.html` aggiunto un badge dedicato (`.badge-indisponibile`,
+   colore distinto dal rosso delle assenze e dal giallo del "non più in
+   servizio") che mostra il/i motivo/i accanto al nome del docente — è
+   solo un avviso informativo, non esclude dalla convocazione (a
+   differenza delle assenze/non-in-servizio), perché un'indisponibilità
+   dichiarata non impedisce di forma la partecipazione, va solo
+   verificata come possibile conflitto.
+
+   Verificato su copia isolata del database reale: trovato un caso
+   reale di sovrapposizione (evento id 46, "Scrutinio finale CAT V A"
+   del 6/6/2026, docente PALERMO Giuseppe con indisponibilità
+   "progetto" nello stesso giorno) — il badge compare correttamente
+   nella pagina Presenze.
+
+**Aggiornamento Task 47 — fine contratto (TD_GS/supplenti brevi) per gli
+eventi di luglio/agosto**: Roberto ha fatto notare che la correzione
+precedente (esclusione docenti non in servizio dai partecipanti
+preventivati) non bastava per gli scrutini del 31 agosto: TI e
+TD_annuale restano in servizio fino al 31 agosto compreso, ma i
+supplenti brevi ("scadenza contratto fine delle lezioni") e i TD fino
+a GS (**GS = Giorno degli Scrutini**, CCNL — il contratto viene
+prorogato dal termine delle lezioni fino al giorno conclusivo degli
+scrutini, cioè fine giugno) non lo sono più. Verificato che questa
+distinzione NON era considerata.
+
+Trovato che questa esatta regola esiste già altrove nell'app, per uno
+scopo diverso: `routes/recupero_costanti.py::CONTRATTI_OK = ('TI',
+'TD_annuale')`, usata da `routes/recupero_agosto.py` per decidere chi
+è disponibile per le prove di recupero di agosto. Invece di
+duplicarla, creata `routes/attivita_ist.py::_non_in_servizio_per_data()`
+che combina: (1) la stessa esclusione per anno scolastico di prima
+(uscita/AP uscente/aspettativa), sempre attiva; (2) **solo per eventi
+datati luglio o agosto**, esclude anche chi ha `tipo_contratto` non in
+`CONTRATTI_OK` (quindi TD_GS, supplente, e — conseguenza diretta del
+riuso della stessa costante — anche IRC, che nell'app non rientra in
+CONTRATTI_OK: segnalato a Roberto come effetto collaterale da valutare,
+non deciso qui). Sia `_preset_partecipanti()` che il badge "non più in
+servizio" in `presenze.html` usano ora questa funzione unica al posto
+della sola `_docenti_non_in_servizio`.
+
+Verificato su copia isolata del database reale: per un evento
+fittizio del 31/8/2026 gli esclusi salgono da 10 (solo uscita/
+aspettativa per l'anno 2025-2026, a cui appartiene il 31 agosto per
+convenzione dell'app — vedi `_anno_scolastico()`, l'anno scolastico
+cambia a settembre) a 34 (+24: 16 TD_GS + 6 supplenti + 2 IRC),
+nessuna sovrapposizione tra i due gruppi. Trovato un caso reale in
+`OrarioDocente`: il docente BADASA (contratto "supplente", classe 1A
+CAT) risulta correttamente escluso dal preset di uno scrutinio
+ipotetico del 31/8/2026 e correttamente incluso per lo stesso
+scrutinio ipotetico all'8/6/2026 (quando il suo contratto era ancora
+valido). Database reale non toccato.
+
+**Aggiornamento Task 47 — numeri romani nell'import xlsx + esclusione
+docenti non più in servizio dai partecipanti preventivati**:
+
+1. `modules/import_piano_xlsx.py::_normalizza_classe_romana()` — la
+   colonna Classe del file xlsx può contenere l'anno-corso in numero
+   romano (es. "II A", "III"), come nel vecchio formato originale:
+   viene ora convertito in numero arabo nel formato usato da Caronte
+   (es. "2A", "3"), lasciando invariati i valori già in numeri arabi.
+   Provato riconvertendo "AGOSTO_PIANO DELLE ATTIVITA_2025_26.xlsx"
+   (vedi voce precedente): "II A" → "2A", "III" → "3", ecc.
+
+2. Roberto ha chiesto se l'assegnazione automatica dei partecipanti
+   (`_preset_partecipanti` in `routes/attivita_ist.py`) tenesse già
+   conto dei docenti non più in servizio. Verificato che **no**: il
+   filtro esistente controllava solo `Docente.attivo == True`, che
+   però — come già documentato in `routes/docenti.py::
+   _docenti_non_in_servizio` — non si aggiorna in tempo reale quando
+   un docente viene segnalato in uscita (`segna_uscita` in
+   `impostazione_anno.py` imposta solo `anno_scol_uscita`/
+   `motivo_uscita`, il flag `attivo` passa a `False` solo al
+   passaggio formale di cambio anno) né tiene conto di AP
+   uscente/aspettativa (`status_presenza`). Confermato con un caso
+   reale nel database (sola lettura, copia isolata): 34 docenti con
+   `anno_scol_uscita='2026-2027'` risultavano comunque tra i
+   partecipanti preventivati del Collegio dei docenti del 1°
+   settembre 2026 (evento id 41, anno scolastico 2026-2027).
+
+   Corretto `_preset_partecipanti()`: ora esclude, per tutti i tipi di
+   evento, i docenti restituiti da `_docenti_non_in_servizio(anno)`
+   calcolato sull'anno scolastico della **data dell'evento** (non
+   "oggi" — un Consiglio di marzo 2027 guarda chi è in servizio nel
+   2026/27). Verificato: sullo stesso evento fittizio (Collegio
+   7/9/2026, 93 docenti attivi) i partecipanti preventivati scendono
+   correttamente da 93 a 57 (esclusi i 34 usciti + 2 ap_uscente/
+   aspettativa).
+
+   Aggiunta anche una segnalazione visiva in
+   `templates/attivita_ist/presenze.html` (nuovo badge giallo "non più
+   in servizio") per i partecipanti **già presenti** in un evento
+   (es. eventi importati prima di questa correzione, o aggiunti a
+   mano) che risultano non più in servizio alla data dell'evento —
+   con link diretto a "nomina sostituto" quando l'evento è uno
+   scrutinio (route `sostituzione_scrutinio` già esistente). Verificato
+   sull'evento reale id 41: 34 badge mostrati, uno per ciascuno dei 34
+   docenti non in servizio tra i suoi partecipanti.
+
+   Tutto verificato su copie isolate del database reale (mai scritto),
+   con bypass login `CARONTE_SKIP_LOGIN=1` + `CARONTE_DEBUG=1` (nota:
+   il bypass ora richiede **entrambe** le variabili, non più solo la
+   prima — cambiato rispetto a quanto documentato nella voce
+   precedente di questo stesso Task, verificato leggendo `app.py`
+   aggiornato prima di ripetere i test).
+
 ## Sessione 48 — Audit larghezze colonne su tutte le tabelle dell'app (Cowork)
 
 **Contesto:** segnalato che in `/utenti` la colonna "Nome" occupava
