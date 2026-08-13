@@ -810,16 +810,27 @@ def sostituzione_scrutinio(id):
                 succ, succ_ini = ev2, ev2_ini
         return prec, succ
 
-    def _score_candidato(d, assente_id):
+    def _score_candidato(d, assente_id, riun_prec, riun_succ):
         """
         Priorità (score più basso = priorità più alta):
-        1. Stessa materia dell'assente
-        2. Stesso dipartimento
-        3. Ha un'altra riunione prima o dopo
-        4. È disponibile lo stesso giorno (non impegnato in scrutini paralleli)
-        5. Generico disponibile
+        1. Stessa materia dell'assente               (10)
+        2. Stesso dipartimento                        (20)
+        3. Libero e ha un'altra riunione lo stesso giorno:
+           - PRIMA di questo scrutinio (già a scuola, è la scelta più
+             comoda) — range 21-25, più vicina nel tempo = priorità
+             maggiore
+           - DOPO questo scrutinio (deve comunque tornare/restare) —
+             range 26-30, stessa logica di vicinanza oraria
+           A parità di condizioni, "prima" batte sempre "dopo": chi è
+           già a scuola per un altro impegno è la scelta più pratica,
+           chi ha impegni solo dopo potrebbe non essere ancora arrivato.
+        4. Generico disponibile, nessun'altra riunione quel giorno (50)
+
+        Segnalato da Roberto (Task 47): la versione precedente non
+        distingueva riunioni prima/dopo né la vicinanza oraria — un
+        docente con riunione lontana nel pomeriggio finiva ordinato
+        alla pari (o meglio) di uno realmente comodo per l'orario.
         """
-        score = 50
         if d.id in assenti_giorno: return 999  # non disponibile
         if d.id in impegnati_altri: return 998
 
@@ -833,22 +844,33 @@ def sostituzione_scrutinio(id):
             id_docente=d.id, anno_scol=anno_evento).all()}
 
         if assente_mat_ids & cand_mat_ids:
-            score = 10  # stessa materia
+            return 10  # stessa materia
 
-        elif assente_mat_ids and cand_mat_ids:
+        if assente_mat_ids and cand_mat_ids:
             # Stesso dipartimento?
             assente_dips = {m.id_dipartimento for m in Materia.query.filter(
                 Materia.id.in_(assente_mat_ids)).all()}
             cand_dips = {m.id_dipartimento for m in Materia.query.filter(
                 Materia.id.in_(cand_mat_ids)).all()}
             if assente_dips & cand_dips:
-                score = 20
+                return 20
 
-        # Ha altra riunione quel giorno (vicina orariamente)
-        if riunioni_per_docente.get(d.id) and score > 30:
-            score = 30
+        # Riunione prima: quanto è vicina (in minuti) al termine dello
+        # scrutinio? Più è vicina, più il docente è "comodo" — score
+        # 21 (subito prima) fino a 25 (fino a 8h prima, poi resta a 25).
+        if riun_prec:
+            prec_fin = _to_min(riun_prec.ora_fine) if riun_prec.ora_fine else _to_min(riun_prec.ora_inizio) + 45
+            gap = max(0, ev_ini - prec_fin)
+            return 21 + min(gap / 480, 1) * 4
 
-        return score
+        # Riunione dopo: stessa logica ma range 26-30, sempre dopo
+        # (peggiore) di "riunione prima" a parità di vicinanza.
+        if riun_succ:
+            succ_ini = _to_min(riun_succ.ora_inizio)
+            gap = max(0, succ_ini - ev_fin)
+            return 26 + min(gap / 480, 1) * 4
+
+        return 50  # generico, nessun'altra riunione quel giorno
 
     # Calcola score per ogni candidato rispetto a ogni assente
     sostituzioni_attuali = {s.id_assente: s for s in
@@ -868,8 +890,10 @@ def sostituzione_scrutinio(id):
                           if d.id != assente.id
                           and d.id not in assenti_giorno
                           and d.id not in gia_impegnati_riunione]
+        cands_prec_succ = {d.id: _riunione_prec_succ(d.id) for d in candidati_riga}
         cands_scored = sorted(
-            [(d, _score_candidato(d, assente.id), *_riunione_prec_succ(d.id))
+            [(d, _score_candidato(d, assente.id, *cands_prec_succ[d.id]),
+              *cands_prec_succ[d.id])
              for d in candidati_riga],
             key=lambda x: x[1]
         )

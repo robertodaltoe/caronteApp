@@ -113,6 +113,42 @@ a "modifica" sblocca subito la POST corrispondente); controllo visivo
 della pagina Permessi e della nav filtrata con un utente di prova
 ruolo ds.
 
+**Aggiornamento Task 47 — punteggio candidati sostituzione scrutini
+ricalibrato su prima/dopo e vicinanza oraria**: Roberto ha segnalato
+che in `/attivita-ist/<id>/sostituzioni` i docenti suggeriti come
+possibili sostituti comparivano sostanzialmente in ordine alfabetico
+e capitava di vedere in buona posizione un docente con un'altra
+riunione lontana (es. nel pomeriggio) mentre lo scrutinio da coprire
+era di mattina.
+
+Causa: `_score_candidato()` in `routes/attivita_ist.py` assegnava lo
+stesso punteggio fisso (30) a **qualunque** docente con un'altra
+riunione quel giorno, senza distinguere se la riunione fosse prima o
+dopo lo scrutinio né quanto fosse vicina in orario — per questo, a
+parità di punteggio, l'ordine finale ricadeva sul cognome (ordine di
+`candidati_base`).
+
+Ricalibrato lo score, usando i dati (`riun_prec`/`riun_succ`) già
+calcolati da `_riunione_prec_succ()` — già mostrati in pagina, solo
+non usati per l'ordinamento:
+- Stessa materia → 10, stesso dipartimento → 20 (invariato).
+- **Riunione prima** dello scrutinio (già a scuola, la scelta più
+  comoda) → punteggio 21–25, più vicina nel tempo = più in alto.
+- **Riunione dopo** → punteggio 26–30, stessa logica di vicinanza,
+  ma sempre dopo "riunione prima" a parità di condizioni.
+- Nessun'altra riunione quel giorno → 50 (invariato).
+La soglia usata dal template per l'etichetta "③ riunione"
+(`score <= 30`) restava valida senza toccare `sostituzioni_scrutinio.html`.
+
+Verificato su copia isolata del database reale con due scrutini
+reali del 6/6/2026: per uno scrutinio delle 10:30–11:15, i candidati
+con riunione alle 11:15 (subito dopo) sono comparsi prima di quelli
+con riunione alle 12:45 (più lontana); per uno scrutinio delle
+14:45–15:30, i candidati con riunione conclusa proprio alle 14:45
+(subito prima, quindi già a scuola) sono comparsi in cima, davanti a
+quelli con riunione solo dopo — comportamento corretto secondo la
+richiesta di Roberto.
+
 **Aggiornamento Task 47 — IRC incluso in CONTRATTI_OK, rinomina
 etichette tipo_contratto, controllo indisponibilità in Presenze**:
 Roberto ha corretto tre punti dopo la voce precedente.
