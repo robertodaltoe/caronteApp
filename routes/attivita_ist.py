@@ -693,6 +693,23 @@ def sostituzione_scrutinio(id):
         data_nomina  = request.form.get('data_nomina') or None
         note         = request.form.get('note', '').strip() or None
 
+        # Un sostituto non può coprire due assenti nella stessa riunione:
+        # controllo anche qui, non solo escludendolo dal menu, perché il
+        # menu è filtrato al caricamento della pagina — due form inviati
+        # da schede diverse aperte insieme scavalcherebbero il filtro lato
+        # client.
+        if id_sostituto:
+            conflitto = SostituzioneScrutinio.query.filter(
+                SostituzioneScrutinio.id_attivita == id,
+                SostituzioneScrutinio.id_assente != id_assente,
+                SostituzioneScrutinio.id_sostituto == int(id_sostituto),
+            ).first()
+            if conflitto:
+                flash(f'{conflitto.sostituto.cognome} è già stato nominato sostituto di '
+                      f'{conflitto.assente.cognome} in questa riunione: non può sostituire '
+                      f'due docenti contemporaneamente.', 'error')
+                return redirect(url_for('attivita_ist.sostituzione_scrutinio', id=id))
+
         sost = SostituzioneScrutinio.query.filter_by(
             id_attivita=id, id_assente=id_assente).first()
         if sost:
@@ -760,6 +777,39 @@ def sostituzione_scrutinio(id):
         if alt_ini < ev_fin and alt_fin > ev_ini:
             impegnati_altri.update(p.id_docente for p in alt.partecipanti)
 
+    # Altre attività istituzionali dello stesso giorno, indicizzate per
+    # docente partecipante: servono sia al punteggio "altra riunione" sia,
+    # per ogni candidato, a trovare la riunione immediatamente precedente
+    # o successiva a questo scrutinio — utile per scegliere chi è comunque
+    # già a scuola in quella fascia oraria.
+    from collections import defaultdict
+    altri_ev_giorno = AttivitaIst.query.filter(
+        AttivitaIst.data == evento.data,
+        AttivitaIst.id != id
+    ).all()
+    riunioni_per_docente = defaultdict(list)
+    for ev2 in altri_ev_giorno:
+        if not ev2.ora_inizio:
+            continue
+        for p2 in ev2.partecipanti:
+            riunioni_per_docente[p2.id_docente].append(ev2)
+
+    def _riunione_prec_succ(docente_id):
+        """Tra le altre riunioni del giorno a cui partecipa questo
+        docente, la più vicina prima e dopo questo scrutinio (per
+        orario), o None se non ce ne sono."""
+        prec = succ = None
+        prec_fin = -1
+        succ_ini = 10**9
+        for ev2 in riunioni_per_docente.get(docente_id, []):
+            ev2_ini = _to_min(ev2.ora_inizio)
+            ev2_fin = _to_min(ev2.ora_fine) if ev2.ora_fine else ev2_ini + 45
+            if ev2_fin <= ev_ini and ev2_fin > prec_fin:
+                prec, prec_fin = ev2, ev2_fin
+            elif ev2_ini >= ev_fin and ev2_ini < succ_ini:
+                succ, succ_ini = ev2, ev2_ini
+        return prec, succ
+
     def _score_candidato(d, assente_id):
         """
         Priorità (score più basso = priorità più alta):
@@ -795,15 +845,8 @@ def sostituzione_scrutinio(id):
                 score = 20
 
         # Ha altra riunione quel giorno (vicina orariamente)
-        altri_ev = AttivitaIst.query.filter(
-            AttivitaIst.data == evento.data,
-            AttivitaIst.id != id
-        ).all()
-        for ev2 in altri_ev:
-            if any(p.id_docente == d.id for p in ev2.partecipanti):
-                if score > 30:
-                    score = 30
-                break
+        if riunioni_per_docente.get(d.id) and score > 30:
+            score = 30
 
         return score
 
@@ -814,26 +857,37 @@ def sostituzione_scrutinio(id):
     righe = []
     for p in presenze_assenti:
         assente = p.docente
+        # Sostituti già nominati per UN ALTRO assente in questa stessa
+        # riunione: non possono comparire come candidati anche qui, non
+        # possono coprire due assenti contemporaneamente.
+        gia_impegnati_riunione = {
+            s.id_sostituto for a_id, s in sostituzioni_attuali.items()
+            if a_id != assente.id and s.id_sostituto
+        }
+        candidati_riga = [d for d in candidati_base
+                          if d.id != assente.id
+                          and d.id not in assenti_giorno
+                          and d.id not in gia_impegnati_riunione]
         cands_scored = sorted(
-            [(d, _score_candidato(d, assente.id)) for d in candidati_base
-             if d.id != assente.id and d.id not in assenti_giorno],
+            [(d, _score_candidato(d, assente.id), *_riunione_prec_succ(d.id))
+             for d in candidati_riga],
             key=lambda x: x[1]
         )
         sost_att = sostituzioni_attuali.get(assente.id)
+        docenti_disp_riga = [d for d in candidati_base
+                             if d.id not in assenti_giorno
+                             and d.id not in impegnati_altri
+                             and d.id not in gia_impegnati_riunione]
         righe.append({
             'presenza': p,
             'assente': assente,
             'candidati': cands_scored[:8],
+            'docenti_disponibili': docenti_disp_riga,
             'sostituzione': sost_att,
         })
-
-    docenti_disponibili = [d for d in candidati_base
-                           if d.id not in assenti_giorno
-                           and d.id not in impegnati_altri]
 
     return render_template('attivita_ist/sostituzioni_scrutinio.html',
         evento=evento,
         righe=righe,
-        docenti_disponibili=docenti_disponibili,
         oggi=date.today(),
     )

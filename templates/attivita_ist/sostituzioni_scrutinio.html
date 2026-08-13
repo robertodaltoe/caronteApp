@@ -95,7 +95,7 @@
                     margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px;">
             Candidati suggeriti
         </div>
-        {% for cand, score in riga.candidati %}
+        {% for cand, score, riun_prec, riun_succ in riga.candidati %}
         {% set prio = 'p1' if score <= 10 else ('p2' if score <= 20 else ('p3' if score <= 30 else 'p4')) %}
         {% set prio_row = 'priorita-1' if score <= 10 else ('priorita-2' if score <= 20 else ('priorita-3' if score <= 30 else 'priorita-altro')) %}
         <div class="cand-row {{ prio_row }}"
@@ -108,6 +108,13 @@
             </span>
             {% if cand.materia_effettiva %}
             <span style="font-size:.75rem; color:var(--grigio);">{{ cand.materia_effettiva }}</span>
+            {% endif %}
+            {% if riun_prec or riun_succ %}
+            <span style="font-size:.7rem; color:#6b7280; white-space:nowrap;">
+                {% if riun_prec %}{{ icon('arrow-left') }} {{ riun_prec.ora_fine or riun_prec.ora_inizio }} {{ riun_prec.classe or riun_prec.titolo }}{% endif %}
+                {% if riun_prec and riun_succ %} · {% endif %}
+                {% if riun_succ %}{{ riun_succ.ora_inizio }} {{ riun_succ.classe or riun_succ.titolo }} {{ icon('arrow') }}{% endif %}
+            </span>
             {% endif %}
         </div>
         {% else %}
@@ -129,7 +136,7 @@
                         style="width:100%; padding:5px 8px; border:1px solid #d1d5db;
                                border-radius:6px; font-size:.84rem;">
                     <option value="">— seleziona —</option>
-                    {% for d in docenti_disponibili %}
+                    {% for d in riga.docenti_disponibili %}
                     <option value="{{ d.id }}"
                         {% if riga.sostituzione and riga.sostituzione.id_sostituto == d.id %}selected{% endif %}>
                         {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
