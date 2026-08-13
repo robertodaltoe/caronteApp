@@ -146,6 +146,11 @@ def login():
             # GDPR: pulisci log vecchi ad ogni login
             try: pulisci_log_vecchi()
             except Exception: pass
+            if u.ruolo == 'display':
+                # Ignora 'next' apposta: questo ruolo vede solo /display,
+                # mai un'altra pagina anche se il link di provenienza lo
+                # suggerisce (vedi anche il redirect fisso in check_auth).
+                return redirect(url_for('display.display'))
             return redirect(next_url)
         else:
             _login_registra_fallimento(ip, username)

@@ -32,7 +32,10 @@
 
 <div class="imp-grid">
 
+{% set vede_orario_globale = g.utente is defined and g.utente.ruolo in ('ds', 'dsga') %}
+
 {# ── CAMBIO ANNO SCOLASTICO ─────────────────────────────────────── #}
+{% if puo_vedere('cambio_anno') or puo_vedere('organico') or puo_vedere('incarichi') or puo_vedere('assegnazioni') %}
 <div class="sez-card" style="grid-column:1/-1; border-left:4px solid var(--bronzo);">
     <div class="sez-title">{{ icon('refresh') }} Anno scolastico{% if anno_piano %} — {{ anno_piano }}{% endif %}</div>
     <div class="sez-desc">
@@ -47,17 +50,22 @@
         <div class="kpi"><div class="kpi-n">{{ n_docenti }}</div><div class="kpi-l">Docenti attivi</div></div>
     </div>
     {% endif %}
+    {% if puo_vedere('cambio_anno') %}
     <a href="{{ url_for('cambio_anno.index') }}" class="imp-link"
        style="border-color:var(--rosso); background:var(--rosso-bg); font-weight:700;">
         {{ icon('refresh') }} Prepara / Attiva nuovo anno scolastico
         <span style="color:var(--rosso); font-weight:700;">{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
+    {% if puo_vedere('organico') %}
     <a href="{{ url_for('impostazione_anno.index') }}" class="imp-link"
        style="border-color:var(--bronzo); background:var(--bronzo-bg);">
         {{ icon('list') }} Hub impostazione anno — 9 passi
         <span style="color:var(--bronzo); font-weight:700;">{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">
+        {% if puo_vedere('organico') %}
         <a href="{{ url_for('impostazione_anno.docenti_anno') }}" class="imp-link">
             {{ icon('person') }} Docenti per anno (TI/TD/uscite)
             <span class="badge-count">{{ n_docenti }} att.</span>
@@ -71,14 +79,20 @@
             {{ icon('chart') }} Dashboard anno
             <span>{{ icon('arrow') }}</span>
         </a>
+        {% endif %}
+        {% if puo_vedere('incarichi') %}
         <a href="{{ url_for('incarichi.index') }}" class="imp-link">
             {{ icon('star') }} Incarichi docenti
             <span>{{ icon('arrow') }}</span>
         </a>
+        {% endif %}
+        {% if puo_vedere('assegnazioni') %}
         <a href="{{ url_for('aule.lista') }}" class="imp-link">
             {{ icon('door') }} Aule per classe
             <span>{{ icon('arrow') }}</span>
         </a>
+        {% endif %}
+        {% if puo_vedere('organico') %}
         <a href="{{ url_for('impostazione_anno.piano_studi') }}" class="imp-link">
             {{ icon('layers') }} Piano di studi
             <span>{{ icon('arrow') }}</span>
@@ -87,17 +101,23 @@
             {{ icon('grid-alt') }} Calcolo organico
             <span class="badge-count">{{ n_cc_confermate }}/{{ n_cc_tot }}</span>
         </a>
+        {% endif %}
     </div>
 </div>
+{% endif %}
 
 {# ── DOCENTI ────────────────────────────────────────────────────── #}
+{% if puo_vedere('docenti') or puo_vedere('organico') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('person') }} Docenti</div>
     <div class="sez-desc">Anagrafica, classi di concorso e materie assegnate.</div>
+    {% if puo_vedere('docenti') %}
     <a href="{{ url_for('docenti.lista') }}" class="imp-link">
         {{ icon('person') }} Anagrafica docenti
         <span class="badge-count">{{ n_docenti }} docenti</span>
     </a>
+    {% endif %}
+    {% if puo_vedere('organico') %}
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="imp-link">
         {{ icon('diamond') }} Docenti ↔︎ Classi di concorso
         <span>{{ icon('arrow') }}</span>
@@ -106,14 +126,19 @@
         {{ icon('layers') }} Docenti ↔︎ Materie
         <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
+    {% if puo_vedere('docenti') %}
     <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="imp-link">
         {{ icon('layers') }} Dipartimenti e materie
         <span class="badge-count">{{ n_dip }} dip · {{ n_materie }} mat</span>
     </a>
+    {% endif %}
 
 </div>
+{% endif %}
 
 {# ── CALENDARIO ──────────────────────────────────────────────────── #}
+{% if puo_vedere('calendario') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('grid') }} Calendario scolastico</div>
     <div class="sez-desc">Sospensioni didattiche, festività e periodi.</div>
@@ -124,20 +149,28 @@
         {{ icon('grid') }} Periodi (recupero, rientro, ...) <span>{{ icon('arrow') }}</span>
     </a>
 </div>
+{% endif %}
 
 {# ── ORARIO ──────────────────────────────────────────────────────── #}
+{% if vede_orario_globale or puo_vedere('attivita') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('clock') }} Orario</div>
     <div class="sez-desc">Importazione e gestione dell'orario docenti.</div>
+    {% if vede_orario_globale %}
     <a href="{{ url_for('sync.index') }}" class="imp-link">
         {{ icon('download') }} Importa / modifica orario <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
+    {% if puo_vedere('attivita') %}
     <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="imp-link">
         {{ icon('download') }} Importa Piano delle Attività <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
 </div>
+{% endif %}
 
 {# ── ISTITUTO ────────────────────────────────────────────────────── #}
+{% if puo_vedere('istituto') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('building') }} Istituto</div>
     <div class="sez-desc">Dati dell'istituto e parametri economici.</div>
@@ -151,20 +184,30 @@
         {{ icon('star') }} Tipi di incarico assegnabili <span>{{ icon('arrow') }}</span>
     </a>
 </div>
+{% endif %}
 
 {# ── SISTEMA ─────────────────────────────────────────────────────── #}
 <div class="sez-card">
     <div class="sez-title">{{ icon('gear') }} Sistema</div>
     <div class="sez-desc">Utenti, accessi e backup del database.</div>
+    {% if g.utente is defined and g.utente.ha_permesso('gestione_utenti') %}
     <a href="{{ url_for('auth.lista_utenti') }}" class="imp-link">
         {{ icon('person') }} Gestione utenti e PIN <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
     <a href="{{ url_for('auth.cambia_pin') }}" class="imp-link">
         {{ icon('key') }} Cambia PIN <span>{{ icon('arrow') }}</span>
     </a>
+    {% if puo_vedere('istituto') %}
     <a href="{{ url_for('impostazioni.backup') }}" class="imp-link">
         {{ icon('list') }} Backup database <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
+    {% if session.get('ruolo') == 'ds' %}
+    <a href="{{ url_for('impostazioni.permessi') }}" class="imp-link">
+        {{ icon('key') }} Permessi per ruolo <span>{{ icon('arrow') }}</span>
+    </a>
+    {% endif %}
 </div>
 
 </div>

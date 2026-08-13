@@ -253,3 +253,50 @@ def backup():
     nome = f'caronteapp_backup_{date.today().isoformat()}.db'
     return send_file(buf, as_attachment=True, download_name=nome,
                      mimetype='application/octet-stream')
+
+
+@impostazioni_bp.route('/impostazioni/permessi', methods=['GET', 'POST'])
+def permessi():
+    """
+    Matrice permessi per ruolo — riservata al DS (letteralmente: solo
+    ruolo == 'ds', non tramite ha_permesso/'tutto', così nemmeno il DSGA
+    può modificarla — è una scelta esplicita, non un controllo di
+    permesso normale). Vedi models/permesso_ruolo.py per il perché
+    'dsga' e 'display' non compaiono in questa tabella: sono gestiti a
+    parte, per non rischiare che una configurazione qui blocchi l'intera
+    app o l'accesso dell'unico ruolo che può correggerla.
+    """
+    from flask import session, redirect, url_for, request, flash
+    from models import db
+    from models.permesso_ruolo import (
+        SEZIONI, SEZIONI_LABEL, RUOLI_CONFIGURABILI, LIVELLI, LIVELLI_VALIDI,
+        PermessoRuolo, matrice_permessi, invalida_cache,
+    )
+
+    if session.get('ruolo') != 'ds':
+        flash('Questa pagina è riservata al Dirigente Scolastico.', 'error')
+        return redirect(url_for('impostazioni.index'))
+
+    if request.method == 'POST':
+        righe = {(p.ruolo, p.sezione): p for p in PermessoRuolo.query.all()}
+        for sezione, _ in SEZIONI:
+            for ruolo, _ in RUOLI_CONFIGURABILI:
+                valore = request.form.get(f'liv_{sezione}_{ruolo}')
+                if valore not in LIVELLI_VALIDI:
+                    continue
+                riga = righe.get((ruolo, sezione))
+                if riga:
+                    riga.livello = valore
+                else:
+                    db.session.add(PermessoRuolo(ruolo=ruolo, sezione=sezione, livello=valore))
+        db.session.commit()
+        invalida_cache()
+        from routes.auth import log as auth_log
+        auth_log('modifica_permessi_ruolo', 'matrice permessi aggiornata')
+        flash('Permessi aggiornati.', 'success')
+        return redirect(url_for('impostazioni.permessi'))
+
+    matrice = matrice_permessi()
+    return render_template('impostazioni/permessi.html',
+        sezioni=SEZIONI, sezioni_label=SEZIONI_LABEL,
+        ruoli=RUOLI_CONFIGURABILI, livelli=LIVELLI, matrice=matrice)

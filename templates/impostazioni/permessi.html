@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Permessi per ruolo{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{{ url_for('impostazioni.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Impostazioni</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('key') }} Permessi per ruolo</h1>
+</div>
+
+<div class="card" style="padding:10px 14px; margin-bottom:16px; font-size:.82rem; color:var(--grigio); border-left:4px solid #6366f1;">
+    Per ogni sezione, scegli cosa può fare ciascun ruolo: <strong>Esclusa</strong> (la sezione non compare nemmeno
+    nel menu), <strong>Visualizza</strong> (può consultarla ma non modificare nulla) o <strong>Modifica</strong>
+    (accesso completo). Il DSGA ha sempre accesso pieno a tutto e non compare qui; l'utente Display vede solo
+    la pagina Display e nient'altro, sempre — nessuna delle due cose è modificabile da questa pagina.
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <form method="post">
+        <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:280px;">Sezione</th>
+                    {% for cod_ruolo, label_ruolo in ruoli %}
+                    <th style="width:200px; text-align:center;">{{ label_ruolo }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for cod_sezione, label_sezione in sezioni %}
+                <tr>
+                    <td class="wrap"><strong>{{ label_sezione }}</strong></td>
+                    {% for cod_ruolo, label_ruolo in ruoli %}
+                    {% set attuale = matrice.get(cod_ruolo, {}).get(cod_sezione, 'esclusa') %}
+                    <td style="text-align:center;">
+                        <select name="liv_{{ cod_sezione }}_{{ cod_ruolo }}"
+                                style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;
+                                       {% if attuale == 'modifica' %}background:var(--verde-bg); color:var(--verde); font-weight:700;
+                                       {% elif attuale == 'visualizza' %}background:#eff6ff; color:#1d4ed8;
+                                       {% else %}background:#f3f4f6; color:var(--grigio);{% endif %}">
+                            {% for cod_liv, label_liv in livelli %}
+                            <option value="{{ cod_liv }}" {% if cod_liv == attuale %}selected{% endif %}>{{ label_liv }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div style="padding:16px 20px;">
+            <button class="btn btn-success" type="submit">{{ icon('check') }} Salva permessi</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

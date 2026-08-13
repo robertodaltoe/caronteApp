@@ -194,27 +194,77 @@ def create_app(avvio_con_reloader=True):
     ROUTE_PUBBLICHE = {'display.display', 'auth.login', 'auth.logout',
                         'auth.privacy', 'static'}
 
-    # Mappa blueprint -> permesso minimo richiesto
-    BLUEPRINT_PERMESSI = {
-        'report':        'report_r',
-        'banca_ore':     'banca_ore_r',
-        'docenti':       'docenti_r',
-        'aule':          'aule_r',
-        'supplenze':     'supplenze_r',    # lettura supplenze per tutti
-        'assenze':       'assenze',         # segreteria e collaboratore
-        'cambi':         'supplenze',       # solo collaboratore/dsga
-        'attivita':      'attivita',        # segreteria e collaboratore
-        'indisponibilita': 'assenze',       # segreteria e collaboratore
-        'agenda':        'supplenze_r',
-        'sync':          'dsga_only',   # solo DSGA
-        'import_banca':  'banca_ore',
-        'recupero':      'recupero_r',      # corsi/prove di recupero (lettura per DS, scrittura per collaboratore/segreteria/dsga)
-        'rientro':       'recupero_r',      # colloqui di rientro dall'estero
-        'esami_integrativi': 'recupero_r',  # esami integrativi (passaggi/trasferimenti settembre)
-        'att_differite': 'recupero_r',      # hub di selezione, nessuna azione propria
-        'impostazione_anno': 'organico_r',  # classi di concorso, organico diritto/fatto
-        'auth':          None,          # gestito internamente
+    # Blueprint riservati DSGA (+ DS, storicamente incluso nel nome
+    # 'dsga_only' anche se non del tutto letterale): import dell'orario
+    # generale e risoluzione conflitti — cancellano/ricreano dati, troppo
+    # rischiosi per essere configurabili dalla matrice permessi.
+    BLUEPRINT_DSGA_ONLY = {'sync', 'sync_conflitti'}
+
+    # Mappa blueprint -> sezione (vedi models/permesso_ruolo.py per le
+    # sezioni e la matrice ruolo x sezione, configurabile dal DS in
+    # Impostazioni > Sistema > Permessi). Un blueprint può contenere
+    # route di sezioni diverse: ENDPOINT_SEZIONE sotto ha la precedenza.
+    # Blueprint assenti da entrambe le mappe (dashboard, guida, ricerca,
+    # display, export_xlsx) restano aperti a chiunque sia loggato, come
+    # sempre — non contengono azioni sensibili specifiche di un ruolo.
+    BLUEPRINT_SEZIONE = {
+        'assenze':            'assenze',
+        'indisponibilita':    'assenze',
+        'supplenze':          'supplenze',
+        'cambi':              'supplenze',
+        'agenda':             'supplenze',
+        'attivita':           'attivita',
+        'attivita_ist':       'attivita',
+        'att_differite':      'attivita',
+        'banca_ore':          'banca_ore',
+        'import_banca':       'banca_ore',
+        'report':             'report',
+        'mail_bozze':         'report',
+        'orario_sostegno':    'orario',
+        'recupero':           'recupero',
+        'rientro':            'recupero',
+        'esami_integrativi':  'recupero',
+        'impostazione_anno':  'organico',
+        'dashboard_anno':     'organico',
+        'docenti':            'docenti',
+        'cambio_anno':        'cambio_anno',
+        'impostazioni':       'istituto',
+        'incarichi':          'incarichi',
+        'assegnazioni':       'assegnazioni',
+        'aule':               'assegnazioni',
     }
+    ENDPOINT_SEZIONE = {
+        'attivita_ist.dipartimenti':               'docenti',
+        'attivita_ist.salva_dipartimento':         'docenti',
+        'attivita_ist.salva_materia':              'docenti',
+        'attivita_ist.assegna_materia_dipartimento': 'docenti',
+        'impostazioni.sospensioni':                'calendario',
+        'impostazioni.periodi':                    'calendario',
+        'incarichi.tipi':                          'istituto',
+        'incarichi.salva_tipo':                    'istituto',
+        'incarichi.salva_categoria':                'istituto',
+        # None = nessun cancello di sezione: ha un controllo interno suo
+        # (riservato letteralmente al ruolo 'ds', vedi routes/impostazioni.py)
+        # e non deve dipendere dalla sezione 'istituto' del blueprint, che
+        # per design è esclusa per il DS stesso.
+        'impostazioni.permessi':                   None,
+        # L'hub /impostazioni resta sempre raggiungibile: mostra solo le
+        # card a cui l'utente ha accesso (filtrate nel template), non deve
+        # ereditare 'istituto' (esclusa di default) solo perché è nello
+        # stesso blueprint delle pagine davvero sensibili.
+        'impostazioni.index':                      None,
+    }
+
+    def _nega_accesso(u, endpoint, messaggio):
+        from flask import flash, request
+        from models.log_accesso import LogAccesso
+        db.session.add(LogAccesso(
+            id_utente=u.id, username=u.username, ruolo=u.ruolo,
+            azione='accesso_negato', dettaglio=endpoint,
+            ip=request.remote_addr, esito='denied'
+        ))
+        db.session.commit()
+        flash(messaggio, 'error')
 
     @app.before_request
     def check_auth():
@@ -249,36 +299,35 @@ def create_app(avvio_con_reloader=True):
 
         g.utente = u
 
-        # Controlla permesso per blueprint
+        # L'utente "display" vede SOLO la pagina display, sempre — qualunque
+        # altra route provi a raggiungere (anche digitando l'URL a mano) lo
+        # riporta lì, invece di affidarsi solo a nascondere i link in nav.
+        if u.ruolo == 'display':
+            if endpoint not in ('display.display', 'auth.logout'):
+                return redirect(url_for('display.display'))
+            return None
+
         blueprint = endpoint.split('.')[0] if '.' in endpoint else ''
-        permesso_richiesto = BLUEPRINT_PERMESSI.get(blueprint)
 
-        if permesso_richiesto == 'dsga_only':
+        if blueprint in BLUEPRINT_DSGA_ONLY:
             if u.ruolo not in ('ds', 'dsga'):
-                from models.log_accesso import LogAccesso
-                from datetime import datetime
-                db.session.add(LogAccesso(
-                    id_utente=u.id, username=u.username, ruolo=u.ruolo,
-                    azione='accesso_negato', dettaglio=endpoint,
-                    ip=request.remote_addr, esito='denied'
-                ))
-                db.session.commit()
-                from flask import flash
-                flash('Accesso riservato al DSGA.', 'error')
+                _nega_accesso(u, endpoint, 'Accesso riservato al DSGA.')
                 return redirect(url_for('dashboard.index'))
+            return None
 
-        elif permesso_richiesto and not u.ha_permesso(permesso_richiesto):
-            from models.log_accesso import LogAccesso
-            from datetime import datetime
-            db.session.add(LogAccesso(
-                id_utente=u.id, username=u.username, ruolo=u.ruolo,
-                azione='accesso_negato', dettaglio=endpoint,
-                ip=request.remote_addr, esito='denied'
-            ))
-            db.session.commit()
-            from flask import flash
-            flash('Non hai i permessi per questa sezione.', 'error')
-            return redirect(url_for('dashboard.index'))
+        if blueprint == 'auth':
+            return None  # gestito dai singoli @login_required(...) sulle route
+
+        if endpoint in ENDPOINT_SEZIONE:
+            sezione = ENDPOINT_SEZIONE[endpoint]  # può essere None = nessun cancello
+        else:
+            sezione = BLUEPRINT_SEZIONE.get(blueprint)
+        if sezione and u.ruolo != 'dsga':
+            from models.permesso_ruolo import livello_per
+            livello = livello_per(u.ruolo, sezione)
+            if livello == 'esclusa' or (livello == 'visualizza' and request.method != 'GET'):
+                _nega_accesso(u, endpoint, 'Non hai i permessi per questa sezione.')
+                return redirect(url_for('dashboard.index'))
 
     with app.app_context():
         from models.colloqui_eccezione import ColloquiEccezione  # noqa
@@ -295,6 +344,7 @@ def create_app(avvio_con_reloader=True):
         from models.recupero import RecuperoDocente, RecuperoGruppo, RecuperoLezione, RecuperoAlunno, RecuperoVincolo, RecuperoImport, RecuperoPeriodo  # noqa
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
+        from models.permesso_ruolo import PermessoRuolo  # noqa
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()
@@ -302,8 +352,24 @@ def create_app(avvio_con_reloader=True):
         _backfill_anno_scol_banca_ore()
         _seed_dipartimenti_materie()
         _seed_sospensioni()
+        from models.permesso_ruolo import _seed_permessi_ruolo
+        _seed_permessi_ruolo()
         _backup_automatico(base_dir)
         _pulizia_log(base_dir)
+
+    @app.template_global()
+    def puo_vedere(sezione):
+        """Per nascondere le voci di menu che l'utente corrente non può
+        aprire (vedi templates/base.html) — stessa logica di check_auth,
+        usata qui solo per la visibilità dei link, non come controllo di
+        sicurezza a sé stante (quello resta check_auth, invariabile
+        anche digitando l'URL a mano)."""
+        from flask import g
+        u = getattr(g, 'utente', None)
+        if not u or u.ruolo in ('dsga', 'display'):
+            return True
+        from models.permesso_ruolo import livello_per
+        return livello_per(u.ruolo, sezione) != 'esclusa'
 
     @app.context_processor
     def _inject_dati_istituto():

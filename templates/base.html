@@ -477,8 +477,11 @@
 
     <div class="nav-links" id="nav-links">
     <a href="{{ url_for('dashboard.index') }}"><span class="nav-ic">{{ icon('home') }}</span> Dashboard</a>
+    {% if puo_vedere('assenze') %}
     <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">{{ icon('edit') }}</span> Registra assenza</a>
+    {% endif %}
 
+    {% if puo_vedere('attivita') %}
     <div class="nav-dropdown">
         <a><span class="nav-ic">{{ icon('list') }}</span> Attività</a>
         <div class="nav-drop-menu">
@@ -487,16 +490,28 @@
             <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
         </div>
     </div>
+    {% endif %}
 
+    {% if puo_vedere('banca_ore') %}
     <a href="{{ url_for('banca_ore.index') }}"><span class="nav-ic">{{ icon('coin') }}</span> Banca Ore</a>
+    {% endif %}
+    {% if puo_vedere('report') %}
     <a href="{{ url_for('report.index') }}"><span class="nav-ic">{{ icon('chart') }}</span> Report</a>
+    {% endif %}
+    {% set vede_orario_globale = g.utente is defined and g.utente.ruolo in ('ds', 'dsga') %}
+    {% if vede_orario_globale or puo_vedere('orario') %}
     <div class="nav-dropdown">
         <a><span class="nav-ic">{{ icon('grid') }}</span> Orario</a>
         <div class="nav-drop-menu">
+            {% if vede_orario_globale %}
             <a href="{{ url_for('sync.orario_globale') }}"><span class="nav-ic">{{ icon('grid') }}</span> Orario globale</a>
+            {% endif %}
+            {% if puo_vedere('orario') %}
             <a href="{{ url_for('orario_sostegno.index') }}"><span class="nav-ic">{{ icon('support') }}</span> Orario sostegno</a>
+            {% endif %}
         </div>
     </div>
+    {% endif %}
     <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">{{ icon('monitor') }}</span> Display</a>
 
     <a href="{{ url_for('impostazioni.index') }}"><span class="nav-ic">{{ icon('gear') }}</span> Impostazioni</a>
