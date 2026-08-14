@@ -4,6 +4,54 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 53 — Permessi: sezioni granulari, Orario globale configurabile, blocco pulsanti in Visualizza (Cowork)
+
+**Contesto:** Roberto trova la matrice permessi (Sessione 49) incompleta
+su tre punti: "Orario globale" non è impostabile (era hardcoded ds/dsga,
+mai passato dalla matrice); diverse sezioni sono accorpate e le vorrebbe
+singole, "anche le sottosezioni"; il livello "Visualizza" dovrebbe anche
+impedire di cliccare i pulsanti di modifica (es. "+ Assenza"), non solo
+rifiutare il salvataggio lato server. Commit: `5c5401d`.
+
+- `models/permesso_ruolo.py`: `SEZIONI` passa da 14 a 28 voci singole al
+  posto dei raggruppamenti precedenti (es. 'attivita' → 'attivita' +
+  'attivita_istituzionali' + 'attivita_differite' + 'dipartimenti';
+  'supplenze' → 'supplenze' + 'cambi' + 'agenda'; stesso schema per
+  banca_ore/import, report/mail_bozze, recupero/rientro/esami_integrativi,
+  organico/dashboard_anno, istituto/tipi_incarico, assegnazioni/aule),
+  più la nuova 'orario_globale'. `SEZIONI_GRUPPI` raggruppa solo
+  visivamente le righe nella pagina Permessi (9 gruppi), il controllo di
+  accesso resta per singola sezione.
+- `_migra_split_sezioni_permessi()`: su un'installazione già in uso, ogni
+  sezione nata da uno scorporo eredita il livello REALE già salvato per
+  la sezione genitore (non il default statico) — altrimenti un accesso
+  già funzionante sarebbe sparito di colpo al deploy (le sezioni nuove,
+  senza righe proprie, sarebbero state trattate come 'esclusa' per
+  tutti). Idempotente, gira ad ogni avvio insieme al seed esistente.
+  'orario_globale' non eredita da nessuna sezione (prima era hardcoded,
+  non un raggruppamento): seed diretto con lo stesso comportamento di
+  prima (solo ds/dsga in modifica).
+- `app.py::check_auth`: `BLUEPRINT_DSGA_ONLY_ECCEZIONI` porta fuori
+  `sync.orario_globale` dal blocco hardcoded del blueprint `sync` (che
+  resta DSGA-only per `sync.index`/`importa` — sovrascrivono l'orario,
+  troppo rischiosi per essere configurabili, invariato per scelta
+  esplicita) e lo fa passare dal controllo normale per sezione.
+- Nuovi template global `sezione_corrente()`/`sola_lettura()`: quando la
+  sezione della pagina corrente è 'visualizza' per l'utente, il `<body>`
+  prende la classe `sola-lettura` — CSS generico disabilita i pulsanti
+  submit dei form POST in tutta l'app senza dover toccare ogni singolo
+  template, più un banner esplicito e il pulsante "+ Registra assenza"
+  in nav disattivato quando 'assenze' è in sola visualizzazione. Il
+  blocco server-side in check_auth resta la vera difesa, invariato.
+
+Verificato con una copia del database reale: la migrazione crea 84 righe
+(28 sezioni × 3 ruoli) ereditando correttamente i valori già salvati;
+`orario_globale` configurabile per collaboratore/segreteria mantenendo
+`sync.index` bloccato; il body riceve la classe `sola-lettura` e il POST
+resta comunque rifiutato lato server anche forzandolo via richiesta
+diretta. Aggiunto `tests/test_permessi_sezioni_granulari.py` (6 test).
+Suite completa: 58/58 test passano.
+
 ## Sessione 52 — Banca Ore: docenti neoassunti anno futuro visibili anche negli anni precedenti (Cowork)
 
 **Contesto:** Roberto segnala che in Banca Ore, con l'anno 2025-2026
