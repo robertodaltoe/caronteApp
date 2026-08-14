@@ -82,7 +82,7 @@
                 <a href="{{ url_for('assenze.modifica', id=a.id) }}">
                     <strong>{{ a.data.strftime('%d/%m/%Y') }}</strong> — {{ a.docente.cognome }} {{ a.docente.nome }}
                 </a>
-                <span style="color:var(--grigio); margin-left:8px;">{{ cat_label(a.motivo) }}</span>
+                <span style="color:var(--grigio); margin-left:8px;">{{ label_motivo_assenza(a.motivo) }}</span>
             </td>
         </tr>
         {% endfor %}

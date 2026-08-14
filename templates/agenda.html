@@ -106,7 +106,7 @@
                 {% else %}{{ a.ora_inizio }}ª–{{ a.ora_fine }}ª{% endif %}
             </td>
             <td>
-                <span class="badge badge-grigio">{{ a.motivo }}</span>
+                <span class="badge badge-grigio">{{ label_motivo_assenza(a.motivo) }}</span>
                 {% if a.note_interne and a.note_interne.startswith('Auto') %}
                 <span class="auto-badge">AUTO</span>
                 {% endif %}

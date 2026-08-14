@@ -10,7 +10,10 @@ solo spostate qui insieme alla logica che le usa.
 """
 from datetime import date, timedelta
 from models import db
-from models.assenza import Assenza, cat_impatta_banca, cat_colonna_banca, cat_genera_supplenza, cat_assegnabile
+from models.assenza import (
+    Assenza, cat_impatta_banca, cat_colonna_banca, cat_genera_supplenza, cat_assegnabile,
+    MOTIVI_RISERVATI, RUOLI_MOTIVO_SPECIFICO,
+)
 from models.movimento_banca_ore import MovimentoBancaOre
 from models.orario_docente import OrarioDocente
 from models.scambio_orario import ScambioOrario, ScambioSlot
@@ -420,6 +423,14 @@ def registra_assenze_form(form):
         ora_inizio  = int(form.get('ora_inizio', 1))
         ora_fine    = int(form.get('ora_fine', 9))
     motivo          = form.get('motivo', 'malattia')
+    from flask import g as _g_ruolo
+    _ruolo_reg = _g_ruolo.utente.ruolo if getattr(_g_ruolo, 'utente', None) else None
+    if motivo in MOTIVI_RISERVATI and motivo != 'non_recuperabile' and _ruolo_reg not in RUOLI_MOTIVO_SPECIFICO:
+        # Difesa lato server (oltre al form, che già non mostra queste
+        # opzioni a chi non ha titolo — vedi contesto_form_assenza):
+        # un ruolo non autorizzato non può registrare un motivo
+        # specifico riservato, nemmeno forzando la richiesta POST.
+        motivo = 'non_recuperabile'
     note            = form.get('note', '').strip()
     note_disp       = form.get('note_display', '').strip()
     ora_ist_ini     = form.get('ora_ist_inizio', '').strip() or None
@@ -539,12 +550,38 @@ def registra_assenze_form(form):
     }
 
 
-def contesto_form_nuova(data_str):
+def contesto_form_nuova(data_str, ruolo=None):
     """Alias storico: pagina 'Nuova assenza' (nessuna assenza da escludere dal CCNL)."""
-    return contesto_form_assenza(data_str)
+    return contesto_form_assenza(data_str, ruolo=ruolo)
 
 
-def contesto_form_assenza(data_str, escludi_assenza_id=None):
+# Motivi specifici "riservati" (vedi models/assenza.py::MOTIVI_RISERVATI):
+# mostrati come pulsanti solo a chi ha titolo a conoscerli (DS/DSGA/
+# segreteria). Chi non ha titolo (es. collaboratore del DS) vede al loro
+# posto un solo pulsante generico 'non_recuperabile'.
+_TIPI_VISIVI_SPECIFICI = [
+    ('malattia',             '🤒', 'Malattia'),
+    ('permesso_personale',   '📄', 'Permesso'),
+    ('lutto',                '🕯', 'Lutto'),
+    ('matrimonio',           '💍', 'Matrimonio'),
+    ('permesso_sindacale',   '🗣', 'Sindacale'),
+]
+_TIPI_VISIVI_RISERVATO = [
+    ('non_recuperabile',     '🔒', 'Non recuperabile'),
+]
+# Non sensibili: nessun problema di privacy, visibili identici a tutti.
+_TIPI_VISIVI_COMUNI = [
+    ('permesso_orario',      '📋', 'Perm. orario'),
+    ('ferie',                '🏖', 'Ferie'),
+    ('classe_libera',        '🚫', 'Cl. libera'),
+    ('scambio_orario',       '🔄', 'Scambio ore'),
+    ('ed_civica',            '📚', 'Ed. Civica'),
+    ('formazione',           '🎓', 'Formazione'),
+    ('attivita_istituzionale','🏫', 'Att. ist.'),
+]
+
+
+def contesto_form_assenza(data_str, escludi_assenza_id=None, ruolo=None):
     """
     Prepara tutti i dati necessari alla pagina del form assenza, sia in
     creazione (routes/assenze.py::nuova(), escludi_assenza_id=None) sia in
@@ -553,27 +590,23 @@ def contesto_form_assenza(data_str, escludi_assenza_id=None):
     contato due volte nel conteggio dei limiti): elenco docenti, tipi
     visivi, orari per il JS, utilizzi CCNL dell'anno corrente, sospensioni
     didattiche, eventi istituzionali del giorno selezionato.
+
+    ruolo: ruolo di chi apre il form — determina se i pulsanti/contatori
+    per i motivi riservati (malattia, lutto, ...) sono quelli specifici
+    o il generico 'non_recuperabile' (vedi models/assenza.py::
+    RUOLI_MOTIVO_SPECIFICO). Il default (None) tratta il chiamante come
+    NON autorizzato, per non rischiare di esporre lo specifico se qualche
+    punto di chiamata dimenticasse di passarlo.
     """
     from models.docente import Docente
-    from models.assenza import LIMITI_CCNL
+    from models.assenza import LIMITI_CCNL, MOTIVI_RISERVATI, RUOLI_MOTIVO_SPECIFICO
 
     oggi = date.today()
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
 
-    tipi_visivi = [
-        ('malattia',             '🤒', 'Malattia'),
-        ('permesso_personale',   '📄', 'Permesso'),
-        ('lutto',                '🕯', 'Lutto'),
-        ('matrimonio',           '💍', 'Matrimonio'),
-        ('permesso_sindacale',   '🗣', 'Sindacale'),
-        ('permesso_orario',      '📋', 'Perm. orario'),
-        ('ferie',                '🏖', 'Ferie'),
-        ('classe_libera',        '🚫', 'Cl. libera'),
-        ('scambio_orario',       '🔄', 'Scambio ore'),
-        ('ed_civica',            '📚', 'Ed. Civica'),
-        ('formazione',           '🎓', 'Formazione'),
-        ('attivita_istituzionale','🏫', 'Att. ist.'),
-    ]
+    vede_specifico = ruolo in RUOLI_MOTIVO_SPECIFICO
+    tipi_visivi = ((_TIPI_VISIVI_SPECIFICI if vede_specifico else _TIPI_VISIVI_RISERVATO)
+                   + _TIPI_VISIVI_COMUNI)
 
     orari_docenti = {}
     for slot in OrarioDocente.query.all():
@@ -587,6 +620,12 @@ def contesto_form_assenza(data_str, escludi_assenza_id=None):
     fine_as   = date(anno + 1, 8, 31)
     utilizzi_ccnl = {}
     for motivo_k, limiti in LIMITI_CCNL.items():
+        if motivo_k in MOTIVI_RISERVATI and not vede_specifico:
+            # Non incorporare nemmeno i CONTATORI nel JSON della pagina:
+            # chi non ha titolo non deve poter dedurre "questo docente ha
+            # già usato 2/3 permessi personali" guardando il sorgente,
+            # anche se il pulsante specifico non è mostrato.
+            continue
         limite_ref  = list(limiti.values())[0] if limiti else {}
         unita       = limite_ref.get('u', 'giorni') if isinstance(limite_ref, dict) else 'giorni'
         query = Assenza.query.filter(
@@ -666,6 +705,20 @@ def modifica_assenza(a, form):
         new_ora_inizio  = int(form.get("ora_inizio", 1))
         new_ora_fine    = int(form.get("ora_fine", 9))
     new_motivo    = form.get("motivo", a.motivo)
+    from flask import g as _g_ruolo
+    _ruolo_mod = _g_ruolo.utente.ruolo if getattr(_g_ruolo, 'utente', None) else None
+    if _ruolo_mod not in RUOLI_MOTIVO_SPECIFICO:
+        if new_motivo in MOTIVI_RISERVATI and new_motivo != 'non_recuperabile':
+            # Un ruolo non autorizzato non può assegnare un motivo
+            # specifico riservato, nemmeno forzando la richiesta POST.
+            new_motivo = 'non_recuperabile'
+        if a.motivo in MOTIVI_RISERVATI and a.motivo != 'non_recuperabile':
+            # Né può "declassare" un'assenza già classificata nello
+            # specifico da chi ha titolo (DS/DSGA/segreteria) — il form
+            # gliela mostra mascherata, ma modificare altri campi
+            # (orario, note, docente) non deve cancellare la
+            # classificazione già fatta.
+            new_motivo = a.motivo
     new_note      = form.get("note_interne", "").strip()
     note_disp     = form.get("note_display", "").strip()
 

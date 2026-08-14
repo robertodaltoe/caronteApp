@@ -56,7 +56,7 @@ def nuova():
     from flask import session
     ruolo = session.get('ruolo', 'segreteria')
 
-    ctx = contesto_form_nuova(data_str)
+    ctx = contesto_form_nuova(data_str, ruolo=ruolo)
 
     return render_template('assenza_form.html',
         docenti=ctx['docenti'],
@@ -155,10 +155,12 @@ def modifica(id):
     from flask import session
     ruolo = session.get('ruolo', 'segreteria')
 
-    ctx = contesto_form_assenza(a.data.isoformat(), escludi_assenza_id=a.id)
+    ctx = contesto_form_assenza(a.data.isoformat(), escludi_assenza_id=a.id, ruolo=ruolo)
 
+    from models.assenza import motivo_visibile
     return render_template("assenza_form.html",
         assenza=a,
+        motivo_visibile=motivo_visibile(a.motivo, ruolo),
         docenti=docenti,
         data_sel=a.data.isoformat(),
         ore_list=range(1, 10),

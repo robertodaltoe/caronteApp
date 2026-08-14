@@ -369,7 +369,7 @@
                         {% else %}{{ ns.ore_min }}ª – {{ ns.ore_max }}ª{% endif %}
                     </td>
                     <td>
-                        <span class="badge badge-grigio">{{ ns.prev_mot }}</span>
+                        <span class="badge badge-grigio">{{ label_motivo_assenza(ns.prev_mot) }}</span>
                         {% if not ns.imp %}
                         <span style="font-size:.72rem;color:var(--grigio);"> no banca ore</span>
                         {% endif %}
@@ -407,7 +407,7 @@
                 {% else %}{{ ns.ore_min }}ª – {{ ns.ore_max }}ª{% endif %}
             </td>
             <td>
-                <span class="badge badge-grigio">{{ ns.prev_mot }}</span>
+                <span class="badge badge-grigio">{{ label_motivo_assenza(ns.prev_mot) }}</span>
                 {% if not ns.imp %}
                 <span style="font-size:.72rem;color:var(--grigio);"> no banca ore</span>
                 {% endif %}

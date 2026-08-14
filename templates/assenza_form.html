@@ -30,7 +30,12 @@
 {% block content %}
 <h1 style="font-size:1.3rem; color:var(--blu); margin-bottom:4px;">{% if assenza %}✏️ Modifica assenza{% else %}📋 Registra assenza / variazione orario{% endif %}</h1>
 <p style="color:var(--grigio); font-size:.82rem; margin-bottom:20px;">
-    Il tipo di assenza è visibile a segreteria, DS e DSGA. Il motivo specifico è visibile solo a DS e DSGA.
+    {% if ruolo_utente in ['ds', 'dsga', 'segreteria'] %}
+    Il motivo specifico (malattia, lutto, permesso personale...) è visibile solo a DS, DSGA e segreteria.
+    {% else %}
+    Per le assenze non recuperabili non è richiesto il motivo specifico (malattia, lutto, permesso
+    personale...): riservato a DS, DSGA e segreteria, che lo assegnano quando arriva la giustificazione.
+    {% endif %}
 </p>
 
 <form method="post" id="form-assenza">
@@ -198,13 +203,16 @@
         </label>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
             {% for tipo, ico, label in tipi_visivi %}
-            <button type="button" class="tipo-btn {% if (assenza and assenza.motivo == tipo) or (not assenza and loop.first) %}attivo{% endif %}"
+            <button type="button" class="tipo-btn {% if (assenza and motivo_visibile == tipo) or (not assenza and loop.first) %}attivo{% endif %}"
                     data-tipo="{{ tipo }}" onclick="setTipo('{{ tipo }}', this)">
                 <span class="ico">{{ ico }}</span>{{ label }}
             </button>
             {% endfor %}
+            {# 'motivo_visibile' (non 'assenza.motivo' diretto): per chi non ha
+               titolo a vedere un motivo riservato, non scrive il valore reale
+               nemmeno nell'HTML nascosto — vedi models/assenza.py::motivo_visibile. #}
             <input type="hidden" name="motivo" id="hidden-motivo"
-                   value="{{ assenza.motivo if assenza else tipi_visivi[0][0] }}">
+                   value="{{ motivo_visibile if assenza else tipi_visivi[0][0] }}">
         </div>
 
 
@@ -317,15 +325,15 @@
             <label>Note interne
                 <span style="font-weight:400; color:var(--grigio); font-size:.76rem;">
                     — non visibili nel display
-                    {% if ruolo_utente in ['ds','dsga','segreteria'] %}
-                    · <span style="color:var(--giallo);">🔒 motivo specifico</span>
-                    {% endif %}
                 </span>
             </label>
             <textarea name="note_interne" rows="2"
                       placeholder="Es. numero protocollo, riferimento pratica...">{{ assenza.note_interne or '' if assenza }}</textarea>
             <div style="font-size:.72rem; color:var(--giallo); margin-top:4px;">
                 {{ icon('warning') }} Non riportare qui diagnosi, prognosi o altri dettagli clinici — solo riferimenti amministrativi (es. numero di protocollo).
+                {% if ruolo_utente not in ['ds', 'dsga', 'segreteria'] %}
+                Non scrivere qui il motivo specifico dell'assenza (malattia, lutto...): non è di tua competenza saperlo.
+                {% endif %}
             </div>
         </div>
     </div>

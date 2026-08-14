@@ -78,7 +78,7 @@
         <div style="flex:1; font-weight:700; font-size:.9rem;">
             {{ p.docente.cognome }}{% if p.docente.nome %} {{ p.docente.nome[0] }}.{% endif %}
             {% if assenza %}
-            <span class="badge-assenza">{{ assenza.motivo }}</span>
+            <span class="badge-assenza">{{ label_motivo_assenza(assenza.motivo) }}</span>
             {% endif %}
             {% if indisp_list %}
             <span class="badge-indisponibile" title="Indisponibilità dichiarata per questa data: verifica un possibile conflitto.">

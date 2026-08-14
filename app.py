@@ -354,6 +354,19 @@ def create_app(avvio_con_reloader=True):
         from models.permesso_ruolo import livello_per
         return livello_per(u.ruolo, sezione) == 'visualizza'
 
+    @app.template_global()
+    def label_motivo_assenza(motivo):
+        """Etichetta di un motivo Assenza per l'utente corrente — i motivi
+        riservati (malattia, lutto, permesso personale...) mostrano lo
+        specifico solo a ds/dsga/segreteria (vedi models/assenza.py::
+        cat_label_visibile, Sessione 54). Usato ovunque un motivo assenza
+        va mostrato in un template, al posto del valore grezzo."""
+        from flask import g
+        from models.assenza import cat_label_visibile
+        u = getattr(g, 'utente', None)
+        ruolo = u.ruolo if u else None
+        return cat_label_visibile(motivo, ruolo)
+
     @app.context_processor
     def _inject_dati_istituto():
         """

@@ -61,7 +61,7 @@
                     {% for a in r.assenze %}
                         <span style="display:inline-block; margin:1px 4px 1px 0; padding:1px 6px;
                                      background:var(--rosso-bg); color:var(--rosso); border-radius:4px; font-size:.72rem;">
-                            {{ a.data.strftime('%d/%m') }}{% if a.motivo %} ({{ a.motivo }}){% endif %}
+                            {{ a.data.strftime('%d/%m') }}{% if a.motivo %} ({{ label_motivo_assenza(a.motivo) }}){% endif %}
                         </span>
                     {% endfor %}
                 {% else %}

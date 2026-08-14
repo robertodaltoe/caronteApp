@@ -256,9 +256,10 @@ def _pulisci_effetti(att):
 # ── API: docente per classe/ora/giorno ─────────────────────────
 @attivita_bp.route('/api/docente-classe-ora')
 def api_docente_classe_ora():
-    from flask import jsonify, request as req
-    from models.assenza import Assenza
+    from flask import jsonify, request as req, session
+    from models.assenza import Assenza, cat_label_visibile
     from models.indisponibilita import Indisponibilita
+    ruolo = session.get('ruolo')
     classe   = req.args.get('classe','').strip().upper()
     ora      = req.args.get('ora', type=int)
     giorno   = req.args.get('giorno', type=int)  # 0=lun
@@ -285,7 +286,7 @@ def api_docente_classe_ora():
                 Assenza.ora_inizio<=ora, Assenza.ora_fine>=ora).first()
             if ass:
                 disponibile = False
-                motivo_non_disp = f'assente ({ass.motivo})'
+                motivo_non_disp = f'assente ({cat_label_visibile(ass.motivo, ruolo)})'
             # Indisponibile?
             if disponibile:
                 ind = Indisponibilita.query.filter_by(id_docente=doc.id, data=data_d, ora=ora).first()

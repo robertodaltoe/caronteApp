@@ -36,6 +36,18 @@ CATEGORIE = {
         False, None, True, True,
         'giorni_anno', 3, 'giorni'      # CCNL: 3 gg TD / 3+6 TI
     ),
+    # Usato al posto del motivo specifico quando chi registra l'assenza
+    # non ha titolo a conoscerlo (vedi MOTIVI_RISERVATI/RUOLI_MOTIVO_
+    # SPECIFICO più sotto — Sessione 54, richiesto da Roberto): il
+    # collaboratore del DS sa solo che l'ora non è recuperabile, non il
+    # perché. DS/DSGA/segreteria riclassificano poi nello specifico
+    # (malattia/lutto/...) quando arriva la giustificazione, modificando
+    # normalmente l'assenza.
+    'non_recuperabile': (
+        'Assenza',
+        False, None, True, True,
+        None, None, None
+    ),
     'lutto': (
         'Assenza',
         False, None, True, True,
@@ -129,7 +141,7 @@ CATEGORIE = {
 CATEGORIE_FORM = [
     ('assenze', 'Assenze', [
         'malattia', 'permesso_personale', 'lutto', 'matrimonio',
-        'permesso_sindacale',
+        'permesso_sindacale', 'non_recuperabile',
     ]),
     ('orario', 'Variazioni orario', [
         'permesso_orario', 'ferie', 'classe_libera',
@@ -146,6 +158,7 @@ LABEL_INTERNE = {
     'lutto':                 '🕯 Lutto',
     'matrimonio':            '💍 Matrimonio',
     'permesso_sindacale':    '🗣 Permesso sindacale',
+    'non_recuperabile':      '🔒 Non recuperabile (motivo riservato)',
     'permesso_orario':       '📋 Permesso orario',
     'ferie':                 '🏖 Ferie',
     'classe_libera':         '🚫 Classe libera (sciopero / altro)',
@@ -183,6 +196,46 @@ def cat_label(motivo):
 
 def cat_label_interna(motivo):
     return LABEL_INTERNE.get(motivo, motivo)
+
+# ─────────────────────────────────────────────────────────────
+# PRIVACY DEL MOTIVO (Sessione 54, richiesto da Roberto)
+#
+# Un collaboratore del DS coordina le sostituzioni ma non deve sapere il
+# motivo di salute/personale di un'assenza — solo se l'ora è recuperabile
+# (permesso_orario) o no. Segreteria Personale invece gestisce le pratiche/
+# certificati per prassi HR, quindi vede lo specifico come DS/DSGA
+# (confermato con Roberto in sessione).
+#
+# MOTIVI_RISERVATI = tutti i motivi con etichetta pubblica 'Assenza'
+# (calcolato da CATEGORIE, non duplicato a mano: include 'non_recuperabile'
+# una volta aggiunto sopra, più malattia/permesso_personale/lutto/
+# matrimonio/permesso_sindacale e le vecchie voci di compatibilità
+# permesso_retribuito/assemblea/sciopero).
+MOTIVI_RISERVATI = frozenset(k for k, v in CATEGORIE.items() if v[0] == 'Assenza')
+RUOLI_MOTIVO_SPECIFICO = {'ds', 'dsga', 'segreteria'}
+
+
+def cat_label_visibile(motivo, ruolo):
+    """Etichetta da mostrare per un motivo assenza, tenendo conto di chi
+    guarda: per un motivo riservato, un ruolo senza titolo vede solo
+    l'etichetta generica 'non recuperabile' — anche se la riga è già
+    stata riclassificata nello specifico da chi ne ha titolo (mascherare
+    solo il valore ancora-da-classificare non basterebbe: la specificità
+    tornerebbe visibile non appena qualcuno la assegna)."""
+    if motivo in MOTIVI_RISERVATI and ruolo not in RUOLI_MOTIVO_SPECIFICO:
+        return LABEL_INTERNE['non_recuperabile']
+    return cat_label_interna(motivo)
+
+
+def motivo_visibile(motivo, ruolo):
+    """Codice motivo (non l'etichetta) da esporre lato client per il
+    ruolo indicato — usato per non scrivere il valore reale nemmeno
+    nell'HTML/JSON della pagina (campo nascosto del form, contatori
+    CCNL): un motivo riservato diventa 'non_recuperabile' per chi non
+    ha titolo a vederlo, anche solo guardando il sorgente della pagina."""
+    if motivo in MOTIVI_RISERVATI and ruolo not in RUOLI_MOTIVO_SPECIFICO:
+        return 'non_recuperabile'
+    return motivo
 
 def cat_impatta_banca(motivo):
     return CATEGORIE.get(motivo, ('', False, None, True, True, None, None, None))[1]
