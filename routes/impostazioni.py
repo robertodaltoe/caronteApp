@@ -270,7 +270,7 @@ def permessi():
     from models import db
     from flask import current_app
     from models.permesso_ruolo import (
-        SEZIONI, SEZIONI_LABEL, RUOLI_CONFIGURABILI, LIVELLI, LIVELLI_VALIDI,
+        SEZIONI, SEZIONI_LABEL, SEZIONI_GRUPPI, RUOLI_CONFIGURABILI, LIVELLI, LIVELLI_VALIDI,
         PermessoRuolo, matrice_permessi, invalida_cache, blueprint_non_mappati,
     )
 
@@ -299,6 +299,6 @@ def permessi():
 
     matrice = matrice_permessi()
     return render_template('impostazioni/permessi.html',
-        sezioni=SEZIONI, sezioni_label=SEZIONI_LABEL,
+        sezioni=SEZIONI, sezioni_label=SEZIONI_LABEL, sezioni_gruppi=SEZIONI_GRUPPI,
         ruoli=RUOLI_CONFIGURABILI, livelli=LIVELLI, matrice=matrice,
         non_mappati=blueprint_non_mappati(current_app))

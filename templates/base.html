@@ -271,6 +271,7 @@
            altre voci — prima aveva un pill rosso pieno che la faceva
            risaltare troppo rispetto al resto della barra, ora omologata. */
         nav a.nav-cta { font-weight: 700; }
+        nav span.nav-cta-disabilitata { font-weight: 700; opacity: .45; cursor: not-allowed; }
         nav .nav-spacer { flex: 1 1 auto; }
         nav .nav-search {
             display: inline-flex; margin: 0 4px;
@@ -457,9 +458,27 @@
     .nav-links .nav-dropdown .nav-drop-menu { min-width: 0; }
 }
 </style>
+    <style>
+        /* Livello "Visualizza" su una sezione (vedi models/permesso_ruolo.py,
+           app.py::sola_lettura): il server rifiuta comunque qualunque POST
+           (check_auth), questo qui è solo per non lasciare pulsanti
+           cliccabili che porterebbero a un rifiuto — disabilita in blocco
+           i pulsanti/submit dei form di modifica, senza dover toccare ogni
+           singolo template. I link di navigazione (<a>, incluse le liste/
+           filtri GET) restano attivi. */
+        body.sola-lettura form[method="post"] button[type="submit"],
+        body.sola-lettura form[method="post"] input[type="submit"],
+        body.sola-lettura form[method="POST"] button[type="submit"],
+        body.sola-lettura form[method="POST"] input[type="submit"] {
+            opacity: .45; cursor: not-allowed; pointer-events: none;
+        }
+        .banner-sola-lettura { display:flex; align-items:center; gap:8px;
+            background:#eff6ff; color:#1d4ed8; border-left:4px solid #1d4ed8;
+            border-radius:8px; padding:8px 14px; margin-bottom:14px; font-size:.84rem; }
+    </style>
     {% block extra_style %}{% endblock %}
 </head>
-<body>
+<body class="{% if sola_lettura() %}sola-lettura{% endif %}">
 {% from '_icons.html' import icon %}
 <nav>
     <div class="nav-lowpoly">{% include '_nav_bg.html' %}</div>
@@ -478,16 +497,27 @@
     <div class="nav-links" id="nav-links">
     <a href="{{ url_for('dashboard.index') }}"><span class="nav-ic">{{ icon('home') }}</span> Dashboard</a>
     {% if puo_vedere('assenze') %}
-    <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">{{ icon('edit') }}</span> Registra assenza</a>
+        {% if sola_lettura('assenze') %}
+        <span class="nav-cta nav-cta-disabilitata" title="Sola visualizzazione: non puoi registrare assenze">
+            <span class="nav-ic">{{ icon('edit') }}</span> Registra assenza</span>
+        {% else %}
+        <a href="{{ url_for('assenze.nuova') }}" class="nav-cta"><span class="nav-ic">{{ icon('edit') }}</span> Registra assenza</a>
+        {% endif %}
     {% endif %}
 
-    {% if puo_vedere('attivita') %}
+    {% if puo_vedere('attivita') or puo_vedere('attivita_istituzionali') or puo_vedere('attivita_differite') %}
     <div class="nav-dropdown">
         <a><span class="nav-ic">{{ icon('list') }}</span> Attività</a>
         <div class="nav-drop-menu">
+            {% if puo_vedere('attivita') %}
             <a href="{{ url_for('attivita.lista') }}"><span class="nav-ic">{{ icon('compass') }}</span> Attività fuori aula</a>
+            {% endif %}
+            {% if puo_vedere('attivita_istituzionali') %}
             <a href="{{ url_for('attivita_ist.lista') }}"><span class="nav-ic">{{ icon('building') }}</span> Attività istituzionali</a>
+            {% endif %}
+            {% if puo_vedere('attivita_differite') %}
             <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -498,12 +528,11 @@
     {% if puo_vedere('report') %}
     <a href="{{ url_for('report.index') }}"><span class="nav-ic">{{ icon('chart') }}</span> Report</a>
     {% endif %}
-    {% set vede_orario_globale = g.utente is defined and g.utente.ruolo in ('ds', 'dsga') %}
-    {% if vede_orario_globale or puo_vedere('orario') %}
+    {% if puo_vedere('orario_globale') or puo_vedere('orario') %}
     <div class="nav-dropdown">
         <a><span class="nav-ic">{{ icon('grid') }}</span> Orario</a>
         <div class="nav-drop-menu">
-            {% if vede_orario_globale %}
+            {% if puo_vedere('orario_globale') %}
             <a href="{{ url_for('sync.orario_globale') }}"><span class="nav-ic">{{ icon('grid') }}</span> Orario globale</a>
             {% endif %}
             {% if puo_vedere('orario') %}
@@ -561,6 +590,9 @@
             <div class="flash {{ cat }}">{{ msg }}</div>
         {% endfor %}
     {% endwith %}
+    {% if sola_lettura() %}
+    <div class="banner-sola-lettura">{{ icon('lock') }} Sola visualizzazione: puoi consultare questa sezione ma non modificarla.</div>
+    {% endif %}
     {% block content %}{% endblock %}
 </div>
 

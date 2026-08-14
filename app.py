@@ -198,7 +198,10 @@ def create_app(avvio_con_reloader=True):
     # (non qui) cosi' la pagina Permessi può segnalare le sezioni non ancora
     # collegate leggendo la stessa fonte usata dal controllo reale sotto,
     # invece di duplicarla e rischiare che le due si disallineino.
-    from models.permesso_ruolo import BLUEPRINT_DSGA_ONLY, BLUEPRINT_SEZIONE, ENDPOINT_SEZIONE
+    from models.permesso_ruolo import (
+        BLUEPRINT_DSGA_ONLY, BLUEPRINT_DSGA_ONLY_ECCEZIONI,
+        BLUEPRINT_SEZIONE, ENDPOINT_SEZIONE,
+    )
 
     def _nega_accesso(u, endpoint, messaggio):
         from flask import flash, request
@@ -254,7 +257,7 @@ def create_app(avvio_con_reloader=True):
 
         blueprint = endpoint.split('.')[0] if '.' in endpoint else ''
 
-        if blueprint in BLUEPRINT_DSGA_ONLY:
+        if blueprint in BLUEPRINT_DSGA_ONLY and endpoint not in BLUEPRINT_DSGA_ONLY_ECCEZIONI:
             if u.ruolo not in ('ds', 'dsga'):
                 _nega_accesso(u, endpoint, 'Accesso riservato al DSGA.')
                 return redirect(url_for('dashboard.index'))
@@ -297,8 +300,9 @@ def create_app(avvio_con_reloader=True):
         _backfill_anno_scol_banca_ore()
         _seed_dipartimenti_materie()
         _seed_sospensioni()
-        from models.permesso_ruolo import _seed_permessi_ruolo
+        from models.permesso_ruolo import _seed_permessi_ruolo, _migra_split_sezioni_permessi
         _seed_permessi_ruolo()
+        _migra_split_sezioni_permessi()
         _backup_automatico(base_dir)
         _pulizia_log(base_dir)
 
@@ -315,6 +319,40 @@ def create_app(avvio_con_reloader=True):
             return True
         from models.permesso_ruolo import livello_per
         return livello_per(u.ruolo, sezione) != 'esclusa'
+
+    @app.template_global()
+    def sezione_corrente():
+        """Sezione (vedi models/permesso_ruolo.SEZIONI) a cui appartiene
+        la pagina che si sta renderizzando, stessa risoluzione endpoint ->
+        sezione usata da check_auth — usata da sola_lettura() sotto per
+        sapere di quale sezione controllare il livello senza doverlo
+        passare a mano da ogni template."""
+        from flask import request
+        from models.permesso_ruolo import BLUEPRINT_SEZIONE, ENDPOINT_SEZIONE
+        endpoint = request.endpoint or ''
+        blueprint = endpoint.split('.')[0] if '.' in endpoint else ''
+        if endpoint in ENDPOINT_SEZIONE:
+            return ENDPOINT_SEZIONE[endpoint]
+        return BLUEPRINT_SEZIONE.get(blueprint)
+
+    @app.template_global()
+    def sola_lettura(sezione=None):
+        """True se l'utente corrente ha livello 'visualizza' sulla sezione
+        indicata (quella della pagina corrente, se non specificata) —
+        usato nei template per disabilitare/nascondere pulsanti di
+        modifica, oltre al blocco già presente lato server in check_auth
+        (che rifiuta comunque il POST anche se un pulsante restasse
+        cliccabile: questo è solo per l'esperienza d'uso, non è la difesa)."""
+        from flask import g
+        u = getattr(g, 'utente', None)
+        if u is None or u.ruolo in ('dsga', 'display'):
+            return False
+        if sezione is None:
+            sezione = sezione_corrente()
+        if not sezione:
+            return False
+        from models.permesso_ruolo import livello_per
+        return livello_per(u.ruolo, sezione) == 'visualizza'
 
     @app.context_processor
     def _inject_dati_istituto():

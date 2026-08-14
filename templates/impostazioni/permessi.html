@@ -36,9 +36,15 @@
                 </tr>
             </thead>
             <tbody>
-            {% for cod_sezione, label_sezione in sezioni %}
+            {% for label_gruppo, codici_gruppo in sezioni_gruppi %}
                 <tr>
-                    <td class="wrap"><strong>{{ label_sezione }}</strong></td>
+                    <td colspan="{{ 1 + ruoli|length }}" style="background:#f3f4f6; font-size:.72rem;
+                        font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--grigio);
+                        padding:6px 12px;">{{ label_gruppo }}</td>
+                </tr>
+                {% for cod_sezione in codici_gruppo %}
+                <tr>
+                    <td class="wrap"><strong>{{ sezioni_label.get(cod_sezione, cod_sezione) }}</strong></td>
                     {% for cod_ruolo, label_ruolo in ruoli %}
                     {% set attuale = matrice.get(cod_ruolo, {}).get(cod_sezione, 'esclusa') %}
                     <td style="text-align:center;">
@@ -54,6 +60,7 @@
                     </td>
                     {% endfor %}
                 </tr>
+                {% endfor %}
             {% endfor %}
             </tbody>
         </table>

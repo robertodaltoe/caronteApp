@@ -32,7 +32,7 @@
 
 <div class="imp-grid">
 
-{% set vede_orario_globale = g.utente is defined and g.utente.ruolo in ('ds', 'dsga') %}
+{% set vede_import_orario = g.utente is defined and g.utente.ruolo in ('ds', 'dsga') %}
 
 {# ── CAMBIO ANNO SCOLASTICO ─────────────────────────────────────── #}
 {% if puo_vedere('cambio_anno') or puo_vedere('organico') or puo_vedere('incarichi') or puo_vedere('assegnazioni') %}
@@ -74,6 +74,8 @@
             {{ icon('building') }} Classi attive
             <span class="badge-count">{{ n_sezioni_attive }} sez.</span>
         </a>
+        {% endif %}
+        {% if puo_vedere('dashboard_anno') %}
         <a href="{{ url_for('dashboard_anno.index') }}" class="imp-link"
            style="border-left:4px solid var(--verde);">
             {{ icon('chart') }} Dashboard anno
@@ -86,7 +88,7 @@
             <span>{{ icon('arrow') }}</span>
         </a>
         {% endif %}
-        {% if puo_vedere('assegnazioni') %}
+        {% if puo_vedere('aule') %}
         <a href="{{ url_for('aule.lista') }}" class="imp-link">
             {{ icon('door') }} Aule per classe
             <span>{{ icon('arrow') }}</span>
@@ -107,7 +109,7 @@
 {% endif %}
 
 {# ── DOCENTI ────────────────────────────────────────────────────── #}
-{% if puo_vedere('docenti') or puo_vedere('organico') %}
+{% if puo_vedere('docenti') or puo_vedere('organico') or puo_vedere('dipartimenti') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('person') }} Docenti</div>
     <div class="sez-desc">Anagrafica, classi di concorso e materie assegnate.</div>
@@ -127,7 +129,7 @@
         <span>{{ icon('arrow') }}</span>
     </a>
     {% endif %}
-    {% if puo_vedere('docenti') %}
+    {% if puo_vedere('dipartimenti') %}
     <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="imp-link">
         {{ icon('layers') }} Dipartimenti e materie
         <span class="badge-count">{{ n_dip }} dip · {{ n_materie }} mat</span>
@@ -152,16 +154,16 @@
 {% endif %}
 
 {# ── ORARIO ──────────────────────────────────────────────────────── #}
-{% if vede_orario_globale or puo_vedere('attivita') %}
+{% if vede_import_orario or puo_vedere('attivita_istituzionali') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('clock') }} Orario</div>
     <div class="sez-desc">Importazione e gestione dell'orario docenti.</div>
-    {% if vede_orario_globale %}
+    {% if vede_import_orario %}
     <a href="{{ url_for('sync.index') }}" class="imp-link">
         {{ icon('download') }} Importa / modifica orario <span>{{ icon('arrow') }}</span>
     </a>
     {% endif %}
-    {% if puo_vedere('attivita') %}
+    {% if puo_vedere('attivita_istituzionali') %}
     <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="imp-link">
         {{ icon('download') }} Importa Piano delle Attività <span>{{ icon('arrow') }}</span>
     </a>
@@ -170,19 +172,23 @@
 {% endif %}
 
 {# ── ISTITUTO ────────────────────────────────────────────────────── #}
-{% if puo_vedere('istituto') %}
+{% if puo_vedere('istituto') or puo_vedere('tipi_incarico') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('building') }} Istituto</div>
     <div class="sez-desc">Dati dell'istituto e parametri economici.</div>
+    {% if puo_vedere('istituto') %}
     <a href="{{ url_for('impostazioni.dati_istituto') }}" class="imp-link">
         {{ icon('building') }} Dati istituto <span>{{ icon('arrow') }}</span>
     </a>
     <a href="{{ url_for('impostazioni.dati_istituto') }}#parametri-economici" class="imp-link">
         {{ icon('coin') }} Costo ora supplenza <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
+    {% if puo_vedere('tipi_incarico') %}
     <a href="{{ url_for('incarichi.tipi') }}" class="imp-link">
         {{ icon('star') }} Tipi di incarico assegnabili <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
 </div>
 {% endif %}
 
