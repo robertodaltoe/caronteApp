@@ -38,7 +38,8 @@ def index():
     anno_corrente = get_anno_corrente()
     anno = request.args.get('anno', anno_corrente)
 
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    from routes.impostazione_anno import _docenti_per_anno
+    docenti = _docenti_per_anno(anno)
 
     saldi = {}
     for d in docenti:
