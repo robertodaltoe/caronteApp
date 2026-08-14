@@ -65,6 +65,16 @@ cambiarne l'orario ma non declassarla. Aggiunto
 `tests/test_privacy_motivo_assenza.py` (12 test). Suite completa:
 70/70 test passano.
 
+**Addendum stessa sessione:** chiesto se anche Indisponibilità espone
+dati sensibili — i motivi strutturati sono già tutti non sensibili
+(colloqui, consiglio, uscita, progetto, gara, formazione, riunione,
+altro), ma il campo note è testo libero visibile a chiunque abbia
+accesso alla sezione. Aggiunto lo stesso avviso già presente nel form
+Assenze ("non riportare qui motivi personali/clinici") sia nel form di
+creazione (`templates/indisponibilita_form.html`) sia in quello di
+modifica (`templates/modifica_indisponibilita.html`). Solo testo UI,
+nessuna logica toccata. Commit: `d99db7a`.
+
 ## Sessione 53 — Permessi: sezioni granulari, Orario globale configurabile, blocco pulsanti in Visualizza (Cowork)
 
 **Contesto:** Roberto trova la matrice permessi (Sessione 49) incompleta
