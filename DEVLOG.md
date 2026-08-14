@@ -4,6 +4,29 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 52 — Banca Ore: docenti neoassunti anno futuro visibili anche negli anni precedenti (Cowork)
+
+**Contesto:** Roberto segnala che in Banca Ore, con l'anno 2025-2026
+selezionato, comparivano docenti inseriti come neoassunti per il
+2026-2027 (`anno_scol_inizio='2026-2027'`, già `attivo=True`). Commit:
+`1c49203`.
+
+`routes/banca_ore.py::index()` interrogava
+`Docente.query.filter_by(attivo=True)` senza applicare alcun filtro
+sull'anno scolastico selezionato. Stesso bug già preso una volta per la
+pagina Docenti (Task 35, `_docenti_per_anno()` in
+`routes/impostazione_anno.py`) — qui il fix non era mai stato applicato
+perché la stessa logica di "docenti attivi in un dato anno" era
+duplicata invece di essere condivisa (pattern ricorrente, vedi guida
+rapida). Sistemato riusando direttamente `_docenti_per_anno(anno)`.
+
+Verificato: con una copia del database reale, i 13 docenti attualmente
+segnati come neoassunti 2026-2027 (tra cui Agrò, Ghezzi, Tramontana,
+già oggetto di unione anagrafiche in sessioni precedenti) sparivano
+dall'elenco Banca Ore 2025-2026 col fix, comparivano prima. Aggiunto
+test di regressione (`tests/test_banca_ore_docenti_anno.py`). Suite
+completa: 52/52 test passano.
+
 ## Sessione 51 — Sostituzioni scrutinio: niente doppie nomine + riunione prec./succ. (Cowork)
 
 **Contesto:** in Attività istituzionali, nulla impediva di nominare lo
