@@ -229,10 +229,15 @@ function aggiungiRiga() {
 
         <!-- Note -->
         <div class="form-group" style="margin-top:10px; margin-bottom:0;">
-            <label>Note</label>
+            <label>Note
+                <span style="font-weight:400; color:var(--grigio); font-size:.76rem;">— visibili a chiunque abbia accesso a questa sezione</span>
+            </label>
             <input type="text" name="note[${idx}]" maxlength="150"
                    style="width:100%; box-sizing:border-box;"
-                   placeholder="Opzionale">
+                   placeholder="Opzionale — solo riferimenti organizzativi">
+            <div style="font-size:.7rem; color:var(--giallo); margin-top:4px;">
+                {{ icon('warning') }} Non riportare qui motivi personali o dettagli clinici — es. non "visita medica", solo riferimenti organizzativi.
+            </div>
         </div>
     `;
 

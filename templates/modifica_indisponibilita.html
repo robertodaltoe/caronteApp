@@ -59,8 +59,13 @@
     </div>
 
     <div class="form-group">
-        <label>Note</label>
+        <label>Note
+            <span style="font-weight:400; color:var(--grigio); font-size:.76rem;">— visibili a chiunque abbia accesso a questa sezione</span>
+        </label>
         <textarea name="note" rows="2">{{ indisp.note or '' }}</textarea>
+        <div style="font-size:.7rem; color:var(--giallo); margin-top:4px;">
+            {{ icon('warning') }} Non riportare qui motivi personali o dettagli clinici — solo riferimenti organizzativi.
+        </div>
     </div>
 
     <div style="display:flex; gap:10px; margin-top:8px;">
