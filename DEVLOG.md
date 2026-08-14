@@ -4,6 +4,67 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 54 — Assenze: motivo specifico nascosto al collaboratore del DS (Cowork)
+
+**Contesto:** Roberto: un collaboratore del DS coordina le sostituzioni
+ma non deve sapere il motivo di salute/personale di un'assenza — solo
+se l'ora è recuperabile (permesso orario) o no. Ferie/cambi turno non
+hanno bisogno di un motivo, restano invariati. Chiesto "come potremmo
+organizzare la sezione assenze per rispettare questo discorso di
+privacy?" — confermato con lui che DS/DSGA/segreteria (gestisce già le
+pratiche per prassi HR) vedono lo specifico, il collaboratore no.
+Commit: `63ec41d`.
+
+Il modello aveva già un abbozzo (`cat_label` vs `cat_label_interna`,
+un commento "visibile solo DS/DSGA") mai completato: il form di
+inserimento faceva scegliere a chiunque, collaboratore incluso, il
+motivo esatto (lo sapeva comunque, lo digitava lui), e diverse pagine
+(dashboard, agenda, presenze scrutini, ricerca...) mostravano il
+codice motivo grezzo senza filtro.
+
+- `models/assenza.py`: nuovo motivo `non_recuperabile` (usato al posto
+  dello specifico da chi non ha titolo). `MOTIVI_RISERVATI` calcolato
+  da `CATEGORIE` (tutti i motivi con etichetta pubblica 'Assenza'), non
+  duplicato a mano. `cat_label_visibile()`/`motivo_visibile()`:
+  mascherano sia l'etichetta sia il CODICE per ruolo — il codice anche,
+  perché altrimenti resterebbe leggibile nel sorgente HTML (campo
+  nascosto del form).
+- `contesto_form_assenza(ruolo=...)`: i pulsanti specifici (malattia/
+  lutto/matrimonio/permesso_personale/permesso_sindacale) compaiono
+  solo a ds/dsga/segreteria, altrimenti un solo pulsante generico "Non
+  recuperabile"; i contatori CCNL incorporati come JSON nella pagina
+  escludono i motivi riservati per chi non ha titolo (altrimenti
+  leggibili dal sorgente anche senza il pulsante).
+- Difesa in profondità lato server: un tentativo di registrare/
+  assegnare un motivo specifico via POST diretto da un ruolo non
+  autorizzato viene forzato a `non_recuperabile`; modificare
+  un'assenza già classificata nello specifico da chi ha titolo non può
+  declassarla (il valore reale resta), anche cambiando altri campi
+  come orario o note.
+- Chiuse le fughe di visualizzazione dello stesso dato in dashboard,
+  agenda, presenze scrutini/collegi, ricerca globale (che ora esclude
+  anche il motivo dai criteri di ricerca per chi non ha titolo),
+  disponibilità docenti corsi di agosto, endpoint JSON di disponibilità
+  docente/classe/ora.
+
+**Segnalato a Roberto, non deciso:** l'export dati personali GDPR
+art.15 (`/docenti/<id>/esporta-dati`) mostra correttamente il dettaglio
+completo (corretto per finalità legali), ma oggi vi accede chiunque
+abbia 'visualizza' su Docenti — quindi anche il collaboratore può
+generarlo per qualunque docente, bypassando di fatto questa
+protezione. Indisponibilità ha un campo motivo separato (testo
+libero), non toccato in questa sessione.
+
+Verificato con una copia del database reale: collaboratore non vede né
+i pulsanti né il valore nascosto nell'HTML; POST diretto con
+motivo='lutto' forzato a 'non_recuperabile'; segreteria riclassifica
+correttamente; DS vede lo specifico in sola lettura (coerente con la
+matrice permessi, che gli dà solo 'visualizza' su assenze) ma non può
+modificare; collaboratore che riapre un'assenza già classificata può
+cambiarne l'orario ma non declassarla. Aggiunto
+`tests/test_privacy_motivo_assenza.py` (12 test). Suite completa:
+70/70 test passano.
+
 ## Sessione 53 — Permessi: sezioni granulari, Orario globale configurabile, blocco pulsanti in Visualizza (Cowork)
 
 **Contesto:** Roberto trova la matrice permessi (Sessione 49) incompleta
