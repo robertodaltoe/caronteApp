@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 55 — Guida: sezioni mancanti aggiunte, contenuto obsoleto corretto (Cowork)
+
+**Contesto:** chiesto se la Guida avesse bisogno di aggiornamenti e se
+farli con un Cowork dedicato o in questa stessa sessione — risposto
+che conveniva restare qui (già tutto il contesto delle ultime
+sessioni caricato, nessun ciclo di test/verifica come per il codice).
+Confermato con "rendi la guida quanto più completa e corretta
+possibile ora". Commit: `6494fad`.
+
+La Guida copriva solo 6 sezioni su una ventina di aree funzionali
+esistenti, e due punti erano ormai sbagliati: "Assenze" diceva ancora
+al collaboratore di scegliere "il motivo più preciso possibile
+(malattia, permesso, legge 104...)" — l'opposto di quanto introdotto
+nella Sessione 54 (privacy del motivo); "Cambi quadro" diceva "la
+segreteria non ha accesso a questa sezione", falso da quando esiste
+la matrice permessi configurabile (Sessione 49/53).
+
+Aggiunte 18 sezioni nuove in `modules/guida_content.py`: Attività
+fuori aula, Attività istituzionali (con la logica delle sostituzioni
+scrutinio), Attività differite, Dipartimenti e materie, Banca ore,
+Report, Orario, Recupero, Rientro dall'estero, Esami integrativi,
+Docenti, Impostazione anno/Organico (con l'elenco reale dei 13 passi
+del wizard), Cambio anno scolastico, Calendario scolastico, Istituto,
+Incarichi, Assegnazioni e aule, Permessi per ruolo.
+
+Verificato con una copia del database reale: tutte le 24 sezioni
+(indice + pagina + PDF) rispondono 200. Corretto anche un test della
+sessione precedente che usava `date.today()` come data di prova e
+falliva se eseguito di domenica (l'app esclude di proposito le
+domeniche dal periodo di un'assenza) — sostituita con una data fissa.
+Suite completa: 70/70 test passano.
+
 ## Sessione 54 — Assenze: motivo specifico nascosto al collaboratore del DS (Cowork)
 
 **Contesto:** Roberto: un collaboratore del DS coordina le sostituzioni
