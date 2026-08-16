@@ -119,8 +119,11 @@ class _UtenteFinto:
 
 
 def _form(**over):
+    # Data fissa su un giorno feriale (2025-10-10, venerdì): non si può usare
+    # date.today(), perché registra_assenze_form esclude di proposito le
+    # domeniche dal periodo — se il test gira di domenica non creerebbe nulla.
     base = {
-        'id_docente': None, 'data': date.today().isoformat(),
+        'id_docente': None, 'data': '2025-10-10',
         'ora_inizio': '3', 'ora_fine': '4', 'motivo': 'lutto',
         'note': '',
     }
