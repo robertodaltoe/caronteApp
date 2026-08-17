@@ -63,6 +63,15 @@ anno diverso da quello corrente. I dati erano già correttamente
 separati per anno (chiave unica docente+anno_scol) — mancava solo la
 visibilità/il modo di cambiarlo in UI. Commit: `d9cb73d`.
 
+**Secondo addendum:** Roberto chiede conferma che il link personale
+funzioni solo sulla stessa rete del Mac che esegue l'app — confermato
+(`app.py` fa `app.run(host='0.0.0.0', ...)`: raggiungibile in LAN, non
+esposto su internet; un docente da casa non può aprirlo, a meno di una
+VPN/tunnel a parte, fuori dal codice). Chiesto che questo sia chiaro,
+non solo detto a voce: aggiunto un avviso esplicito nella pagina
+staff, nella pagina pubblica del docente e nella voce Guida. Commit:
+`90c2c60`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
