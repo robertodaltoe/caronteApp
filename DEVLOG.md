@@ -132,6 +132,21 @@ TORTOSA") — comportamento preesistente, non introdotto da questa
 modifica. 86/86 test passano (solo presentazione, nessuna logica
 toccata). Commit: `f3b4ade`.
 
+**Settimo addendum:** Roberto: le etichette corte vanno bene, ma non
+il `table-layout:fixed` e la `class="wrap"` introdotti nell'addendum
+precedente — la colonna Classe di concorso restava con spazio
+inutilizzato perché il fixed le assegnava sempre tutto il residuo
+anche quando non le serviva. Tornato a `table-layout:auto`: con le
+etichette già accorciate il contenuto naturale della tabella ora entra
+da solo, senza bisogno di forzare le larghezze; rimossa anche la
+`class="wrap"` sulla cella Contratto (badge TI/PT/Piano di nuovo su
+una riga sola). Verificato sul server reale: 0 celle troncate a
+1440px/1090px, tabella larga esattamente quanto il contenitore, niente
+spazio residuo forzato. A finestre molto strette (~860px) l'
+`overflow-x:auto` del quinto addendum resta come rete di sicurezza
+(scrollbar invece di clip silenzioso). 86/86 test passano. Commit:
+`6270396`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
