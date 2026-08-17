@@ -384,6 +384,53 @@ SEZIONI = [
         'attenzione': None,
     },
     {
+        'slug': 'piano-personale',
+        'titolo': 'Piano attività personale',
+        'icona': '📋',
+        'riassunto': 'I docenti a cattedra non completa scelgono i propri impegni collegiali dal Piano ufficiale.',
+        'a_cosa_serve': (
+            'Un docente con cattedra non completa in istituto (orario ridotto, o cattedra completata '
+            'in un\'altra scuola) partecipa agli impegni collegiali (collegio, consigli di classe, '
+            'dipartimenti...) solo in proporzione alle ore di contratto qui — non per intero come un '
+            'docente a cattedra piena. Questa pagina genera per ciascuno di questi docenti un link '
+            'personale con cui sceglie, tra gli eventi già calendarizzati nel Piano delle Attività, '
+            'quelli a cui parteciperà. Gli scrutini restano sempre obbligatori per tutti e non passano '
+            'da qui.'
+        ),
+        'passi': [
+            ('Apri "Attività → Piano attività personale"',
+             'L\'elenco mostra solo i docenti con cattedra non completa per l\'anno selezionato, con '
+             'la percentuale di cattedra e le ore dovute per ciascuno dei due bucket CCNL.'),
+            ('Genera il link per un docente',
+             'Il pulsante "Genera link" crea un link personale univoco (nessun account richiesto) — '
+             'invialo al docente via email o come preferisci.'),
+            ('Il docente sceglie i propri impegni',
+             'Aprendo il link, il docente vede l\'elenco degli eventi del Piano e spunta quelli a cui '
+             'parteciperà, con un contatore delle ore scelte rispetto alla quota dovuta. Può salvare '
+             'e tornare più volte, oppure "Salva e invia" per segnalare che ha finito.'),
+            ('Blocca il piano quando è definitivo',
+             'Il pulsante 🔒 impedisce ulteriori modifiche dal docente — usalo quando le scelte sono '
+             'confermate. Lo sblocco (↺) permette correzioni successive.'),
+        ],
+        'faq': [
+            ('Cosa succede alla partecipazione del docente agli eventi che non ha scelto?',
+             'Non compare più come partecipante previsto per quegli eventi — la sua selezione '
+             'personale sostituisce interamente il calcolo automatico "per tutti/per classe/per '
+             'dipartimento" usato per un docente a cattedra piena.'),
+            ('Come viene calcolata la quota di ore dovute?',
+             'In proporzione alle ore di contratto del docente rispetto al riferimento di "cattedra '
+             'completa" impostato in Impostazioni → Istituto (di norma 18 ore).'),
+            ('Il link scaduto o condiviso per errore si può disattivare?',
+             'Sì, il pulsante di rigenerazione crea un nuovo link e rende inutilizzabile quello '
+             'precedente.'),
+        ],
+        'attenzione': (
+            'Il link personale non richiede alcun login: chiunque lo riceva può vedere e modificare '
+            'il piano di quel docente. Condividilo solo per canali diretti e riservati (email al '
+            'docente), mai in modo pubblico.'
+        ),
+    },
+    {
         'slug': 'banca-ore',
         'titolo': 'Banca ore',
         'icona': '⏲',
