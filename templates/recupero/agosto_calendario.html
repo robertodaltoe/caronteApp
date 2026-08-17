@@ -167,15 +167,16 @@
         <span style="font-size:.76rem; opacity:.8;">{{ icon('star') }} Giorno orali</span>
         {% endif %}
     </div>
-    <table>
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:1080px;">
         <thead>
             <tr>
                 <th style="width:100px;">Orario</th>
-                <th>Materia</th>
+                <th class="wrap" style="width:170px;">Materia</th>
                 <th style="width:100px;">Tipo</th>
                 <th style="width:150px;">Docente somministratore</th>
-                <th style="width:190px;">Docente assistente</th>
-                <th>Classi</th>
+                <th style="width:230px;">Docente assistente</th>
+                <th class="wrap" style="width:170px;">Classi</th>
                 <th style="width:60px; text-align:center;">Alunni</th>
                 <th style="width:50px;">Aula</th>
                 <th style="width:70px; min-width:70px; text-align:center; white-space:nowrap;">Azioni</th>
@@ -187,7 +188,7 @@
             <td style="font-size:.86rem; font-weight:700; white-space:nowrap;">
                 {{ l.ora_inizio }}–{{ l.ora_fine }}
             </td>
-            <td><strong style="font-size:.88rem;">{{ g.materia[:40] }}</strong></td>
+            <td class="wrap"><strong style="font-size:.88rem;">{{ g.materia[:40] }}</strong></td>
             <td style="font-size:.8rem;">
                 {{ TIPO_PROVA_LABEL.get(g.tipo_prova, '—') }}
             </td>
@@ -215,7 +216,7 @@
                     </select>
                 </form>
             </td>
-            <td style="font-size:.82rem; max-width:220px; white-space:normal; word-break:break-word;">{{ g.classi }}</td>
+            <td style="font-size:.82rem; max-width:220px; white-space:normal;">{{ g.classi.replace(',', ', ') }}</td>
             <td style="text-align:center; font-size:.84rem; white-space:nowrap;">{{ g.alunni|length }}</td>
             <td style="font-size:.82rem; white-space:nowrap;">{{ l.aula or '—' }}</td>
             <td style="text-align:center; white-space:nowrap;">
@@ -266,6 +267,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endfor %}
 {% else %}
