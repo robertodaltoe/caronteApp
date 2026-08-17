@@ -147,6 +147,14 @@ spazio residuo forzato. A finestre molto strette (~860px) l'
 (scrollbar invece di clip silenzioso). 86/86 test passano. Commit:
 `6270396`.
 
+**Ottavo addendum:** con l'auto layout c'era di nuovo margine.
+Ripristinate le intestazioni estese (H/sett, Contratto, Colloqui,
+Attivo) dove entrano senza forzare scroll, lasciando abbreviati solo i
+*valori* nelle celle (TI, "Lun 1ª–2ª", icona check/x) — erano quelli
+il vero bersaglio della compattazione, non le intestazioni. Verificato
+sul server reale a 1440px/1090px: nessuna intestazione o cella
+troncata. 86/86 test passano. Commit: `0340cd7`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
