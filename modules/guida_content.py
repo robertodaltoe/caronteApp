@@ -427,7 +427,9 @@ SEZIONI = [
         'attenzione': (
             'Il link personale non richiede alcun login: chiunque lo riceva può vedere e modificare '
             'il piano di quel docente. Condividilo solo per canali diretti e riservati (email al '
-            'docente), mai in modo pubblico.'
+            'docente), mai in modo pubblico. Funziona inoltre solo da un dispositivo collegato alla '
+            'rete dell\'istituto: il docente deve compilarlo da scuola, non da casa — avvisalo quando '
+            'gli invii il link.'
         ),
     },
     {

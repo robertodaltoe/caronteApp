@@ -51,6 +51,13 @@
 </div>
 {% endif %}
 
+<div style="font-size:.78rem; color:var(--rosso); background:var(--rosso-bg); border:1px solid var(--rosso);
+     border-radius:6px; padding:8px 12px; margin-bottom:14px;">
+    {{ icon('warning') }} Il link personale funziona solo da un dispositivo collegato alla rete
+    dell'istituto — <strong>il docente deve compilarlo da scuola</strong>, non funziona da casa
+    o da una rete diversa. Avvisalo quando gli invii il link.
+</div>
+
 {% if not righe %}
 <div class="card" style="text-align:center; padding:32px; color:var(--grigio);">
     {{ icon('check') }} Nessun docente con cattedra non completa per l'anno {{ anno }}.
