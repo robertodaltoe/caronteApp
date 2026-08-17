@@ -67,6 +67,7 @@
 {% set conferma_id = request.args.get('conferma_elimina', type=int) %}
 
 <div class="card" style="padding:0; overflow:hidden;">
+<div style="overflow-x:auto;">
 <table>
     <thead>
         <tr>
@@ -179,6 +180,7 @@
     {% endfor %}
     </tbody>
 </table>
+</div>
 </div>
 
 {% if mostra_inattivi %}
