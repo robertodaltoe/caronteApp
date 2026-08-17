@@ -113,6 +113,25 @@ sessione per `piano_personale_lista.html` e `agosto_calendario.html`.
 Verificato sul server reale (prima: `scrollLeft` senza alcun effetto;
 dopo: colonne raggiungibili scorrendo). Commit: `6dba99c`.
 
+**Sesto addendum:** Roberto preferisce non dover scorrere affatto —
+chiede etichette più corte (es. colloqui "Lun 1^-2^", tipo contratto
+"TI", stato come icona invece di "Attivo"/"Non attivo"). Aggiunte
+`Docente.colloqui_label_breve` ("Lun 1ª–2ª" invece di "Lunedì 1ª–2ª
+ora") e `Docente.tipo_contratto_label_breve` (TI, IRC, TD ann., TD
+30/6, TD-GS, Pot.) — l'etichetta estesa resta nel tooltip. Badge
+"Piano" accorciato (via "da fare" invece di "Piano: da generare").
+Colonna Stato → icona verde/rossa (check/x) con tooltip. La tabella è
+passata da `table-layout:auto` (una colonna senza vincoli "rubava"
+spazio alle altre finché non serviva scroll) a `table-layout:fixed`
+con larghezze esplicite per ogni colonna tranne "Classe di concorso",
+che assorbe lo spazio restante. Verificato sul server reale misurando
+`scrollWidth`/`clientWidth` di ogni cella a più larghezze finestra
+(1440px e 1090px): nessuno scroll orizzontale necessario, restano
+troncati solo 6 cognomi eccezionalmente lunghi (es. "ORDINANA
+TORTOSA") — comportamento preesistente, non introdotto da questa
+modifica. 86/86 test passano (solo presentazione, nessuna logica
+toccata). Commit: `f3b4ade`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
