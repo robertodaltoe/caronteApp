@@ -18,15 +18,38 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
     <div>
-        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('person') }} Piano attività personale</h1>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('person') }} Piano attività personale — a.s. {{ anno }}</h1>
         <p style="font-size:.82rem; color:var(--grigio); max-width:640px; margin-top:2px;">
             Docenti con cattedra non completa in istituto (orario ridotto o completamento in un'altra
             scuola) — scelgono i propri impegni collegiali (bucket A/B) tramite un link personale,
             in proporzione alle ore di contratto qui. Gli scrutini restano sempre obbligatori per tutti.
+            Ogni anno scolastico ha i propri link/scelte: cambiare anno non tocca gli altri.
         </p>
     </div>
-    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Attività istituzionali</a>
+    <div style="display:flex; align-items:center; gap:8px;">
+        {% if anni_disponibili %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('piano_personale.lista', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno %}background:var(--blu); color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Attività istituzionali</a>
+    </div>
 </div>
+
+{% if anno != anno_default %}
+<div style="font-size:.78rem; color:var(--giallo); background:var(--giallo-bg); border:1px solid var(--giallo);
+     border-radius:6px; padding:6px 10px; margin-bottom:14px;">
+    {{ icon('warning') }} Stai visualizzando l'a.s. {{ anno }} (diverso dall'anno corrente {{ anno_default }}).
+</div>
+{% endif %}
 
 {% if not righe %}
 <div class="card" style="text-align:center; padding:32px; color:var(--grigio);">

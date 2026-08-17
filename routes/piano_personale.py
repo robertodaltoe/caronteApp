@@ -36,8 +36,24 @@ def _anno_scolastico(d=None):
 
 @piano_personale_bp.route('/attivita-ist/piano-personale')
 def lista():
-    from routes.impostazione_anno import _anno_default_piano
-    anno = request.args.get('anno', _anno_default_piano())
+    from config_anno import get_anno_corrente
+    from routes.docenti import _shift_anno
+    # Anno OPERATIVO (get_anno_corrente), non _anno_default_piano(): il
+    # Piano delle Attività da cui i docenti scelgono è quello dell'anno
+    # in corso, non quello in preparazione per il successivo (i due
+    # concetti vanno tenuti separati — vedi guida rapida del progetto,
+    # causa ricorrente di bug in passato). Ogni anno ha le sue righe
+    # PianoAttivitaPersonale (chiave unica docente+anno_scol): passare da
+    # un anno all'altro non tocca né azzera i link/le scelte degli anni
+    # precedenti, restano consultabili qui cambiando anno.
+    anno_default = get_anno_corrente()
+    anno = request.args.get('anno', anno_default)
+
+    anni_disponibili = ({_shift_anno(anno_default, n) for n in (-1, 0, 1)} |
+        {p.anno_scol for p in PianoAttivitaPersonale.query.with_entities(
+            PianoAttivitaPersonale.anno_scol).distinct()} |
+        {anno})
+    anni_disponibili = sorted(anni_disponibili, reverse=True)
 
     docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
                if cattedra_incompleta(d, anno)]
@@ -55,13 +71,14 @@ def lista():
         })
 
     return render_template('attivita_ist/piano_personale_lista.html',
-        righe=righe, anno=anno)
+        righe=righe, anno=anno, anno_default=anno_default,
+        anni_disponibili=anni_disponibili)
 
 
 @piano_personale_bp.route('/attivita-ist/piano-personale/<int:id_docente>/genera', methods=['POST'])
 def genera(id_docente):
-    from routes.impostazione_anno import _anno_default_piano
-    anno = request.form.get('anno') or _anno_default_piano()
+    from config_anno import get_anno_corrente
+    anno = request.form.get('anno') or get_anno_corrente()
     d = Docente.query.get_or_404(id_docente)
 
     p = PianoAttivitaPersonale.query.filter_by(id_docente=id_docente, anno_scol=anno).first()
@@ -80,8 +97,8 @@ def genera(id_docente):
 def rigenera_link(id_docente):
     """Rigenera il token (link precedente non più valido) — utile se il
     link è stato condiviso per errore o il docente lo ha perso."""
-    from routes.impostazione_anno import _anno_default_piano
-    anno = request.form.get('anno') or _anno_default_piano()
+    from config_anno import get_anno_corrente
+    anno = request.form.get('anno') or get_anno_corrente()
     p = PianoAttivitaPersonale.query.filter_by(id_docente=id_docente, anno_scol=anno).first_or_404()
     p.token = genera_token()
     db.session.commit()
