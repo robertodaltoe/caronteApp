@@ -93,15 +93,17 @@ def lista():
     mostra_inattivi = request.args.get('mostra') == 'inattivi'
     docenti_inattivi = _docenti_non_in_servizio(anno_sel) if mostra_inattivi else []
 
-    # Stato Piano Attività Personale (Sessione 57), solo per i docenti a
-    # cattedra non completa nell'anno mostrato — per tutti gli altri
-    # piano_personale_stato resta None (nessun badge in tabella).
-    from models.piano_attivita_personale import cattedra_incompleta, PianoAttivitaPersonale
-    incompleti_ids = {d.id for d in docenti if cattedra_incompleta(d, anno_sel)}
+    # Stato Piano Attività Personale (Sessione 57), solo per i docenti
+    # che devono compilarlo nell'anno mostrato (cattedra non completa,
+    # o IRC anche a cattedra piena — vedi models/piano_attivita_
+    # personale.py::deve_compilare_piano) — per tutti gli altri
+    # piano_personale_stato resta assente (nessun badge in tabella).
+    from models.piano_attivita_personale import deve_compilare_piano, PianoAttivitaPersonale
+    coinvolti_ids = {d.id for d in docenti if deve_compilare_piano(d, anno_sel)}
     piani_stato = {p.id_docente: p.stato for p in PianoAttivitaPersonale.query.filter(
         PianoAttivitaPersonale.anno_scol == anno_sel,
-        PianoAttivitaPersonale.id_docente.in_(incompleti_ids)).all()} if incompleti_ids else {}
-    piano_personale_stato = {did: piani_stato.get(did, 'nessuno') for did in incompleti_ids}
+        PianoAttivitaPersonale.id_docente.in_(coinvolti_ids)).all()} if coinvolti_ids else {}
+    piano_personale_stato = {did: piani_stato.get(did, 'nessuno') for did in coinvolti_ids}
 
     return render_template('docenti.html', docenti=docenti,
                            anno_sel=anno_sel, anni_disponibili=anni_disponibili,
@@ -347,15 +349,16 @@ def modifica(id):
         if i.anno_scol != anno_c:
             incarichi_storico.setdefault(i.anno_scol, []).append(i)
 
-    # Piano Attività Personale (Sessione 57): solo se il docente ha
-    # cattedra non completa nell'anno corrente — per un docente a
-    # cattedra piena il riquadro non ha senso, non compare proprio.
+    # Piano Attività Personale (Sessione 57): solo se il docente deve
+    # compilarlo nell'anno corrente — cattedra non completa, o IRC anche
+    # a cattedra piena (vedi models/piano_attivita_personale.py::
+    # deve_compilare_piano) — altrimenti il riquadro non compare.
     piano_personale = None
     if d.attivo:
         from models.piano_attivita_personale import (
-            cattedra_incompleta, frazione_cattedra, quota_ore_bucket, PianoAttivitaPersonale,
+            deve_compilare_piano, frazione_cattedra, quota_ore_bucket, PianoAttivitaPersonale,
         )
-        if cattedra_incompleta(d, anno_c):
+        if deve_compilare_piano(d, anno_c):
             piano = PianoAttivitaPersonale.query.filter_by(
                 id_docente=d.id, anno_scol=anno_c).first()
             quota_a, quota_b = quota_ore_bucket(d, anno_c)

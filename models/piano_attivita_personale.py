@@ -65,6 +65,26 @@ def cattedra_incompleta(docente, anno_scol):
     return frazione_cattedra(docente, anno_scol) < 0.999
 
 
+# Categorie di docenti che compilano il piano anche a cattedra PIENA
+# (frazione 1.0): il criterio "cattedra incompleta" da solo non basta.
+# Un IRC a 18 ore è a tempo pieno, ma essendo presente in moltissime
+# classi (di norma 1h/settimana ciascuna) il preset automatico lo
+# metterebbe in ogni consiglio di classe di ognuna — ben oltre le 40
+# ore del bucket B — quindi deve comunque scegliere quali seguire,
+# anche se la sua quota resta quella piena (40 ore, non proporzionata).
+TIPI_CONTRATTO_SEMPRE_PIANO = {'IRC'}
+
+
+def deve_compilare_piano(docente, anno_scol):
+    """Chi rientra nel Piano Attività Personale: cattedra incompleta
+    (quota proporzionale) OPPURE una categoria come IRC che, pur a
+    cattedra piena, rischierebbe comunque di sforare i bucket CCNL se
+    seguisse il preset automatico "per tutte le sue classi"."""
+    if cattedra_incompleta(docente, anno_scol):
+        return True
+    return docente.tipo_contratto in TIPI_CONTRATTO_SEMPRE_PIANO
+
+
 def quota_ore_bucket(docente, anno_scol):
     """(quota_a, quota_b) — ore dovute per ciascun bucket CCNL,
     proporzionali alla frazione di cattedra del docente. Usa lo stesso

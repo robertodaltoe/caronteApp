@@ -54,6 +54,37 @@ def test_frazione_cattedra_part_time_proporzionale(app, db_session):
         assert cattedra_incompleta(d, '2025-2026')
 
 
+def test_irc_a_cattedra_piena_deve_comunque_compilare(app, db_session):
+    """Chiesto da Roberto: un IRC a 18 ore e' a cattedra piena (frazione
+    1.0), ma essendo presente in moltissime classi il preset automatico
+    lo metterebbe in ogni consiglio di classe — sforando facilmente le
+    40 ore. Deve quindi compilare il piano anche se cattedra_incompleta()
+    e' False, con la quota PIENA (non proporzionata, essendo a tempo pieno)."""
+    _crea_tabelle(app)
+    with app.app_context():
+        d = crea_docente('Santi', tipo_contratto='IRC')
+        d.ore_contratto = 18
+        db.session.commit()
+
+        from models.piano_attivita_personale import (
+            cattedra_incompleta, deve_compilare_piano, quota_ore_bucket,
+        )
+        assert not cattedra_incompleta(d, '2025-2026')     # cattedra piena
+        assert deve_compilare_piano(d, '2025-2026')         # ma deve comunque compilare
+        assert quota_ore_bucket(d, '2025-2026') == (40.0, 40.0)  # quota piena, non ridotta
+
+
+def test_docente_normale_a_cattedra_piena_non_deve_compilare(app, db_session):
+    """Un docente non-IRC a cattedra piena resta escluso, come prima."""
+    _crea_tabelle(app)
+    with app.app_context():
+        d = crea_docente('Ferrari', tipo_contratto='TI')
+        d.ore_contratto = 18
+        db.session.commit()
+        from models.piano_attivita_personale import deve_compilare_piano
+        assert not deve_compilare_piano(d, '2025-2026')
+
+
 def test_quota_ore_bucket_segue_limite_configurabile(app, db_session):
     _crea_tabelle(app)
     with app.app_context():

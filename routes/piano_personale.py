@@ -20,7 +20,7 @@ from models.docente import Docente
 from models.attivita_ist import AttivitaIst, TIPI_ATTIVITA, BUCKET_A, BUCKET_B, label_bucket
 from models.piano_attivita_personale import (
     PianoAttivitaPersonale, PianoAttivitaPersonaleVoce,
-    genera_token, frazione_cattedra, cattedra_incompleta, quota_ore_bucket,
+    genera_token, frazione_cattedra, deve_compilare_piano, quota_ore_bucket,
 )
 from datetime import datetime, date
 
@@ -56,7 +56,7 @@ def lista():
     anni_disponibili = sorted(anni_disponibili, reverse=True)
 
     docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
-               if cattedra_incompleta(d, anno)]
+               if deve_compilare_piano(d, anno)]
     piani = {p.id_docente: p for p in PianoAttivitaPersonale.query.filter_by(anno_scol=anno).all()}
 
     righe = []
@@ -158,6 +158,7 @@ def pubblico(token):
         piano=p, docente=p.docente, eventi=eventi,
         selezionati=p.ids_attivita_scelte,
         quota_a=quota_a, quota_b=quota_b, ore_a=ore_a, ore_b=ore_b,
+        frazione=frazione_cattedra(p.docente, p.anno_scol),
         BUCKET_A=BUCKET_A, BUCKET_B=BUCKET_B,
         tipi_a=label_bucket(BUCKET_A), tipi_b=label_bucket(BUCKET_B))
 

@@ -21,9 +21,11 @@
         <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('person') }} Piano attività personale — a.s. {{ anno }}</h1>
         <p style="font-size:.82rem; color:var(--grigio); max-width:640px; margin-top:2px;">
             Docenti con cattedra non completa in istituto (orario ridotto o completamento in un'altra
-            scuola) — scelgono i propri impegni collegiali (bucket A/B) tramite un link personale,
-            in proporzione alle ore di contratto qui. Gli scrutini restano sempre obbligatori per tutti.
-            Ogni anno scolastico ha i propri link/scelte: cambiare anno non tocca gli altri.
+            scuola), più gli IRC anche a cattedra piena (presenti in moltissime classi: il calcolo
+            automatico li metterebbe in ogni consiglio di classe, sforando facilmente le 40 ore) —
+            scelgono i propri impegni collegiali (bucket A/B) tramite un link personale. Gli scrutini
+            restano sempre obbligatori per tutti. Ogni anno scolastico ha i propri link/scelte:
+            cambiare anno non tocca gli altri.
         </p>
         <p style="font-size:.76rem; color:var(--grigio); max-width:640px; margin-top:4px;">
             <strong>Bucket A</strong> — {{ tipi_a | join(', ') }}.
@@ -64,7 +66,7 @@
 
 {% if not righe %}
 <div class="card" style="text-align:center; padding:32px; color:var(--grigio);">
-    {{ icon('check') }} Nessun docente con cattedra non completa per l'anno {{ anno }}.
+    {{ icon('check') }} Nessun docente coinvolto (cattedra non completa o IRC) per l'anno {{ anno }}.
 </div>
 {% else %}
 <div class="card" style="padding:0; overflow:hidden;">

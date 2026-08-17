@@ -387,20 +387,24 @@ SEZIONI = [
         'slug': 'piano-personale',
         'titolo': 'Piano attività personale',
         'icona': '📋',
-        'riassunto': 'I docenti a cattedra non completa scelgono i propri impegni collegiali dal Piano ufficiale.',
+        'riassunto': 'I docenti a cattedra non completa (e gli IRC) scelgono i propri impegni collegiali dal Piano ufficiale.',
         'a_cosa_serve': (
             'Un docente con cattedra non completa in istituto (orario ridotto, o cattedra completata '
             'in un\'altra scuola) partecipa agli impegni collegiali (collegio, consigli di classe, '
             'dipartimenti...) solo in proporzione alle ore di contratto qui — non per intero come un '
-            'docente a cattedra piena. Questa pagina genera per ciascuno di questi docenti un link '
-            'personale con cui sceglie, tra gli eventi già calendarizzati nel Piano delle Attività, '
-            'quelli a cui parteciperà. Gli scrutini restano sempre obbligatori per tutti e non passano '
-            'da qui.'
+            'docente a cattedra piena. Rientrano in questo modulo anche gli IRC, anche quando hanno '
+            'cattedra piena (18 ore): essendo presenti in moltissime classi, seguire tutti gli '
+            'impegni di ognuna supererebbe facilmente le 40 ore annue per bucket previste dal CCNL, '
+            'quindi scelgono anche loro quali seguire. Questa pagina genera per ciascuno di questi '
+            'docenti un link personale con cui sceglie, tra gli eventi già calendarizzati nel Piano '
+            'delle Attività, quelli a cui parteciperà. Gli scrutini restano sempre obbligatori per '
+            'tutti e non passano da qui.'
         ),
         'passi': [
             ('Apri "Attività → Piano attività personale"',
-             'L\'elenco mostra solo i docenti con cattedra non completa per l\'anno selezionato, con '
-             'la percentuale di cattedra e le ore dovute per ciascuno dei due bucket CCNL.'),
+             'L\'elenco mostra solo i docenti coinvolti (cattedra non completa, o IRC) per l\'anno '
+             'selezionato, con la percentuale di cattedra e le ore dovute per ciascuno dei due '
+             'bucket CCNL.'),
             ('Genera il link per un docente',
              'Il pulsante "Genera link" crea un link personale univoco (nessun account richiesto) — '
              'invialo al docente via email o come preferisci.'),
