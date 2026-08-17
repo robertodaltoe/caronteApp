@@ -17,7 +17,7 @@ Due pubblici distinti in questo stesso blueprint:
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from models import db
 from models.docente import Docente
-from models.attivita_ist import AttivitaIst, TIPI_ATTIVITA, BUCKET_A, BUCKET_B
+from models.attivita_ist import AttivitaIst, TIPI_ATTIVITA, BUCKET_A, BUCKET_B, label_bucket
 from models.piano_attivita_personale import (
     PianoAttivitaPersonale, PianoAttivitaPersonaleVoce,
     genera_token, frazione_cattedra, cattedra_incompleta, quota_ore_bucket,
@@ -72,7 +72,8 @@ def lista():
 
     return render_template('attivita_ist/piano_personale_lista.html',
         righe=righe, anno=anno, anno_default=anno_default,
-        anni_disponibili=anni_disponibili)
+        anni_disponibili=anni_disponibili,
+        tipi_a=label_bucket(BUCKET_A), tipi_b=label_bucket(BUCKET_B))
 
 
 @piano_personale_bp.route('/attivita-ist/piano-personale/<int:id_docente>/genera', methods=['POST'])
@@ -157,7 +158,8 @@ def pubblico(token):
         piano=p, docente=p.docente, eventi=eventi,
         selezionati=p.ids_attivita_scelte,
         quota_a=quota_a, quota_b=quota_b, ore_a=ore_a, ore_b=ore_b,
-        BUCKET_A=BUCKET_A, BUCKET_B=BUCKET_B)
+        BUCKET_A=BUCKET_A, BUCKET_B=BUCKET_B,
+        tipi_a=label_bucket(BUCKET_A), tipi_b=label_bucket(BUCKET_B))
 
 
 def _salva_scelte(p, form):

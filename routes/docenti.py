@@ -93,11 +93,22 @@ def lista():
     mostra_inattivi = request.args.get('mostra') == 'inattivi'
     docenti_inattivi = _docenti_non_in_servizio(anno_sel) if mostra_inattivi else []
 
+    # Stato Piano Attività Personale (Sessione 57), solo per i docenti a
+    # cattedra non completa nell'anno mostrato — per tutti gli altri
+    # piano_personale_stato resta None (nessun badge in tabella).
+    from models.piano_attivita_personale import cattedra_incompleta, PianoAttivitaPersonale
+    incompleti_ids = {d.id for d in docenti if cattedra_incompleta(d, anno_sel)}
+    piani_stato = {p.id_docente: p.stato for p in PianoAttivitaPersonale.query.filter(
+        PianoAttivitaPersonale.anno_scol == anno_sel,
+        PianoAttivitaPersonale.id_docente.in_(incompleti_ids)).all()} if incompleti_ids else {}
+    piano_personale_stato = {did: piani_stato.get(did, 'nessuno') for did in incompleti_ids}
+
     return render_template('docenti.html', docenti=docenti,
                            anno_sel=anno_sel, anni_disponibili=anni_disponibili,
                            anno_default=anno_default,
                            mostra_inattivi=mostra_inattivi,
-                           docenti_inattivi=docenti_inattivi)
+                           docenti_inattivi=docenti_inattivi,
+                           piano_personale_stato=piano_personale_stato)
 
 
 @docenti_bp.route('/docenti/<int:id>/riattiva', methods=['POST'])
@@ -336,6 +347,29 @@ def modifica(id):
         if i.anno_scol != anno_c:
             incarichi_storico.setdefault(i.anno_scol, []).append(i)
 
+    # Piano Attività Personale (Sessione 57): solo se il docente ha
+    # cattedra non completa nell'anno corrente — per un docente a
+    # cattedra piena il riquadro non ha senso, non compare proprio.
+    piano_personale = None
+    if d.attivo:
+        from models.piano_attivita_personale import (
+            cattedra_incompleta, frazione_cattedra, quota_ore_bucket, PianoAttivitaPersonale,
+        )
+        if cattedra_incompleta(d, anno_c):
+            piano = PianoAttivitaPersonale.query.filter_by(
+                id_docente=d.id, anno_scol=anno_c).first()
+            quota_a, quota_b = quota_ore_bucket(d, anno_c)
+            ore_a, ore_b = piano.ore_scelte_bucket() if piano else (0.0, 0.0)
+            piano_personale = {
+                'piano': piano, 'anno': anno_c,
+                'frazione': frazione_cattedra(d, anno_c),
+                'quota_a': quota_a, 'quota_b': quota_b,
+                'ore_a': ore_a, 'ore_b': ore_b,
+                'eventi_scelti': sorted(
+                    (v.attivita for v in piano.voci if v.attivita), key=lambda e: e.data
+                ) if piano else [],
+            }
+
     return render_template('docente_form.html', docente=d,
                            materie=materie, mat_assegnate=mat_assegnate,
         giorni=list(enumerate(GIORNI)), eccezioni=eccezioni,
@@ -345,7 +379,8 @@ def modifica(id):
         anni_disponibili_ore_max=anni_ore_max,
         anno_corrente_incarichi=anno_c,
         incarichi_corrente=incarichi_corrente,
-        incarichi_storico=incarichi_storico)
+        incarichi_storico=incarichi_storico,
+        piano_personale=piano_personale)
 
 @docenti_bp.route('/docenti/<int:id>/anonimizza', methods=['POST'])
 def anonimizza(id):

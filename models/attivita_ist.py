@@ -28,6 +28,14 @@ TIPI_ATTIVITA = {
 LIMITE_BUCKET = 40  # ore annue per bucket A e B
 
 
+def label_bucket(bucket):
+    """Etichette dei tipi che appartengono a un bucket, nell'ordine di
+    TIPI_ATTIVITA — usata per spiegare esplicitamente cosa conta in
+    ciascun bucket (es. nel Piano Attività Personale, Sessione 57)
+    senza duplicare a mano l'elenco in più punti/template."""
+    return [info['label'] for info in TIPI_ATTIVITA.values() if info['bucket'] == bucket]
+
+
 class AttivitaIst(db.Model):
     """Singolo evento istituzionale (una data, un orario)."""
     __tablename__ = 'attivita_ist'

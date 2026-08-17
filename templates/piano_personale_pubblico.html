@@ -81,10 +81,14 @@
     <div class="card">
         <p style="font-size:.86rem; color:#374151; margin-top:0;">
             Avendo una cattedra non completa in istituto, la tua partecipazione agli impegni
-            collegiali (collegio docenti, consigli di classe, dipartimenti...) è proporzionale
-            alle tue ore di contratto qui. Scegli qui sotto gli impegni a cui parteciperai tra
-            quelli già calendarizzati nel Piano delle Attività dell'istituto — <strong>gli
-            scrutini restano sempre obbligatori per tutti</strong> e non compaiono in questo elenco.
+            collegiali è proporzionale alle tue ore di contratto qui. Scegli qui sotto gli impegni
+            a cui parteciperai tra quelli già calendarizzati nel Piano delle Attività dell'istituto
+            — <strong>gli scrutini restano sempre obbligatori per tutti</strong> e non compaiono
+            in questo elenco.
+        </p>
+        <p style="font-size:.78rem; color:var(--grigio); margin-bottom:0;">
+            <strong>Bucket A</strong> — {{ tipi_a | join(', ') }}.
+            <strong>Bucket B</strong> — {{ tipi_b | join(', ') }}.
         </p>
         <p style="font-size:.78rem; color:var(--giallo); background:var(--giallo-bg); border-radius:6px;
                   padding:8px 12px; margin-bottom:0;">

@@ -251,6 +251,51 @@ def test_invia_salva_anche_le_scelte_non_solo_lo_stato(app, db_session, monkeypa
         assert [v.id_attivita for v in p.voci] == [ev_id]
 
 
+# ── Chiarezza bucket A/B (colloqui e formazione, chiesto da Roberto) ─
+
+def test_label_bucket_include_colloqui_e_formazione():
+    from models.attivita_ist import label_bucket, BUCKET_A, BUCKET_B
+    tipi_a = label_bucket(BUCKET_A)
+    tipi_b = label_bucket(BUCKET_B)
+    assert 'Incontro scuola-famiglia' in tipi_a
+    assert 'Formazione' in tipi_a
+    assert 'Consiglio di classe' in tipi_b
+    # Lo scrutinio non appartiene a nessuno dei due bucket configurabili.
+    assert 'Scrutinio' not in tipi_a and 'Scrutinio' not in tipi_b
+
+
+# ── Riepilogo in scheda/elenco docenti ──────────────────────────────
+
+def test_riepilogo_docenti_lista_e_scheda(app, db_session, monkeypatch):
+    """Il badge in elenco e il riquadro nella scheda docente devono
+    riflettere lo stato reale del piano — verificato a livello di dati
+    (già coperto end-to-end manualmente con una copia del database
+    reale); qui controlliamo che le funzioni su cui si basano restino
+    coerenti tra loro per lo stesso docente/anno."""
+    _crea_tabelle(app)
+    with app.app_context():
+        d = crea_docente('Adami')
+        d.ore_contratto = 9
+        d.part_time = True
+        d.ore_contratto_pt = 9
+        db.session.commit()
+
+        from models.piano_attivita_personale import (
+            cattedra_incompleta, PianoAttivitaPersonale, genera_token,
+        )
+        assert cattedra_incompleta(d, '2025-2026')
+
+        p = PianoAttivitaPersonale(id_docente=d.id, anno_scol='2025-2026',
+                                    token=genera_token(), stato='inviato')
+        db.session.add(p)
+        db.session.commit()
+
+        # Stessa lettura che farebbero routes/docenti.py::lista()/modifica()
+        stato = PianoAttivitaPersonale.query.filter_by(
+            id_docente=d.id, anno_scol='2025-2026').first().stato
+        assert stato == 'inviato'
+
+
 # ── Permessi: la sezione e' collegata correttamente ─────────────────
 
 def test_sezione_piano_personale_collegata():

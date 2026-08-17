@@ -115,6 +115,18 @@
                     PT{{ ' ' ~ d.ore_contratto_pt_effettive_per_anno(anno_sel) ~ 'h' if d.ore_contratto_pt_effettive_per_anno(anno_sel) else '' }}
                 </span>
             {% endif %}
+            {% if puo_vedere('piano_personale') and d.id in piano_personale_stato %}
+                {% set st = piano_personale_stato[d.id] %}
+                <a href="{{ url_for('piano_personale.lista', anno=anno_sel) }}"
+                   class="badge" style="margin-left:3px; text-decoration:none;
+                          {% if st == 'bloccato' %}background:var(--verde-bg); color:var(--verde);
+                          {% elif st == 'inviato' %}background:#dbeafe; color:#1e40af;
+                          {% elif st == 'bozza' %}background:#f3f4f6; color:#6b7280;
+                          {% else %}background:var(--rosso-bg); color:var(--rosso);{% endif %}"
+                   title="Piano attività personale — {{ {'bloccato':'confermato','inviato':'inviato','bozza':'in compilazione','nessuno':'link non ancora generato'}.get(st, st) }}">
+                    {{ icon('list') }} Piano: {{ {'bloccato':'OK','inviato':'inviato','bozza':'in attesa','nessuno':'da generare'}.get(st, st) }}
+                </a>
+            {% endif %}
         </td>
         <td style="text-align:center; white-space:nowrap; font-size:.82rem; color:var(--grigio);">
             {{ d.colloqui_label if d.colloqui_label != '—' else '—' }}

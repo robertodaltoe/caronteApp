@@ -413,6 +413,11 @@ SEZIONI = [
              'confermate. Lo sblocco (↺) permette correzioni successive.'),
         ],
         'faq': [
+            ('Colloqui scuola-famiglia e formazione rientrano in uno dei due bucket?',
+             'Sì. Bucket A: collegio docenti, incontri scuola-famiglia, formazione, altro. '
+             'Bucket B: consigli di classe, riunioni di dipartimento/materia, GLO, riunioni referenti '
+             'di dipartimento. Solo gli scrutini restano fuori da entrambi (sempre obbligatori per '
+             'tutti). L\'elenco esatto compare anche nella pagina del link personale.'),
             ('Cosa succede alla partecipazione del docente agli eventi che non ha scelto?',
              'Non compare più come partecipante previsto per quegli eventi — la sua selezione '
              'personale sostituisce interamente il calcolo automatico "per tutti/per classe/per '

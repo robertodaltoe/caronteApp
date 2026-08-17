@@ -457,6 +457,64 @@
     </div>
     {% endif %}
 
+    {# ── 4c. Piano attività personale (cattedra non completa) ───────── #}
+    {% if docente and piano_personale and puo_vedere('piano_personale') %}
+    <div class="card" style="padding:16px 18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-weight:700; color:var(--blu); font-size:.9rem;">
+                {{ icon('list') }} Piano attività personale — a.s. {{ piano_personale.anno }}
+            </div>
+            <a href="{{ url_for('piano_personale.lista', anno=piano_personale.anno) }}"
+               style="font-size:.74rem; color:var(--blu);">Gestisci {{ icon('arrow') }}</a>
+        </div>
+
+        <div style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
+            Cattedra al {{ (piano_personale.frazione * 100) | round | int }}%.
+            {% if not piano_personale.piano %}
+                <span style="color:var(--rosso); font-weight:600;">Nessun link ancora generato.</span>
+            {% else %}
+                Stato: <strong>{{ {'bozza':'in compilazione','inviato':'inviato','bloccato':'confermato'}.get(piano_personale.piano.stato, piano_personale.piano.stato) }}</strong>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:{{ '10px' if piano_personale.eventi_scelti else '0' }};">
+            <div style="flex:1; min-width:160px;">
+                <div style="font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--grigio);">Bucket A</div>
+                <div style="font-size:.9rem; font-weight:700; color:var(--blu);">
+                    {{ piano_personale.ore_a }} <span style="font-size:.76rem; font-weight:400; color:var(--grigio);">/ {{ piano_personale.quota_a }} h</span>
+                </div>
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <div style="font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--grigio);">Bucket B</div>
+                <div style="font-size:.9rem; font-weight:700; color:var(--blu);">
+                    {{ piano_personale.ore_b }} <span style="font-size:.76rem; font-weight:400; color:var(--grigio);">/ {{ piano_personale.quota_b }} h</span>
+                </div>
+            </div>
+        </div>
+
+        {% if piano_personale.eventi_scelti %}
+        <details>
+            <summary style="font-size:.75rem; font-weight:700; color:var(--grigio); cursor:pointer;
+                            text-transform:uppercase; letter-spacing:.5px;">
+                Impegni scelti ({{ piano_personale.eventi_scelti|length }})
+            </summary>
+            <div style="display:flex; flex-direction:column; gap:4px; margin-top:6px;">
+                {% for e in piano_personale.eventi_scelti %}
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;
+                            padding:5px 9px; background:#fafbfc; border:1px solid #f0f2f5; border-radius:6px; font-size:.8rem;">
+                    <span>
+                        <span style="color:var(--grigio); font-size:.74rem;">{{ e.data.strftime('%d/%m/%Y') }}</span>
+                        <strong style="margin-left:6px;">{{ e.tipo_emoji }} {{ e.titolo }}</strong>
+                    </span>
+                    <span style="color:var(--grigio); font-size:.74rem; white-space:nowrap;">{{ e.durata_ore }} h</span>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {# ── 5. Colloqui settimanali ──────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">

@@ -25,6 +25,10 @@
             in proporzione alle ore di contratto qui. Gli scrutini restano sempre obbligatori per tutti.
             Ogni anno scolastico ha i propri link/scelte: cambiare anno non tocca gli altri.
         </p>
+        <p style="font-size:.76rem; color:var(--grigio); max-width:640px; margin-top:4px;">
+            <strong>Bucket A</strong> — {{ tipi_a | join(', ') }}.
+            <strong>Bucket B</strong> — {{ tipi_b | join(', ') }}.
+        </p>
     </div>
     <div style="display:flex; align-items:center; gap:8px;">
         {% if anni_disponibili %}
