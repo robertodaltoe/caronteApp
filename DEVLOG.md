@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
+
+**Contesto:** Roberto ha chiesto una verifica visuale di
+`/recupero/agosto/calendario` sul suo server reale (localhost:5002),
+con login fatto direttamente nel pannello browser. Commit: `c8578c7`.
+
+Trovati due problemi visivi: la colonna "Docente assistente" (un
+`<select>`) troncava il testo senza ellissi ("SCHEPIS M. — 1 impe...");
+la colonna "Classi" spezzava la lista separata da virgole a metà
+token su righe diverse. Causa radice comune: la tabella usa il
+`table-layout:auto` di default del sito, quindi una "Materia" molto
+lunga su una riga rubava spazio alle colonne con larghezza dichiarata,
+comprimendole in modo incoerente riga per riga.
+
+- `table-layout:fixed` sulla tabella, con larghezze esplicite anche
+  per Materia e Classi (prima senza width, causa dello squeeze).
+- Contenitore `overflow-x:auto` + `min-width` sulla tabella: senza,
+  il fixed layout avrebbe schiacciato proporzionalmente TUTTE le
+  colonne sui viewport stretti — ora scorre in orizzontale.
+- "Docente assistente" allargata a 230px (prima 190px).
+- "Classi": spazio dopo ogni virgola solo in visualizzazione (il dato
+  salvato resta invariato) così il testo va a capo ai punti naturali.
+- "Materia" passa alla classe `.wrap` invece di troncare in silenzio.
+
+Verificato visivamente sul server reale, prima e dopo, su più righe
+con materie/cognomi lunghi. 110/110 template passano il parser Jinja
+(a parte il falso positivo preesistente su roster.html). Suite
+completa: 70/70 test passano (nessuna logica toccata, solo CSS/markup).
+
 ## Sessione 55 — Guida: sezioni mancanti aggiunte, contenuto obsoleto corretto (Cowork)
 
 **Contesto:** chiesto se la Guida avesse bisogno di aggiornamenti e se
