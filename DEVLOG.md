@@ -4,6 +4,54 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
+
+**Contesto:** Roberto: i docenti con cattedra non completa in istituto
+(orario ridotto o completamento altrove) partecipano agli impegni
+collegiali solo in proporzione alle ore di contratto qui — prima
+gestito fuori dall'app (piano personale su carta/email), ora scelto
+direttamente dal Piano delle Attività ufficiale. Confermato: link
+personale con token (nessun account per i docenti), quota
+proporzionale, selezione che sostituisce il preset automatico,
+modificabile finché lo staff non la blocca. Commit: `33bfe15`.
+
+- `models/piano_attivita_personale.py`: `PianoAttivitaPersonale`
+  (token, stato bozza/inviato/bloccato) + `PianoAttivitaPersonaleVoce`
+  (eventi scelti). Riusa i bucket CCNL art.44 già modellati in
+  `models/attivita_ist.py` (BUCKET_A/B, 40h/anno per cattedra piena) —
+  gli scrutini restano sempre obbligatori per tutti, fuori da qui.
+- **Trovata un'ambiguità nei dati durante il collaudo**: `Docente.
+  ore_contratto` non si può usare come riferimento "cattedra piena" —
+  per i part-time contiene già il valore ridotto (verificato: ABRAMINI
+  ha ore_contratto=15 e ore_contratto_pt=15, la frazione sarebbe
+  sempre stata 1.0, nascondendo proprio i docenti da intercettare).
+  Aggiunto `config_istituto.py::ore_cattedra_piena` (default 18,
+  configurabile in Impostazioni → Dati istituto) come riferimento
+  esterno — segnalato a Roberto di verificare se 18 vale per tutte le
+  categorie di docenti nel suo istituto. Riusa anche `ore_ist_limite`
+  (già esistente, usato dal cruscotto ore istituzionali in
+  routes/report.py, lì fisso a 40h per chiunque — qui proporzionato).
+- `routes/attivita_ist.py::_preset_partecipanti()`: per gli eventi
+  non-scrutinio, un docente con un piano attivo per l'anno non segue
+  più il preset "per tutti/per classe/per dipartimento" — la sua
+  selezione personale lo sostituisce interamente.
+- `routes/piano_personale.py`: route staff (genera/rigenera link,
+  blocca/sblocca — nuova sezione `piano_personale` nella matrice
+  permessi) + route pubbliche a token (nessun controllo oltre al
+  token — vedi `app.py::ROUTE_PUBBLICHE`). La pagina pubblica non
+  estende `base.html` (niente nav/permessi staff per un visitatore
+  anonimo).
+
+Verificato con una copia del database reale: 30 docenti su 93 attivi
+risultano a cattedra incompleta, frazioni/quote coerenti. Flusso
+end-to-end completo (genera link → docente sceglie un evento → compare
+come partecipante SOLO per quello, non per altri eventi bucket A/B
+dello stesso anno, scrutinio invariato → blocco → tentativo di
+modifica forzata rifiutato → sblocco). Aggiunto
+`tests/test_piano_attivita_personale.py` (12 test, inclusa la
+regressione su "Salva e invia" che deve salvare anche le spunte, non
+solo lo stato). Suite completa: 82/82 test passano.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
