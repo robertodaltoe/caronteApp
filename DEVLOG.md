@@ -72,6 +72,20 @@ non solo detto a voce: aggiunto un avviso esplicito nella pagina
 staff, nella pagina pubblica del docente e nella voce Guida. Commit:
 `90c2c60`.
 
+**Terzo addendum:** Roberto propone (confermato) un richiamo al piano
+direttamente in Anagrafica docenti, e chiede se colloqui
+scuola-famiglia/formazione rientrino nei bucket CCNL — sì, erano già
+in bucket A, mai reso esplicito. Aggiunto `models/attivita_ist.py::
+label_bucket()` (elenco tipi per bucket, derivato da TIPI_ATTIVITA) e
+la legenda esplicita nella pagina staff, pagina pubblica e una nuova
+FAQ in Guida. In `templates/docenti.html`: badge colorato per stato
+piano (da generare/in attesa/inviato/OK) accanto al tipo contratto,
+solo per chi ha permesso su 'piano_personale'. In
+`templates/docente_form.html`: nuova card "Piano attività personale"
+(stesso stile della card Incarichi) con ore bucket A/B, stato ed
+elenco impegni scelti, solo per docenti a cattedra non completa
+nell'anno corrente. Commit: `90217de`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
