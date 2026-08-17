@@ -86,6 +86,19 @@ solo per chi ha permesso su 'piano_personale'. In
 elenco impegni scelti, solo per docenti a cattedra non completa
 nell'anno corrente. Commit: `90217de`.
 
+**Quarto addendum:** Roberto segnala un caso reale non coperto: gli
+IRC hanno spesso 18 ore (cattedra piena) ma su moltissime classi (1h/
+settimana ciascuna) — seguendo tutti i consigli di classe di ognuna
+sforerebbero facilmente le 40 ore del bucket B, quindi devono
+scegliere anche loro pur essendo a tempo pieno. Il criterio precedente
+(`cattedra_incompleta`, frazione < 1) li escludeva del tutto. Aggiunta
+`deve_compilare_piano()` = cattedra incompleta OPPURE
+`tipo_contratto == 'IRC'` — la quota per un IRC a 18 ore resta piena
+(40/40h, non ridotta): il punto non è fare meno ore ma scegliere
+quali. Verificato sui 2 IRC reali del database (entrambi 18 ore, prima
+esclusi, ora correttamente inclusi con quota piena). Commit:
+`e82402a`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
