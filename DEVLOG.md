@@ -52,6 +52,17 @@ modifica forzata rifiutato → sblocco). Aggiunto
 regressione su "Salva e invia" che deve salvare anche le spunte, non
 solo lo stato). Suite completa: 82/82 test passano.
 
+**Addendum stessa sessione:** Roberto segnala che la pagina non
+mostrava da nessuna parte l'anno scolastico, e usava come default
+`_anno_default_piano()` (l'anno "in preparazione") invece dell'anno
+operativo — proprio la confusione tra i due concetti-anno già causa di
+bug ricorrenti in passato (vedi guida rapida del progetto). Cambiato
+il default a `get_anno_corrente()`, aggiunto un selettore anni (stesso
+pattern di `templates/docenti.html`) e un avviso quando si guarda un
+anno diverso da quello corrente. I dati erano già correttamente
+separati per anno (chiave unica docente+anno_scol) — mancava solo la
+visibilità/il modo di cambiarlo in UI. Commit: `d9cb73d`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
