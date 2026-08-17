@@ -59,6 +59,16 @@ def _preset_partecipanti(attivita):
     non più disponibile continuerebbe a comparire come partecipante
     previsto anche dopo che ha lasciato la scuola o dopo la scadenza del
     contratto.
+
+    Sessione 57: per gli eventi non-scrutinio (bucket A/B, vedi
+    models/attivita_ist.py), un docente con un Piano delle Attività
+    Personale attivo per l'anno (vedi models/piano_attivita_personale.py
+    — cattedra non completa in istituto) NON segue più questo preset
+    "per tutti/per classe/per dipartimento": la sua selezione personale
+    sostituisce interamente la sua partecipazione prevista a questi
+    eventi, in proporzione alle sue ore di contratto. Gli scrutini
+    (bucket None) restano invece sempre calcolati come per chiunque
+    altro, fuori da questo meccanismo.
     """
     esclusi_ids = _non_in_servizio_per_data(attivita.data)
 
@@ -67,15 +77,15 @@ def _preset_partecipanti(attivita):
     tipo = attivita.tipo
 
     if tipo in ('collegio', 'incontro_famiglie', 'formazione'):
-        return [d.id for d in docenti_attivi]
+        risultato = [d.id for d in docenti_attivi]
 
-    if tipo in ('consiglio_classe', 'scrutinio') and attivita.classe:
+    elif tipo in ('consiglio_classe', 'scrutinio') and attivita.classe:
         from models.orario_docente import OrarioDocente
         ids = {s.id_docente for s in OrarioDocente.query.filter_by(
             classe=attivita.classe).all()}
-        return [i for i in ids if i not in esclusi_ids]
+        risultato = [i for i in ids if i not in esclusi_ids]
 
-    if tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \
+    elif tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \
             and attivita.id_dipartimento:
         # Anno scolastico dell'EVENTO (dalla sua data), non "oggi": una
         # riunione di dipartimento programmata per marzo 2027 deve
@@ -85,12 +95,25 @@ def _preset_partecipanti(attivita):
             Materia.id_dipartimento == attivita.id_dipartimento,
             DocenteMateria.anno_scol == _anno_scolastico(attivita.data)
         ).all()}
-        return [i for i in ids if i not in esclusi_ids]
+        risultato = [i for i in ids if i not in esclusi_ids]
 
-    if tipo == 'glo':
-        return []  # solo manuale
+    elif tipo == 'glo':
+        risultato = []  # solo manuale
 
-    return [d.id for d in docenti_attivi]
+    else:
+        risultato = [d.id for d in docenti_attivi]
+
+    if attivita.bucket is not None:
+        from models.piano_attivita_personale import PianoAttivitaPersonale
+        anno_ev = _anno_scolastico(attivita.data)
+        piani = {p.id_docente: p for p in
+                 PianoAttivitaPersonale.query.filter_by(anno_scol=anno_ev).all()}
+        if piani:
+            selezionati = {did for did, p in piani.items()
+                           if attivita.id in p.ids_attivita_scelte and did not in esclusi_ids}
+            risultato = [i for i in risultato if i not in piani] + list(selezionati)
+
+    return risultato
 
 
 def _auto_presenze(attivita):

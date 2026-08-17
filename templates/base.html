@@ -505,7 +505,7 @@
         {% endif %}
     {% endif %}
 
-    {% if puo_vedere('attivita') or puo_vedere('attivita_istituzionali') or puo_vedere('attivita_differite') %}
+    {% if puo_vedere('attivita') or puo_vedere('attivita_istituzionali') or puo_vedere('attivita_differite') or puo_vedere('piano_personale') %}
     <div class="nav-dropdown">
         <a><span class="nav-ic">{{ icon('list') }}</span> Attività</a>
         <div class="nav-drop-menu">
@@ -517,6 +517,9 @@
             {% endif %}
             {% if puo_vedere('attivita_differite') %}
             <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
+            {% endif %}
+            {% if puo_vedere('piano_personale') %}
+            <a href="{{ url_for('piano_personale.lista') }}"><span class="nav-ic">{{ icon('person') }}</span> Piano attività personale</a>
             {% endif %}
         </div>
     </div>

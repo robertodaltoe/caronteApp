@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piano attività personale — {{ docente.cognome }}</title>
+<style>
+    :root {
+        --blu: #7a1c17; --blu-med: #a33a30; --blu-light: #fbeceb;
+        --grigio: #6b7280; --verde: #166534; --verde-bg: #dcfce7;
+        --rosso: #b91c1c; --rosso-bg: #fee2e2; --giallo: #92400e; --giallo-bg: #fef3c7;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; margin:0;
+           background:#f4f1ee; color:#1f2937; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
+    header { background: var(--blu); color: white; padding: 18px 16px; }
+    header .inner { max-width: 760px; margin: 0 auto; }
+    header h1 { font-size: 1.15rem; margin: 0 0 2px; }
+    header p { font-size: .84rem; margin: 0; opacity: .9; }
+    .card { background: white; border-radius: 10px; border: 1px solid #e5eaf0;
+            padding: 16px 18px; margin-bottom: 14px; }
+    .quote-riga { display:flex; gap:16px; flex-wrap:wrap; margin-bottom: 4px; }
+    .quota-box { flex:1; min-width: 200px; }
+    .quota-lbl { font-size: .74rem; color: var(--grigio); text-transform: uppercase;
+                 letter-spacing: .4px; font-weight: 700; margin-bottom: 4px; }
+    .quota-val { font-size: 1.3rem; font-weight: 800; color: var(--blu); }
+    .quota-bar { height: 8px; border-radius: 4px; background:#e5eaf0; overflow: hidden; margin-top: 6px; }
+    .quota-bar-fill { height: 100%; background: var(--verde); }
+    .quota-bar-fill.over { background: var(--rosso); }
+    .giorno-header { font-weight: 700; color: var(--blu); font-size: .84rem;
+                     margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #e5eaf0; }
+    .ev-row { display:flex; align-items:flex-start; gap: 10px; padding: 8px 4px;
+              border-bottom: 1px solid #f3f4f6; }
+    .ev-row label { display:flex; align-items:flex-start; gap: 10px; cursor: pointer; width: 100%; }
+    .ev-row input[type=checkbox] { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
+    .ev-titolo { font-weight: 700; font-size: .9rem; }
+    .ev-meta { font-size: .78rem; color: var(--grigio); margin-top: 1px; }
+    .ev-ore { font-size: .76rem; font-weight: 700; color: var(--blu); white-space: nowrap; margin-left: auto; padding-left: 8px; }
+    .pill { font-size: .68rem; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+    .pill-a { background:#dbeafe; color:#1e40af; }
+    .pill-b { background: var(--verde-bg); color: var(--verde); }
+    textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+               font-size: .86rem; font-family: inherit; resize: vertical; }
+    .btn { display: inline-block; padding: 9px 18px; border-radius: 7px; border: none;
+           font-size: .88rem; font-weight: 700; cursor: pointer; text-decoration: none; }
+    .btn-primary { background: var(--blu); color: white; }
+    .btn-secondary { background: #e5eaf0; color: var(--blu); }
+    .flash { padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: .86rem; }
+    .flash-success { background: var(--verde-bg); color: var(--verde); }
+    .flash-error { background: var(--rosso-bg); color: var(--rosso); }
+    .flash-warning { background: var(--giallo-bg); color: var(--giallo); }
+    .banner-bloccato { background: var(--verde-bg); color: var(--verde); border-radius: 8px;
+                        padding: 12px 16px; margin-bottom: 14px; font-size: .86rem; font-weight: 600; }
+    .azioni { display:flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .vuoto { text-align:center; color: var(--grigio); padding: 24px; font-size: .86rem; }
+</style>
+</head>
+<body>
+<header>
+    <div class="inner">
+        <h1>📋 Piano attività personale</h1>
+        <p>{{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %} — anno {{ piano.anno_scol }}</p>
+    </div>
+</header>
+<div class="wrap">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+            <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    {% if piano.stato == 'bloccato' %}
+    <div class="banner-bloccato">
+        🔒 Questo piano è stato confermato dalla segreteria e non è più modificabile.
+        Per una correzione, contatta direttamente la segreteria o il collaboratore del DS.
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <p style="font-size:.86rem; color:#374151; margin-top:0;">
+            Avendo una cattedra non completa in istituto, la tua partecipazione agli impegni
+            collegiali (collegio docenti, consigli di classe, dipartimenti...) è proporzionale
+            alle tue ore di contratto qui. Scegli qui sotto gli impegni a cui parteciperai tra
+            quelli già calendarizzati nel Piano delle Attività dell'istituto — <strong>gli
+            scrutini restano sempre obbligatori per tutti</strong> e non compaiono in questo elenco.
+        </p>
+        <div class="quote-riga">
+            <div class="quota-box">
+                <div class="quota-lbl">Bucket A — collegiali <span class="pill pill-a">A</span></div>
+                <div class="quota-val">{{ ore_a }} <span style="font-size:.8rem; font-weight:400; color:var(--grigio);">/ {{ quota_a }} h dovute</span></div>
+                <div class="quota-bar"><div class="quota-bar-fill {% if ore_a > quota_a %}over{% endif %}"
+                    style="width:{{ [100, (ore_a / quota_a * 100) if quota_a else 0] | min }}%;"></div></div>
+            </div>
+            <div class="quota-box">
+                <div class="quota-lbl">Bucket B — CdC/dipartimenti <span class="pill pill-b">B</span></div>
+                <div class="quota-val">{{ ore_b }} <span style="font-size:.8rem; font-weight:400; color:var(--grigio);">/ {{ quota_b }} h dovute</span></div>
+                <div class="quota-bar"><div class="quota-bar-fill {% if ore_b > quota_b %}over{% endif %}"
+                    style="width:{{ [100, (ore_b / quota_b * 100) if quota_b else 0] | min }}%;"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" action="{{ url_for('piano_personale.salva', token=piano.token) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="card" style="padding:0; overflow:hidden;">
+            {% if not eventi %}
+            <div class="vuoto">Nessun impegno ancora calendarizzato per quest'anno.</div>
+            {% else %}
+            <div style="padding: 12px 18px 4px;">
+            {% set ns = namespace(giorno_corrente=None) %}
+            {% for e in eventi %}
+                {% set giorno = e.data.strftime('%d/%m/%Y') %}
+                {% if giorno != ns.giorno_corrente %}
+                    {% set ns.giorno_corrente = giorno %}
+                    <div class="giorno-header">{{ e.data.strftime('%A %d %B %Y') | capitalize }}</div>
+                {% endif %}
+                <div class="ev-row">
+                    <label>
+                        <input type="checkbox" name="evento" value="{{ e.id }}"
+                               {% if e.id in selezionati %}checked{% endif %}
+                               {% if piano.stato == 'bloccato' %}disabled{% endif %}>
+                        <span style="flex:1;">
+                            <span class="ev-titolo">{{ e.tipo_emoji }} {{ e.titolo }}</span>
+                            <span class="pill {{ 'pill-a' if e.bucket == BUCKET_A else 'pill-b' }}">{{ e.bucket }}</span>
+                            <div class="ev-meta">
+                                {% if e.ora_inizio and e.ora_fine %}{{ e.ora_inizio }}–{{ e.ora_fine }}{% endif %}
+                                {% if e.classe %} · {{ e.classe }}{% endif %}
+                            </div>
+                        </span>
+                        <span class="ev-ore">{{ e.durata_ore }} h</span>
+                    </label>
+                </div>
+            {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <label style="font-size:.82rem; font-weight:700; color:#374151; display:block; margin-bottom:6px;">
+                Note per la segreteria (facoltative)
+            </label>
+            <textarea name="note" rows="2" {% if piano.stato == 'bloccato' %}disabled{% endif %}
+                      placeholder="Es. disponibilità particolari, vincoli di orario...">{{ piano.note or '' }}</textarea>
+        </div>
+
+        {% if piano.stato != 'bloccato' %}
+        <div class="azioni">
+            <button type="submit" class="btn btn-primary">💾 Salva scelte</button>
+            <button type="submit" formaction="{{ url_for('piano_personale.invia', token=piano.token) }}"
+                    class="btn btn-secondary">✓ Salva e invia alla segreteria</button>
+        </div>
+        <p style="font-size:.76rem; color:var(--grigio); margin-top:10px;">
+            Puoi tornare su questo link e modificare le tue scelte finché la segreteria non le conferma.
+        </p>
+        {% endif %}
+    </form>
+</div>
+</body>
+</html>

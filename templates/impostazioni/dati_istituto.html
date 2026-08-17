@@ -62,6 +62,13 @@
                        value="{{ dati.ore_ist_soglia_alert }}" required>
                 <div class="hint">Sotto questo valore nessun alert nel cruscotto Report.</div>
             </div>
+            <div class="form-field">
+                <label>Ore cattedra completa</label>
+                <input type="number" step="1" min="1" name="ore_cattedra_piena"
+                       value="{{ dati.ore_cattedra_piena }}" required>
+                <div class="hint">Riferimento per la quota proporzionale del Piano attività
+                    personale (docenti a cattedra non completa) — di norma 18.</div>
+            </div>
         </div>
 
         <div class="sez-h">Accordo sindacale — scadenza saldo banca ore</div>

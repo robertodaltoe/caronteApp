@@ -184,6 +184,8 @@ def create_app(avvio_con_reloader=True):
     app.register_blueprint(sync_conflitti_bp)
     from routes.guida import guida_bp
     app.register_blueprint(guida_bp)
+    from routes.piano_personale import piano_personale_bp
+    app.register_blueprint(piano_personale_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json
@@ -192,7 +194,13 @@ def create_app(avvio_con_reloader=True):
 
     # Protezione accesso — tutte le route tranne display e auth
     ROUTE_PUBBLICHE = {'display.display', 'auth.login', 'auth.logout',
-                        'auth.privacy', 'static'}
+                        'auth.privacy', 'static',
+                        # Link personale del docente per il Piano delle Attività
+                        # (Sessione 57): nessun account per i docenti in questa
+                        # app, l'unico controllo d'accesso è il token nell'URL
+                        # stessa (vedi routes/piano_personale.py).
+                        'piano_personale.pubblico', 'piano_personale.salva',
+                        'piano_personale.invia'}
 
     # Mappe blueprint/endpoint -> sezione: vivono in models/permesso_ruolo.py
     # (non qui) cosi' la pagina Permessi può segnalare le sezioni non ancora
@@ -293,6 +301,7 @@ def create_app(avvio_con_reloader=True):
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
         from models.permesso_ruolo import PermessoRuolo  # noqa
+        from models.piano_attivita_personale import PianoAttivitaPersonale, PianoAttivitaPersonaleVoce  # noqa
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()

@@ -30,6 +30,12 @@ DEFAULTS = {
     'costo_ora_supplenza':    29.08,
     'ore_ist_limite':         40,     # limite CCNL art.44 (bucket A/B)
     'ore_ist_soglia_alert':   32,     # soglia di attenzione (cruscotto)
+    'ore_cattedra_piena':     18,     # riferimento "cattedra completa" per la
+                                       # quota proporzionale del Piano attività
+                                       # personale (vedi models/piano_attivita_
+                                       # personale.py) — cambialo se nel vostro
+                                       # istituto la cattedra piena non è 18h
+                                       # per tutte le categorie di docenti.
     'scadenza_saldo_mesi':    3,      # accordo sindacale: mesi per saldare
 }
 

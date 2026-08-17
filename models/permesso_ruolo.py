@@ -35,6 +35,7 @@ SEZIONI = [
     ('attivita_istituzionali', 'Attività istituzionali (scrutini, collegi...)'),
     ('attivita_differite',     'Attività differite'),
     ('dipartimenti',           'Dipartimenti e materie'),
+    ('piano_personale',        'Piano attività personale (cattedra incompleta)'),
     ('banca_ore',              'Banca ore'),
     ('import_banca_ore',       'Import banca ore da file'),
     ('report',                 'Report'),
@@ -63,7 +64,7 @@ SEZIONI_LABEL = dict(SEZIONI)
 # Impostazioni, cosi' la tabella (28 righe) resta orientabile.
 SEZIONI_GRUPPI = [
     ('Assenze e supplenze', ['assenze', 'indisponibilita', 'supplenze', 'cambi', 'agenda']),
-    ('Attività', ['attivita', 'attivita_istituzionali', 'attivita_differite', 'dipartimenti']),
+    ('Attività', ['attivita', 'attivita_istituzionali', 'attivita_differite', 'dipartimenti', 'piano_personale']),
     ('Banca ore e report', ['banca_ore', 'import_banca_ore', 'report', 'mail_bozze']),
     ('Orario', ['orario', 'orario_globale']),
     ('Recupero', ['recupero', 'rientro', 'esami_integrativi']),
@@ -101,6 +102,7 @@ DEFAULT_MATRICE = {
     'attivita_istituzionali':  {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'modifica'},
     'attivita_differite':      {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'modifica'},
     'dipartimenti':            {'ds': 'visualizza', 'collaboratore': 'visualizza', 'segreteria': 'visualizza'},
+    'piano_personale':         {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'modifica'},
     'banca_ore':               {'ds': 'visualizza', 'collaboratore': 'visualizza', 'segreteria': 'modifica'},
     'import_banca_ore':        {'ds': 'visualizza', 'collaboratore': 'visualizza', 'segreteria': 'modifica'},
     'report':                  {'ds': 'visualizza', 'collaboratore': 'visualizza', 'segreteria': 'modifica'},
@@ -197,6 +199,7 @@ BLUEPRINT_SEZIONE = {
     'incarichi':          'incarichi',
     'assegnazioni':       'assegnazioni',
     'aule':               'aule',
+    'piano_personale':    'piano_personale',
 }
 ENDPOINT_SEZIONE = {
     'attivita_ist.dipartimenti':                 'dipartimenti',
@@ -282,11 +285,16 @@ def _migra_split_sezioni_permessi():
             db.session.add(PermessoRuolo(ruolo=ruolo, sezione=figlia, livello=livello))
             cambiato = True
 
-    for ruolo, _ in RUOLI_CONFIGURABILI:
-        if not PermessoRuolo.query.filter_by(ruolo=ruolo, sezione='orario_globale').first():
-            db.session.add(PermessoRuolo(ruolo=ruolo, sezione='orario_globale',
-                            livello=DEFAULT_MATRICE['orario_globale'][ruolo]))
-            cambiato = True
+    # Sezioni nuove indipendenti, non nate da uno scorporo: seed diretto
+    # dal default, come per una sezione mai vista prima da questa
+    # installazione ('orario_globale', Sessione 53; 'piano_personale',
+    # Sessione 57).
+    for sezione in ('orario_globale', 'piano_personale'):
+        for ruolo, _ in RUOLI_CONFIGURABILI:
+            if not PermessoRuolo.query.filter_by(ruolo=ruolo, sezione=sezione).first():
+                db.session.add(PermessoRuolo(ruolo=ruolo, sezione=sezione,
+                                livello=DEFAULT_MATRICE[sezione][ruolo]))
+                cambiato = True
 
     if cambiato:
         db.session.commit()
