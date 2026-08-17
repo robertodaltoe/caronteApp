@@ -68,17 +68,17 @@
 
 <div class="card" style="padding:0; overflow:hidden;">
 <div style="overflow-x:auto;">
-<table>
+<table style="table-layout:fixed; width:100%;">
     <thead>
         <tr>
             <th style="width:130px;">Cognome</th>
             <th style="width:100px;">Nome</th>
             <th>Classe di concorso</th>
-            <th style="text-align:center; width:60px;">H/sett</th>
-            <th style="width:130px;">Tipo contratto</th>
-            <th style="text-align:center; width:130px;">Colloqui</th>
-            <th style="text-align:center; width:80px;">Stato</th>
-            <th style="text-align:center; width:160px;">Azioni</th>
+            <th style="text-align:center; width:55px;" title="Ore settimanali">H</th>
+            <th style="width:90px;">Contr.</th>
+            <th style="text-align:center; width:90px;">Coll.</th>
+            <th style="text-align:center; width:56px;" title="Attivo nell'a.s. selezionato">Att.</th>
+            <th style="text-align:center; width:140px;">Azioni</th>
         </tr>
     </thead>
     <tbody>
@@ -104,9 +104,9 @@
         </td>
         <td class="wrap" style="color:var(--grigio); font-size:.88rem;">{{ d.materia_effettiva or '—' }}</td>
         <td style="text-align:center;">{{ d.ore_contratto }}h</td>
-        <td>
+        <td class="wrap">
             {% if d.tipo_contratto %}
-                <span class="badge badge-grigio">{{ d.tipo_contratto_label }}</span>
+                <span class="badge badge-grigio" title="{{ d.tipo_contratto_label }}">{{ d.tipo_contratto_label_breve }}</span>
             {% else %}
                 <span style="color:var(--giallo); font-size:.8rem;">{{ icon('warning') }} da completare</span>
             {% endif %}
@@ -125,16 +125,20 @@
                           {% elif st == 'bozza' %}background:#f3f4f6; color:#6b7280;
                           {% else %}background:var(--rosso-bg); color:var(--rosso);{% endif %}"
                    title="Piano attività personale — {{ {'bloccato':'confermato','inviato':'inviato','bozza':'in compilazione','nessuno':'link non ancora generato'}.get(st, st) }}">
-                    {{ icon('list') }} Piano: {{ {'bloccato':'OK','inviato':'inviato','bozza':'in attesa','nessuno':'da generare'}.get(st, st) }}
+                    {{ icon('list') }} {{ {'bloccato':'OK','inviato':'inviato','bozza':'attesa','nessuno':'da fare'}.get(st, st) }}
                 </a>
             {% endif %}
         </td>
-        <td style="text-align:center; white-space:nowrap; font-size:.82rem; color:var(--grigio);">
-            {{ d.colloqui_label if d.colloqui_label != '—' else '—' }}
+        <td style="text-align:center; white-space:nowrap; font-size:.78rem; color:var(--grigio);"
+            title="{{ d.colloqui_label or '' }}">
+            {{ d.colloqui_label_breve or '—' }}
         </td>
         <td style="text-align:center;">
-            {% if d.attivo %}<span class="badge badge-verde">Attivo</span>
-            {% else %}<span class="badge badge-grigio">Non attivo</span>{% endif %}
+            {% if d.attivo %}
+                <span style="color:var(--verde);" title="Attivo">{{ icon('check') }}</span>
+            {% else %}
+                <span style="color:var(--rosso);" title="Non attivo">{{ icon('close') }}</span>
+            {% endif %}
         </td>
         <td style="text-align:center; white-space:nowrap;">
 

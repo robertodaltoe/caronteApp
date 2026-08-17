@@ -23,6 +23,17 @@ TIPO_CONTRATTO_LABELS = {
     'potenziamento': 'Potenziamento',
 }
 
+# Versione compatta della stessa etichetta, per colonne strette (es.
+# elenco docenti) dove il testo esteso forza lo scroll orizzontale.
+TIPO_CONTRATTO_LABELS_BREVI = {
+    'TI':            'TI',
+    'IRC':           'IRC',
+    'TD_annuale':    'TD ann.',
+    'TD_GS':         'TD 30/6',
+    'supplente':     'TD-GS',
+    'potenziamento': 'Pot.',
+}
+
 
 class Docente(db.Model):
     __tablename__ = 'docenti'
@@ -60,6 +71,10 @@ class Docente(db.Model):
     @property
     def tipo_contratto_label(self):
         return TIPO_CONTRATTO_LABELS.get(self.tipo_contratto, self.tipo_contratto)
+
+    @property
+    def tipo_contratto_label_breve(self):
+        return TIPO_CONTRATTO_LABELS_BREVI.get(self.tipo_contratto, self.tipo_contratto)
 
     @property
     def ora_uscita_map(self):
@@ -173,6 +188,20 @@ class Docente(db.Model):
             return f"{g} {self.colloqui_ora_inizio}ª–{self.colloqui_ora_fine}ª ora"
         elif self.colloqui_ora_inizio:
             return f"{g} {self.colloqui_ora_inizio}ª ora"
+        return g
+
+    @property
+    def colloqui_label_breve(self):
+        """Come colloqui_label ma compatta (es. "Lun 1ª–2ª"), per colonne
+        strette dove "Lunedì 1ª–2ª ora" costringe la tabella a scrollare."""
+        GIORNI_BREVI = ['Lun','Mar','Mer','Gio','Ven','Sab']
+        if self.colloqui_giorno is None:
+            return None
+        g = GIORNI_BREVI[self.colloqui_giorno]
+        if self.colloqui_ora_inizio and self.colloqui_ora_fine:
+            return f"{g} {self.colloqui_ora_inizio}ª–{self.colloqui_ora_fine}ª"
+        elif self.colloqui_ora_inizio:
+            return f"{g} {self.colloqui_ora_inizio}ª"
         return g
 
     supplenze_svolte  = db.relationship('Supplenza',        foreign_keys='Supplenza.id_sostituto',  backref='sostituto',  lazy=True)
