@@ -99,6 +99,20 @@ quali. Verificato sui 2 IRC reali del database (entrambi 18 ore, prima
 esclusi, ora correttamente inclusi con quota piena). Commit:
 `e82402a`.
 
+**Quinto addendum:** Roberto chiede una verifica visuale di
+`/docenti?anno=2025-2026` — il badge "Piano attività personale" (terzo
+addendum) risultava troncato a bordo pagina. Causa più ampia del
+singolo badge: il contenitore della tabella aveva `overflow:hidden`
+senza nessun meccanismo di scroll orizzontale, mentre la tabella
+(1270px) è più larga del contenitore visibile (772px) — le colonne
+Colloqui, Stato e soprattutto Azioni (modifica/esporta/elimina) erano
+già silenziosamente irraggiungibili anche prima di questa sessione, il
+nuovo badge ha solo reso il problema più visibile. Aggiunto un
+contenitore `overflow-x:auto`, stesso pattern già usato in questa
+sessione per `piano_personale_lista.html` e `agosto_calendario.html`.
+Verificato sul server reale (prima: `scrollLeft` senza alcun effetto;
+dopo: colonne raggiungibili scorrendo). Commit: `6dba99c`.
+
 ## Sessione 56 — Calendario prove agosto: colonne tabella corrette (Cowork)
 
 **Contesto:** Roberto ha chiesto una verifica visuale di
