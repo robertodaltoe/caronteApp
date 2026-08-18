@@ -285,17 +285,30 @@ function tick(){
         el.classList.toggle('ora-corrente',parseInt(el.dataset.ora)===ora);
     });
 }
-tick(); 
-// Scorrimento continuo: ogni 3 secondi avanza di una supplenza
-let _tickIdx = 0;
-function autoScroll() {
-    const cards = document.querySelectorAll('.sup-card');
-    if (cards.length <= 1) return;
-    _tickIdx = (_tickIdx + 1) % cards.length;
-    cards[_tickIdx].scrollIntoView({behavior:'smooth', block:'nearest'});
-}
+tick();
 setInterval(tick, 30000);   // aggiorna dati ogni 30s
-setInterval(autoScroll, 3000);  // scorre ogni 3s
+
+// Autoscroll: se le ore non entrano tutte in una schermata (monitor in
+// corridoio, nessuno tocca lo schermo), scorre da solo una sezione-ora
+// alla volta finché il prossimo refresh automatico (ogni 30s, vedi
+// <meta http-equiv="refresh">) non riporta tutto in cima. Se il
+// contenuto sta già tutto a video non fa nulla: niente scroll inutile
+// quando c'è una sola ora di variazioni.
+function avviaAutoScroll() {
+    const margine = 40;  // spazio della footer fissa in basso
+    if (document.documentElement.scrollHeight <= window.innerHeight + margine) return;
+    const sezioni = Array.from(document.querySelectorAll('.sezione-ora'));
+    if (sezioni.length <= 1) return;
+    let idx = 0;
+    // Budget di ~24s sulle sezioni successive alla prima (già visibile
+    // al caricamento), per restare entro il refresh di pagina a 30s.
+    const intervallo = Math.max(3500, Math.floor(24000 / sezioni.length));
+    setInterval(() => {
+        idx = (idx + 1) % sezioni.length;
+        sezioni[idx].scrollIntoView({behavior: 'smooth', block: 'start'});
+    }, intervallo);
+}
+window.addEventListener('load', avviaAutoScroll);
 document.getElementById('nav-data').addEventListener('change',function(){if(this.value)window.location.href='/display?data='+this.value;});
 </script>
 </body>
