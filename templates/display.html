@@ -312,7 +312,7 @@ function avviaAutoScroll() {
     if (distanza <= 20) return;  // scarto sub-pixel/arrotondamento, non contenuto vero da scorrere
     const pausaIniziale = 2000;   // tempo per leggere la prima ora prima di partire
     const pausaEstremo  = 1800;   // pausa di lettura in cima/fondo prima di invertire
-    const velocita = 110;         // px al secondo, ritmo di lettura comodo da corridoio
+    const velocita = 90;          // px al secondo, ritmo di lettura comodo da corridoio
     const durataTratta = (distanza / velocita) * 1000;
     let fase = 'pausa_iniziale';  // 'pausa_iniziale' | 'pausa_estremo' | 'scroll'
     let direzione = 1;            // 1 = scende, -1 = risale
