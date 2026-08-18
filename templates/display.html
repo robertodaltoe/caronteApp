@@ -38,16 +38,16 @@
         .nav-btn:hover { background:rgba(255,255,255,.22); }
         input[type=date].nav-date-inp { padding:4px 8px; border-radius:6px; border:none; background:rgba(255,255,255,.12); color:white; font-family:var(--font); font-size:.82rem; cursor:pointer; }
 
-        .sezione-ora { padding:18px 40px 6px; }
-        .ora-header { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-        .ora-num { width:54px; height:54px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); flex-shrink:0; }
+        .sezione-ora { padding:10px 40px 4px; }
+        .ora-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+        .ora-num { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.25rem; font-weight:800; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); flex-shrink:0; }
         .ora-num.corrente { background:rgba(255,224,51,.18); color:var(--giallo-acc); border-color:rgba(255,224,51,.4); box-shadow:0 0 14px rgba(255,224,51,.2); }
-        .ora-fascia { font-size:1.1rem; color:var(--grigio); }
+        .ora-fascia { font-size:.88rem; color:var(--grigio); }
         .adesso-label { font-size:.65rem; font-weight:800; color:var(--giallo-acc); text-transform:uppercase; letter-spacing:.5px; background:rgba(255,224,51,.12); padding:2px 8px; border-radius:10px; display:none; }
         .ora-corrente-row .adesso-label { display:inline-block; }
 
-        .box-row { display:flex; flex-wrap:wrap; gap:12px; padding-bottom:18px; }
-        .box { flex: 1 1 210px; min-width: 190px; max-width: 360px; min-height: 116px; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:3px; border-left:4px solid transparent; transition:transform .12s; }
+        .box-row { display:flex; flex-wrap:wrap; gap:8px; padding-bottom:10px; }
+        .box { flex: 1 1 190px; min-width: 170px; max-width: 320px; min-height: 74px; border-radius:8px; padding:7px 10px; display:flex; flex-direction:column; gap:1px; border-left:4px solid transparent; transition:transform .12s; }
         .box:hover { transform:translateY(-2px); }
 
         .box.assegnata        { background:rgba(0,201,74,.22);  border-left-color:rgba(0,201,74,.45); }
@@ -57,22 +57,22 @@
         .box.ora-corrente.scoperta       { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
         .box.ora-corrente.non_assegnabile{ background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
 
-        .box-classe { font-size:1.7rem; font-weight:800; line-height:1; }
+        .box-classe { font-size:1.3rem; font-weight:800; line-height:1.1; }
         .assegnata       .box-classe { color:white; }
         .scoperta        .box-classe { color:var(--rosso-acc); }
         .non_assegnabile .box-classe { color:var(--viola-acc); }
 
-        .box-materia { font-size:1.1rem; color:var(--grigio); font-style:italic; }
+        .box-materia { font-size:.85rem; color:var(--grigio); font-style:italic; }
 
-        .box-sost { font-size:1.3rem; font-weight:700; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .box-sost { font-size:1.05rem; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .assegnata       .box-sost { color:var(--verde-acc); }
         .scoperta        .box-sost { color:var(--rosso-acc); }
-        .non_assegnabile .box-sost { color:var(--viola-acc); font-size:.9rem; }
+        .non_assegnabile .box-sost { color:var(--viola-acc); font-size:.8rem; }
 
-        .box-aula { font-size:.92rem; color:rgba(255,255,255,.9); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .box-aula { font-size:.78rem; color:rgba(255,255,255,.9); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .box-aula.override { color:var(--giallo-acc); opacity:.8; }
 
-        .tipo-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:10px; margin-top:3px; font-size:.82rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; width:fit-content; }
+        .tipo-badge { display:inline-flex; align-items:center; padding:1px 6px; border-radius:8px; margin-top:2px; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; width:fit-content; }
         .tipo-recupero      { background:rgba(255,224,51,.12); color:var(--giallo-acc); border:1px solid rgba(255,224,51,.3); }
         .tipo-pagamento     { background:rgba(255,120,60,.13); color:#ff9966;            border:1px solid rgba(255,120,60,.3); }
         .tipo-completamento { background:rgba(140,200,255,.1); color:#99ccff;            border:1px solid rgba(140,200,255,.2); }
@@ -84,27 +84,27 @@
         .box.classe-libera {
             background: rgba(251,191,36,.22);
             border-left-color: rgba(251,191,36,.5);
-            min-height: 80px;
+            min-height: 60px;
         }
         .box.classe-libera.ora-corrente { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
-        .box-cl-label  { font-size:.72rem; font-weight:700; text-transform:uppercase;
-            letter-spacing:.5px; color:#fbbf24; opacity:.8; margin-bottom:2px; }
-        .box-cl-classe { font-size:1.7rem; font-weight:800; color:white; }
-        .box-cl-testo  { font-size:1.1rem; font-weight:700; color:#fbbf24; margin-top:3px; }
-        .box-cl-doc    { font-size:.82rem; color:rgba(255,255,255,.38); margin-top:2px; }
+        .box-cl-label  { font-size:.68rem; font-weight:700; text-transform:uppercase;
+            letter-spacing:.5px; color:#fbbf24; opacity:.8; margin-bottom:1px; }
+        .box-cl-classe { font-size:1.3rem; font-weight:800; color:white; }
+        .box-cl-testo  { font-size:.88rem; font-weight:700; color:#fbbf24; margin-top:2px; }
+        .box-cl-doc    { font-size:.72rem; color:rgba(255,255,255,.38); margin-top:1px; }
 
         /* Box migrazione gruppo */
         .box.migrazione {
             background: rgba(96,165,250,.22);
             border-left-color: rgba(96,165,250,.45);
-            min-height: 80px;
+            min-height: 60px;
         }
         .box.migrazione.ora-corrente { background:rgba(255,248,0,.07); border-left-color:rgba(255,224,51,.5); }
-        .box-mig-label { font-size:.72rem; font-weight:700; text-transform:uppercase;
-            letter-spacing:.5px; color:var(--azzurro); opacity:.7; margin-bottom:2px; }
-        .box-mig-classi { font-size:1.5rem; font-weight:800; color:white; }
-        .box-mig-dest { font-size:1rem; color:var(--azzurro); font-weight:600; margin-top:2px; }
-        .box-mig-att { font-size:.8rem; color:var(--grigio); font-style:italic; margin-top:2px; }
+        .box-mig-label { font-size:.68rem; font-weight:700; text-transform:uppercase;
+            letter-spacing:.5px; color:var(--azzurro); opacity:.7; margin-bottom:1px; }
+        .box-mig-classi { font-size:1.2rem; font-weight:800; color:white; }
+        .box-mig-dest { font-size:.85rem; color:var(--azzurro); font-weight:600; margin-top:1px; }
+        .box-mig-att { font-size:.72rem; color:var(--grigio); font-style:italic; margin-top:1px; }
 
         .vuoto { display:flex; flex-direction:column; align-items:center; justify-content:center; height:calc(100vh - 180px); color:rgba(255,255,255,.2); gap:16px; }
         .vuoto .icona { font-size:5rem; }
@@ -289,24 +289,30 @@ tick();
 setInterval(tick, 30000);   // aggiorna dati ogni 30s
 
 // Autoscroll: se le ore non entrano tutte in una schermata (monitor in
-// corridoio, nessuno tocca lo schermo), scorre da solo una sezione-ora
-// alla volta finché il prossimo refresh automatico (ogni 30s, vedi
-// <meta http-equiv="refresh">) non riporta tutto in cima. Se il
-// contenuto sta già tutto a video non fa nulla: niente scroll inutile
-// quando c'è una sola ora di variazioni.
+// corridoio, nessuno tocca lo schermo), scorre da sola verso il basso
+// con un movimento continuo pixel per pixel (requestAnimationFrame),
+// non a scatti tra una sezione e l'altra — più leggibile da lontano.
+// Se il contenuto sta già tutto a video non fa nulla: niente scroll
+// inutile quando c'è una sola ora di variazioni.
 function avviaAutoScroll() {
     const margine = 40;  // spazio della footer fissa in basso
-    if (document.documentElement.scrollHeight <= window.innerHeight + margine) return;
-    const sezioni = Array.from(document.querySelectorAll('.sezione-ora'));
-    if (sezioni.length <= 1) return;
-    let idx = 0;
-    // Budget di ~24s sulle sezioni successive alla prima (già visibile
-    // al caricamento), per restare entro il refresh di pagina a 30s.
-    const intervallo = Math.max(3500, Math.floor(24000 / sezioni.length));
-    setInterval(() => {
-        idx = (idx + 1) % sezioni.length;
-        sezioni[idx].scrollIntoView({behavior: 'smooth', block: 'start'});
-    }, intervallo);
+    const distanza = document.documentElement.scrollHeight - window.innerHeight - margine;
+    if (distanza <= 0) return;
+    const pausaIniziale = 2500;  // tempo per leggere la prima ora prima di partire
+    const pausaFinale   = 2500;  // tempo di lettura sull'ultima ora prima del refresh (30s)
+    // Il resto del tempo va nello scorrimento vero e proprio, con un
+    // margine di sicurezza prima del refresh automatico di pagina.
+    const durata = Math.max(6000, 27000 - pausaIniziale - pausaFinale);
+    let inizio = null;
+    function passo(ts) {
+        if (inizio === null) inizio = ts;
+        const t = ts - inizio;
+        if (t < pausaIniziale) { requestAnimationFrame(passo); return; }
+        const progresso = Math.min(1, (t - pausaIniziale) / durata);
+        window.scrollTo(0, distanza * progresso);
+        if (progresso < 1) requestAnimationFrame(passo);
+    }
+    requestAnimationFrame(passo);
 }
 window.addEventListener('load', avviaAutoScroll);
 document.getElementById('nav-data').addEventListener('change',function(){if(this.value)window.location.href='/display?data='+this.value;});
