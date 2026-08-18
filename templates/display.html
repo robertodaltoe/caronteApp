@@ -298,11 +298,15 @@ function avviaAutoScroll() {
     const margine = 40;  // spazio della footer fissa in basso
     const distanza = document.documentElement.scrollHeight - window.innerHeight - margine;
     if (distanza <= 0) return;
-    const pausaIniziale = 2500;  // tempo per leggere la prima ora prima di partire
-    const pausaFinale   = 2500;  // tempo di lettura sull'ultima ora prima del refresh (30s)
-    // Il resto del tempo va nello scorrimento vero e proprio, con un
-    // margine di sicurezza prima del refresh automatico di pagina.
-    const durata = Math.max(6000, 27000 - pausaIniziale - pausaFinale);
+    const pausaIniziale = 2000;  // tempo per leggere la prima ora prima di partire
+    // Velocità costante (non una durata fissa: con poco da scorrere una
+    // durata fissa risultava innaturalmente lenta) — 110px/s è un ritmo
+    // di lettura comodo da monitor in corridoio. Se il contenuto è così
+    // lungo da non starci nel tempo residuo prima del refresh a 30s,
+    // la durata viene compressa per restare comunque entro quel limite.
+    const velocita = 110;  // px al secondo
+    const budgetMassimo = 27000 - pausaIniziale;  // margine di sicurezza prima del refresh
+    const durata = Math.min(Math.max(1000, (distanza / velocita) * 1000), budgetMassimo);
     let inizio = null;
     function passo(ts) {
         if (inizio === null) inizio = ts;
