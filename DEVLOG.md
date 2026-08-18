@@ -4,6 +4,33 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 58 — Display: autoscroll quando le ore non entrano a video (Cowork)
+
+**Contesto:** Roberto, sul monitor display in corridoio (nessuno lo
+tocca): nei giorni con molte supplenze le ore oltre la prima/seconda
+restano fuori dallo schermo, chiede se ha senso un autoscroll.
+
+Trovata una `autoScroll()` già presente in `templates/display.html` ma
+completamente morta: cercava elementi `.sup-card`, classe che non
+esiste nel markup attuale (i box supplenza sono `.box`, le sezioni
+`.sezione-ora`) — probabilmente un resto di una versione precedente
+del template, mai raggiunto perché la querySelectorAll tornava sempre
+vuota.
+
+Sostituita con `avviaAutoScroll()`: se il contenuto della pagina non
+supera l'altezza della finestra non fa nulla (niente scroll superfluo
+nei giorni con poche variazioni); altrimenti scorre una `.sezione-ora`
+(un'ora scolastica) alla volta con `scrollIntoView`, con intervallo
+calcolato per stare entro i 30s del refresh automatico di pagina già
+esistente (che comunque riporta tutto in cima ad ogni ciclo).
+
+Verificato sul server reale: data con 39 supplenze/5 ore (contenuto
+2124px contro 800px di viewport) → autoscroll attivo, sequenza delle
+5 sezioni verificata via JS con offset crescenti coerenti; data senza
+supplenze (contenuto = esattamente 1 schermata) → nessuno scroll,
+come atteso. 86/86 test passano (solo JS lato client). Commit:
+`5434582`.
+
 ## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
 
 **Contesto:** Roberto: i docenti con cattedra non completa in istituto
