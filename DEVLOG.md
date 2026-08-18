@@ -31,6 +31,19 @@ supplenze (contenuto = esattamente 1 schermata) → nessuno scroll,
 come atteso. 86/86 test passano (solo JS lato client). Commit:
 `5434582`.
 
+**Addendum:** Roberto: meno a scatti e più fluido, e box più compatti
+per ridurre quanto c'è da scorrere. Sostituito lo scroll a salti tra
+`.sezione-ora` (scrollIntoView) con un movimento continuo pixel per
+pixel via `requestAnimationFrame`, con pausa di lettura all'inizio e
+alla fine prima del refresh a 30s — verificato campionando `scrollY`
+frame per frame (performance.now()): incrementi di ~1px ogni ~16ms
+(60fps), non più un balzo discreto. Box supplenza/classe libera/
+migrazione ridotti al minimo leggibile (min-height quasi dimezzata,
+font-size ridotti in proporzione). Sulla stessa giornata di prova
+(2026-06-03, 5 ore/39 supplenze) l'altezza del contenuto è scesa da
+2124px a 1558px a parità di viewport — meno da scorrere, più visibile
+subito. 86/86 test passano. Commit: `b2e2eb3`.
+
 ## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
 
 **Contesto:** Roberto: i docenti con cattedra non completa in istituto
