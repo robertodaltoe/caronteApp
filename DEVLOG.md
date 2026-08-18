@@ -73,6 +73,9 @@ parte per non far vibrare la pagina per un arrotondamento di pochi
 pixel quando il contenuto sta già tutto a video. 86/86 test passano.
 Commit: `d6b9dbd`.
 
+**Quarto addendum:** velocità autoscroll ridotta da 110 a 90px/s su
+richiesta di Roberto. Commit: `cb3a09e`.
+
 ## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
 
 **Contesto:** Roberto: i docenti con cattedra non completa in istituto
