@@ -43,7 +43,6 @@
         .nav-date { display:flex; gap:6px; align-items:center; }
         .nav-btn { padding:4px 10px; border-radius:6px; background:rgba(255,255,255,.12); color:white; text-decoration:none; font-size:.9rem; font-weight:700; }
         .nav-btn:hover { background:rgba(255,255,255,.22); }
-        input[type=date].nav-date-inp { padding:4px 8px; border-radius:6px; border:none; background:rgba(255,255,255,.12); color:white; font-family:var(--font); font-size:.82rem; cursor:pointer; }
 
         .sezione-ora { padding:10px 40px 4px; }
         .ora-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -165,7 +164,6 @@
     </div>
     <div class="nav-date">
         <a class="nav-btn" href="/display?data={{ (data_sel - timedelta(days=1)).isoformat() }}">‹</a>
-        <input type="date" class="nav-date-inp" id="nav-data" value="{{ data_sel.isoformat() }}">
         <a class="nav-btn" href="/display?data={{ (data_sel + timedelta(days=1)).isoformat() }}">›</a>
         <a class="nav-btn" href="/display" style="font-size:.8rem;font-weight:600;">Oggi</a>
     </div>
@@ -340,7 +338,6 @@ function avviaAutoScroll() {
     requestAnimationFrame(passo);
 }
 window.addEventListener('load', avviaAutoScroll);
-document.getElementById('nav-data').addEventListener('change',function(){if(this.value)window.location.href='/display?data='+this.value;});
 </script>
 </body>
 </html>
