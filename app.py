@@ -306,6 +306,7 @@ def create_app(avvio_con_reloader=True):
         db.create_all()
         _auto_migrate()
         _migra_vincolo_aule()
+        _migra_codici_classi_concorso()
         _backfill_anno_scol_banca_ore()
         _seed_dipartimenti_materie()
         _seed_sospensioni()
@@ -593,6 +594,58 @@ def _migra_vincolo_aule():
         conn.execute(text("ALTER TABLE aule_new RENAME TO aule"))
         conn.commit()
         print("Migrazione: vincolo tabella 'aule' corretto a UNIQUE(anno_scol, classe).")
+
+
+def _migra_codici_classi_concorso():
+    """
+    Corregge alcuni codici di classe di concorso rimasti errati o superati.
+
+    Due errori erano indipendenti da qualunque riforma (verificati contro
+    l'Allegato 8 ministeriale — elenco ufficiale codici DPR 19/2016): il
+    codice 'A-01' ufficialmente è "Arte e immagine nella scuola secondaria
+    di I grado", non "Disegno e storia dell'arte" (quello è A-17); il
+    codice 'A-22' ufficialmente era "Italiano, storia, geografia nella
+    scuola secondaria di I grado", non "Lingue e culture straniere"
+    (quello era A-24). Sembrano refusi di inserimento originari, non
+    scelte deliberate (nessuna nota li giustificava).
+
+    Il terzo cambio è normativo: dal D.I. 22 dicembre 2023 n. 255 (in
+    vigore per i servizi dal 1° settembre 2024), 'A-48' Scienze motorie
+    II grado è stata scorporata in AM48 (I grado) e AS48 (II grado) —
+    confermato da Roberto: il prospetto organico/SIDI ricevuto per il
+    2026-2027 mostra già il nuovo codice AS48, non più A-48.
+
+    Corretto direttamente al codice finale (AS01/AS2B/AS2C/AS2D/AS48)
+    invece di passare per l'intermedio A-17/A-24, dato che comunque va
+    aggiornato alla luce della riforma 2023. Idempotente: dopo il primo
+    giro i vecchi codici non esistono più, gli UPDATE non trovano righe.
+    """
+    from sqlalchemy import text
+
+    mappa = {
+        'A-01':     'AS01',
+        'A-22-ING': 'AS2B',
+        'A-22-SPA': 'AS2C',
+        'A-22-TED': 'AS2D',
+        'A-48':     'AS48',
+    }
+    with db.engine.connect() as conn:
+        row = conn.execute(text(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='classi_concorso'"
+        )).fetchone()
+        if not row or not row[0]:
+            return  # tabella non ancora creata, nulla da migrare
+        aggiornati = []
+        for vecchio, nuovo in mappa.items():
+            res = conn.execute(text(
+                "UPDATE classi_concorso SET codice=:nuovo WHERE codice=:vecchio"
+            ), {'nuovo': nuovo, 'vecchio': vecchio})
+            if res.rowcount:
+                aggiornati.append(f"{vecchio}→{nuovo}")
+        if aggiornati:
+            conn.commit()
+            print("Migrazione: codici classe di concorso aggiornati: "
+                  + ", ".join(aggiornati) + ".")
 
 
 def _backfill_anno_scol_banca_ore():
