@@ -44,6 +44,16 @@ font-size ridotti in proporzione). Sulla stessa giornata di prova
 2124px a 1558px a parità di viewport — meno da scorrere, più visibile
 subito. 86/86 test passano. Commit: `b2e2eb3`.
 
+**Secondo addendum:** Roberto: sul suo browser sembrava lento. Causa:
+la durata totale dello scroll era fissa (~22s) indipendentemente da
+quanto c'era da scorrere — su una pagina con poco overflow, coprire
+poca distanza in 22s dà una velocità (px/s) molto bassa. Sostituita
+con una velocità costante (110px/s, verificata via campionamento
+frame per frame: ~2px ogni 16ms, contro i ~33px/s di prima); se il
+contenuto è così lungo da non starci nel tempo residuo prima del
+refresh a 30s, la durata viene comunque compressa per restare nel
+limite, come prima. 86/86 test passano. Commit: `4d044e4`.
+
 ## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
 
 **Contesto:** Roberto: i docenti con cattedra non completa in istituto
