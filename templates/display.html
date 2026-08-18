@@ -21,7 +21,14 @@
             --grigio:     rgba(255,255,255,.38);
             --bg:         #1a0a08;
         }
+        /* padding-bottom pari all'altezza della footer fissa: senza
+           questo spazio riservato, l'ultima fetta di contenuto resta
+           permanentemente coperta dalla footer anche scorrendo fino al
+           fondo — la footer è "position:fixed" quindi non partecipa al
+           flusso del documento e non sposta da sola il punto di scroll
+           massimo. */
         html, body { min-height:100%; background:var(--bg); color:white; font-family:var(--font); -webkit-font-smoothing:antialiased; font-variant-emoji: text; }
+        body { padding-bottom: 50px; }
 
         header { background:var(--blu-header); border-bottom:3px solid var(--blu-line); padding:10px 40px; min-height:76px; display:flex; align-items:center; justify-content:space-between; }
         .header-left { display:flex; align-items:center; gap:14px; }
@@ -293,28 +300,42 @@ setInterval(tick, 30000);   // aggiorna dati ogni 30s
 // con un movimento continuo pixel per pixel (requestAnimationFrame),
 // non a scatti tra una sezione e l'altra — più leggibile da lontano.
 // Se il contenuto sta già tutto a video non fa nulla: niente scroll
-// inutile quando c'è una sola ora di variazioni.
+// inutile quando c'è una sola ora di variazioni. Il body ha un
+// padding-bottom pari all'altezza della footer fissa (vedi CSS), quindi
+// la distanza si può calcolare senza margini a mano: a scrollTop massimo
+// l'ultima riga di contenuto è già sopra la footer, non più coperta.
+// Alla velocità impostata lo scroll finisce spesso ben prima del
+// refresh automatico a 30s: invece di restare fermo in fondo, risale
+// e riscende (va e vieni) finché il refresh non ricomincia il ciclo.
 function avviaAutoScroll() {
-    const margine = 40;  // spazio della footer fissa in basso
-    const distanza = document.documentElement.scrollHeight - window.innerHeight - margine;
-    if (distanza <= 0) return;
-    const pausaIniziale = 2000;  // tempo per leggere la prima ora prima di partire
-    // Velocità costante (non una durata fissa: con poco da scorrere una
-    // durata fissa risultava innaturalmente lenta) — 110px/s è un ritmo
-    // di lettura comodo da monitor in corridoio. Se il contenuto è così
-    // lungo da non starci nel tempo residuo prima del refresh a 30s,
-    // la durata viene compressa per restare comunque entro quel limite.
-    const velocita = 110;  // px al secondo
-    const budgetMassimo = 27000 - pausaIniziale;  // margine di sicurezza prima del refresh
-    const durata = Math.min(Math.max(1000, (distanza / velocita) * 1000), budgetMassimo);
-    let inizio = null;
+    const distanza = document.documentElement.scrollHeight - window.innerHeight;
+    if (distanza <= 20) return;  // scarto sub-pixel/arrotondamento, non contenuto vero da scorrere
+    const pausaIniziale = 2000;   // tempo per leggere la prima ora prima di partire
+    const pausaEstremo  = 1800;   // pausa di lettura in cima/fondo prima di invertire
+    const velocita = 110;         // px al secondo, ritmo di lettura comodo da corridoio
+    const durataTratta = (distanza / velocita) * 1000;
+    let fase = 'pausa_iniziale';  // 'pausa_iniziale' | 'pausa_estremo' | 'scroll'
+    let direzione = 1;            // 1 = scende, -1 = risale
+    let inizioFase = null;
+
     function passo(ts) {
-        if (inizio === null) inizio = ts;
-        const t = ts - inizio;
-        if (t < pausaIniziale) { requestAnimationFrame(passo); return; }
-        const progresso = Math.min(1, (t - pausaIniziale) / durata);
-        window.scrollTo(0, distanza * progresso);
-        if (progresso < 1) requestAnimationFrame(passo);
+        if (inizioFase === null) inizioFase = ts;
+        const t = ts - inizioFase;
+        if (fase !== 'scroll') {
+            const durataPausa = fase === 'pausa_iniziale' ? pausaIniziale : pausaEstremo;
+            if (t >= durataPausa) { fase = 'scroll'; inizioFase = ts; }
+            requestAnimationFrame(passo);
+            return;
+        }
+        const progresso = Math.min(1, t / durataTratta);
+        const partenza = direzione === 1 ? 0 : distanza;
+        window.scrollTo(0, partenza + direzione * distanza * progresso);
+        if (progresso >= 1) {
+            direzione *= -1;
+            fase = 'pausa_estremo';
+            inizioFase = ts;
+        }
+        requestAnimationFrame(passo);
     }
     requestAnimationFrame(passo);
 }
