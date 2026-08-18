@@ -54,6 +54,25 @@ contenuto è così lungo da non starci nel tempo residuo prima del
 refresh a 30s, la durata viene comunque compressa per restare nel
 limite, come prima. 86/86 test passano. Commit: `4d044e4`.
 
+**Terzo addendum:** Roberto segnala che l'ultima parte del contenuto
+restava nascosta e che la footer blu fissa copriva del testo; propone
+anche un "va e vieni" visto che lo scroll ora è più veloce del refresh
+a 30s. Causa del contenuto nascosto: la footer è `position:fixed`,
+quindi non fa parte del flusso del documento — non sposta da sola il
+punto di scroll massimo, per cui anche a fondo scroll l'ultima fetta
+di contenuto pari all'altezza della footer restava sempre sotto di
+essa, perché il body non riservava lo spazio corrispondente. Aggiunto
+`padding-bottom` al body pari all'altezza della footer (50px, quella
+reale misura 32px) — verificato sul server reale che a scrollTop
+massimo il fondo dell'ultima sezione-ora sta ora sopra la footer
+(750.5px contro footerTop 767px). Aggiunto anche il va-e-vieni
+richiesto: raggiunta la fine, dopo una pausa di lettura risale fino in
+cima e ridiscende in loop finché il refresh a 30s non ricomincia da
+capo, più una soglia minima (20px) sotto la quale l'autoscroll non
+parte per non far vibrare la pagina per un arrotondamento di pochi
+pixel quando il contenuto sta già tutto a video. 86/86 test passano.
+Commit: `d6b9dbd`.
+
 ## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
 
 **Contesto:** Roberto: i docenti con cattedra non completa in istituto
