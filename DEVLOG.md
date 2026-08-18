@@ -4,6 +4,56 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 59 — Classi di concorso: codici obsoleti/errati corretti (Cowork)
+
+**Contesto:** Roberto nota che l'app mostra ancora "A048" mentre ora
+si chiama "AS48", chiede una verifica completa dei codici contro la
+normativa più recente.
+
+Verifica sull'app + ricerca online (Allegato 8 ministeriale — elenco
+ufficiale codici DPR 19/2016 — e tabelle del D.I. 22/12/2023 n. 255):
+il problema era più ampio del solo A-48. Due errori indipendenti da
+qualunque riforma, verosimilmente refusi di inserimento originari
+(nessuna nota li giustificava come scelta deliberata):
+- `A-01` era etichettato "Disegno e storia dell'arte II grado", ma
+  A-01 ufficialmente è "Arte e immagine nella scuola secondaria di I
+  grado" — tutt'altra materia/grado; quello giusto per noi era A-17.
+- `A-22-ING/SPA/TED` era etichettato "Lingua e Culture Straniere", ma
+  A-22 ufficialmente era "Italiano, storia, geografia I grado" —
+  quello giusto era A-24.
+
+Prima di modificare il database (11 docenti reali collegati a questi
+codici), chiesto conferma esplicita a Roberto — segnalato, non deciso
+da soli, come da regola del progetto sui dati ambigui: (1) se il
+prospetto SIDI ricevuto per il 2026-2027 mostra già i nuovi codici
+AM/AS o ancora i vecchi (le fonti di settore segnalavano che a metà
+2025 alcune procedure, es. Esami di Stato, usavano ancora i vecchi
+codici DPR 19/2016 — non un fatto scontato); (2) conferma per la
+correzione di A-01/A-22. Risposta: SIDI mostra già i nuovi codici,
+procedi con entrambe le correzioni.
+
+Codici corretti direttamente al valore finale post-riforma (non
+attraverso l'intermedio A-17/A-24, dato che comunque va aggiornato):
+A-01→AS01, A-22-ING→AS2B, A-22-SPA→AS2C, A-22-TED→AS2D, A-48→AS48.
+
+- `app.py::_migra_codici_classi_concorso()`: nuova migrazione
+  idempotente (stesso pattern delle altre già presenti — guardia su
+  sqlite_master, UPDATE solo se il vecchio codice esiste ancora), si
+  applica da sola su ogni macchina di Roberto al prossimo avvio.
+- `routes/assegnazioni.py::AREE`: aggiornato l'elenco usato per
+  raggruppare le classi di concorso nella pagina Assegnazioni — senza
+  questo, i gruppi "Storia dell'Arte", "Lingue" e "Motorie e Sportive"
+  sarebbero spariti in silenzio (`ClasseConcorso.query.filter_by(
+  codice=...)` non trova nulla col codice vecchio e salta il gruppo).
+- Backup cifrato del DB reale prima di procedere (regola non
+  negoziabile #2), migrazione testata su copie isolate tramite
+  `create_app()` completo (non solo SQL a mano) verificando
+  idempotenza (secondo giro: nessun UPDATE) e nessuna perdita dati
+  (conteggio docenti/materie collegati identico prima/dopo — le
+  relazioni sono per `id`, non per `codice`, quindi il rename non le
+  tocca). Applicata poi sul database.db reale, `PRAGMA integrity_check`:
+  ok. 86/86 test passano. Commit: `25a504a`.
+
 ## Sessione 58 — Display: autoscroll quando le ore non entrano a video (Cowork)
 
 **Contesto:** Roberto, sul monitor display in corridoio (nessuno lo
