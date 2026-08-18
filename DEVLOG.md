@@ -76,6 +76,12 @@ Commit: `d6b9dbd`.
 **Quarto addendum:** velocità autoscroll ridotta da 110 a 90px/s su
 richiesta di Roberto. Commit: `cb3a09e`.
 
+**Quinto addendum:** rimosso il campo data in alto a destra nella
+banner — Roberto segnala che non è modificabile (probabile limite del
+browser/monitor kiosk su cui è mostrato lo schermo, nessuno lo tocca
+comunque) e chiede di toglierlo. Restano le frecce ‹ › e "Oggi" (link
+semplici, non un date-picker). Commit: `a4d3545`.
+
 ## Sessione 57 — Piano Attività Personale per docenti a cattedra incompleta (Cowork)
 
 **Contesto:** Roberto: i docenti con cattedra non completa in istituto
