@@ -4,6 +4,41 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 60 — Assenze: data futura ignorata nei tab "Più giorni"/"Periodico" (Cowork)
+
+**Contesto:** Roberto segnala che registrando un'assenza con inizio
+nel futuro, l'app salva la data di apertura del form invece di quella
+inserita.
+
+Causa: `templates/assenza_form.html` ha tre coppie di campi data (uno
+per ciascun tab "Un giorno"/"Più giorni"/"Periodico"), tutte presenti
+nel DOM contemporaneamente e precompilate con la stessa data di
+apertura del form — `setDurata()` cambiava solo `style.display` per
+mostrare/nascondere il tab, non disabilitava i campi degli altri due.
+Il browser inviava quindi sempre anche il campo "data" del tab "Un
+giorno" (mai toccato se si usava un altro tab), e `modules/assenze_
+registrazione.py::registra_assenze_form()` controlla i campi in
+quest'ordine: `form.get('data') or form.get('data_range_ini') or
+form.get('data_per_ini')` — "data" vinceva sempre perché non è mai
+vuoto, ignorando in silenzio la data scelta nel tab realmente in uso.
+
+Fix: i campi dei tab non attivi vengono disabilitati (non solo
+nascosti) in `setDurata()`, così il browser non li invia più — stesso
+approccio anche di default nell'HTML per i tab inattivi al
+caricamento. Verificato sul server reale via `FormData()`: prima del
+fix tutti e tre i campi arrivavano popolati, dopo solo quello del tab
+attivo. Aggiunti 2 test di regressione che chiamano
+`registra_assenze_form()` con solo `data_range_ini`/`data_per_ini`
+valorizzati (come farebbe ora il browser) e verificano che l'Assenza
+creata abbia la data futura corretta. 88/88 test passano (86 + 2
+nuovi). Commit: `bfe034a`.
+
+**Nota a margine:** nella stessa sessione, verificata anche su
+richiesta la tabella della piantina interattiva aule (`/aule/mappa`):
+la colonna "Sede" era tagliata a bordo pagina per un riquadro laterale
+troppo stretto (260px) — corretto allargandolo a 300px e aggiungendo
+`class="wrap"` alla cella Sede. Vedi addendum Sessione 59.
+
 ## Sessione 59 — Classi di concorso: codici obsoleti/errati corretti (Cowork)
 
 **Contesto:** Roberto nota che l'app mostra ancora "A048" mentre ora
