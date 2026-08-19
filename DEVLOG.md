@@ -43,6 +43,30 @@ renderizza come icona (nessun testo residuo). 98/98 test passano
 (solo script lato client, nessuna logica server toccata). Commit:
 `06b27d8`.
 
+**Addendum:** Roberto, sempre in Assegnazioni: non riesce a cliccare
+il box ore potenziamento per Casarico, e nota che quella cella non è
+centrata in nessuna tabella. Causa comune: la colonna Potenziamento
+(`.td-pot`, 34px, subito dopo le due colonne fisse Docente/Tipo) non
+aveva `text-align:center`, e soprattutto non era "sticky" come le due
+colonne che la precedono (`.td-doc` sticky a `left:0`, `.td-tipo`
+sticky a `left:170px`). Con la tabella scorsa anche di pochi pixel —
+inevitabile su schermi non larghissimi, una colonna per ogni classe —
+la colonna Potenziamento, ferma nel flusso normale, finiva
+fisicamente SOTTO la colonna Tipo (che restando ancorata la copre con
+z-index più alto): i click in quella zona colpivano la cella Tipo
+sottostante. Riprodotto con precisione via `elementFromPoint()`: a
+scroll orizzontale >0, il punto centrale della cella risultava
+occupato da `td.td-tipo`, non da `td.td-pot`.
+
+Aggiunta `text-align:center` e `position:sticky` (`left:226px` =
+170+56) alla regola CSS condivisa `.td-pot`/`.th-pot`, e la classe
+`td-pot` (mancante) alle 7 celle della colonna che non l'avevano —
+solo quella interattiva delle assegnazioni ce l'aveva già. Verificato:
+dopo il fix, allo stesso scroll il punto appartiene alla cella
+potenziamento stessa (confermato via `getComputedStyle`), e un click
+reale in quel punto apre correttamente il popover. 98/98 test
+passano.
+
 ## Sessione 62 — Prove agosto: docenti fuori servizio in tendina, assenze senza alert (Cowork)
 
 **Contesto:** Roberto, su `/recupero/agosto/calendario`: la tendina
