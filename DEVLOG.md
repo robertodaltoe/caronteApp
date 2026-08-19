@@ -4,6 +4,42 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 61 — Assenze: eliminazione multipla per periodi di più giorni (Cowork)
+
+**Contesto:** Roberto, dopo il fix della Sessione 60: caricando
+un'assenza di più giorni, non c'era modo di eliminare l'intero blocco
+— bisognava farlo riga per riga, perché ogni giorno di un range/
+periodico viene creato come `Assenza` indipendente (nessun id_gruppo
+le collega, per scelta di design invariata qui). Proposta un'euristica
+automatica (stesso docente+motivo+giorni contigui) o selezione
+manuale — scelta la selezione manuale, per poter correggere anche un
+periodo non del tutto contiguo.
+
+- `routes/assenze.py::_elimina_assenza_righe()`: estratta dalla
+  vecchia `elimina()` tutta la logica di cancellazione di UNA riga
+  (movimenti banca ore, supplenze automatiche, presenze
+  istituzionali, lapide di sync) senza commit/log — condivisa ora fra
+  l'eliminazione singola esistente e quella multipla nuova.
+- Nuova route POST `/assenze/elimina-multiple`: riceve una lista di id
+  (checkbox) + id_docente, elimina solo le righe selezionate.
+- Nuova route GET `/assenze/docente/<id>` +
+  `templates/assenze/docente_lista.html`: elenco di tutte le assenze
+  di un docente (filtrabile per periodo), con checkbox per riga,
+  "seleziona tutte" e un pulsante "Elimina selezionate" che si attiva
+  solo con almeno una riga scelta.
+- `templates/dashboard.html`: icona "elenco" accanto a modifica/
+  elimina in ogni riga di "Docenti assenti", verso la nuova pagina —
+  richiedeva l'id_docente, prima non tracciato nel namespace di
+  raggruppamento (aggiunto `ns.prev_id_docente`).
+
+Verificato: test end-to-end diretto su copia del DB reale (creata/
+eliminata un'assenza di prova su 3 giorni selezionandone 2 su 3 —
+solo quelle sparite, la terza intatta; database.db reale mai
+toccato). Sul server reale: pagina, checkbox, contatore e "seleziona
+tutte" funzionano; i 17 link dalla dashboard puntano all'URL corretto
+per il rispettivo docente. Aggiunti 3 test di regressione. 91/91 test
+passano (88 + 3 nuovi). Commit: `895fad6`.
+
 ## Sessione 60 — Assenze: data futura ignorata nei tab "Più giorni"/"Periodico" (Cowork)
 
 **Contesto:** Roberto segnala che registrando un'assenza con inizio
