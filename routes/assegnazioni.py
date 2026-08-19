@@ -163,10 +163,26 @@ def _anno_default():
 def _classi_per_cc(anno_scol, cc_id):
     """
     Restituisce lista ordinata di label classe (es. '1A AFM')
-    per cui il piano studi prevede ore in quella CC — vedi _righe_piano
-    per il fallback sulle CC che esistono solo come compresenza.
+    per cui il piano studi prevede ore in quella CC.
+
+    Prende TUTTE le righe di piano studi (sia con ore proprie che di
+    sola compresenza), non solo quelle scelte da _righe_piano(): quella
+    funzione, quando chiamata senza anno_corso/indirizzo (come qui),
+    applica il fallback "usa compresenza solo se la CC non ha NESSUNA
+    riga propria in nessuna classe" — corretto per il caso in cui
+    un'intera CC esiste solo come compresenza (B-02, B-03, B-12, B-14,
+    B-16, B-17), ma sbagliato quando la STESSA CC ha ore proprie in
+    alcune classi e SOLO compresenza in un'altra: quella singola classe
+    scompariva del tutto dalla pagina Assegnazioni, perché il fallback
+    a livello di CC non scattava mai (bug segnalato per B-02-ING in
+    5ª LLI, marcata compresenza mentre la stessa CC ha ore proprie in
+    altre classi). Il calcolo delle ore per singola classe più sotto
+    (_righe_piano con anno_corso/indirizzo specificati) resta invariato
+    e già corretto: sceglie giustamente compresenza solo se quella
+    specifica classe non ha una riga propria.
     """
-    righe = _righe_piano(anno_scol, cc_id)
+    righe = PianoStudi.query.filter_by(
+        anno_scol=anno_scol, id_classe_concorso=cc_id).all()
     classi = []
     for p in righe:
         sezioni = ClasseSezione.query.filter_by(
