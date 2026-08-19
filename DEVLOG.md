@@ -4,6 +4,39 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 62 — Prove agosto: docenti fuori servizio in tendina, assenze senza alert (Cowork)
+
+**Contesto:** Roberto, su `/recupero/agosto/calendario`: la tendina
+"Docente assistente" mostrava anche docenti che entreranno in servizio
+dopo il 31 agosto (dopo le prove) e docenti con contratto già scaduto;
+inoltre un'assenza registrata dopo aver assegnato un docente come
+assistente non dava alcun riscontro.
+
+Causa (1): `costruisci_dati_agosto()` filtrava i docenti solo su
+`attivo==True` e `tipo_contratto` — nessun controllo sull'anno
+scolastico di servizio, mentre `_docenti_per_anno()` in
+`routes/impostazione_anno.py` ha già il filtro giusto su
+`anno_scol_inizio`/`anno_scol_uscita` (corretto in passato per lo
+stesso tipo di bug, Task 35). Replicato lo stesso filtro qui (non
+importato da routes/, per non introdurre una dipendenza da un modulo
+route dentro modules/). Verificato sul DB reale: 13 docenti con
+`anno_scol_inizio` 2026-2027 ora correttamente esclusi (71 → 58
+docenti in tendina).
+
+Causa (2): nessun controllo incrociava titolare/assistente assegnati
+con la tabella Assenza. Aggiunto un nuovo tipo di conflitto 'assenza'
+nello stesso meccanismo già esistente per i conflitti docente/alunno
+(banner rosso in cima alla pagina) — a livello di data, non di ora
+precisa (le ore di RecuperoLezione sono HH:MM, quelle di Assenza sono
+numeri di ora scolastica 1-9, rappresentazioni diverse senza
+conversione diretta; un'assenza quel giorno resta comunque un segnale
+utile anche solo a livello di data). Verificato sul DB reale: il caso
+concreto segnalato (Santagata, assistente assente il 26/08) ora genera
+correttamente l'alert.
+
+Aggiunti 4 test di regressione. 95/95 test passano (91 + 4 nuovi).
+Commit: `5cf4128`.
+
 ## Sessione 61 — Assenze: eliminazione multipla per periodi di più giorni (Cowork)
 
 **Contesto:** Roberto, dopo il fix della Sessione 60: caricando
