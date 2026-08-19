@@ -335,7 +335,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     <div style="font-size:.68rem; color:var(--grigio);">{{ a.note }}</div>
                     {% endif %}
                 </td>
-<td class="td-tipo" style="border:1px solid #e2e8f0;"><span style="font-size:.68rem; background:#f3f4f6; padding:1px 5px; border-radius:4px;">{{ tipo_display.get(a.tipo, a.tipo) }}</span></td>
+<td class="td-tipo" style="border:1px solid #e2e8f0;"><span style="font-size:.68rem; background:#f3f4f6; padding:1px 5px; border-radius:4px;" {% if tipo_title.get(a.tipo) %}title="{{ tipo_title[a.tipo] }}"{% endif %}>{{ tipo_display.get(a.tipo, a.tipo) }}</span></td>
                 {% if blk.potenziamento %}
                 {% set ore_pot = blk.ore_pot_doc.get(a.id, 0) %}
                 <td class="{{ 'ore-val' if ore_pot else 'ore-zero' }} td-pot" style="border:1px solid var(--viola); cursor:pointer;

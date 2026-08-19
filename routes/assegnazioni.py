@@ -147,11 +147,26 @@ AREE = [
 
 TIPO_DISPLAY = {
     'titolare':    'TI',
-    'coe_entrata': 'COE ←︎',
-    'coe_uscita':  'COE →︎',
+    # coe_entrata: il docente è titolare in un'altra scuola — la nostra
+    # cede ore in eccesso di questa classe di concorso per completargli
+    # la cattedra qui (stesso linguaggio "cede a"/"completa con" già
+    # usato in CattedraOrganico.coe_direzione, vedi impostazione-anno →
+    # Organico USR — Roberto ha chiesto di allinearli, prima qui c'erano
+    # solo le frecce ←︎/→︎ senza indicare la direzione a parole).
+    'coe_entrata': 'Cede a',
+    # coe_uscita: il docente è titolare qui, ma la sua cattedra si
+    # completa con ore di un'altra scuola.
+    'coe_uscita':  'Completa',
     'supplente':   'Supp.',
     'part_time':   'PT',
     'eccedenza':   '+ore',
+}
+
+# Testo esteso per il tooltip dei due tipi COE (il badge in tabella è
+# troppo stretto per il testo completo) — stessa distinzione di sopra.
+TIPO_TITLE = {
+    'coe_entrata': 'Cede a: il docente è titolare altrove, questa scuola cede ore in eccesso per completargli la cattedra qui',
+    'coe_uscita':  'Completa con: il docente è titolare qui, la cattedra si completa con ore in un\'altra scuola',
 }
 
 
@@ -413,7 +428,8 @@ def index():
         aree_data=aree_data,
         indirizzi_attivi=indirizzi_attivi,
         docenti_anno=docenti_anno,
-        tipo_display=TIPO_DISPLAY)
+        tipo_display=TIPO_DISPLAY,
+        tipo_title=TIPO_TITLE)
 
 
 @assegnazioni_bp.route('/assegnazioni/salva', methods=['POST'])
