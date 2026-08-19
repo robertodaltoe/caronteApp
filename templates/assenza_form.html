@@ -83,11 +83,11 @@
         <div style="display:flex; gap:12px;">
             <div class="form-group" style="flex:1;">
                 <label>Dal *</label>
-                <input type="date" name="data_range_ini" id="inp-range-ini" value="{{ data_sel }}">
+                <input type="date" name="data_range_ini" id="inp-range-ini" value="{{ data_sel }}" disabled>
             </div>
             <div class="form-group" style="flex:1;">
                 <label>Al *</label>
-                <input type="date" name="data_range_fin" id="inp-range-fin" value="{{ data_sel }}">
+                <input type="date" name="data_range_fin" id="inp-range-fin" value="{{ data_sel }}" disabled>
             </div>
         </div>
     </div>
@@ -97,11 +97,11 @@
         <div style="display:flex; gap:12px; margin-bottom:12px;">
             <div class="form-group" style="flex:1;">
                 <label>Dal *</label>
-                <input type="date" name="data_per_ini" id="inp-per-ini" value="{{ data_sel }}">
+                <input type="date" name="data_per_ini" id="inp-per-ini" value="{{ data_sel }}" disabled>
             </div>
             <div class="form-group" style="flex:1;">
                 <label>Al *</label>
-                <input type="date" name="data_per_fin" id="inp-per-fin" value="{{ data_sel }}">
+                <input type="date" name="data_per_fin" id="inp-per-fin" value="{{ data_sel }}" disabled>
             </div>
         </div>
         <div class="form-group">
@@ -390,6 +390,17 @@ function setDurata(tipo, btn) {
     document.getElementById('sez-singolo').style.display  = tipo === 'singolo'   ? 'block' : 'none';
     document.getElementById('sez-range').style.display    = tipo === 'range'     ? 'block' : 'none';
     document.getElementById('sez-periodico').style.display= tipo === 'periodico' ? 'block' : 'none';
+    // I campi data dei tab non attivi vanno disabilitati, non solo nascosti:
+    // altrimenti il browser li invia comunque col loro valore di default
+    // (la data con cui si è aperto il form) e il backend, che controlla
+    // prima 'data' poi 'data_range_ini' poi 'data_per_ini', prendeva
+    // sempre quel valore residuo invece della data scelta nel tab
+    // realmente in uso (es. "Più giorni"/"Periodico" con inizio futuro).
+    document.getElementById('inp-data').disabled      = tipo !== 'singolo';
+    document.getElementById('inp-range-ini').disabled = tipo !== 'range';
+    document.getElementById('inp-range-fin').disabled = tipo !== 'range';
+    document.getElementById('inp-per-ini').disabled   = tipo !== 'periodico';
+    document.getElementById('inp-per-fin').disabled   = tipo !== 'periodico';
     // Ore: solo per singolo e range (non periodico con giorni multipli variabili)
     document.getElementById('sez-ore').style.display = 'block';
     aggiornaOrarioDocente();
