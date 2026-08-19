@@ -34,6 +34,7 @@
 <div class="card agenda-section">
     <h2>{{ icon('forbidden') }} Indisponibilità ({{ indisp_accorpate|length }} voci)</h2>
     {% if indisp_accorpate %}
+    <div style="overflow-x:auto;">
     <table>
         <thead>
             <tr>
@@ -77,6 +78,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <p style="color:var(--grigio); padding:16px 0;">
         Nessuna indisponibilità registrata per i prossimi giorni.
@@ -88,6 +90,7 @@
 <div class="card agenda-section">
     <h2>● Assenze future ({{ assenze_future|length }} voci)</h2>
     {% if assenze_future %}
+    <div style="overflow-x:auto;">
     <table>
         <thead>
             <tr><th style="width:120px;">Data</th><th style="width:120px;">Docente</th><th style="width:90px;">Ore</th>
@@ -117,6 +120,9 @@
             </td>
             <td>
                 <div style="display:flex; gap:4px; justify-content:center;">
+                <a href="{{ url_for('assenze.docente', id_docente=a.id_docente) }}"
+                   class="btn btn-sm" style="background:#f3f4f6; color:#374151;"
+                   title="Tutte le assenze di questo docente">{{ icon('list') }}</a>
                 <a href="{{ url_for('assenze.modifica', id=a.id, next=request.url) }}"
                    class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('assenze.elimina', id=a.id) }}"
@@ -130,6 +136,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <p style="color:var(--grigio); padding:16px 0;">
         Nessuna assenza futura registrata.
@@ -141,6 +148,7 @@
 {% if supplenze_future %}
 <div class="card agenda-section">
     <h2>{{ icon('list') }} Supplenze future ({{ supplenze_future|length }} voci)</h2>
+    <div style="overflow-x:auto;">
     <table>
         <thead>
             <tr><th style="width:120px;">Data</th><th style="width:40px;text-align:center;">Ora</th><th style="width:80px;text-align:center;">Classe</th>
@@ -181,6 +189,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endif %}
 
@@ -188,6 +197,7 @@
 {% if cambi_futuri %}
 <div class="card agenda-section">
     <h2>{{ icon('refresh') }} Cambi quadro futuri ({{ cambi_futuri|length }} voci)</h2>
+    <div style="overflow-x:auto;">
     <table>
         <thead>
             <tr>
@@ -241,6 +251,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endif %}
 
