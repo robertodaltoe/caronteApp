@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 65 — Assegnazioni: classe con sola compresenza spariva (Cowork)
+
+**Contesto:** Roberto: B-02-ING (ITP Conversazione Inglese) ha ore
+proprie in 1ª-4ª LLI ma è marcata compresenza in 5ª LLI — quella
+singola classe non compariva affatto nella pagina Assegnazioni,
+nessun modo di assegnarci ore alla docente. Temeva un problema anche
+nel Calcolo organico USR.
+
+Causa: `routes/assegnazioni.py::_classi_per_cc()` derivava l'elenco
+classi da `_righe_piano()` chiamata senza anno_corso/indirizzo — quella
+funzione, così, sceglie le righe di compresenza solo se l'INTERA
+classe di concorso non ha alcuna riga propria in NESSUNA classe
+(fallback pensato per le CC che esistono solo come compresenza: B-02,
+B-03, B-12, B-14, B-16, B-17 — Task 44). Con B-02-ING che ha ore
+proprie altrove, il fallback non scattava mai e la riga di sola
+compresenza per 5ª LLI spariva dall'elenco classi per l'intera CC, non
+solo dal conteggio ore.
+
+Fix: `_classi_per_cc()` ora prende l'unione di tutte le righe di piano
+studi per quella CC (proprie e di compresenza), non solo quelle scelte
+dal fallback. Il calcolo ore per singola classe (`_righe_piano` con
+anno_corso/indirizzo, usata altrove) resta invariato e già corretto.
+
+Verificato che il timore sul Calcolo organico USR era infondato:
+`_ricalcola_organico()` già somma tutte le righe di piano studi,
+comprese quelle di compresenza, verso l'organico della CC dell'ITP —
+nessuna modifica necessaria lì.
+
+Verificato sul DB reale (5ª LLI assente prima, presente con le ore
+corrette dopo) e sul server reale ("5A LLI" ora tra le colonne).
+Aggiunti 3 test di regressione, incluso uno che verifica che il caso
+originale (Task 44) non regredisca. 101/101 test passano (98 + 3
+nuovi). Commit: `e931b54`.
+
 ## Sessione 64 — Incarichi docenti: tendina non filtrava per anno di servizio (Cowork)
 
 **Contesto:** Roberto: selezionando l'anno corrente in Incarichi
