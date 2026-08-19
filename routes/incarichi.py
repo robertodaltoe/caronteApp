@@ -49,8 +49,14 @@ def index():
     # Tipi incarico disponibili per il form
     tipi = TipoIncarico.query.filter_by(attivo=True).order_by(
         TipoIncarico.ordine).all()
-    docenti = Docente.query.filter_by(attivo=True).order_by(
-        Docente.cognome).all()
+    # In servizio nell'anno selezionato (non semplicemente "attivo ora") —
+    # vedi routes/impostazione_anno.py::_docenti_per_anno(). Prima la
+    # tendina mostrava sempre lo stesso elenco di docenti correntemente
+    # attivi, senza tener conto dell'anno scelto nella pagina: comparivano
+    # anche docenti non più in servizio nell'anno appena iniziato/in
+    # preparazione (segnalato da Roberto).
+    from routes.impostazione_anno import _docenti_per_anno
+    docenti = sorted(_docenti_per_anno(anno), key=lambda d: d.cognome)
     classi = ClasseSezione.query.filter_by(
         anno_scol=anno, attiva=True).order_by(
         ClasseSezione.indirizzo,
