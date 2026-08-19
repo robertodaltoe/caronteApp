@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Assenze — {{ docente.cognome }}{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">
+        {{ icon('list') }} Assenze — {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}
+    </h1>
+</div>
+
+<div class="card" style="padding:14px 16px; margin-bottom:16px;">
+    <form method="get" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;">
+            <label style="font-size:.78rem; color:var(--grigio);">Dal</label>
+            <input type="date" name="da" value="{{ da }}"
+                   style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label style="font-size:.78rem; color:var(--grigio);">Al</label>
+            <input type="date" name="a" value="{{ a }}"
+                   style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ icon('search') }} Filtra</button>
+        {% if da or a %}
+        <a href="{{ url_for('assenze.docente', id_docente=docente.id) }}" class="btn btn-sm"
+           style="background:#f3f4f6; color:#374151;">Azzera filtro</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if not assenze %}
+<div class="card" style="padding:20px; text-align:center; color:var(--grigio);">
+    Nessuna assenza {{ 'nel periodo indicato' if (da or a) else 'registrata' }} per questo docente.
+</div>
+{% else %}
+
+<form method="post" action="{{ url_for('assenze.elimina_multiple') }}" id="form-multi"
+      onsubmit="return confermaEliminaMultipla()">
+    <input type="hidden" name="id_docente" value="{{ docente.id }}">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <div style="font-size:.82rem; color:var(--grigio);">
+            <strong style="color:var(--blu);">{{ assenze|length }}</strong> assenze
+            {%- if da or a %} nel periodo{% endif %}
+        </div>
+        <button type="submit" class="btn btn-danger btn-sm" id="btn-elimina-sel" disabled>
+            {{ icon('close') }} Elimina selezionate (<span id="conta-sel">0</span>)
+        </button>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:36px; text-align:center;">
+                    <input type="checkbox" id="chk-tutte" onchange="toggleTutte(this)">
+                </th>
+                <th style="width:110px;">Data</th>
+                <th style="width:90px;">Ore</th>
+                <th style="width:150px;">Motivo</th>
+                <th>Note interne</th>
+                <th style="text-align:center; width:120px;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in assenze %}
+            <tr>
+                <td style="text-align:center;">
+                    <input type="checkbox" name="ids" value="{{ a.id }}" class="chk-riga" onchange="aggiornaConteggio()">
+                </td>
+                <td style="white-space:nowrap;">{{ a.data.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    {% if a.ora_inizio == 1 and a.ora_fine == 9 %}Intera giornata
+                    {% elif a.ora_inizio == a.ora_fine %}{{ a.ora_inizio }}ª ora
+                    {% else %}{{ a.ora_inizio }}ª – {{ a.ora_fine }}ª{% endif %}
+                </td>
+                <td><span class="badge badge-grigio">{{ label_motivo_assenza(a.motivo) }}</span></td>
+                <td class="wrap" style="color:var(--grigio); font-size:.85rem;">{{ a.note_interne or '—' }}</td>
+                <td style="text-align:center; white-space:nowrap;">
+                    <div style="display:flex; gap:4px; justify-content:center;">
+                    <a href="{{ url_for('assenze.modifica', id=a.id, next=request.url) }}"
+                       class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
+                    <form method="post" action="{{ url_for('assenze.elimina', id=a.id) }}"
+                          onsubmit="return confirm('Eliminare questa assenza?')" style="display:inline;">
+                        <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
+                    </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    </div>
+</form>
+
+{% endif %}
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function toggleTutte(master) {
+    document.querySelectorAll('.chk-riga').forEach(c => c.checked = master.checked);
+    aggiornaConteggio();
+}
+function aggiornaConteggio() {
+    const selezionate = document.querySelectorAll('.chk-riga:checked').length;
+    document.getElementById('conta-sel').textContent = selezionate;
+    document.getElementById('btn-elimina-sel').disabled = selezionate === 0;
+    const tutte = document.querySelectorAll('.chk-riga').length;
+    document.getElementById('chk-tutte').checked = selezionate > 0 && selezionate === tutte;
+}
+function confermaEliminaMultipla() {
+    const n = document.querySelectorAll('.chk-riga:checked').length;
+    return confirm(`Eliminare ${n} assenze selezionate e le variazioni collegate?`);
+}
+</script>
+{% endblock %}

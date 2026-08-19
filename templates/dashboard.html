@@ -353,6 +353,7 @@
         <tbody>
         {# Accorpa assenze consecutive dello stesso docente+motivo #}
         {% set ns = namespace(prev_doc=None, prev_mot=None, prev_nome=None, prev_id=None,
+                               prev_id_docente=None,
                                ore_min=None, ore_max=None, note_val=None,
                                imp=True, first_id=None, creato_da=None) %}
         {% for a in assenze %}
@@ -377,6 +378,9 @@
                     <td style="color:var(--grigio);font-size:.84rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">{{ ns.note_val or "—" }}</td>
                     <td>
                         <div style="display:flex;gap:4px;justify-content:center;">
+                        <a href="{{ url_for('assenze.docente', id_docente=ns.prev_id_docente) }}"
+                           class="btn btn-sm" style="background:#f3f4f6; color:#374151;"
+                           title="Tutte le assenze di questo docente">{{ icon('list') }}</a>
                         <a href="{{ url_for('assenze.modifica', id=ns.first_id, next=request.url) }}"
                            class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                         <form method="post" action="{{ url_for('assenze.elimina', id=ns.first_id) }}"
@@ -389,6 +393,7 @@
                 </tr>
                 {% endif %}
                 {% set ns.prev_doc  = a.docente.cognome %}{% set ns.prev_nome = a.docente.nome %}
+                {% set ns.prev_id_docente = a.id_docente %}
                 {% set ns.prev_mot  = a.motivo %}
                 {% set ns.ore_min   = a.ora_inizio %}
                 {% set ns.ore_max   = a.ora_fine %}
@@ -418,6 +423,9 @@
             <td style="color:var(--grigio);font-size:.84rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">{{ ns.note_val or "—" }}</td>
             <td>
                 <div style="display:flex;gap:4px;justify-content:center;">
+                <a href="{{ url_for('assenze.docente', id_docente=ns.prev_id_docente) }}"
+                   class="btn btn-sm" style="background:#f3f4f6; color:#374151;"
+                   title="Tutte le assenze di questo docente">{{ icon('list') }}</a>
                 <a href="{{ url_for('assenze.modifica', id=ns.first_id, next=request.url) }}"
                    class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('assenze.elimina', id=ns.first_id) }}"

@@ -72,20 +72,28 @@ def nuova():
     )
 
 
-@assenze_bp.route('/assenze/<int:id>/elimina', methods=['POST'])
-def elimina(id):
-    a = Assenza.query.get_or_404(id)
-    data_str   = a.data.isoformat()
-    id_docente = a.id_docente
-    docente_ref = a.docente
-    _log_desc = (f'{docente_ref.cognome} {docente_ref.nome} — {a.motivo} '
-                 f'({a.data.strftime("%d/%m/%Y")})') if docente_ref else f'id_docente={id_docente} ({a.data.strftime("%d/%m/%Y")})'
+# Categorie che generano un movimento negativo in banca ore — usata sia
+# dall'eliminazione singola che da quella multipla (vedi sotto), per non
+# duplicare l'elenco in due punti.
+TIPI_ASSENZA = ('permesso', 'assenza', 'permesso_orario', 'permesso_ist', 'civica',
+                'ed_civica', 'malattia', 'assemblea', 'formazione',
+                'viaggio', 'progetto', 'riunione', 'sciopero', 'altro')
 
-    # Rimuovi movimenti banca ore collegati a questa assenza
-    # Cerca per id_docente + data + tipi negativi (non supplenze)
-    TIPI_ASSENZA = ('permesso', 'assenza', 'permesso_orario', 'permesso_ist', 'civica',
-                    'ed_civica', 'malattia', 'assemblea', 'formazione',
-                    'viaggio', 'progetto', 'riunione', 'sciopero', 'altro')
+
+def _elimina_assenza_righe(a, utente_corrente):
+    """
+    Cancella dal DB tutto ciò che è collegato a una singola Assenza
+    (movimenti banca ore, supplenze automatiche scoperte/non assegnabili,
+    presenze istituzionali, lapide di sync) e infine la riga stessa — ma
+    non fa commit né audit log, quello resta al chiamante (route singola
+    o eliminazione multipla, che aggregano più righe in un'unica
+    transazione/messaggio invece di una per ciascuna).
+
+    Ritorna il numero di supplenze automatiche rimosse insieme a questa
+    assenza (per il messaggio flash cumulativo del chiamante).
+    """
+    id_docente = a.id_docente
+
     MovimentoBancaOre.query.filter(
         MovimentoBancaOre.id_docente == id_docente,
         MovimentoBancaOre.data == a.data,
@@ -93,12 +101,10 @@ def elimina(id):
         MovimentoBancaOre.minuti < 0
     ).delete(synchronize_session=False)
 
-    # Annulla supplenze generate automaticamente
     auto = Supplenza.query.filter_by(
         data=a.data, id_assente=id_docente, origine='automatica'
     ).filter(Supplenza.stato.in_(['scoperta', 'non_assegnabile'])).all()
     n = len(auto)
-    utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
     for s in auto:
         registra_eliminazione('supplenze', {
             'data': s.data.isoformat(), 'ora': s.ora,
@@ -106,8 +112,7 @@ def elimina(id):
         }, utente=utente_corrente)
         db.session.delete(s)
 
-    # Ripristina presenze istituzionali collegate a questa assenza
-    _ripristina_presenza_ist(id_docente, [a.data], id_assenza=id)
+    _ripristina_presenza_ist(id_docente, [a.data], id_assenza=a.id)
 
     # Lapide PRIMA di eliminare: altrimenti il sync automatico la
     # rimetterebbe al giro successivo trovandola ancora sull'altra
@@ -119,6 +124,19 @@ def elimina(id):
     }, utente=utente_corrente)
 
     db.session.delete(a)
+    return n
+
+
+@assenze_bp.route('/assenze/<int:id>/elimina', methods=['POST'])
+def elimina(id):
+    a = Assenza.query.get_or_404(id)
+    data_str   = a.data.isoformat()
+    docente_ref = a.docente
+    _log_desc = (f'{docente_ref.cognome} {docente_ref.nome} — {a.motivo} '
+                 f'({a.data.strftime("%d/%m/%Y")})') if docente_ref else f'id_docente={a.id_docente} ({a.data.strftime("%d/%m/%Y")})'
+
+    utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
+    n = _elimina_assenza_righe(a, utente_corrente)
     db.session.commit()
 
     from routes.auth import log as auth_log
@@ -126,6 +144,73 @@ def elimina(id):
 
     flash(f'Assenza rimossa.' + (f' Rimosse {n} variazioni collegate.' if n else ''), 'warning')
     return redirect(url_for('dashboard.index', data=data_str))
+
+
+@assenze_bp.route('/assenze/elimina-multiple', methods=['POST'])
+def elimina_multiple():
+    """
+    Elimina in un colpo solo più assenze selezionate a mano (checkbox)
+    dalla pagina "Assenze del docente" — utile per un periodo di più
+    giorni caricato in blocco, che altrimenti andrebbe eliminato riga
+    per riga (vedi models/assenza.py: nessun id_gruppo collega le righe
+    di un range/periodico, sono indipendenti fin dalla creazione).
+    """
+    ids = [int(i) for i in request.form.getlist('ids') if i.isdigit()]
+    id_docente = request.form.get('id_docente', type=int)
+    if not ids:
+        flash('Nessuna assenza selezionata.', 'warning')
+        return redirect(url_for('assenze.docente', id_docente=id_docente) if id_docente else url_for('dashboard.index'))
+
+    righe = Assenza.query.filter(Assenza.id.in_(ids)).all()
+    utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
+    n_sup = 0
+    n_ass = 0
+    docente_ref = righe[0].docente if righe else None
+    for a in righe:
+        n_sup += _elimina_assenza_righe(a, utente_corrente)
+        n_ass += 1
+    db.session.commit()
+
+    from routes.auth import log as auth_log
+    if docente_ref:
+        auth_log('elimina_assenza_multipla',
+                  f'{docente_ref.cognome} {docente_ref.nome} — {n_ass} assenze rimosse in blocco')
+
+    msg = f'{n_ass} assenze rimosse.' + (f' Rimosse {n_sup} variazioni collegate.' if n_sup else '')
+    flash(msg, 'warning')
+    return redirect(url_for('assenze.docente', id_docente=id_docente) if id_docente else url_for('dashboard.index'))
+
+
+@assenze_bp.route('/assenze/docente/<int:id_docente>')
+def docente(id_docente):
+    """
+    Elenco di tutte le assenze di un docente, con selezione multipla per
+    l'eliminazione in blocco — pensata per chi carica un periodo di più
+    giorni (range/periodico) e poi deve correggerlo/eliminarlo, senza
+    andare a caccia riga per riga nella dashboard giorno per giorno.
+    """
+    d = Docente.query.get_or_404(id_docente)
+
+    da_str = request.args.get('da', '')
+    a_str  = request.args.get('a', '')
+    q = Assenza.query.filter_by(id_docente=id_docente)
+    if da_str:
+        try:
+            q = q.filter(Assenza.data >= date.fromisoformat(da_str))
+        except ValueError:
+            da_str = ''
+    if a_str:
+        try:
+            q = q.filter(Assenza.data <= date.fromisoformat(a_str))
+        except ValueError:
+            a_str = ''
+    assenze = q.order_by(Assenza.data.desc(), Assenza.ora_inizio).all()
+
+    from flask import session
+    ruolo = session.get('ruolo', 'segreteria')
+
+    return render_template('assenze/docente_lista.html',
+        docente=d, assenze=assenze, da=da_str, a=a_str, ruolo_utente=ruolo)
 
 
 @assenze_bp.route('/assenze/<int:id>/modifica', methods=['GET', 'POST'])
