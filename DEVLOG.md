@@ -37,6 +37,33 @@ correttamente l'alert.
 Aggiunti 4 test di regressione. 95/95 test passano (91 + 4 nuovi).
 Commit: `5cf4128`.
 
+**Addendum:** Roberto ha chiesto di verificare che lo stesso bug non
+si ripetesse altrove. Grep sistematica di ogni query "docenti attivi"
+usata per liste candidati legate a un anno/periodo fisso — trovate 4
+ricorrenze reali, verificate sul DB reale (13 docenti 2026-2027 le
+rendevano visibili dove non dovevano):
+1. `routes/recupero_agosto.py::agosto_docenti_disponibili()` — pagina
+   dedicata "Docenti disponibili", stesso bug della tendina.
+2. `routes/recupero_agosto.py` (route gruppi, GET) — creava una riga
+   RecuperoDocente anche per chi non è ancora in servizio.
+3. `modules/recupero_agosto_calendario.py::genera_bozza_agosto()` — la
+   più seria: il generatore automatico poteva ASSEGNARE (non solo
+   proporre) un docente non ancora arrivato come assistente, senza
+   verifica umana nel mezzo.
+4. `routes/recupero_giugno.py::docenti()` — lista "non ancora
+   iscritto" per giugno (senza filtro sul tipo contratto, regola
+   diversa da agosto).
+5. `routes/attivita_ist.py::_non_in_servizio_per_data()` — preset
+   partecipanti eventi istituzionali: il controllo esisteva già per chi
+   è USCITO ma non per chi non è ancora ARRIVATO.
+
+Centralizzato in due funzioni condivise in `routes/recupero_costanti.py`
+(foglia dell'albero di import): `docenti_in_servizio_query(anno_scol)`
+e `docenti_idonei_periodo(anno_scol)` (la precedente + CONTRATTI_OK).
+Verificato sul DB reale e dal vivo che nessuno dei 13 docenti
+2026-2027 compaia più in nessuno dei punti corretti. Aggiunti 3 test
+di regressione. 98/98 test passano (95 + 3 nuovi). Commit: `7fcee78`.
+
 ## Sessione 61 — Assenze: eliminazione multipla per periodi di più giorni (Cowork)
 
 **Contesto:** Roberto, dopo il fix della Sessione 60: caricando
