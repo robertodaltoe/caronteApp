@@ -4,6 +4,28 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 64 — Incarichi docenti: tendina non filtrava per anno di servizio (Cowork)
+
+**Contesto:** Roberto: selezionando l'anno corrente in Incarichi
+docenti, la tendina mostra anche docenti non in servizio per
+quell'anno — stesso bug già trovato e corretto in altri 5 punti
+dell'app in questa sessione (prove di recupero agosto/giugno, attività
+istituzionali): `routes/incarichi.py` filtrava solo
+`Docente.attivo==True`, senza controllare `anno_scol_inizio`/
+`anno_scol_uscita` né tener conto dell'anno effettivamente selezionato
+nella pagina — la tendina mostrava sempre lo stesso elenco di docenti
+correntemente attivi, qualunque anno si scegliesse.
+
+Sostituito con `routes/impostazione_anno.py::_docenti_per_anno(anno)`,
+lo stesso helper già usato con successo in `docenti.py`,
+`assegnazioni.py`, `banca_ore.py`, `dashboard_anno.py` ed
+`export_xlsx.py` — stesso pattern di import locale già consolidato.
+
+Verificato sul DB reale: per l'anno corrente (2025-2026), 13 docenti
+con `anno_scol_inizio` 2026-2027 (non ancora in servizio) sono ora
+correttamente esclusi (93 → 80 in tendina); verificato anche sul
+server reale. 98/98 test passano. Commit: `b0963c4`.
+
 ## Sessione 63 — Icone SVG mostrate come testo grezzo (textContent→innerHTML) (Cowork)
 
 **Contesto:** Roberto segnala che nel popup di inserimento ore in
