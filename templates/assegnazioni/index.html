@@ -26,7 +26,10 @@ table.pivot .th-tipo,
 table.pivot .td-tipo   { width:56px; min-width:56px; max-width:56px; background:#f1f5f9;
                           overflow:hidden; text-overflow:ellipsis; text-align:center; }
 table.pivot .th-pot,
-table.pivot .td-pot    { width:34px; min-width:34px; max-width:34px; }
+table.pivot .td-pot    { width:34px; min-width:34px; max-width:34px; text-align:center;
+                          position:sticky; left:226px; z-index:2;
+                          box-shadow:2px 0 4px rgba(0,0,0,.06); }
+table.pivot .th-pot    { z-index:3; }
 table.pivot .col-tot   { width:58px; min-width:58px; max-width:58px; }
 table.pivot .col-max   { width:58px; min-width:58px; max-width:58px; }
 table.pivot .col-azioni{ width:40px; min-width:40px; max-width:40px; }
@@ -221,8 +224,8 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     </td>
                     <td class="td-tipo"></td>
                     {% if blk.potenziamento %}
-                    <td style="border:1px solid var(--viola); background:var(--viola-bg);
-                               text-align:center; font-size:.72rem; color:var(--viola); font-weight:700;">
+                    <td class="td-pot" style="border:1px solid var(--viola); background:var(--viola-bg);
+                               font-size:.72rem; color:var(--viola); font-weight:700;">
                         {{ blk.potenziamento.ore }}h
                     </td>
                     {% endif %}
@@ -272,7 +275,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     </td>
                     <td class="td-tipo" style="border:1px solid #e2e8f0;"></td>
                     {% if blk.potenziamento %}
-                    <td style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
+                    <td class="td-pot" style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
                     {% endif %}
                     {% for classe in classi %}
                     {% if classe in cc_multi_classes %}
@@ -428,7 +431,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     </td>
                     <td class="td-tipo" style="border:1px solid #e2e8f0;"></td>
                     {% if blk.potenziamento %}
-                    <td style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
+                    <td class="td-pot" style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
                     {% endif %}
                     {% for classe in classi %}
                     <td style="border:1px solid #e2e8f0; padding:2px 4px; vertical-align:top; overflow:visible;">
@@ -469,7 +472,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     TI
                 </td>
                 {% if blk.potenziamento %}
-                <td style="border:1px solid var(--viola); background:var(--viola-bg); color:var(--viola); text-align:center;">—</td>
+                <td class="td-pot" style="border:1px solid var(--viola); background:var(--viola-bg); color:var(--viola);">—</td>
                 {% endif %}
                 {% set IND_COL_PRE = {
                     'AFM':'#1e40af','RIM':'#1d4ed8',
@@ -518,7 +521,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                 {% if blk.potenziamento %}
                 {% set cop_pot = blk.ore_pot_totali %}
                 {% set prev_pot = blk.potenziamento.ore %}
-                <td class="td-cop" id="cop-{{ cc.id }}-__POT__" data-prev="{{ prev_pot }}"
+                <td class="td-cop td-pot" id="cop-{{ cc.id }}-__POT__" data-prev="{{ prev_pot }}"
                     style="color:{{ 'var(--verde)' if cop_pot==prev_pot else ('var(--rosso)' if cop_pot>prev_pot else 'var(--giallo)') }};
                            border:1px solid var(--viola); background:var(--viola-bg); font-weight:700; text-align:center;">
                     {{ cop_pot }}/{{ prev_pot }}
@@ -546,7 +549,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     {{ icon('download') }} Scheda classe
                 </td>
                 {% if blk.potenziamento %}
-                <td style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
+                <td class="td-pot" style="border:1px solid var(--viola); background:var(--viola-bg);"></td>
                 {% endif %}
                 {% for classe in classi %}
                 <td style="border:1px solid #e2e8f0; text-align:center; padding:3px 4px;">
