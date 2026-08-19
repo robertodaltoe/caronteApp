@@ -149,12 +149,12 @@
     if (cb) {
         cb.addEventListener('change', function() {
             if (this.checked) {
-                btn.textContent = '{{ icon('refresh') }} Reimporta (sovrascrittura) — ' +
+                btn.innerHTML = '{{ icon('refresh') }} Reimporta (sovrascrittura) — ' +
                     ({{ da_importare|length }} + {{ doppioni|length }}) + ' movimenti';
                 btn.style.background = '#92400e';
                 nota.textContent = 'I movimenti esistenti per le settimane selezionate verranno eliminati e riscritti.';
             } else {
-                btn.textContent = '{{ icon('check') }} Importa movimenti selezionati ({{ da_importare|length }})';
+                btn.innerHTML = '{{ icon('check') }} Importa movimenti selezionati ({{ da_importare|length }})';
                 btn.style.background = '';
                 nota.textContent = 'I doppioni non verranno reimportati.';
             }

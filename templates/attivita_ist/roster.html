@@ -150,14 +150,14 @@ function toggleCard(did) {
     const body = document.getElementById(`body-${did}`);
     const icon = document.getElementById(`icon-${did}`);
     const open = body.classList.toggle('aperto');
-    icon.textContent = open ? '{{ icon('chart') }}' : '▼';
+    icon.innerHTML = open ? '{{ icon('chart') }}' : '▼';
 }
 function apriTutti() {
     document.querySelectorAll('.doc-card:not([style*="none"])').forEach(card => {
         const did = card.id.replace('card-','');
         const body = document.getElementById(`body-${did}`);
         const icon = document.getElementById(`icon-${did}`);
-        if (body) { body.classList.add('aperto'); icon.textContent = '{{ icon('chart') }}'; }
+        if (body) { body.classList.add('aperto'); icon.innerHTML = '{{ icon('chart') }}'; }
     });
 }
 function chiudiTutti() {

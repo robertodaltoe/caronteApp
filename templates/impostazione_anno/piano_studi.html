@@ -567,8 +567,8 @@ function selezionaTutti(labelEl) {
     const checks = (form || document).querySelectorAll('input[type="checkbox"][name="anni_corso[]"]');
     const tuttiChecked = Array.from(checks).every(c => c.checked);
     checks.forEach(c => c.checked = !tuttiChecked);
-    labelEl.textContent = tuttiChecked ? '{{ icon('check') }} tutti' : '{{ icon('close') }} nessuno';
-    setTimeout(() => labelEl.textContent = '{{ icon('check') }} tutti', 1500);
+    labelEl.innerHTML = tuttiChecked ? '{{ icon('check') }} tutti' : '{{ icon('close') }} nessuno';
+    setTimeout(() => labelEl.innerHTML = '{{ icon('check') }} tutti', 1500);
 }
 
 function toggleOverride(id) {

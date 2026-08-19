@@ -119,9 +119,13 @@ function rimuoviBadge(xEl) {
         prima.style.background = '#dbeafe';
         prima.style.color = '#1e40af';
         prima.style.borderColor = '#93c5fd';
-        if (!prima.textContent.includes('{{ icon('star') }}')) {
-            prima.innerHTML = '{{ icon('star') }} ' + prima.innerHTML;
-        }
+        // prima non può già avere la stella: solo un badge alla volta è
+        // "principale" (background dbeafe) e quello vecchio è appena
+        // stato rimosso — nessun controllo di duplicato necessario
+        // (il controllo precedente confrontava textContent, che non
+        // contiene mai l'SVG della stella inserita via innerHTML, e
+        // quindi non prependeva mai la stella).
+        prima.innerHTML = '{{ icon('star') }} ' + prima.innerHTML;
     }
 }
 </script>

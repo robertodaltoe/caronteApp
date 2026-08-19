@@ -317,12 +317,12 @@ function copiaRiga(docId) {
 
     // Feedback visivo
     const btn = event.target;
-    const orig = btn.textContent;
-    btn.textContent = `{{ icon('check') }} ${copiate} celle`;
+    const orig = btn.innerHTML;
+    btn.innerHTML = `{{ icon('check') }} ${copiate} celle`;
     btn.style.background = 'var(--verde-bg)';
     btn.style.color = 'var(--verde)';
     setTimeout(() => {
-        btn.textContent = orig;
+        btn.innerHTML = orig;
         btn.style.background = '';
         btn.style.color = '';
     }, 2000);
@@ -355,10 +355,10 @@ document.getElementById('btn-salva').addEventListener('click', async () => {
     const data = await res.json();
 
     if (data.ok) {
-        btn.textContent = '{{ icon('check') }} Salvato!';
+        btn.innerHTML = '{{ icon('check') }} Salvato!';
         btn.style.background = 'var(--verde)';
         setTimeout(() => {
-            btn.textContent = '{{ icon('check') }} Salva calendario';
+            btn.innerHTML = '{{ icon('check') }} Salva calendario';
             btn.style.background = '';
             btn.disabled = false;
         }, 2000);

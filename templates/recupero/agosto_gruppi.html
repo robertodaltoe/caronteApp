@@ -290,7 +290,12 @@ function aggiornaClassiLibero() {
             label.style.borderColor = this.checked ? 'var(--viola)' : '#d1d5db';
         };
         label.appendChild(input);
-        label.appendChild(document.createTextNode(cls + (giaCoperta ? ' {{ icon('check') }}' : '')));
+        label.appendChild(document.createTextNode(cls));
+        if (giaCoperta) {
+            const badge = document.createElement('span');
+            badge.innerHTML = ' {{ icon('check') }}';
+            label.appendChild(badge);
+        }
         box.appendChild(label);
     });
 }

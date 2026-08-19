@@ -454,9 +454,9 @@ function calcolaDurataIst() {
         const [hf, mf] = fin.split(':').map(Number);
         const tot = (hf * 60 + mf) - (hi * 60 + mi);
         if (tot > 0) {
-            div.textContent = `${Math.floor(tot/60)}h ${tot%60>0 ? tot%60+'m' : ''}`.trim();
+            div.innerHTML = `${Math.floor(tot/60)}h ${tot%60>0 ? tot%60+'m' : ''}`.trim();
             div.style.color = tot > 120 ? 'var(--rosso)' : '#1e40af';
-            if (tot > 120) div.textContent += ' {{ icon('warning') }} supera 2h CCNL';
+            if (tot > 120) div.innerHTML += ' {{ icon('warning') }} supera 2h CCNL';
         } else {
             div.textContent = '';
         }

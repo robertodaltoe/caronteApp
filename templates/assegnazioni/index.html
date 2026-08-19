@@ -1068,7 +1068,7 @@ async function salvaPopover(keepOpen = false) {
         _ricalcolaColoriTutteRighe();
     }
 
-    msg.textContent = '{{ icon('check') }}';
+    msg.innerHTML = '{{ icon('check') }}';
     msg.style.color = 'var(--verde)';
     if (!keepOpen) setTimeout(chiudiPopover, 600);
 }
