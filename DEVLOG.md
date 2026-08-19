@@ -40,6 +40,17 @@ tutte" funzionano; i 17 link dalla dashboard puntano all'URL corretto
 per il rispettivo docente. Aggiunti 3 test di regressione. 91/91 test
 passano (88 + 3 nuovi). Commit: `895fad6`.
 
+**Addendum:** stesso collegamento aggiunto anche in Agenda (sezione
+"Assenze future"), su richiesta di Roberto. Verificando dal vivo è
+emerso un problema preesistente: nessuna delle 4 tabelle di
+`agenda.html` aveva un contenitore `overflow-x:auto` — con "Assenze
+future" già a 22 righe, la tabella era più larga della card ANCHE
+PRIMA di aggiungere la nuova icona (869px vs 724px senza, 824px
+rimuovendo la nuova icona via JS — già oltre). Corretto avvolgendo
+tutte e 4 le tabelle della pagina nello stesso pattern
+`overflow-x:auto` già usato altrove nell'app. 91/91 test passano.
+Commit: `d187733`.
+
 ## Sessione 60 — Assenze: data futura ignorata nei tab "Più giorni"/"Periodico" (Cowork)
 
 **Contesto:** Roberto segnala che registrando un'assenza con inizio
