@@ -4,6 +4,45 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 63 — Icone SVG mostrate come testo grezzo (textContent→innerHTML) (Cowork)
+
+**Contesto:** Roberto segnala che nel popup di inserimento ore in
+Assegnazioni compare il markup SVG grezzo (`<svg width="16"...>`)
+invece dell'icona di conferma.
+
+Causa: `templates/assegnazioni/index.html` impostava `msg.textContent
+= '{{ icon('check') }}'` — `icon()` (macro in `templates/_icons.html`)
+restituisce markup SVG grezzo, che va inserito con `innerHTML` per
+essere interpretato come HTML; con `textContent` il browser lo tratta
+come testo puro e lo mostra letteralmente.
+
+Cercato lo stesso pattern in tutto il progetto — trovate altre 11
+occorrenze reali in 8 file: `import_banca_ore.html` (2), `dashboard.html`
+(toggle box + tendina "Cambia tipo" supplenza, dove "Recupero" era
+l'unico tipo con icona SVG anziché un carattere semplice, mai
+notato), `assenza_form.html` (avviso "supera 2h CCNL"),
+`calendario_fsl.html` (3, incluso il valore salvato per il ripristino
+del bottone), `roster.html` (2, toggle apri/chiudi card),
+`piano_studi.html` (label seleziona tutti/nessuno),
+`recupero/agosto_gruppi.html` (badge "già coperta" — qui passava per
+`document.createTextNode()`, che non interpreta MAI l'HTML).
+
+Un caso diverso dal sintomo visibile: `docenti_classi_concorso.html`
+aveva una funzionalità rotta in silenzio — un controllo "il badge ha
+già la stella?" confrontava `.textContent.includes('{{ icon(...) }}')`,
+che non trova mai l'SVG (textContent non contiene mai markup HTML),
+quindi la stella di "classe di concorso principale" non veniva mai
+riassegnata dopo aver rimosso la precedente. Il controllo era comunque
+ridondante (un solo badge principale alla volta) — rimosso invece di
+ripararlo.
+
+Verificato: grep finale su tutto templates/ per gli stessi pattern —
+zero occorrenze rimanenti. Sul server reale, confermato che il codice
+servito contiene `msg.innerHTML = '<svg...'` e che il browser lo
+renderizza come icona (nessun testo residuo). 98/98 test passano
+(solo script lato client, nessuna logica server toccata). Commit:
+`06b27d8`.
+
 ## Sessione 62 — Prove agosto: docenti fuori servizio in tendina, assenze senza alert (Cowork)
 
 **Contesto:** Roberto, su `/recupero/agosto/calendario`: la tendina
