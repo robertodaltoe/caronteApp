@@ -54,6 +54,18 @@ A-01→AS01, A-22-ING→AS2B, A-22-SPA→AS2C, A-22-TED→AS2D, A-48→AS48.
   tocca). Applicata poi sul database.db reale, `PRAGMA integrity_check`:
   ok. 86/86 test passano. Commit: `25a504a`.
 
+**Addendum:** Roberto chiede di verificare la tabella nella sezione
+Aule. Trovato: nella tabella laterale della piantina interattiva
+(`/aule/mappa`) la colonna "Sede" veniva tagliata a bordo pagina — il
+riquadro aveva larghezza fissa (260px, comprensiva del padding di
+default di `.card`, 24px per lato) insufficiente per il testo più
+lungo ("Sede Centrale - Piano Terra"), senza scroll orizzontale né
+andare a capo. Allargato il riquadro (260px→300px, padding ridotto a
+14px) e aggiunta `class="wrap"` alla cella Sede (colonna più stretta,
+testo su due righe invece di forzare una colonna larga). Verificato:
+0 celle in overflow dopo il fix (prima: tableWidth 291px >
+containerWidth 260px). 86/86 test passano. Commit: `f9eecd2`.
+
 ## Sessione 58 — Display: autoscroll quando le ore non entrano a video (Cowork)
 
 **Contesto:** Roberto, sul monitor display in corridoio (nessuno lo
