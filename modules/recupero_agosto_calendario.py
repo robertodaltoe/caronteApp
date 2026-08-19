@@ -227,12 +227,56 @@ def costruisci_dati_agosto():
                         'msg': f'{nomi}: {g1.materia[:12]} {l1.ora_inizio}-{l1.ora_fine} / {g2.materia[:12]} {l2.ora_inizio}-{l2.ora_fine}',
                         'ids': [l1.id, l2.id]})
 
+    # Conflitto assenza: un docente assegnato (titolare o sorvegliante) su
+    # una prova ha un'assenza registrata quel giorno — segnalato solo a
+    # livello di data (non incrocia le ore): le ore di RecuperoLezione sono
+    # orari assoluti HH:MM mentre quelle di Assenza sono numeri di ora
+    # scolastica (1-9), rappresentazioni diverse che non si confrontano
+    # direttamente senza la tabella di conversione oraria — un'assenza
+    # quel giorno è comunque un segnale da controllare a mano, anche solo
+    # a livello di data. Roberto ha segnalato un caso concreto (Santagata)
+    # senza alcun riscontro perché prima questo controllo non esisteva.
+    from models.assenza import Assenza
+    date_coinvolte = list(lezioni_per_data.keys())
+    if date_coinvolte:
+        assenze_periodo = Assenza.query.filter(Assenza.data.in_(date_coinvolte)).all()
+        assenti_per_data = defaultdict(set)
+        for a in assenze_periodo:
+            assenti_per_data[a.data].add(a.id_docente)
+        for data, coppie in lezioni_per_data.items():
+            assenti_oggi = assenti_per_data.get(data)
+            if not assenti_oggi:
+                continue
+            segnalati = set()
+            for l, g in coppie:
+                id_titolare_reale = g.docente.id if g.docente else None
+                for doc_id in filter(None, [id_titolare_reale, g.id_sorvegliante]):
+                    if doc_id in assenti_oggi and (doc_id, l.id) not in segnalati:
+                        segnalati.add((doc_id, l.id))
+                        doc = Docente.query.get(doc_id)
+                        ruolo = 'somministratore' if doc_id == id_titolare_reale else 'assistente'
+                        conflitti_ago.append({
+                            'tipo': 'assenza', 'data': data,
+                            'msg': f'{doc.cognome if doc else "?"} ({ruolo}) risulta assente questo giorno — '
+                                   f'{g.materia[:15]} {l.ora_inizio}-{l.ora_fine}',
+                            'ids': [l.id]})
+
     conflitti_ids_ago = {lid for cf in conflitti_ago for lid in cf['ids']}
 
-    # Docenti validi come assistente (sorvegliante): contratto idoneo
+    # Docenti validi come assistente (sorvegliante): contratto idoneo e
+    # in servizio nell'anno scolastico delle prove — stesso filtro
+    # anno_scol_inizio/anno_scol_uscita usato da _docenti_per_anno() in
+    # routes/impostazione_anno.py (replicato qui, non importato, per non
+    # introdurre una dipendenza da un modulo route dentro modules/).
+    # Prima mancava del tutto: comparivano sia docenti non ancora in
+    # servizio (arrivano dal 1° settembre, dopo le prove) sia docenti con
+    # contratto già scaduto (segnalato da Roberto).
+    from sqlalchemy import or_
     docenti_validi = Docente.query.filter(
         Docente.attivo == True,
-        Docente.tipo_contratto.in_(CONTRATTI_OK)
+        Docente.tipo_contratto.in_(CONTRATTI_OK),
+        or_(Docente.anno_scol_inizio == None, Docente.anno_scol_inizio <= ANNO_AGO),
+        or_(Docente.anno_scol_uscita == None, Docente.anno_scol_uscita > ANNO_AGO),
     ).order_by(Docente.cognome).all()
 
     # Conteggio impegni (somministratore + assistente) per favorire una
