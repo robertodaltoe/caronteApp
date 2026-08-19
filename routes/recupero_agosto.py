@@ -75,10 +75,11 @@ def agosto_docenti_disponibili():
                 date_periodo.append(cur)
             cur += timedelta(days=1)
 
-    docenti_validi = Docente.query.filter(
-        Docente.attivo == True,
-        Docente.tipo_contratto.in_(CONTRATTI_OK)
-    ).order_by(Docente.cognome).all()
+    # Vedi routes/recupero_costanti.py::docenti_idonei_periodo() — prima
+    # mancava il filtro sull'anno di servizio, comparivano anche docenti
+    # non ancora in servizio o con contratto scaduto (Sessione 62).
+    from routes.recupero_costanti import docenti_idonei_periodo
+    docenti_validi = docenti_idonei_periodo(ANNO_AGO)
 
     righe = []
     for d in docenti_validi:
@@ -236,10 +237,11 @@ def agosto_gruppi():
     imports = RecuperoImport.query.filter_by(anno_scol=ANNO_AGO).all()
 
     # Garantisce un RecuperoDocente per ogni docente idoneo per contratto
-    docenti_idonei = Docente.query.filter(
-        Docente.attivo == True,
-        Docente.tipo_contratto.in_(CONTRATTI_OK)
-    ).order_by(Docente.cognome).all()
+    # e in servizio nell'anno delle prove — vedi routes/recupero_costanti.py
+    # ::docenti_idonei_periodo() (Sessione 62: creava una riga anche per
+    # chi non è ancora in servizio o ha contratto scaduto).
+    from routes.recupero_costanti import docenti_idonei_periodo
+    docenti_idonei = docenti_idonei_periodo(ANNO_AGO)
 
     rd_esistenti = {
         rd.id_docente: rd for rd in

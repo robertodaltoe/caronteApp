@@ -16,7 +16,7 @@ from collections import defaultdict
 from models import db
 from models.recupero import RecuperoDocente, RecuperoGruppo, RecuperoLezione
 from models.docente import Docente
-from routes.recupero_costanti import ANNO_AGO, PERIODO_AGO, CONTRATTI_OK, TIPO_PROVA_LABEL
+from routes.recupero_costanti import ANNO_AGO, PERIODO_AGO, TIPO_PROVA_LABEL
 
 
 def _t(s):
@@ -264,20 +264,13 @@ def costruisci_dati_agosto():
     conflitti_ids_ago = {lid for cf in conflitti_ago for lid in cf['ids']}
 
     # Docenti validi come assistente (sorvegliante): contratto idoneo e
-    # in servizio nell'anno scolastico delle prove — stesso filtro
-    # anno_scol_inizio/anno_scol_uscita usato da _docenti_per_anno() in
-    # routes/impostazione_anno.py (replicato qui, non importato, per non
-    # introdurre una dipendenza da un modulo route dentro modules/).
-    # Prima mancava del tutto: comparivano sia docenti non ancora in
-    # servizio (arrivano dal 1° settembre, dopo le prove) sia docenti con
-    # contratto già scaduto (segnalato da Roberto).
-    from sqlalchemy import or_
-    docenti_validi = Docente.query.filter(
-        Docente.attivo == True,
-        Docente.tipo_contratto.in_(CONTRATTI_OK),
-        or_(Docente.anno_scol_inizio == None, Docente.anno_scol_inizio <= ANNO_AGO),
-        or_(Docente.anno_scol_uscita == None, Docente.anno_scol_uscita > ANNO_AGO),
-    ).order_by(Docente.cognome).all()
+    # in servizio nell'anno scolastico delle prove — vedi
+    # routes/recupero_costanti.py::docenti_idonei_periodo() (Sessione 62:
+    # prima mancava del tutto questo controllo qui, e nello stesso modo
+    # in altri 3 punti dello stesso modulo prove di recupero — centralizzato
+    # per non ripetere lo stesso bug la prossima volta che serve la lista).
+    from routes.recupero_costanti import docenti_idonei_periodo
+    docenti_validi = docenti_idonei_periodo(ANNO_AGO)
 
     # Conteggio impegni (somministratore + assistente) per favorire una
     # distribuzione equa quando si assegna l'assistente manualmente.
@@ -446,10 +439,12 @@ def genera_bozza_agosto(solo_incompleti=False):
         if g.docente_rec and g.docente_rec.docente:
             n_impegni[g.docente_rec.docente.id] += 1
 
-    docenti_idonei_ord = Docente.query.filter(
-        Docente.attivo == True,
-        Docente.tipo_contratto.in_(CONTRATTI_OK)
-    ).all()
+    # Vedi routes/recupero_costanti.py::docenti_idonei_periodo() — senza
+    # il filtro sull'anno di servizio, questa lista (usata per assegnare
+    # AUTOMATICAMENTE l'assistente mancante, non solo per proporlo) poteva
+    # scegliere un docente non ancora arrivato o con contratto scaduto.
+    from routes.recupero_costanti import docenti_idonei_periodo
+    docenti_idonei_ord = docenti_idonei_periodo(ANNO_AGO)
 
     # Assenze registrate nel periodo, per escludere chi non è davvero
     # disponibile in quel giorno specifico (non solo per tutto il periodo).

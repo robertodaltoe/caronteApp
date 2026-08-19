@@ -17,7 +17,7 @@ from datetime import date, timedelta
 from routes.recupero_costanti import (
     ANNO, DATA_INIZIO, DATA_FINE, TIPO_PROVA_LABEL,
     _materia_canonica, _norm_materia,
-    _split_cognome_nome, _parse_tipo_prova,
+    _split_cognome_nome, _parse_tipo_prova, docenti_in_servizio_query,
 )
 
 from routes.recupero import recupero_bp
@@ -65,7 +65,12 @@ def docenti():
     disponibili = (RecuperoDocente.query.filter_by(anno_scol=ANNO)
                    .join(Docente).order_by(Docente.cognome).all())
     disp_ids = {rd.id_docente for rd in disponibili}
-    tutti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    # In servizio nell'anno dei corsi di recupero — vedi
+    # routes/recupero_costanti.py::docenti_in_servizio_query() (Sessione
+    # 62: senza questo filtro comparivano anche docenti non ancora
+    # arrivati, arruolabili per errore in un anno prima del loro inizio
+    # effettivo di servizio).
+    tutti = docenti_in_servizio_query(ANNO).order_by(Docente.cognome).all()
     non_ancora = [d for d in tutti if d.id not in disp_ids]
 
     return render_template('recupero/docenti.html',

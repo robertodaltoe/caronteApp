@@ -18,13 +18,22 @@ def _anno_scolastico(d=None):
 def _non_in_servizio_per_data(data_evento):
     """
     Docenti non disponibili per un evento in una data specifica.
-    Due controlli distinti, applicati insieme:
+    Tre controlli distinti, applicati insieme:
 
     1. Non in servizio nell'anno scolastico dell'evento (uscita già
        segnalata, AP uscente, aspettativa) — vedi
        routes/docenti.py::_docenti_non_in_servizio.
 
-    2. SOLO per eventi di luglio/agosto: il contratto potrebbe essere
+    2. Non ancora arrivato: anno_scol_inizio successivo all'anno
+       dell'evento (es. un docente con anno_scol_inizio 2026-2027 non è
+       in servizio per un evento del 2025-2026). _docenti_non_in_servizio
+       non lo controlla — quel campo lì non c'entra col suo scopo
+       principale (elenco "non attivi" in anagrafica docenti, dove serve
+       lo stato più recente, non un anno specifico) — verificato che
+       mancasse anche qui dopo la segnalazione di un caso analogo nelle
+       prove di recupero di agosto (Sessione 62).
+
+    3. SOLO per eventi di luglio/agosto: il contratto potrebbe essere
        già scaduto pur restando nello stesso anno scolastico. I supplenti
        brevi e i TD "fino a GS" (giorno degli scrutini, CCNL — contratto
        prorogato fino al termine delle operazioni di scrutinio, fine
@@ -36,6 +45,11 @@ def _non_in_servizio_per_data(data_evento):
     from routes.docenti import _docenti_non_in_servizio
     anno_evento = _anno_scolastico(data_evento)
     esclusi = {d.id for d in _docenti_non_in_servizio(anno_evento)}
+    esclusi |= {d.id for d in Docente.query.filter(
+        Docente.attivo == True,
+        Docente.anno_scol_inizio != None,
+        Docente.anno_scol_inizio > anno_evento,
+    ).all()}
 
     if data_evento.month in (7, 8):
         from routes.recupero_costanti import CONTRATTI_OK

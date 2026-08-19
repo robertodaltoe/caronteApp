@@ -17,6 +17,41 @@ ANNO_AGO     = _get_anno()
 PERIODO_AGO  = 'prove_agosto'
 CONTRATTI_OK = ('TI', 'TD_annuale', 'IRC')  # in servizio fino al 31 agosto (IRC ha contratto fino al 31/8)
 
+
+def docenti_in_servizio_query(anno_scol):
+    """
+    Query (non ancora eseguita) dei docenti attivi e in servizio in
+    anno_scol — stesso filtro anno_scol_inizio/anno_scol_uscita usato da
+    _docenti_per_anno() in routes/impostazione_anno.py, replicato qui
+    (non importato, per non introdurre una dipendenza da un modulo route
+    dentro routes/recupero_costanti.py, che deve restare una "foglia").
+
+    Base condivisa da docenti_idonei_periodo() (agosto, filtra anche per
+    tipo di contratto) e da chi in giugno vuole solo "in servizio",
+    senza restrizioni di contratto — non unificati in un'unica funzione
+    perché le due pagine hanno regole di idoneità diverse (vedi
+    Sessione 62: senza questo controllo comparivano docenti non ancora
+    arrivati o con contratto già scaduto, in più punti del modulo
+    recupero).
+    """
+    from sqlalchemy import or_
+    return Docente.query.filter(
+        Docente.attivo == True,
+        or_(Docente.anno_scol_inizio == None, Docente.anno_scol_inizio <= anno_scol),
+        or_(Docente.anno_scol_uscita == None, Docente.anno_scol_uscita > anno_scol),
+    )
+
+
+def docenti_idonei_periodo(anno_scol):
+    """
+    Docenti idonei come somministratore/assistente per le prove di
+    recupero di agosto (contratto idoneo — CONTRATTI_OK — e in servizio
+    in anno_scol), ordinati per cognome. Vedi docenti_in_servizio_query().
+    """
+    return (docenti_in_servizio_query(anno_scol)
+            .filter(Docente.tipo_contratto.in_(CONTRATTI_OK))
+            .order_by(Docente.cognome).all())
+
 TIPO_PROVA_LABEL = {
     'scritto':       '✎︎️ Scritto',
     'orale':         '⚑︎ Orale',
