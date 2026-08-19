@@ -15,7 +15,7 @@
                  color: var(--grigio); background: white; }
 .modo-toggle a.attivo { background: var(--blu); color: white; }
 .contenuto-mappa { display: flex; gap: 16px; align-items: flex-start; }
-.tabella-aule { flex: 0 0 260px; max-height: 780px; overflow-y: auto; }
+.tabella-aule { flex: 0 0 300px; max-height: 780px; overflow-y: auto; padding: 14px; }
 .tabella-aule table { width: 100%; border-collapse: collapse; font-size: .8rem; }
 .tabella-aule th { background: var(--blu); color: white; padding: 6px 8px; text-align: left;
                     position: sticky; top: 0; }
@@ -121,7 +121,7 @@
 <div class="card tabella-aule">
     <table>
         <thead>
-            <tr><th style="width:90px;">N° Aula</th><th>Classe</th><th style="width:160px;">Sede</th></tr>
+            <tr><th style="width:60px;">N° Aula</th><th>Classe</th><th style="width:110px;">Sede</th></tr>
         </thead>
         <tbody>
             {% for a in tutte_aule %}
@@ -129,7 +129,7 @@
             <tr class="{{ 'occupata-riga' if classi_qui else '' }}">
                 <td><strong>{{ a.numero }}</strong></td>
                 <td class="wrap">{% if classi_qui %}{{ classi_qui | join(', ') }}{% else %}<span class="cella-vuota">—</span>{% endif %}</td>
-                <td style="font-size:.72rem; color:var(--grigio);">{{ a.sede }}</td>
+                <td class="wrap" style="font-size:.72rem; color:var(--grigio);">{{ a.sede }}</td>
             </tr>
             {% endfor %}
         </tbody>
