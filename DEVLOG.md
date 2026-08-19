@@ -38,6 +38,18 @@ Aggiunti 3 test di regressione, incluso uno che verifica che il caso
 originale (Task 44) non regredisca. 101/101 test passano (98 + 3
 nuovi). Commit: `e931b54`.
 
+**Addendum:** Roberto ha chiesto di chiarire la differenza tra i badge
+"COE ←︎"/"COE →︎" in Assegnazioni (coe_entrata/coe_uscita). Chiarito
+insieme (con una correzione sua alla mia prima spiegazione): coe_uscita
+= "completa con" (titolare qui, cattedra completata con ore altrove);
+coe_entrata = "cede a" (titolare altrove, il nostro istituto cede ore
+in eccesso per completargli la cattedra qui) — stesso linguaggio già
+in uso in Organico USR (`CattedraOrganico.coe_direzione`). Su richiesta
+di Roberto, sostituite le sole frecce con queste stesse parole nei
+badge di Assegnazioni ("Completa"/"Cede a", spazio in tabella troppo
+stretto per la forma estesa), con tooltip per la spiegazione completa.
+101/101 test passano. Commit: `4cf67ef`.
+
 ## Sessione 64 — Incarichi docenti: tendina non filtrava per anno di servizio (Cowork)
 
 **Contesto:** Roberto: selezionando l'anno corrente in Incarichi
