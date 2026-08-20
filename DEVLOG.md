@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 3 — Iscrizione automatica docente a eventi obbligatori (Cowork)
+
+Roberto: "quando aggiungerò un nuovo docente, quello verrà inserito in
+automatico [negli eventi obbligatori]? sarà lo stesso in ogni altra
+attività del piano annuale?" Risposta verificata nel codice: no, non
+era automatico da nessuna parte — il preset partecipanti
+(`_preset_partecipanti`) viene calcolato solo alla creazione/modifica
+di un evento, mai ricalcolato quando cambia l'anagrafica docenti.
+Confermato con Roberto di chiudere il buco.
+
+Nuova funzione `routes/attivita_ist.py::iscrivi_docente_a_obbligatori()`,
+chiamata dopo il commit sia in `routes/docenti.py::nuovo()` sia in
+`riattiva()`. Copre solo i tipi il cui preset è "tutti i docenti attivi"
+senza scelta — Collegio, incontri scuola-famiglia, 'altro' — più i
+corsi di Formazione con `obbligatorio_tutti=True` (i corsi volontari
+restano esclusi, l'iscrizione lì è sempre una scelta). Esclude
+esplicitamente Consigli di classe/dipartimenti/riunioni materia/GLO:
+dipendono da orario/assegnazioni che un docente appena creato non ha
+ancora, non c'è nulla di corretto da preimpostare lì — limite noto,
+non affrontato (serve un lavoro diverso, non generalizzabile a "tutti
+i docenti").
+
+Verificato: 7 test di unità (`tests/test_iscrizione_automatica_docente.py`,
+copertura di tutti i confini — evento futuro/passato, tipo scoped
+escluso, corso obbligatorio/volontario, nessuna doppia iscrizione) +
+verifica end-to-end su copia del DB con Flask test client attraverso
+la route reale `/docenti/nuovo` (non solo la funzione isolata),
+`PRAGMA integrity_check` ok. 114/114 test passano (107 + 7 nuovi).
+
 ## Sessione 66 addendum 2 — Selettore anno + import Piano formazione reale (Cowork)
 
 Due richieste di Roberto dopo aver visto la Fase 1: 1) il filtro anno a

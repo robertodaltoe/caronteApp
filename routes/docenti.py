@@ -140,6 +140,8 @@ def riattiva(id):
     d.status_presenza = 'presente'
     d.scuola_ap = None
     db.session.commit()
+    from routes.attivita_ist import iscrivi_docente_a_obbligatori
+    iscrivi_docente_a_obbligatori(d)
     from routes.auth import log as auth_log
     auth_log('riattiva_docente', f'{d.nome_completo} (dal {anno_rientro})')
     flash(f"{d.nome_completo} riattivato dall'a.s. {anno_rientro}. "
@@ -169,6 +171,8 @@ def nuovo():
         d.nome_display = f"{d.cognome} {d.nome[0]}." if d.nome else d.cognome
         db.session.add(d)
         db.session.commit()
+        from routes.attivita_ist import iscrivi_docente_a_obbligatori
+        iscrivi_docente_a_obbligatori(d)
         from routes.auth import log as auth_log
         auth_log('crea_docente', f'{d.nome_completo} (ore_contratto={d.ore_contratto})')
         flash(f"Docente {d.nome_completo} aggiunto. Ora assegna la sua classe di concorso e le materie.", 'success')

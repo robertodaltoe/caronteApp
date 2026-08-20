@@ -130,6 +130,64 @@ def _preset_partecipanti(attivita):
     return risultato
 
 
+def iscrivi_docente_a_obbligatori(docente):
+    """
+    Iscrive un docente appena attivato (nuovo o riattivato, vedi
+    routes/docenti.py::nuovo/riattiva) a tutti gli eventi istituzionali
+    futuri "per tutti i docenti" già creati — senza questo, un evento
+    creato PRIMA che il docente esistesse in anagrafica non lo
+    includerebbe mai: il preset (_preset_partecipanti) viene calcolato
+    solo alla creazione/modifica dell'evento, non ricalcolato quando
+    cambia l'anagrafica.
+
+    Copre solo i tipi il cui preset è "tutti i docenti attivi" senza
+    scelta (collegio, incontro_famiglie, altro) e i corsi di Formazione
+    con obbligatorio_tutti=True (models/formazione.py — i corsi
+    volontari restano esclusi, l'iscrizione lì è sempre una scelta).
+    Eventi scoped su classe/dipartimento (Consigli di classe,
+    dipartimenti, riunioni materia, GLO) restano fuori di proposito:
+    dipendono da orario/assegnazioni che un docente appena creato non
+    ha ancora — non c'è nulla di corretto da preimpostare qui.
+
+    Ritorna il numero di iscrizioni aggiunte (0 se il docente è escluso
+    per la data, o se non ci sono eventi futuri di questi tipi).
+    """
+    from datetime import date
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    from models.formazione import CorsoFormazione
+
+    oggi = date.today()
+    eventi = AttivitaIst.query.filter(
+        AttivitaIst.data >= oggi,
+        AttivitaIst.tipo.in_(('collegio', 'incontro_famiglie', 'altro', 'formazione')),
+    ).all()
+    if not eventi:
+        return 0
+
+    corsi_volontari_evento_ids = {
+        c.id_attivita for c in CorsoFormazione.query.filter_by(obbligatorio_tutti=False).all()}
+
+    esclusi_per_data = {}
+    aggiunti = 0
+    for ev in eventi:
+        if ev.tipo == 'formazione' and ev.id in corsi_volontari_evento_ids:
+            continue
+        if ev.data not in esclusi_per_data:
+            esclusi_per_data[ev.data] = _non_in_servizio_per_data(ev.data)
+        if docente.id in esclusi_per_data[ev.data]:
+            continue
+        dup = AttivitaIstPartecipante.query.filter_by(
+            id_attivita=ev.id, id_docente=docente.id).first()
+        if not dup:
+            db.session.add(AttivitaIstPartecipante(
+                id_attivita=ev.id, id_docente=docente.id, preset=True))
+            aggiunti += 1
+
+    if aggiunti:
+        db.session.commit()
+    return aggiunti
+
+
 def _auto_presenze(attivita):
     """Crea record presenze per i partecipanti, pre-compilando assenti noti."""
     assenze_giorno = {a.id_docente: a for a in
