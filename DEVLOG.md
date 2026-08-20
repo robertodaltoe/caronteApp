@@ -45,9 +45,30 @@ Verificato a video sul server con `database.db` reale (sola lettura):
 menu Attività senza le due voci rimosse e con "Piano delle attività"
 al loro posto, sezione Anno scolastico di Impostazioni con le due
 nuove voci, titolo scheda browser del generatore aggiornato a "Genera
-piano delle attività — IIS Da Vinci", KPI allineate a sinistra, "Hub
-impostazione anno" senza il conteggio passi. Nessuna logica toccata,
-solo template — 175/175 test passano invariati.
+piano delle attività — IIS Da Vinci", "Hub impostazione anno" senza il
+conteggio passi. Nessuna logica toccata, solo template — 175/175 test
+passano invariati.
+
+**Correzione nello stesso addendum**: Roberto aveva chiarito
+male all'inizio ("allineiamoli a sinistra" riferito alle caselle KPI
+in alto), poi corretto: le KPI andavano bene centrate, il problema era
+sulle voci-link (`imp-link`) della griglia a due colonne — chiesto
+con AskUserQuestion quali esattamente, risposta: tutte le voci
+`imp-link`. Causa reale, trovata guardando il markup: ogni link ha 3
+elementi flex (icona, testo, badge/freccia finale) e
+`justify-content:space-between` su 3 elementi centra quello di mezzo
+invece di tenerlo a sinistra — non un problema di allineamento del
+testo ma di distribuzione flex con un numero dispari di elementi.
+Fix CSS puro in `.imp-link` (`justify-content:flex-start` + `gap:8px`
++ `margin-left:auto` sull'ultimo span), nessuna modifica al markup
+dei template: il badge/freccia finale resta ancorato a destra, icona+
+testo ora davvero incollati a sinistra. Ripristinato `.kpi
+text-align:center`. Verificato a video: le caselle KPI sono di nuovo
+centrate, tutte le voci-link (incluse le due CTA rosso/bronzo in
+cima) hanno icona+testo a sinistra con gap regolare e freccia/badge a
+destra su tutte le sezioni della pagina (Anno scolastico, Docenti,
+Calendario, Orario, Istituto, Sistema). 175/175 test invariati (solo
+CSS).
 
 ## Sessione 66 addendum 21 — Export Piano Annuale in Excel, stile identico al modello originale (Cowork)
 

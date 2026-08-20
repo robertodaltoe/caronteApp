@@ -8,17 +8,18 @@
 .sez-title { font-size:1rem; font-weight:800; color:var(--blu);
     margin-bottom:4px; display:flex; align-items:center; gap:8px; }
 .sez-desc { font-size:.82rem; color:var(--grigio); margin-bottom:14px; }
-.imp-link { display:flex; align-items:center; justify-content:space-between;
+.imp-link { display:flex; align-items:center; justify-content:flex-start; gap:8px;
     padding:9px 12px; border-radius:7px; border:1px solid #e5eaf0;
     margin-bottom:6px; background:#fafbfc; text-decoration:none;
     color:var(--blu); font-size:.88rem; font-weight:600; transition:all .1s; }
 .imp-link:hover { background:var(--blu-light); border-color:#d9b8b3; }
+.imp-link > span:last-child { margin-left:auto; }
 .imp-link .badge-count { font-size:.72rem; background:#e5eaf0; color:var(--grigio);
     border-radius:10px; padding:1px 8px; font-weight:700; }
 .imp-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 @media(max-width:700px){ .imp-grid { grid-template-columns:1fr; } }
 .kpi-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-.kpi { background:var(--blu-light); border-radius:8px; padding:8px 14px; text-align:left; flex:1; min-width:80px; }
+.kpi { background:var(--blu-light); border-radius:8px; padding:8px 14px; text-align:center; flex:1; min-width:80px; }
 .kpi-n { font-size:1.4rem; font-weight:800; color:var(--blu); }
 .kpi-l { font-size:.68rem; color:var(--grigio); margin-top:1px; }
 </style>
