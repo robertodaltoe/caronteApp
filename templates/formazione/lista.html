@@ -4,8 +4,21 @@
 
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('layers') }} Piano della Formazione</h1>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('layers') }} Piano della Formazione — a.s. {{ anno }}</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        {% if anni_disponibili|length > 1 %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('formazione.lista', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno %}background:var(--blu); color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
         <a href="{{ url_for('formazione.form') }}" class="btn btn-success btn-sm">+ Nuovo corso</a>
         <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('building') }} Attività istituzionali</a>
     </div>
@@ -16,14 +29,6 @@
     Collegio docenti): le ore contano insieme a Collegio/incontri
     scuola-famiglia nel monte 40h, non in quello dei Consigli di classe.
 </p>
-
-<div class="card" style="padding:12px 16px; margin-bottom:16px;">
-    <form method="get" style="display:flex; gap:12px; align-items:center;">
-        <input type="text" name="anno" value="{{ anno }}" placeholder="es. 2026-2027"
-               style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:120px;">
-        <button type="submit" class="btn btn-sm btn-primary">Filtra per anno</button>
-    </form>
-</div>
 
 <table style="table-layout:auto; width:100%;">
     <thead>

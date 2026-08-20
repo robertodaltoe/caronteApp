@@ -24,11 +24,17 @@ def _anno_scolastico(d=None):
 
 @formazione_bp.route('/formazione')
 def lista():
-    anno = request.args.get('anno', _anno_scolastico())
+    from routes.impostazione_anno import _anno_default_piano
+    anno = request.args.get('anno', _anno_default_piano())
+    anni_disponibili = sorted(
+        {c.anno_scol for c in CorsoFormazione.query.all()}, reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
     corsi = CorsoFormazione.query.filter_by(anno_scol=anno) \
         .order_by(CorsoFormazione.data_inizio).all()
     return render_template('formazione/lista.html',
-        corsi=corsi, anno=anno, modalita=MODALITA)
+        corsi=corsi, anno=anno, anni_disponibili=anni_disponibili, modalita=MODALITA)
 
 
 # ── NUOVO / MODIFICA ─────────────────────────────────────────────────────────

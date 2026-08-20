@@ -4,6 +4,43 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 2 — Selettore anno + import Piano formazione reale (Cowork)
+
+Due richieste di Roberto dopo aver visto la Fase 1: 1) il filtro anno a
+testo libero in `/formazione` era scomodo, sostituito con le pillole
+anno standard già usate altrove (`anni_disponibili`, stesso pattern di
+`piano_personale`/`attivita_ist.dipartimenti`) — nascoste se c'è un
+solo anno con dati, come nelle altre pagine. 2) importare i corsi veri
+dal foglio "Piano della formazione" di BOZZA_PIANO_ATTIVITA_2026_27.xlsx
+che Roberto aveva già confermato corretti in fase di analisi.
+
+Rileggendo il foglio: 12 corsi, ma con due problemi che il modello
+Fase 1 non copriva silenziosamente — segnalati e decisi insieme prima
+di importare (non assunti in autonomia):
+- Le date "Dal–Al" sono placeholder letterali (`[dal]-[al]`), mai
+  compilate — confermato anche dal foglio mensile "settembre I", che
+  si dichiara esso stesso "PROPOSTA... Date/orari da confermare in
+  Collegio Docenti". Deciso con Roberto: data provvisoria unica
+  (15/09/2026) per tutti e 12, segnata esplicitamente in nota, da
+  correggere quando il Collegio le fissa.
+- I destinatari nel foglio sono quasi sempre gruppi mirati ("Neo
+  immessi in ruolo", "primo biennio", "max N posti su iscrizione QO"),
+  non "tutti" o "chi si iscrive liberamente" come gestisce oggi il
+  flag `obbligatorio_tutti`. Deciso con Roberto: solo "Indicazioni
+  sicurezza Istituto" (l'unico segnato "obbligatorio"/"Tutti" nel
+  foglio) importato come corso obbligatorio con iscrizione automatica
+  di tutti i docenti in servizio (57 su 93 attivi, esclusi per
+  `_non_in_servizio_per_data`); gli altri 11 importati come volontari,
+  col criterio di destinazione originale del foglio riportato in nota
+  (nessuna targeting automatica per sottogruppo — limite noto, non
+  affrontato in questa fase).
+
+Script di import verificato su copia del DB, poi backup cifrato
+(`database_20260820_1717_pre_import_piano_formazione.db.enc`) e
+applicato al reale, `PRAGMA integrity_check` ok, 107/107 test passano,
+verificato visivamente nel browser (badge "obbligatorio" solo sul
+corso giusto, note con destinatari/data provvisoria leggibili).
+
 ## Sessione 66 addendum — Fase 1: Piano della Formazione (Cowork)
 
 Nuovo modello `models/formazione.py::CorsoFormazione` + blueprint
