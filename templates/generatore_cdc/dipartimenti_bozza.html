@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Bozza {{ tipo_label }}{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
+    <a href="{{ url_for('generatore_cdc.dipartimenti', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Rifai</a>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('check') }} Bozza {{ tipo_label }} — a.s. {{ anno }}</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:18px;">
+    Proposta modificabile: correggi data/ora dove serve prima di confermare. Nulla è ancora stato creato.
+</p>
+
+<form method="post" action="{{ url_for('generatore_cdc.dipartimenti') }}">
+    <input type="hidden" name="azione" value="conferma">
+    <input type="hidden" name="anno_scol" value="{{ anno }}">
+    <input type="hidden" name="tipo" value="{{ tipo }}">
+    <input type="hidden" name="n_righe" value="{{ righe|length }}">
+
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+        <table style="table-layout:fixed; min-width:640px;">
+            <thead>
+                <tr>
+                    <th>Dipartimento</th>
+                    <th style="width:160px;">Data</th>
+                    <th style="width:110px;">Ora inizio</th>
+                    <th style="width:110px;">Ora fine</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in righe %}
+                <tr>
+                    <td>
+                        <span class="badge badge-blu">{{ r.sigla }}</span> {{ r.nome }}
+                        <input type="hidden" name="id_dipartimento_{{ loop.index0 }}" value="{{ r.id_dipartimento }}">
+                        <input type="hidden" name="sigla_{{ loop.index0 }}" value="{{ r.sigla }}">
+                    </td>
+                    <td><input type="date" name="data_{{ loop.index0 }}" value="{{ r.data }}"
+                               style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;"></td>
+                    <td><input type="time" name="ora_inizio_{{ loop.index0 }}" value="{{ r.ora_inizio }}"
+                               style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;"></td>
+                    <td><input type="time" name="ora_fine_{{ loop.index0 }}" value="{{ r.ora_fine }}"
+                               style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <div style="margin-top:16px;">
+        <button type="submit" class="btn btn-success">{{ icon('check') }} Conferma e crea gli eventi</button>
+    </div>
+</form>
+{% endblock %}

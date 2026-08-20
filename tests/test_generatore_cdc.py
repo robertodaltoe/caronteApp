@@ -420,3 +420,82 @@ def test_turno_senza_date_viene_ignorato(app, db_session, monkeypatch):
         assert r.status_code == 200
 
     assert catturato['kwargs']['n_turni'] == 2  # solo i due turni con date valide
+
+
+# ── Riunioni dipartimento/materia: nessun motore, solo piazzamento ──────────
+
+def _registra_dip(app):
+    from routes.generatore_cdc import generatore_cdc_bp
+    from routes.attivita_ist import attivita_ist_bp
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(generatore_cdc_bp)
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(attivita_ist_bp)
+
+
+def _dipartimento(nome, sigla):
+    from models.materia import Dipartimento
+    d = Dipartimento(nome=nome, sigla=sigla)
+    db.session.add(d)
+    db.session.commit()
+    return d
+
+
+def test_dipartimenti_bozza_piazza_tutti_nello_stesso_slot_senza_verificare_conflitti(app, db_session, monkeypatch):
+    """Richiesta di Roberto: i dipartimenti non condividono mai docenti,
+    quindi si piazzano semplicemente, anche tutti nella stessa data/ora
+    — nessun controllo di sovrapposizione da fare."""
+    _registra_dip(app)
+    d1 = _dipartimento('Lettere', 'LET')
+    d2 = _dipartimento('Matematica e Fisica', 'MATFIS')
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/dipartimenti', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'dipartimento',
+            'dipartimenti': [str(d1.id), str(d2.id)],
+            'data': '2026-10-15', 'ora_inizio': '15:00', 'durata_min': '60',
+        })
+        assert r.status_code == 200
+
+    righe = catturato['kwargs']['righe']
+    assert len(righe) == 2
+    # Stessa data/ora per entrambi: nessuna logica di conflitto le separa
+    assert righe[0]['data'] == righe[1]['data'] == '2026-10-15'
+    assert righe[0]['ora_inizio'] == righe[1]['ora_inizio'] == '15:00'
+
+
+def test_conferma_dipartimenti_crea_eventi_con_partecipanti_da_docente_materia(app, db_session):
+    _registra_dip(app)
+    d1 = _dipartimento('Lettere', 'LET')
+    doc = crea_docente('Verdi')
+
+    from models.materia import Materia, DocenteMateria
+    mat = Materia(nome='Italiano', sigla='ITA', id_dipartimento=d1.id)
+    db.session.add(mat)
+    db.session.commit()
+    db.session.add(DocenteMateria(id_docente=doc.id, id_materia=mat.id, anno_scol=ANNO))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/dipartimenti', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'dipartimento',
+            'n_righe': '1',
+            'id_dipartimento_0': str(d1.id), 'sigla_0': 'LET',
+            'data_0': '2026-10-15', 'ora_inizio_0': '15:00', 'ora_fine_0': '16:00',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    ev = AttivitaIst.query.filter_by(tipo='dipartimento', id_dipartimento=d1.id).first()
+    assert ev is not None
+    assert ev.titolo == 'Riunione dipartimento LET'
+    partecipanti = AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()
+    assert {p.id_docente for p in partecipanti} == {doc.id}

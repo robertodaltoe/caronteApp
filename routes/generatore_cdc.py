@@ -36,6 +36,17 @@ TIPI_GENERABILI = {
     'glo':                {'label': 'GLO',                 'durata_default': 45},
 }
 
+# Riunioni di dipartimento/materia: NIENTE motore di scheduling — a
+# differenza delle classi, dipartimenti diversi non condividono mai
+# docenti per definizione (segnalato da Roberto), quindi non serve
+# verificare sovrapposizioni. Vanno solo piazzate in data — vedi
+# route dipartimenti() più sotto, che infatti non usa
+# modules/generatore_cdc.py::genera_bozza_cdc.
+TIPI_DIPARTIMENTO = {
+    'dipartimento':       {'label': 'Riunione dipartimento', 'durata_default': 60},
+    'riunione_materia':   {'label': 'Riunione per materia',  'durata_default': 45},
+}
+
 
 def _anno_scolastico(d=None):
     d = d or date.today()
@@ -216,3 +227,83 @@ def index():
     return render_template('generatore_cdc/index.html',
         anno=anno, anni_disponibili=anni_disponibili, classi_disponibili=classi_disponibili,
         tipi_generabili=TIPI_GENERABILI)
+
+
+# ── RIUNIONI DIPARTIMENTO/MATERIA (nessun motore, solo piazzamento) ──────────
+
+@generatore_cdc_bp.route('/generatore-cdc/dipartimenti', methods=['GET', 'POST'])
+def dipartimenti():
+    from models.materia import Dipartimento
+    from modules.generatore_cdc import docenti_per_dipartimento
+    from routes.impostazione_anno import _anno_default_piano
+
+    anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_default_piano()
+    anni_disponibili = _anni_disponibili_assegnazioni(anno)
+    dips = Dipartimento.query.order_by(Dipartimento.ordine).all()
+
+    if request.method == 'POST' and request.form.get('azione') == 'genera':
+        tipo = request.form.get('tipo', 'dipartimento')
+        if tipo not in TIPI_DIPARTIMENTO:
+            tipo = 'dipartimento'
+        dip_ids = [int(i) for i in request.form.getlist('dipartimenti')]
+        data_s = request.form.get('data', '').strip()
+        ora_inizio = request.form.get('ora_inizio', '').strip()
+        durata_min = int(request.form.get('durata_min', 60))
+
+        if not dip_ids:
+            flash('Seleziona almeno un dipartimento.', 'warning')
+            return redirect(url_for('generatore_cdc.dipartimenti', anno=anno))
+        if not (data_s and ora_inizio):
+            flash('Indica data e ora.', 'warning')
+            return redirect(url_for('generatore_cdc.dipartimenti', anno=anno))
+
+        # Nessuna verifica di sovrapposizione: dipartimenti diversi non
+        # condividono mai docenti, possono benissimo stare tutti nello
+        # stesso slot — si piazzano semplicemente, come richiesto.
+        h, m = map(int, ora_inizio.split(':'))
+        fine_min = h * 60 + m + durata_min
+        ora_fine = f'{fine_min // 60:02d}:{fine_min % 60:02d}'
+        dips_sel = [d for d in dips if d.id in dip_ids]
+        righe = [dict(id_dipartimento=d.id, sigla=d.sigla, nome=d.nome,
+                      data=data_s, ora_inizio=ora_inizio, ora_fine=ora_fine)
+                 for d in dips_sel]
+
+        return render_template('generatore_cdc/dipartimenti_bozza.html',
+            anno=anno, righe=righe, tipo=tipo, tipo_label=TIPI_DIPARTIMENTO[tipo]['label'])
+
+    if request.method == 'POST' and request.form.get('azione') == 'conferma':
+        from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+        tipo = request.form.get('tipo', 'dipartimento')
+        if tipo not in TIPI_DIPARTIMENTO:
+            tipo = 'dipartimento'
+        tipo_label = TIPI_DIPARTIMENTO[tipo]['label']
+        n_ini = int(request.form.get('n_righe', 0))
+        docenti_map = docenti_per_dipartimento(anno)
+        creati = 0
+        for i in range(n_ini):
+            id_dip = request.form.get(f'id_dipartimento_{i}', '').strip()
+            sigla = request.form.get(f'sigla_{i}', '').strip()
+            data_s = request.form.get(f'data_{i}', '').strip()
+            ora_ini = request.form.get(f'ora_inizio_{i}', '').strip()
+            ora_fin = request.form.get(f'ora_fine_{i}', '').strip()
+            if not (id_dip and data_s and ora_ini and ora_fin):
+                continue
+            id_dip = int(id_dip)
+            ev = AttivitaIst(
+                tipo=tipo, titolo=f'{tipo_label} {sigla}',
+                data=date.fromisoformat(data_s), ora_inizio=ora_ini, ora_fine=ora_fin,
+                id_dipartimento=id_dip, origine='import_piano',
+            )
+            db.session.add(ev)
+            db.session.flush()
+            for id_doc in docenti_map.get(id_dip, ()):
+                db.session.add(AttivitaIstPartecipante(
+                    id_attivita=ev.id, id_docente=id_doc, preset=True))
+            creati += 1
+        db.session.commit()
+        flash(f'{creati} eventi "{tipo_label}" creati.', 'success')
+        return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
+
+    return render_template('generatore_cdc/dipartimenti_index.html',
+        anno=anno, anni_disponibili=anni_disponibili, dipartimenti=dips,
+        tipi_dipartimento=TIPI_DIPARTIMENTO)

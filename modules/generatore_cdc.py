@@ -59,6 +59,27 @@ def docenti_reali_per_classe(anno_scol):
     return out
 
 
+def docenti_per_dipartimento(anno_scol):
+    """{id_dipartimento: set(id_docente)} da DocenteMateria — usata solo
+    per popolare i partecipanti delle riunioni di dipartimento/materia,
+    NON per uno scheduling con controllo sovrapposizioni: dipartimenti
+    diversi non condividono mai docenti per definizione (un docente
+    appartiene a un dipartimento tramite le sue materie), quindi non
+    serve — a differenza dei Consigli di classe — nessun motore che
+    eviti conflitti. Le riunioni di dipartimento vanno solo piazzate in
+    data (routes/generatore_cdc.py::dipartimenti), senza generare nulla."""
+    from models.materia import DocenteMateria, Materia
+
+    righe = (DocenteMateria.query
+             .join(Materia, Materia.id == DocenteMateria.id_materia)
+             .filter(DocenteMateria.anno_scol == anno_scol)
+             .all())
+    out = {}
+    for dm in righe:
+        out.setdefault(dm.materia.id_dipartimento, set()).add(dm.id_docente)
+    return out
+
+
 def _to_min(hhmm):
     h, m = map(int, hhmm.split(':'))
     return h * 60 + m

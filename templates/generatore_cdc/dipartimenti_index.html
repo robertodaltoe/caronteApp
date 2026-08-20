@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Riunioni dipartimento/materia{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('layers') }} Riunioni dipartimento/materia — a.s. {{ anno }}</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        {% if anni_disponibili|length > 1 %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('generatore_cdc.dipartimenti', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno %}background:var(--blu); color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('compass') }} Generatore Consigli di classe</a>
+    </div>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
+    A differenza dei Consigli di classe, i dipartimenti non condividono mai docenti fra loro:
+    nessun controllo sovrapposizioni, i dipartimenti scelti vengono semplicemente piazzati
+    tutti nella stessa data/ora — anche in contemporanea, se preferisci. La bozza resta
+    modificabile prima di confermare.
+</p>
+
+<div class="card" style="padding:20px; max-width:640px;">
+    <form method="post" action="{{ url_for('generatore_cdc.dipartimenti') }}">
+        <input type="hidden" name="azione" value="genera">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Tipo di riunione</label>
+            <select name="tipo" id="sel-tipo" onchange="aggiornaDurata()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                {% for k, v in tipi_dipartimento.items() %}
+                <option value="{{ k }}" data-durata="{{ v.durata_default }}">{{ v.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Dipartimenti</label>
+            {% if not dipartimenti %}
+            <p style="color:var(--rosso); font-size:.85rem;">Nessun dipartimento in anagrafica.</p>
+            {% else %}
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selTutti(true)">Tutti</button>
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selTutti(false)">Nessuno</button>
+            </div>
+            <div style="border:1px solid #e5eaf0; border-radius:8px; padding:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:2px;">
+                {% for d in dipartimenti %}
+                <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
+                    <input type="checkbox" name="dipartimenti" value="{{ d.id }}" class="chk-dip" checked> {{ d.sigla }} — {{ d.nome }}
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Data</label>
+                <input type="date" name="data" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Ora inizio</label>
+                <input type="time" name="ora_inizio" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Durata (min)</label>
+                <input type="number" name="durata_min" id="inp-durata" value="60" min="15" step="15" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:90px;">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success" {% if not dipartimenti %}disabled{% endif %}>{{ icon('check') }} Prepara bozza</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function selTutti(sel) {
+    document.querySelectorAll('.chk-dip').forEach(function(c) { c.checked = sel; });
+}
+function aggiornaDurata() {
+    var sel = document.getElementById('sel-tipo');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('inp-durata').value = opt.dataset.durata;
+}
+</script>
+{% endblock %}

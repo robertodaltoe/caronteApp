@@ -4,6 +4,39 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 18 — Riunioni dipartimento/materia: niente motore (Cowork)
+
+Correzione di impostazione da Roberto prima ancora di iniziare a
+scrivere codice: "i dipartimenti/materie non hanno bisogno di un
+motore, devono solo essere piazzati in data, non serve verificare
+sovrapposizioni perché i dipartimenti non hanno docenti in comune".
+Giusto — la premessa sbagliata era mia (avevo previsto un "motore
+gemello" con la stessa logica di parallelismo dei Consigli, quando
+invece qui il problema non esiste affatto: dipartimenti diversi non
+condividono mai docenti per costruzione, quindi non c'è nulla da
+mettere in conflitto).
+
+Nuova route `/generatore-cdc/dipartimenti`, deliberatamente SENZA
+`modules/generatore_cdc.py::genera_bozza_cdc()`: si scelgono i
+dipartimenti, una singola data/ora/durata, e vengono piazzati tutti lì
+— anche in contemporanea, se serve, perché non c'è nulla da evitare.
+Bozza comunque modificabile riga per riga prima di confermare (stesso
+principio "mai un piano imposto" di tutto il resto del generatore).
+Aggiunta `docenti_per_dipartimento()` (da `DocenteMateria`) solo per
+popolare i partecipanti dell'evento creato, non per calcolare
+conflitti — usata esattamente come `docenti_reali_per_classe()` viene
+usata alla conferma dei Consigli, ma senza l'algoritmo a monte.
+
+Verificato: 2 test nuovi (`tests/test_generatore_cdc.py` — bozza
+piazza tutti i dipartimenti nello stesso slot senza alcuna verifica,
+conferma crea eventi con partecipanti corretti da DocenteMateria) +
+verifica a video sui 9 dipartimenti reali (incluso "— Non assegnato"),
+tutti piazzati correttamente nello stesso slot. 161/161 test passano
+(159 + 2 nuovi).
+
+Prossimo passo: vista condivisibile con le sospensioni (ultimo pezzo
+concordato).
+
 ## Sessione 66 addendum 17 — Generatore: turni multipli in un solo invio (Cowork)
 
 Terzo pezzo dell'estensione concordata con Roberto: poter scegliere

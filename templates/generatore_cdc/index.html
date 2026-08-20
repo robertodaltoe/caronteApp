@@ -21,6 +21,7 @@
         {% endif %}
         <a href="{{ url_for('generatore_cdc.vincoli_orario') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('clock') }} Vincoli orario fissi</a>
         <a href="{{ url_for('generatore_cdc.vincoli_manuali', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('calendar') }} Vincoli manuali</a>
+        <a href="{{ url_for('generatore_cdc.dipartimenti', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('layers') }} Riunioni dipartimento/materia</a>
         <a href="{{ url_for('attivita_ist.lista', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('building') }} Attività istituzionali</a>
     </div>
 </div>
