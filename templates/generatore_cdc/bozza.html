@@ -29,9 +29,10 @@
 
     <div class="card" style="padding:0; overflow:hidden;">
         <div style="overflow-x:auto;">
-        <table style="table-layout:fixed; min-width:820px;">
+        <table style="table-layout:fixed; min-width:{{ '950px' if n_turni > 1 else '820px' }};">
             <thead>
                 <tr>
+                    {% if n_turni > 1 %}<th style="width:130px;">Turno</th>{% endif %}
                     <th style="width:110px;">Classe</th>
                     <th style="width:160px;">Data</th>
                     <th style="width:110px;">Ora inizio</th>
@@ -43,6 +44,9 @@
             <tbody>
                 {% for r in bozza %}
                 <tr{% if r.conflitto %} style="background:var(--rosso-bg);"{% endif %}>
+                    {% if n_turni > 1 %}
+                    <td style="font-size:.78rem; color:var(--grigio);">Turno {{ r.turno }}<br>{{ r.turno_periodo }}</td>
+                    {% endif %}
                     <td>
                         <span class="badge badge-blu">{{ r.classe }}</span>
                         <input type="hidden" name="classe_{{ loop.index0 }}" value="{{ r.classe }}">

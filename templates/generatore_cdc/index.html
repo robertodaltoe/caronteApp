@@ -71,15 +71,19 @@
             {% endif %}
         </div>
 
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Turni da generare</label>
+            <p style="color:var(--grigio); font-size:.78rem; margin-bottom:8px;">
+                Un periodo per turno (es. CdC di ottobre, dicembre, marzo, maggio) — stesse
+                classi/orario per ognuno, generati indipendentemente: ogni turno è un momento
+                diverso dell'anno, non gareggiano per lo stesso spazio.
+            </p>
+            <div id="turni-container"></div>
+            <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu); margin-top:6px;" onclick="aggiungiTurno()">+ Aggiungi turno</button>
+            <input type="hidden" name="n_turni" id="inp-n-turni" value="0">
+        </div>
+
         <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
-            <div>
-                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Dal</label>
-                <input type="date" name="data_inizio" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Al</label>
-                <input type="date" name="data_fine" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
-            </div>
             <div>
                 <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Orario giornaliero dalle</label>
                 <input type="time" name="ora_inizio_giorno" value="14:30" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
@@ -126,5 +130,28 @@ function aggiornaDurata() {
     var opt = sel.options[sel.selectedIndex];
     document.getElementById('inp-durata').value = opt.dataset.durata;
 }
+
+var contatoreTurni = 0;
+function aggiungiTurno() {
+    var i = contatoreTurni++;
+    var div = document.createElement('div');
+    div.id = 'turno-' + i;
+    div.style.cssText = 'display:flex; gap:10px; align-items:flex-end; margin-bottom:8px; padding:8px; background:#f8f9fa; border-radius:8px;';
+    div.innerHTML =
+        '<span style="font-size:.78rem; font-weight:700; color:var(--grigio); width:56px;">Turno ' + (i + 1) + '</span>' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Dal</label>' +
+        '<input type="date" name="data_inizio_' + i + '" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;"></div>' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Al</label>' +
+        '<input type="date" name="data_fine_' + i + '" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;"></div>' +
+        '<button type="button" class="btn btn-sm btn-danger" onclick="rimuoviTurno(' + i + ')">×</button>';
+    document.getElementById('turni-container').appendChild(div);
+    document.getElementById('inp-n-turni').value = contatoreTurni;
+}
+function rimuoviTurno(i) {
+    var el = document.getElementById('turno-' + i);
+    if (el) el.remove();
+}
+// Parte già con un turno pronto, così il form è utilizzabile subito.
+aggiungiTurno();
 </script>
 {% endblock %}

@@ -276,7 +276,7 @@ def test_genera_scrutinio_usa_tipo_e_durata_corretti(app, db_session, monkeypatc
         r = c.post('/generatore-cdc', data={
             'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'scrutinio',
             'classi': ['1A LLI'],
-            'data_inizio': '2026-09-14', 'data_fine': '2026-09-18',
+            'n_turni': '1', 'data_inizio_0': '2026-09-14', 'data_fine_0': '2026-09-18',
             'ora_inizio_giorno': '14:00', 'ora_fine_giorno': '18:00',
             'durata_min': '45',
         })
@@ -327,7 +327,7 @@ def test_genera_glo_richiede_comunque_selezione_classi(app, db_session, monkeypa
         r = c.post('/generatore-cdc', data={
             'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'glo',
             'classi': ['2A LLI'],
-            'data_inizio': '2026-09-14', 'data_fine': '2026-09-18',
+            'n_turni': '1', 'data_inizio_0': '2026-09-14', 'data_fine_0': '2026-09-18',
             'ora_inizio_giorno': '14:00', 'ora_fine_giorno': '18:00',
             'durata_min': '45',
         })
@@ -354,3 +354,69 @@ def test_conferma_glo_crea_evento_tipo_glo(app, db_session):
     ev = AttivitaIst.query.filter_by(tipo='glo', classe='2A LLI').first()
     assert ev is not None
     assert ev.titolo == 'GLO 2A LLI'
+
+
+# ── Turni multipli nello stesso invio ────────────────────────────────────────
+
+def test_due_turni_generano_bozze_indipendenti_nello_stesso_invio(app, db_session, monkeypatch):
+    """Richiesta di Roberto: poter scegliere quanti turni di Consigli
+    predisporre (es. ottobre e marzo) in un solo invio, stesse classi
+    per ognuno, generati indipendentemente l'uno dall'altro."""
+    _registra(app)
+    _fissa_docenti(monkeypatch, {'1A LLI': {1}})
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'consiglio_classe',
+            'classi': ['1A LLI'],
+            'n_turni': '2',
+            'data_inizio_0': '2026-10-05', 'data_fine_0': '2026-10-09',
+            'data_inizio_1': '2027-03-08', 'data_fine_1': '2027-03-12',
+            'ora_inizio_giorno': '14:00', 'ora_fine_giorno': '18:00',
+            'durata_min': '60',
+        })
+        assert r.status_code == 200
+
+    bozza = catturato['kwargs']['bozza']
+    assert catturato['kwargs']['n_turni'] == 2
+    assert len(bozza) == 2  # una riga per turno, stessa classe
+    turni = {r['turno']: r['data'] for r in bozza}
+    assert turni[1] < date(2027, 1, 1)   # primo turno in ottobre
+    assert turni[2] >= date(2027, 3, 1)  # secondo turno in marzo
+
+
+def test_turno_senza_date_viene_ignorato(app, db_session, monkeypatch):
+    """Un turno aggiunto e poi rimosso lato client non invia i suoi
+    campi: la route non deve inciampare su un indice mancante."""
+    _registra(app)
+    _fissa_docenti(monkeypatch, {'1A LLI': {1}})
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'consiglio_classe',
+            'classi': ['1A LLI'],
+            'n_turni': '3',  # il turno 1 (indice 1) non ha campi: rimosso lato client
+            'data_inizio_0': '2026-10-05', 'data_fine_0': '2026-10-09',
+            'data_inizio_2': '2027-03-08', 'data_fine_2': '2027-03-12',
+            'ora_inizio_giorno': '14:00', 'ora_fine_giorno': '18:00',
+            'durata_min': '60',
+        })
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['n_turni'] == 2  # solo i due turni con date valide

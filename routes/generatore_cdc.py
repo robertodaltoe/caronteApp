@@ -138,8 +138,6 @@ def index():
         if tipo not in TIPI_GENERABILI:
             tipo = 'consiglio_classe'
         classi_sel = request.form.getlist('classi')
-        data_inizio = date.fromisoformat(request.form['data_inizio'])
-        data_fine = date.fromisoformat(request.form['data_fine'])
         ora_inizio_giorno = request.form['ora_inizio_giorno']
         ora_fine_giorno = request.form['ora_fine_giorno']
         durata_min = int(request.form.get('durata_min', 60))
@@ -149,13 +147,37 @@ def index():
             flash('Seleziona almeno una classe.', 'warning')
             return redirect(url_for('generatore_cdc.index', anno=anno))
 
-        bozza = genera_bozza_cdc(
-            anno, classi_sel, data_inizio, data_fine,
-            ora_inizio_giorno, ora_fine_giorno, durata_min=durata_min,
-            classi_richiedono_ds=classi_ds)
+        # Più turni nello stesso invio (es. CdC di ottobre, dicembre,
+        # marzo, maggio): stesse classi/orario/DS per ognuno, generati
+        # indipendentemente uno dall'altro — un turno non "sa" dello
+        # slot usato da un altro, ha senso così perché sono periodi
+        # diversi dell'anno, non in competizione per lo stesso spazio.
+        n_turni = int(request.form.get('n_turni', 1))
+        bozza = []
+        turni_letti = 0
+        for t in range(n_turni):
+            ini_raw = request.form.get(f'data_inizio_{t}', '').strip()
+            fin_raw = request.form.get(f'data_fine_{t}', '').strip()
+            if not (ini_raw and fin_raw):
+                continue
+            data_inizio = date.fromisoformat(ini_raw)
+            data_fine = date.fromisoformat(fin_raw)
+            turni_letti += 1
+            bozza_turno = genera_bozza_cdc(
+                anno, classi_sel, data_inizio, data_fine,
+                ora_inizio_giorno, ora_fine_giorno, durata_min=durata_min,
+                classi_richiedono_ds=classi_ds)
+            for r in bozza_turno:
+                r['turno'] = turni_letti
+                r['turno_periodo'] = f"{data_inizio.strftime('%d/%m')}–{data_fine.strftime('%d/%m/%Y')}"
+            bozza.extend(bozza_turno)
+
+        if not bozza:
+            flash('Indica almeno un periodo valido (dal/al) per un turno.', 'warning')
+            return redirect(url_for('generatore_cdc.index', anno=anno))
 
         return render_template('generatore_cdc/bozza.html',
-            anno=anno, bozza=bozza, durata_min=durata_min,
+            anno=anno, bozza=bozza, durata_min=durata_min, n_turni=turni_letti,
             classi_ds=classi_ds, tipo=tipo, tipo_label=TIPI_GENERABILI[tipo]['label'])
 
     if request.method == 'POST' and request.form.get('azione') == 'conferma':

@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 17 — Generatore: turni multipli in un solo invio (Cowork)
+
+Terzo pezzo dell'estensione concordata con Roberto: poter scegliere
+quanti turni di riunioni predisporre (es. Consigli di ottobre e di
+marzo) in un solo invio, invece di rigenerare a mano ogni volta.
+
+Il form ora ha un blocco "Turni da generare" con un elenco di periodi
+(Dal/Al) aggiungibili/rimovibili via JS (`+ Aggiungi turno`, parte già
+con un turno pronto), le classi/orario/durata/DS restano condivisi tra
+tutti i turni. Lato route: `genera_bozza_cdc()` gira una volta per
+ogni turno con date valide, indipendentemente l'uno dall'altro (un
+turno non "sa" dello slot occupato da un altro — sono periodi diversi
+dell'anno, non in competizione per lo stesso spazio) — nessuna
+modifica al motore stesso. La bozza risultante è una lista unica con
+le righe di tutti i turni concatenate, taggate con l'indice/periodo
+del turno; la colonna "Turno" in tabella compare solo se sono più di
+uno, per non appesantire il caso comune.
+
+Verificato: 2 test nuovi (`tests/test_generatore_cdc.py` — due turni
+producono bozze indipendenti e correttamente taggate; un turno
+aggiunto e poi rimosso lato client, quindi con indice mancante nel
+form, non fa inciampare la route) + verifica a video end-to-end (2
+turni × 39 classi reali = 78 righe, taggate correttamente "Turno 1
+05/10–09/10/2026" / "Turno 2 08/03–12/03/2027"), scartata subito dopo,
+mai sul reale. Aggiornati anche i 2 test esistenti che postavano i
+vecchi nomi di campo `data_inizio`/`data_fine` (ora `data_inizio_0`/
+`data_fine_0` + `n_turni`). 159/159 test passano (157 + 2 nuovi).
+
+Prossimo passo scelto da Roberto: dipartimenti/materia (motore
+gemello, raggruppamento per dipartimento), poi vista condivisibile
+con le sospensioni.
+
 ## Sessione 66 addendum 16 — Generatore: aggiunto GLO (Cowork)
 
 Roberto: "mettiamo anche GLO come selezione. Se imposto GLO però devo
