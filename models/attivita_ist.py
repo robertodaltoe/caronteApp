@@ -56,6 +56,10 @@ class AttivitaIst(db.Model):
                                 db.ForeignKey('dipartimenti.id'), nullable=True)
     # Origine: 'manuale' | 'import_piano'
     origine     = db.Column(db.String(20), default='manuale')
+    # Presenza del Dirigente Scolastico richiesta — vincolo forte di
+    # sovrapposizione per il generatore CdC (Fase 3 Piano Annuale):
+    # se richiesta in due eventi, non possono stare nello stesso slot.
+    richiede_ds = db.Column(db.Boolean, default=False)
 
     dipartimento  = db.relationship('Dipartimento')
     partecipanti  = db.relationship('AttivitaIstPartecipante',

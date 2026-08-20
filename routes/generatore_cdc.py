@@ -1,0 +1,147 @@
+"""
+Generatore Consigli di Classe — Piano Annuale delle Attività, Fase 3.
+Route: gestione vincoli (orario fisso, manuali pre-generazione) e il
+generatore vero e proprio (bozza modificabile, mai un piano imposto —
+vedi modules/generatore_cdc.py per la logica).
+"""
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from models import db
+from models.generatore_cdc import (VincoloOrarioClasse, VincoloGeneratoreCdc,
+                                    GIORNI_SETTIMANA, TIPI_VINCOLO_CDC)
+from datetime import date
+
+generatore_cdc_bp = Blueprint('generatore_cdc', __name__)
+
+
+def _anno_scolastico(d=None):
+    d = d or date.today()
+    return f'{d.year}-{d.year+1}' if d.month >= 9 else f'{d.year-1}-{d.year}'
+
+
+# ── VINCOLI ORARIO FISSI (finestre settimanali indisponibili) ────────────────
+
+@generatore_cdc_bp.route('/generatore-cdc/vincoli-orario', methods=['GET', 'POST'])
+def vincoli_orario():
+    if request.method == 'POST':
+        azione = request.form.get('azione')
+        if azione == 'aggiungi':
+            db.session.add(VincoloOrarioClasse(
+                giorno_settimana=int(request.form['giorno_settimana']),
+                ora_inizio=request.form['ora_inizio'],
+                ora_fine=request.form['ora_fine'],
+                indirizzi=request.form['indirizzi'].strip().upper(),
+                anno_corso_min=int(request.form['anno_corso_min']) if request.form.get('anno_corso_min') else None,
+                anno_corso_max=int(request.form['anno_corso_max']) if request.form.get('anno_corso_max') else None,
+                descrizione=request.form.get('descrizione', '').strip() or None,
+            ))
+            db.session.commit()
+            flash('Vincolo orario aggiunto.', 'success')
+        elif azione == 'elimina':
+            v = VincoloOrarioClasse.query.get_or_404(int(request.form['id']))
+            db.session.delete(v)
+            db.session.commit()
+            flash('Vincolo orario eliminato.', 'warning')
+        return redirect(url_for('generatore_cdc.vincoli_orario'))
+
+    vincoli = VincoloOrarioClasse.query.order_by(
+        VincoloOrarioClasse.giorno_settimana, VincoloOrarioClasse.ora_inizio).all()
+    return render_template('generatore_cdc/vincoli_orario.html',
+        vincoli=vincoli, giorni=list(enumerate(GIORNI_SETTIMANA)))
+
+
+# ── VINCOLI MANUALI PRE-GENERAZIONE ──────────────────────────────────────────
+
+@generatore_cdc_bp.route('/generatore-cdc/vincoli-manuali', methods=['GET', 'POST'])
+def vincoli_manuali():
+    anno = request.args.get('anno', _anno_scolastico())
+
+    if request.method == 'POST':
+        azione = request.form.get('azione')
+        if azione == 'aggiungi':
+            tipo = request.form.get('tipo', 'entro_data')
+            db.session.add(VincoloGeneratoreCdc(
+                anno_scol=request.form.get('anno_scol', anno),
+                classe=request.form['classe'].strip().upper(),
+                tipo=tipo,
+                scadenza=date.fromisoformat(request.form['scadenza']) if tipo == 'entro_data' and request.form.get('scadenza') else None,
+                data_fissa=date.fromisoformat(request.form['data_fissa']) if tipo == 'fissa' and request.form.get('data_fissa') else None,
+                ora_fissa=request.form.get('ora_fissa') if tipo == 'fissa' else None,
+                note=request.form.get('note', '').strip() or None,
+            ))
+            db.session.commit()
+            flash('Vincolo aggiunto.', 'success')
+        elif azione == 'elimina':
+            v = VincoloGeneratoreCdc.query.get_or_404(int(request.form['id']))
+            db.session.delete(v)
+            db.session.commit()
+            flash('Vincolo eliminato.', 'warning')
+        return redirect(url_for('generatore_cdc.vincoli_manuali', anno=anno))
+
+    vincoli = VincoloGeneratoreCdc.query.filter_by(anno_scol=anno).order_by(
+        VincoloGeneratoreCdc.classe).all()
+    return render_template('generatore_cdc/vincoli_manuali.html',
+        vincoli=vincoli, anno=anno, tipi=TIPI_VINCOLO_CDC)
+
+
+# ── GENERATORE ────────────────────────────────────────────────────────────────
+
+@generatore_cdc_bp.route('/generatore-cdc', methods=['GET', 'POST'])
+def index():
+    from modules.generatore_cdc import docenti_reali_per_classe, genera_bozza_cdc
+
+    anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_scolastico()
+    classi_disponibili = sorted(docenti_reali_per_classe(anno).keys())
+
+    if request.method == 'POST' and request.form.get('azione') == 'genera':
+        classi_sel = request.form.getlist('classi')
+        data_inizio = date.fromisoformat(request.form['data_inizio'])
+        data_fine = date.fromisoformat(request.form['data_fine'])
+        ora_inizio_giorno = request.form['ora_inizio_giorno']
+        ora_fine_giorno = request.form['ora_fine_giorno']
+        durata_min = int(request.form.get('durata_min', 60))
+        classi_ds = set(request.form.getlist('classi_ds'))
+
+        if not classi_sel:
+            flash('Seleziona almeno una classe.', 'warning')
+            return redirect(url_for('generatore_cdc.index', anno=anno))
+
+        bozza = genera_bozza_cdc(
+            anno, classi_sel, data_inizio, data_fine,
+            ora_inizio_giorno, ora_fine_giorno, durata_min=durata_min,
+            classi_richiedono_ds=classi_ds)
+
+        return render_template('generatore_cdc/bozza.html',
+            anno=anno, bozza=bozza, durata_min=durata_min,
+            classi_ds=classi_ds)
+
+    if request.method == 'POST' and request.form.get('azione') == 'conferma':
+        from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+        from modules.generatore_cdc import docenti_reali_per_classe as _drc
+        n_ini = int(request.form.get('n_righe', 0))
+        docenti_map = _drc(anno)
+        creati = 0
+        for i in range(n_ini):
+            classe = request.form.get(f'classe_{i}', '').strip()
+            data_s = request.form.get(f'data_{i}', '').strip()
+            ora_ini = request.form.get(f'ora_inizio_{i}', '').strip()
+            ora_fin = request.form.get(f'ora_fine_{i}', '').strip()
+            richiede_ds = request.form.get(f'ds_{i}') == 'on'
+            if not (classe and data_s and ora_ini and ora_fin):
+                continue  # riga lasciata vuota/in conflitto: non creata, va piazzata a mano
+            ev = AttivitaIst(
+                tipo='consiglio_classe', titolo=f'Consiglio di classe {classe}',
+                data=date.fromisoformat(data_s), ora_inizio=ora_ini, ora_fine=ora_fin,
+                classe=classe, origine='import_piano', richiede_ds=richiede_ds,
+            )
+            db.session.add(ev)
+            db.session.flush()
+            for id_doc in docenti_map.get(classe, ()):
+                db.session.add(AttivitaIstPartecipante(
+                    id_attivita=ev.id, id_docente=id_doc, preset=True))
+            creati += 1
+        db.session.commit()
+        flash(f'{creati} Consigli di classe creati.', 'success')
+        return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
+
+    return render_template('generatore_cdc/index.html',
+        anno=anno, classi_disponibili=classi_disponibili)

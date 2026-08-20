@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Vincoli manuali Consigli di classe{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+    <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Generatore Consigli di classe</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('calendar') }} Vincoli manuali — a.s. {{ anno }}</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
+    Da impostare PRIMA di generare la bozza: una scadenza ("il CdC della 5A entro il 20")
+    o uno slot fisso (data e ora esatte, es. già comunicato alle famiglie).
+</p>
+
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi vincolo</h3>
+    <form method="post" id="form-vincolo">
+        <input type="hidden" name="azione" value="aggiungi">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Classe *</label><br>
+                <input type="text" name="classe" required placeholder="es. 5A CAT"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:110px;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Tipo *</label><br>
+                <select name="tipo" id="sel-tipo" onchange="mostraCampi()" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% for k, v in tipi.items() %}
+                    <option value="{{ k }}">{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="campo-scadenza">
+                <label style="font-size:.75rem; color:var(--grigio);">Scadenza</label><br>
+                <input type="date" name="scadenza" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div id="campo-fissa" style="display:none;">
+                <label style="font-size:.75rem; color:var(--grigio);">Data fissa</label><br>
+                <input type="date" name="data_fissa" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div id="campo-fissa-ora" style="display:none;">
+                <label style="font-size:.75rem; color:var(--grigio);">Ora fissa</label><br>
+                <input type="time" name="ora_fissa" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <label style="font-size:.75rem; color:var(--grigio);">Note</label><br>
+                <input type="text" name="note" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:100%;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">Aggiungi</button>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:700px;">
+        <thead>
+            <tr>
+                <th style="width:100px;">Classe</th>
+                <th style="width:170px;">Tipo</th>
+                <th style="width:180px;">Dettaglio</th>
+                <th>Note</th>
+                <th style="width:70px; text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vincoli %}
+            <tr>
+                <td><span class="badge badge-blu">{{ v.classe }}</span></td>
+                <td>{{ v.tipo_label }}</td>
+                <td>
+                    {% if v.tipo == 'entro_data' %}entro il {{ v.scadenza.strftime('%d/%m/%Y') if v.scadenza else '—' }}
+                    {% else %}{{ v.data_fissa.strftime('%d/%m/%Y') if v.data_fissa else '—' }} {{ v.ora_fissa or '' }}{% endif %}
+                </td>
+                <td style="color:var(--grigio); font-size:.85rem;">{{ v.note or '—' }}</td>
+                <td style="text-align:center;">
+                    <form method="post" onsubmit="return confirm('Eliminare questo vincolo?');" style="display:inline;">
+                        <input type="hidden" name="azione" value="elimina">
+                        <input type="hidden" name="id" value="{{ v.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm">{{ icon('trash') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center; color:var(--grigio); padding:24px;">Nessun vincolo manuale per il {{ anno }}.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function mostraCampi() {
+    var tipo = document.getElementById('sel-tipo').value;
+    document.getElementById('campo-scadenza').style.display = tipo === 'entro_data' ? '' : 'none';
+    document.getElementById('campo-fissa').style.display = tipo === 'fissa' ? '' : 'none';
+    document.getElementById('campo-fissa-ora').style.display = tipo === 'fissa' ? '' : 'none';
+}
+mostraCampi();
+</script>
+{% endblock %}

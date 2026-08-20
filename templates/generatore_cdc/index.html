@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Generatore Consigli di classe{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('compass') }} Generatore Consigli di classe — a.s. {{ anno }}</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{{ url_for('generatore_cdc.vincoli_orario') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('clock') }} Vincoli orario fissi</a>
+        <a href="{{ url_for('generatore_cdc.vincoli_manuali', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('calendar') }} Vincoli manuali</a>
+        <a href="{{ url_for('attivita_ist.lista', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('building') }} Attività istituzionali</a>
+    </div>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
+    Genera una bozza di calendarizzazione per i Consigli di classe scelti: raggruppa in
+    parallelo le classi che non condividono docenti, rispettando i vincoli orario fissi e
+    quelli manuali già impostati. La bozza resta modificabile — nulla viene creato finché
+    non la confermi.
+</p>
+
+<div class="card" style="padding:20px; max-width:760px;">
+    <form method="post" action="{{ url_for('generatore_cdc.index') }}">
+        <input type="hidden" name="azione" value="genera">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Classi da calendarizzare</label>
+            {% if not classi_disponibili %}
+            <p style="color:var(--rosso); font-size:.85rem;">
+                Nessuna classe trovata nelle Assegnazioni per l'a.s. {{ anno }} — completa prima
+                l'assegnazione classi in Impostazione Anno.
+            </p>
+            {% else %}
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selTutte(true)">Tutte</button>
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selTutte(false)">Nessuna</button>
+            </div>
+            <div style="max-height:260px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:2px;">
+                {% for c in classi_disponibili %}
+                <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
+                    <input type="checkbox" name="classi" value="{{ c }}" class="chk-classe" checked> {{ c }}
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Dal</label>
+                <input type="date" name="data_inizio" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Al</label>
+                <input type="date" name="data_fine" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Orario giornaliero dalle</label>
+                <input type="time" name="ora_inizio_giorno" value="14:30" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">alle</label>
+                <input type="time" name="ora_fine_giorno" value="18:30" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Durata (min)</label>
+                <input type="number" name="durata_min" value="60" min="15" step="15" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:90px;">
+            </div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Richiede la presenza del Dirigente Scolastico</label>
+            <p style="color:var(--grigio); font-size:.8rem; margin-bottom:8px;">
+                Le classi selezionate qui non potranno mai stare nello stesso slot fra loro,
+                anche se non condividono docenti — il DS può essere in un solo posto alla volta.
+            </p>
+            {% if classi_disponibili %}
+            <div style="max-height:180px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:2px;">
+                {% for c in classi_disponibili %}
+                <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
+                    <input type="checkbox" name="classi_ds" value="{{ c }}"> {{ c }}
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-success" {% if not classi_disponibili %}disabled{% endif %}>{{ icon('check') }} Genera bozza</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function selTutte(sel) {
+    document.querySelectorAll('.chk-classe').forEach(function(c) { c.checked = sel; });
+}
+</script>
+{% endblock %}

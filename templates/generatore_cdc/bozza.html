@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Bozza Consigli di classe{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
+    <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Rigenera</a>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('check') }} Bozza Consigli di classe — a.s. {{ anno }}</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:18px;">
+    Proposta modificabile: correggi data/ora dove serve (in particolare le righe in conflitto,
+    da piazzare a mano) prima di confermare. Nulla è ancora stato creato.
+</p>
+
+{% set n_conflitti = bozza | selectattr('conflitto') | list | length %}
+{% if n_conflitti %}
+<div class="card" style="border-left:4px solid var(--rosso); padding:12px 16px; margin-bottom:16px;">
+    <p style="font-size:.88rem; color:var(--rosso); font-weight:600;">
+        {{ icon('warning') }} {{ n_conflitti }} class{{ 'e' if n_conflitti != 1 else 'e' }} senza uno slot libero nel periodo — compila data/ora a mano per quelle evidenziate.
+    </p>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('generatore_cdc.index') }}">
+    <input type="hidden" name="azione" value="conferma">
+    <input type="hidden" name="anno_scol" value="{{ anno }}">
+    <input type="hidden" name="n_righe" value="{{ bozza|length }}">
+
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+        <table style="table-layout:fixed; min-width:820px;">
+            <thead>
+                <tr>
+                    <th style="width:110px;">Classe</th>
+                    <th style="width:160px;">Data</th>
+                    <th style="width:110px;">Ora inizio</th>
+                    <th style="width:110px;">Ora fine</th>
+                    <th style="width:80px; text-align:center;">DS</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in bozza %}
+                <tr{% if r.conflitto %} style="background:var(--rosso-bg);"{% endif %}>
+                    <td>
+                        <span class="badge badge-blu">{{ r.classe }}</span>
+                        <input type="hidden" name="classe_{{ loop.index0 }}" value="{{ r.classe }}">
+                    </td>
+                    <td><input type="date" name="data_{{ loop.index0 }}" value="{{ r.data.isoformat() if r.data else '' }}"
+                               style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;"></td>
+                    <td><input type="time" name="ora_inizio_{{ loop.index0 }}" value="{{ r.ora_inizio or '' }}"
+                               style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;"></td>
+                    <td><input type="time" name="ora_fine_{{ loop.index0 }}" value="{{ r.ora_fine or '' }}"
+                               style="width:100%; padding:5px 6px; border:1px solid #d1d5db; border-radius:5px; font-size:.82rem;"></td>
+                    <td style="text-align:center;">
+                        <input type="checkbox" name="ds_{{ loop.index0 }}" {% if r.classe in classi_ds %}checked{% endif %}>
+                    </td>
+                    <td style="font-size:.78rem; color:{{ 'var(--rosso)' if r.conflitto else 'var(--grigio)' }};">
+                        {{ r.motivo or '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <div style="margin-top:16px;">
+        <button type="submit" class="btn btn-success">{{ icon('check') }} Conferma e crea gli eventi</button>
+    </div>
+</form>
+{% endblock %}

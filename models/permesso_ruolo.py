@@ -183,6 +183,7 @@ BLUEPRINT_SEZIONE = {
     'attivita':           'attivita',
     'attivita_ist':       'attivita_istituzionali',
     'formazione':         'attivita_istituzionali',
+    'generatore_cdc':     'attivita_istituzionali',
     'att_differite':      'attivita_differite',
     'banca_ore':          'banca_ore',
     'import_banca':       'import_banca_ore',

@@ -4,6 +4,74 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 13 — Fase 3: Generatore Consigli di Classe (Cowork)
+
+Fase 3 del project plan approvato — la parte più impegnativa: bozza
+automatica di calendarizzazione Consigli di classe, con tutti i
+vincoli decisi durante l'analisi iniziale.
+
+**Modelli nuovi** (`models/generatore_cdc.py`):
+- `VincoloOrarioClasse` — finestre settimanali fisse non libere da
+  lezione (es. martedì 13:30-15:30 rientro pomeridiano CAT/AFM/ROM),
+  per indirizzo + range anni di corso opzionale. Non legate a un anno
+  scolastico, restano valide finché non cambia l'orario reale.
+- `VincoloGeneratoreCdc` — vincoli manuali per classe, impostabili
+  PRIMA di generare: `entro_data` (scadenza) o `fissa` (slot esatto).
+- `AttivitaIst.richiede_ds` (nuova colonna, migrazione additiva in
+  `_auto_migrate`) — presenza del Dirigente Scolastico come vincolo
+  forte di sovrapposizione.
+
+**Motore** (`modules/generatore_cdc.py::genera_bozza_cdc`) — algoritmo
+greedy, non scrive nulla sul DB, ritorna solo la proposta:
+1. Docenti per classe dalle Assegnazioni (`docenti_reali_per_classe`),
+   non dall'orario — placeholder esclusi (nessun insieme docenti noto
+   finché non nominati).
+2. Griglia di slot dal periodo scelto, esclusi i giorni coperti da
+   `SospensioneDidattica` e le domeniche.
+3. Classi ordinate per vincolo fisso prima, poi per numero di slot
+   validi crescente (euristica CSP: le più vincolate vanno piazzate
+   per prime), poi per scadenza più vicina.
+4. Per ogni classe: preferisce impacchettare nello stesso slot già
+   usato da altre classi compatibili — l'obiettivo primario è la
+   massima classi-in-parallelo, non semplicemente "libero" — con
+   preferenza secondaria per lo stesso indirizzo tra le opzioni
+   ugualmente valide (bug trovato e corretto in fase di test: la prima
+   versione preferiva slot vuoti a slot occupati da indirizzo diverso,
+   il contrario di quello che serviva).
+5. DS: due classi che lo richiedono non vanno mai nello stesso slot,
+   anche senza docenti condivisi.
+6. Classi senza slot valido restano "in conflitto" (data/ora vuote),
+   da piazzare a mano nella bozza — mai un errore bloccante.
+
+**Route** (`routes/generatore_cdc.py`, blueprint proprio): pagina di
+generazione (selezione classi da Assegnazioni, periodo, orario
+giornaliero, durata, classi che richiedono DS) → bozza modificabile
+riga per riga (data/ora/DS editabili anche per le righe in conflitto)
+→ conferma crea gli `AttivitaIst` reali con partecipanti già popolati
+dalle Assegnazioni. Più due pagine CRUD per i vincoli. Nuova voce
+"Generatore Consigli di classe" in Attività, permessi riusati dalla
+sezione `attivita_istituzionali`.
+
+Verificato: 13 test sul motore puro (`tests/test_generatore_cdc.py` —
+parallelo senza docenti comuni, separazione con docenti comuni,
+vincoli orario per indirizzo/anno, scadenze, slot fissi in conflitto,
+DS, preferenza stesso indirizzo, giorni lavorativi, query reale dalle
+Assegnazioni). End-to-end su copia del DB: generate 39 classi reali
+(dalle Assegnazioni 2026-2027) su una settimana, **zero conflitti**,
+impacchettate in 19 slot, confermate e verificate le
+`AttivitaIstPartecipante` create correttamente per ognuna — poi
+scartata, mai sul reale. Aggiunti sul database reale i due vincoli
+orario veri segnalati da Roberto durante l'analisi (martedì
+13:30-15:30 CAT/AFM/ROM, martedì 12:30-13:30 3ª-4ª LLI) tramite
+l'interfaccia stessa, con backup cifrato successivo
+(`database_20260820_2054_post_generatore_cdc_vincoli.db.enc`),
+`PRAGMA integrity_check` ok. 152/152 test passano (139 + 13 nuovi).
+
+Con questo, tutte e 5 le fasi del Piano Annuale delle Attività
+concordate nell'analisi iniziale sono implementate (0. Calendario,
+1. Formazione, 2. Vista+Riepilogo, 3. Generatore CdC). Resta la Fase 4
+(Pubblicazione PDF) — non ancora affrontata.
+
 ## Sessione 66 addendum 12 — Import Consigli settembre + formazione obbligatoria sui placeholder (Cowork)
 
 Per dare al riepilogo dati veri da mostrare (finora 0 Consigli di

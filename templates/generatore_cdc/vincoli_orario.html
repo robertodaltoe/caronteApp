@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Vincoli orario Consigli di classe{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+    <a href="{{ url_for('generatore_cdc.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Generatore Consigli di classe</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('clock') }} Vincoli orario fissi</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
+    Finestre settimanali in cui un indirizzo/anno di corso NON è libero da lezione
+    (es. martedì 13:30–15:30 rientro pomeridiano CAT/AFM/ROM) — il generatore non
+    proporrà mai quello slot per le classi coinvolte. Non legate a un anno scolastico
+    specifico, restano valide finché non cambia l'orario reale.
+</p>
+
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:12px;">+ Aggiungi vincolo</h3>
+    <form method="post">
+        <input type="hidden" name="azione" value="aggiungi">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Giorno *</label><br>
+                <select name="giorno_settimana" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                    {% for i, nome in giorni %}
+                    <option value="{{ i }}">{{ nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Dalle *</label><br>
+                <input type="time" name="ora_inizio" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Alle *</label><br>
+                <input type="time" name="ora_fine" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Indirizzi (es. CAT,AFM,ROM) *</label><br>
+                <input type="text" name="indirizzi" required placeholder="CAT,AFM,ROM"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:160px;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Anno corso min</label><br>
+                <input type="number" name="anno_corso_min" min="1" max="5" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:70px;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; color:var(--grigio);">Anno corso max</label><br>
+                <input type="number" name="anno_corso_max" min="1" max="5" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:70px;">
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <label style="font-size:.75rem; color:var(--grigio);">Descrizione</label><br>
+                <input type="text" name="descrizione" placeholder="es. Rientro pomeridiano"
+                       style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem; width:100%;">
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">Aggiungi</button>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:760px;">
+        <thead>
+            <tr>
+                <th style="width:100px;">Giorno</th>
+                <th style="width:130px;">Orario</th>
+                <th style="width:160px;">Indirizzi</th>
+                <th style="width:110px;">Anni corso</th>
+                <th>Descrizione</th>
+                <th style="width:70px; text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vincoli %}
+            <tr>
+                <td>{{ v.giorno_label }}</td>
+                <td>{{ v.ora_inizio }}–{{ v.ora_fine }}</td>
+                <td>{% for i in v.indirizzi_list %}<span class="badge badge-blu" style="margin-right:2px;">{{ i }}</span>{% endfor %}</td>
+                <td>{% if v.anno_corso_min or v.anno_corso_max %}{{ v.anno_corso_min or '1' }}–{{ v.anno_corso_max or '5' }}{% else %}tutti{% endif %}</td>
+                <td style="color:var(--grigio); font-size:.85rem;">{{ v.descrizione or '—' }}</td>
+                <td style="text-align:center;">
+                    <form method="post" onsubmit="return confirm('Eliminare questo vincolo?');" style="display:inline;">
+                        <input type="hidden" name="azione" value="elimina">
+                        <input type="hidden" name="id" value="{{ v.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm">{{ icon('trash') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center; color:var(--grigio); padding:24px;">Nessun vincolo orario impostato.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

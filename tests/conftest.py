@@ -53,6 +53,8 @@ def app():
         from models.config_app import ConfigApp  # noqa
         from models.piano_attivita_personale import (PianoAttivitaPersonale,  # noqa
                                                        PianoAttivitaPersonaleVoce)
+        from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa
+        from models.sospensione import SospensioneDidattica  # noqa
         db.create_all()
         yield app
         db.session.remove()

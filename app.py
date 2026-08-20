@@ -149,6 +149,8 @@ def create_app(avvio_con_reloader=True):
     app.register_blueprint(attivita_ist_bp)
     from routes.formazione import formazione_bp
     app.register_blueprint(formazione_bp)
+    from routes.generatore_cdc import generatore_cdc_bp
+    app.register_blueprint(generatore_cdc_bp)
     from routes.impostazioni import impostazioni_bp
     from routes.cambio_anno import cambio_anno_bp
     from routes.assegnazioni import assegnazioni_bp
@@ -305,6 +307,7 @@ def create_app(avvio_con_reloader=True):
         from models.permesso_ruolo import PermessoRuolo  # noqa
         from models.piano_attivita_personale import PianoAttivitaPersonale, PianoAttivitaPersonaleVoce  # noqa
         from models.formazione import CorsoFormazione  # noqa
+        from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()
@@ -494,6 +497,7 @@ def _auto_migrate():
         ('assenze',         'creato_da', 'VARCHAR(80)', None),
         ('supplenze',       'creato_da', 'VARCHAR(80)', None),
         ('indisponibilita', 'creato_da', 'VARCHAR(80)', None),
+        ('attivita_ist', 'richiede_ds', 'BOOLEAN', 0),
     ]
 
     with db.engine.connect() as conn:
