@@ -30,9 +30,10 @@
             </thead>
             <tbody>
                 {% for r in righe %}
-                <tr>
+                <tr{% if r.senza_referente %} style="background:var(--rosso-bg);"{% endif %}>
                     <td>
                         <span class="badge badge-blu">{{ r.sigla }}</span> {{ r.nome }}
+                        {% if r.senza_referente %}<br><span style="font-size:.72rem; color:var(--rosso);">{{ icon('warning') }} nessun referente nominato per il {{ anno }}</span>{% endif %}
                         <input type="hidden" name="id_dipartimento_{{ loop.index0 }}" value="{{ r.id_dipartimento }}">
                         <input type="hidden" name="sigla_{{ loop.index0 }}" value="{{ r.sigla }}">
                     </td>

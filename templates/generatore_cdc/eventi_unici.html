@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Eventi unici — Collegio, Incontro scuola-famiglia{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('building') }} Eventi unici — a.s. {{ anno }}</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        {% if anni_disponibili|length > 1 %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('generatore_cdc.eventi_unici', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno %}background:var(--blu); color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('compass') }} Generatore Consigli di classe</a>
+    </div>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
+    Collegio ed Incontro scuola-famiglia coinvolgono tutto l'istituto insieme — un solo
+    evento, non tante unità da mettere in parallelo: si crea direttamente, senza bozza
+    intermedia (puoi comunque modificarlo dopo come ogni altro evento).
+</p>
+
+<div class="card" style="padding:20px; max-width:560px;">
+    <form method="post" action="{{ url_for('generatore_cdc.eventi_unici') }}">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Tipo</label>
+            <select name="tipo" id="sel-tipo" onchange="aggiorna()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:100%;">
+                {% for k, v in tipi_unici.items() %}
+                <option value="{{ k }}" data-durata="{{ v.durata_default }}">{{ v.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Titolo (opzionale)</label>
+            <input type="text" name="titolo" placeholder="es. Collegio docenti — settembre 2026"
+                   style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+        </div>
+
+        <div id="blocco-partecipanti" style="margin-bottom:16px; display:none;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Partecipanti</label>
+            <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:.88rem; cursor:pointer;">
+                <input type="radio" name="partecipanti" value="tutti" checked> Tutti i docenti in servizio
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:.88rem; cursor:pointer;">
+                <input type="radio" name="partecipanti" value="coordinatori"> Solo i coordinatori di classe
+            </label>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Data</label>
+                <input type="date" name="data" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Ora inizio</label>
+                <input type="time" name="ora_inizio" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Durata (min)</label>
+                <input type="number" name="durata_min" id="inp-durata" value="120" min="15" step="15" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:90px;">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success">{{ icon('check') }} Crea evento</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function aggiorna() {
+    var sel = document.getElementById('sel-tipo');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('inp-durata').value = opt.dataset.durata;
+    document.getElementById('blocco-partecipanti').style.display =
+        (sel.value === 'incontro_famiglie') ? '' : 'none';
+}
+aggiorna();
+</script>
+{% endblock %}

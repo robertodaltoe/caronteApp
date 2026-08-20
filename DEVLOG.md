@@ -4,6 +4,53 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 19 — Referenti dipartimento + Eventi unici (Cowork)
+
+Roberto ha precisato due punti sui dipartimenti prima di passare alla
+vista condivisibile: "i dipartimenti hanno tre momenti diversi da
+impostare: riunione referenti di dipartimento (riservata solo ai
+docenti incaricati di essere capidipartimento); riunione dipartimento;
+riunioni per materie. Questa differenza pesa nel conteggio ore per i
+capidipartimento." Più "mancherebbe la programmazione degli incontri
+scuola-famiglia che sono o per tutti i docenti o solo per i
+coordinatori (solo una riunione)."
+
+**Riunione referenti (capidipartimento)** — terzo tipo in
+`TIPI_DIPARTIMENTO`, ma con una fonte partecipanti diversa dalle altre
+due: nuova `referenti_per_dipartimento()` (da `IncaricaDocente`, tipo
+"Referente di dipartimento" — incarico già esistente in anagrafica,
+riusato non reinventato) invece di `docenti_per_dipartimento()` (tutti
+i docenti del dipartimento via `DocenteMateria`). La bozza segnala già
+prima di confermare i dipartimenti senza nessun referente nominato per
+l'anno (non blocca, ma è meglio saperlo subito) — verificato sul
+reale: 8 degli 9 dipartimenti non hanno ancora un referente nominato
+per il 2026-2027.
+
+**Eventi unici** (nuova pagina, `/generatore-cdc/eventi-unici`) —
+Collegio e Incontro scuola-famiglia coinvolgono tutto l'istituto
+insieme, non tante unità da mettere in parallelo: creazione diretta,
+niente bozza intermedia. Per l'Incontro scuola-famiglia, scelta
+esplicita tra "tutti i docenti" e "solo i coordinatori di classe"
+(nuova `coordinatori_di_classe()`, stesso principio — da
+`IncaricaDocente` tipo "Coordinatore di classe", incarico già
+esistente) — sempre una sola riunione, cambia solo chi vi partecipa.
+
+Verificato: 5 test nuovi (`tests/test_generatore_cdc.py` — referenti
+esclude i membri non capidipartimento, bozza segnala dipartimento
+senza referente, Collegio include tutti, Incontro famiglie sia con
+tutti sia solo coordinatori) + verifica a video sul reale (tutti e tre
+i tipi dipartimento nel selettore, blocco partecipanti che compare/
+sparisce scegliendo Incontro scuola-famiglia, avviso "nessun
+referente" su 8/9 dipartimenti reali). Aggiunto anche l'import di
+`CategoriaIncarico`/`TipoIncarico`/`IncaricaDocente` mancante in
+`tests/conftest.py`. 166/166 test passano (161 + 5 nuovi).
+
+Con questo, l'estensione del generatore concordata con Roberto è
+completa: Consigli/Scrutini/GLO con motore, dipartimenti/materia/
+referenti senza motore, eventi unici (Collegio/Incontro famiglie)
+senza bozza. Resta l'ultimo pezzo: vista condivisibile con le
+sospensioni.
+
 ## Sessione 66 addendum 18 — Riunioni dipartimento/materia: niente motore (Cowork)
 
 Correzione di impostazione da Roberto prima ancora di iniziare a

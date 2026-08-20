@@ -42,9 +42,16 @@ TIPI_GENERABILI = {
 # verificare sovrapposizioni. Vanno solo piazzate in data — vedi
 # route dipartimenti() più sotto, che infatti non usa
 # modules/generatore_cdc.py::genera_bozza_cdc.
+#
+# 'riunione_referenti' è tenuta distinta dalle altre due (segnalato da
+# Roberto): riservata ai soli capidipartimento, pesa diversamente nel
+# conteggio ore proprio per questo — i partecipanti vengono da
+# referenti_per_dipartimento(), non da docenti_per_dipartimento()
+# (tutti i docenti del dipartimento) usata per le altre due.
 TIPI_DIPARTIMENTO = {
-    'dipartimento':       {'label': 'Riunione dipartimento', 'durata_default': 60},
-    'riunione_materia':   {'label': 'Riunione per materia',  'durata_default': 45},
+    'dipartimento':       {'label': 'Riunione dipartimento',       'durata_default': 60},
+    'riunione_materia':   {'label': 'Riunione per materia',        'durata_default': 45},
+    'riunione_referenti': {'label': 'Riunione referenti (capidipartimento)', 'durata_default': 45},
 }
 
 
@@ -234,7 +241,7 @@ def index():
 @generatore_cdc_bp.route('/generatore-cdc/dipartimenti', methods=['GET', 'POST'])
 def dipartimenti():
     from models.materia import Dipartimento
-    from modules.generatore_cdc import docenti_per_dipartimento
+    from modules.generatore_cdc import docenti_per_dipartimento, referenti_per_dipartimento
     from routes.impostazione_anno import _anno_default_piano
 
     anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_default_piano()
@@ -263,9 +270,14 @@ def dipartimenti():
         h, m = map(int, ora_inizio.split(':'))
         fine_min = h * 60 + m + durata_min
         ora_fine = f'{fine_min // 60:02d}:{fine_min % 60:02d}'
+        # Per i referenti, segnala già in bozza i dipartimenti senza
+        # nessuno nominato — non blocca (crea comunque l'evento, senza
+        # partecipanti, correggibile a mano), ma è meglio saperlo prima.
+        referenti_map = referenti_per_dipartimento(anno) if tipo == 'riunione_referenti' else {}
         dips_sel = [d for d in dips if d.id in dip_ids]
         righe = [dict(id_dipartimento=d.id, sigla=d.sigla, nome=d.nome,
-                      data=data_s, ora_inizio=ora_inizio, ora_fine=ora_fine)
+                      data=data_s, ora_inizio=ora_inizio, ora_fine=ora_fine,
+                      senza_referente=(tipo == 'riunione_referenti' and not referenti_map.get(d.id)))
                  for d in dips_sel]
 
         return render_template('generatore_cdc/dipartimenti_bozza.html',
@@ -278,7 +290,8 @@ def dipartimenti():
             tipo = 'dipartimento'
         tipo_label = TIPI_DIPARTIMENTO[tipo]['label']
         n_ini = int(request.form.get('n_righe', 0))
-        docenti_map = docenti_per_dipartimento(anno)
+        docenti_map = (referenti_per_dipartimento(anno) if tipo == 'riunione_referenti'
+                       else docenti_per_dipartimento(anno))
         creati = 0
         for i in range(n_ini):
             id_dip = request.form.get(f'id_dipartimento_{i}', '').strip()
@@ -307,3 +320,65 @@ def dipartimenti():
     return render_template('generatore_cdc/dipartimenti_index.html',
         anno=anno, anni_disponibili=anni_disponibili, dipartimenti=dips,
         tipi_dipartimento=TIPI_DIPARTIMENTO)
+
+
+# ── EVENTI UNICI (Collegio, Incontro scuola-famiglia) ────────────────────────
+# Un solo evento per l'intero istituto, non "tante unità che si
+# dividono gli slot" come Consigli/dipartimenti — niente bozza con più
+# righe, si crea direttamente. L'unica scelta non banale è per
+# l'Incontro scuola-famiglia: tutti i docenti o solo i coordinatori di
+# classe (segnalato da Roberto — è sempre una sola riunione, cambia
+# solo chi vi partecipa).
+TIPI_UNICI = {
+    'collegio':          {'label': 'Collegio docenti',         'durata_default': 120},
+    'incontro_famiglie': {'label': 'Incontro scuola-famiglia', 'durata_default': 120},
+}
+
+
+@generatore_cdc_bp.route('/generatore-cdc/eventi-unici', methods=['GET', 'POST'])
+def eventi_unici():
+    from routes.impostazione_anno import _anno_default_piano
+    anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_default_piano()
+    anni_disponibili = _anni_disponibili_assegnazioni(anno)
+
+    if request.method == 'POST':
+        from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+        from models.docente import Docente
+        from routes.attivita_ist import _non_in_servizio_per_data
+        from modules.generatore_cdc import coordinatori_di_classe
+
+        tipo = request.form.get('tipo', 'collegio')
+        if tipo not in TIPI_UNICI:
+            tipo = 'collegio'
+        titolo = request.form.get('titolo', '').strip() or TIPI_UNICI[tipo]['label']
+        data_s = request.form['data']
+        ora_inizio = request.form['ora_inizio']
+        durata_min = int(request.form.get('durata_min', 60))
+        partecipanti_sel = request.form.get('partecipanti', 'tutti')
+
+        data_ev = date.fromisoformat(data_s)
+        h, m = map(int, ora_inizio.split(':'))
+        fine_min = h * 60 + m + durata_min
+        ora_fine = f'{fine_min // 60:02d}:{fine_min % 60:02d}'
+
+        esclusi = _non_in_servizio_per_data(data_ev)
+        if tipo == 'incontro_famiglie' and partecipanti_sel == 'coordinatori':
+            id_docenti = coordinatori_di_classe(anno) - esclusi
+        else:
+            id_docenti = {d.id for d in Docente.query.filter_by(attivo=True).all()} - esclusi
+
+        ev = AttivitaIst(
+            tipo=tipo, titolo=titolo, data=data_ev,
+            ora_inizio=ora_inizio, ora_fine=ora_fine, origine='import_piano',
+        )
+        db.session.add(ev)
+        db.session.flush()
+        for id_doc in id_docenti:
+            db.session.add(AttivitaIstPartecipante(
+                id_attivita=ev.id, id_docente=id_doc, preset=True))
+        db.session.commit()
+        flash(f'Evento "{titolo}" creato ({len(id_docenti)} partecipanti).', 'success')
+        return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
+
+    return render_template('generatore_cdc/eventi_unici.html',
+        anno=anno, anni_disponibili=anni_disponibili, tipi_unici=TIPI_UNICI)

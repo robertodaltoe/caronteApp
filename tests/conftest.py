@@ -55,6 +55,7 @@ def app():
                                                        PianoAttivitaPersonaleVoce)
         from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa
         from models.sospensione import SospensioneDidattica  # noqa
+        from models.incarico import CategoriaIncarico, TipoIncarico, IncaricaDocente  # noqa
         db.create_all()
         yield app
         db.session.remove()

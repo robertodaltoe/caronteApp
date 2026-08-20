@@ -499,3 +499,151 @@ def test_conferma_dipartimenti_crea_eventi_con_partecipanti_da_docente_materia(a
     assert ev.titolo == 'Riunione dipartimento LET'
     partecipanti = AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()
     assert {p.id_docente for p in partecipanti} == {doc.id}
+
+
+# ── Riunione referenti: solo i capidipartimento ──────────────────────────────
+
+def _tipo_incarico(nome, collegato_a):
+    from models.incarico import TipoIncarico
+    t = TipoIncarico(nome=nome, categoria='strutturale', collegato_a=collegato_a)
+    db.session.add(t)
+    db.session.commit()
+    return t
+
+
+def test_riunione_referenti_usa_solo_i_capidipartimento_non_tutto_il_dipartimento(app, db_session):
+    """Richiesta di Roberto: la riunione dei referenti è riservata ai
+    soli capidipartimento, non a tutto il dipartimento come le altre
+    due — pesa diversamente nel conteggio ore proprio per questo."""
+    _registra_dip(app)
+    d1 = _dipartimento('Lettere', 'LET')
+    capo = crea_docente('Capo')
+    membro = crea_docente('Membro')
+
+    from models.materia import Materia, DocenteMateria
+    mat = Materia(nome='Italiano', sigla='ITA', id_dipartimento=d1.id)
+    db.session.add(mat)
+    db.session.commit()
+    # Entrambi insegnano nel dipartimento...
+    db.session.add(DocenteMateria(id_docente=capo.id, id_materia=mat.id, anno_scol=ANNO))
+    db.session.add(DocenteMateria(id_docente=membro.id, id_materia=mat.id, anno_scol=ANNO))
+    # ...ma solo uno è nominato referente
+    tipo_ref = _tipo_incarico('Referente di dipartimento', 'dipartimento')
+    from models.incarico import IncaricaDocente
+    db.session.add(IncaricaDocente(
+        anno_scol=ANNO, id_tipo_incarico=tipo_ref.id, id_docente=capo.id,
+        id_dipartimento=d1.id))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/dipartimenti', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'riunione_referenti',
+            'n_righe': '1',
+            'id_dipartimento_0': str(d1.id), 'sigla_0': 'LET',
+            'data_0': '2026-10-15', 'ora_inizio_0': '15:00', 'ora_fine_0': '15:45',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    ev = AttivitaIst.query.filter_by(tipo='riunione_referenti', id_dipartimento=d1.id).first()
+    partecipanti = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()}
+    assert partecipanti == {capo.id}  # non membro.id
+
+
+def test_bozza_riunione_referenti_segnala_dipartimento_senza_referente(app, db_session, monkeypatch):
+    _registra_dip(app)
+    d1 = _dipartimento('Scienze Motorie', 'SMS')
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/dipartimenti', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'riunione_referenti',
+            'dipartimenti': [str(d1.id)],
+            'data': '2026-10-15', 'ora_inizio': '15:00', 'durata_min': '45',
+        })
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['righe'][0]['senza_referente'] is True
+
+
+# ── Eventi unici: Collegio, Incontro scuola-famiglia ─────────────────────────
+
+def _registra_unici(app):
+    from routes.generatore_cdc import generatore_cdc_bp
+    from routes.attivita_ist import attivita_ist_bp
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(generatore_cdc_bp)
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(attivita_ist_bp)
+
+
+def test_collegio_include_tutti_i_docenti_in_servizio(app, db_session):
+    _registra_unici(app)
+    d1 = crea_docente('Uno')
+    d2 = crea_docente('Due')
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/eventi-unici', data={
+            'anno_scol': ANNO, 'tipo': 'collegio',
+            'data': '2026-09-02', 'ora_inizio': '09:00', 'durata_min': '120',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    ev = AttivitaIst.query.filter_by(tipo='collegio').first()
+    assert ev is not None
+    partecipanti = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()}
+    assert partecipanti == {d1.id, d2.id}
+
+
+def test_incontro_famiglie_solo_coordinatori(app, db_session):
+    """Richiesta di Roberto: l'incontro scuola-famiglia può essere per
+    tutti i docenti o solo per i coordinatori (una sola riunione in
+    entrambi i casi, cambia solo chi partecipa)."""
+    _registra_unici(app)
+    coord = crea_docente('Coordinatore')
+    altro = crea_docente('AltroDocente')
+
+    tipo_coord = _tipo_incarico('Coordinatore di classe', 'classe')
+    from models.incarico import IncaricaDocente
+    db.session.add(IncaricaDocente(
+        anno_scol=ANNO, id_tipo_incarico=tipo_coord.id, id_docente=coord.id,
+        indirizzo='LLI', anno_corso=3, sezione='A'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/eventi-unici', data={
+            'anno_scol': ANNO, 'tipo': 'incontro_famiglie', 'partecipanti': 'coordinatori',
+            'data': '2026-11-10', 'ora_inizio': '17:00', 'durata_min': '120',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    ev = AttivitaIst.query.filter_by(tipo='incontro_famiglie').first()
+    partecipanti = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()}
+    assert partecipanti == {coord.id}  # non altro.id
+
+
+def test_incontro_famiglie_tutti_i_docenti_di_default(app, db_session):
+    _registra_unici(app)
+    d1 = crea_docente('Uno')
+    d2 = crea_docente('Due')
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/eventi-unici', data={
+            'anno_scol': ANNO, 'tipo': 'incontro_famiglie', 'partecipanti': 'tutti',
+            'data': '2026-11-10', 'ora_inizio': '17:00', 'durata_min': '120',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    ev = AttivitaIst.query.filter_by(tipo='incontro_famiglie').first()
+    partecipanti = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()}
+    assert partecipanti == {d1.id, d2.id}

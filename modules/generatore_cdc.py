@@ -80,6 +80,42 @@ def docenti_per_dipartimento(anno_scol):
     return out
 
 
+def referenti_per_dipartimento(anno_scol):
+    """{id_dipartimento: set(id_docente)} dei soli docenti nominati
+    'Referente di dipartimento' (IncaricaDocente) per l'anno indicato —
+    a differenza della riunione di dipartimento/materia (tutti i
+    docenti del dipartimento), la riunione dei referenti è riservata a
+    chi ha l'incarico di capodipartimento: conta diversamente nel
+    computo ore proprio per questo, va tenuta distinta e non confusa
+    con 'dipartimento'/'riunione_materia' (segnalato da Roberto)."""
+    from models.incarico import IncaricaDocente, TipoIncarico
+
+    tipo_ref = TipoIncarico.query.filter_by(nome='Referente di dipartimento').first()
+    if not tipo_ref:
+        return {}
+    nomine = IncaricaDocente.query.filter_by(
+        anno_scol=anno_scol, id_tipo_incarico=tipo_ref.id).all()
+    out = {}
+    for n in nomine:
+        if n.id_dipartimento:
+            out.setdefault(n.id_dipartimento, set()).add(n.id_docente)
+    return out
+
+
+def coordinatori_di_classe(anno_scol):
+    """set(id_docente) dei coordinatori di classe (IncaricaDocente) per
+    l'anno indicato — un docente per classe, usato per l'opzione
+    'solo i coordinatori' degli incontri scuola-famiglia."""
+    from models.incarico import IncaricaDocente, TipoIncarico
+
+    tipo_coord = TipoIncarico.query.filter_by(nome='Coordinatore di classe').first()
+    if not tipo_coord:
+        return set()
+    nomine = IncaricaDocente.query.filter_by(
+        anno_scol=anno_scol, id_tipo_incarico=tipo_coord.id).all()
+    return {n.id_docente for n in nomine}
+
+
 def _to_min(hhmm):
     h, m = map(int, hhmm.split(':'))
     return h * 60 + m
