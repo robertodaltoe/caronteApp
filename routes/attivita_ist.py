@@ -445,6 +445,71 @@ def piano_annuale_pdf():
         return html_content
 
 
+@attivita_ist_bp.route('/attivita-ist/piano-annuale/xlsx')
+def piano_annuale_xlsx():
+    """
+    Export Excel dello stesso modello, questa volta replicando lo stile
+    esatto del foglio originale di Roberto
+    (BOZZA_PIANO_ATTIVITA_2026_27_CORRETTO.xlsx): titoli e intestazioni
+    colorate, colonna mese verticale, banner di giorno/sospensione/
+    termine lezioni, più il foglio "Riepilogo ore" per classe — vedi
+    modules/export_piano_xlsx.py per i dettagli e per cosa NON viene
+    replicato (testo libero/agenda, non un dato strutturato qui).
+    """
+    import io
+    from flask import send_file
+    from routes.impostazione_anno import _anno_default_piano
+    from config_anno import intervallo_anno_scolastico
+    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+    from modules.export_piano_xlsx import genera_xlsx_piano_annuale
+
+    anno = request.args.get('anno', _anno_default_piano())
+    mesi, _anni_disponibili, n_eventi = _righe_piano_annuale(anno)
+
+    ini, fine = intervallo_anno_scolastico(anno)
+
+    # Elenco ufficiale delle classi dell'anno da Assegnazioni (non solo
+    # dagli eventi già calendarizzati): così una classe senza ancora
+    # nessun CdC/scrutinio compare comunque con 0 ore, non sparisce.
+    righe_classi = (db.session.query(AssegnazioneClasse.indirizzo,
+                                      AssegnazioneClasse.anno_corso,
+                                      AssegnazioneClasse.sezione)
+                     .join(AssegnazioneDocente,
+                           AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
+                     .filter(AssegnazioneDocente.anno_scol == anno)
+                     .distinct().all())
+    classi_ore = {}
+    for indirizzo, anno_corso, sezione in righe_classi:
+        classi_ore[(indirizzo, f'{anno_corso}{sezione}')] = {'cdc': 0.0, 'scrutinio': 0.0}
+
+    eventi_classe = AttivitaIst.query.filter(
+        AttivitaIst.data >= ini, AttivitaIst.data <= fine,
+        AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio')),
+        AttivitaIst.classe.isnot(None)).all()
+    for ev in eventi_classe:
+        m = re.match(r'(\d+[AB]?)\s+(.+)', ev.classe)
+        if not m:
+            continue
+        classe, indirizzo = m.group(1), m.group(2)
+        acc = classi_ore.setdefault((indirizzo, classe), {'cdc': 0.0, 'scrutinio': 0.0})
+        chiave = 'cdc' if ev.tipo == 'consiglio_classe' else 'scrutinio'
+        acc[chiave] += ev.durata_ore
+
+    classi_ore_lista = [
+        (indirizzo, classe, v['cdc'], v['scrutinio'])
+        for (indirizzo, classe), v in sorted(classi_ore.items())
+    ]
+
+    wb = genera_xlsx_piano_annuale(mesi, classi_ore_lista, anno)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf, as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        download_name=f'piano_annuale_{anno}_{date.today().isoformat()}.xlsx')
+
+
 # ── RIEPILOGO ORE (Fase 2) ────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist/riepilogo-ore')

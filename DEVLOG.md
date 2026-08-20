@@ -4,6 +4,74 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 21 — Export Piano Annuale in Excel, stile identico al modello originale (Cowork)
+
+Dopo l'export PDF, Roberto ha chiarito che il formato condivisibile
+deve essere xlsx, non PDF, e ha fornito il file originale
+(`BOZZA_PIANO_ATTIVITA_2026_27_CORRETTO.xlsx`, 13 fogli) con
+l'istruzione di non cambiarne layout e stile. Analizzato il file con
+openpyxl prima di scrivere codice: titolo/intestazione colorati
+(fill `1F3864`/`2E5395`), colonna mese a sinistra ruotata 90° e unita
+per tutta l'altezza del foglio, banner colorati per giorno (blu
+`4472C4`), gruppi di attività multi-riga con intestazione propria
+(grigio-blu `6C7A96`), riga singola per eventi unici come il Collegio
+(rosa `EAD1DC`), festività a giorno singolo in rosso (`C00000`),
+sospensioni multi-giorno/termine lezioni in verde (`375623`), font
+"Open Sans" (stesso font già incorporato nei PDF di questa sessione),
+colonna Ore con formula `=(F-E)*24`, foglio "Riepilogo ore" a parte
+con Indirizzo/Classe/Ore Consigli/Ore Scrutini/Totale.
+
+Prima di scrivere codice, due punti erano ambigui e sono stati
+chiesti a Roberto invece di essere decisi da soli (regola
+"segnalare, mai decidere" su cose non ovvie dai dati):
+1. quali dei 13 fogli generare dai dati di CaronteApp — risposta:
+   solo i fogli mese + Riepilogo ore (Introduzione/Piano della
+   formazione/Dati_flat restano manuali o fuori scope);
+2. come trattare il testo libero del foglio originale (agenda del
+   Collegio, "ORDINE DEL GIORNO" dei Consigli) — non è un dato
+   strutturato in CaronteApp — risposta: lasciare vuote quelle celle,
+   da compilare a mano dopo l'export.
+
+**Semplificazione dichiarata, non silenziosa**: il foglio originale
+ha un'impaginazione in parte editoriale — es. la scritta "CONSIGLI DI
+CLASSE — Classi prime" copre più giorni consecutivi come un titolo di
+sezione scritto a mano, non derivabile meccanicamente dai singoli
+eventi in `AttivitaIst`. L'export generato invece raggruppa in modo
+puramente meccanico: un banner per ogni giorno con eventi, e sotto,
+per ogni giorno, un sotto-titolo per ciascun gruppo di eventi con lo
+stesso `tipo` (es. tutti i Consigli di classe di quel giorno) — stessi
+colori e stessa gerarchia visiva del modello, ma senza il
+raggruppamento pluri-giorno fatto a mano nell'originale. Roberto ne è
+stato informato esplicitamente, non è un dettaglio nascosto.
+
+**Implementazione**: nuovo `modules/export_piano_xlsx.py` (funzione
+pura `genera_xlsx_piano_annuale(mesi, classi_ore, anno)`, nessun
+accesso al DB — riceve gli stessi `mesi` già prodotti da
+`_righe_piano_annuale()`, la stessa fonte unica usata da schermo e
+PDF, coerente col principio "un solo posto per la stessa logica").
+Nuova route `piano_annuale_xlsx()` in `routes/attivita_ist.py`:
+oltre a passare `mesi`, calcola l'elenco ufficiale delle classi
+dell'anno da `AssegnazioneClasse`/`AssegnazioneDocente` (non solo
+dagli eventi già calendarizzati, così una classe senza ancora nessun
+CdC/scrutinio compare comunque con 0 ore, non sparisce dal
+riepilogo) e le ore per classe separate Consigli/Scrutini. Pulsante
+"Esporta Excel" aggiunto accanto a "Esporta PDF" in
+`templates/attivita_ist/piano_annuale.html`.
+
+Verificato: 6 test nuovi in `tests/test_export_piano_xlsx.py` (unitari
+sul modulo puro, oggetti-evento finti — un foglio per mese più
+Riepilogo, riga singola con fill rosa per Collegio, sottogruppo
+grigio-blu per eventi multipli stesso tipo/giorno, sospensione
+multi-giorno verde vs singolo giorno rosso, banner termine lezioni,
+righe del Riepilogo con le classi passate) + verifica end-to-end sul
+`database.db` reale (sola lettura, server avviato come per il PDF):
+export scaricato e riaperto con openpyxl, confermati fogli
+`['settembre 2026', 'dicembre 2026', ..., 'Riepilogo ore']`, banner
+"MARTEDÌ 1"/blu, "Collegio docenti"/rosa, sottogruppo "Formazione" e
+"Consiglio di classe" (18/09 reale)/grigio-blu, colonna mese unita
+verticalmente A3:A31, Riepilogo ore con 3 classi AFM/CAT reali e
+relative ore. 175/175 test passano (169 + 6 nuovi).
+
 ## Sessione 66 addendum 20 — Vista Piano Annuale condivisibile + export PDF (Cowork)
 
 Ultimo pezzo dell'estensione: "procedi, usa esattamente il modello che

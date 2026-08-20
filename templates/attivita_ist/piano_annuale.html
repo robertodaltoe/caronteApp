@@ -41,6 +41,7 @@
             {% endfor %}
         </div>
         {% endif %}
+        <a href="{{ url_for('attivita_ist.piano_annuale_xlsx', anno=anno) }}" class="btn btn-sm" style="background:#1d6f42;color:white;">{{ icon('download') }} Esporta Excel</a>
         <a href="{{ url_for('attivita_ist.piano_annuale_pdf', anno=anno) }}" class="btn btn-sm" style="background:var(--verde);color:white;">{{ icon('download') }} Esporta PDF</a>
         <a href="{{ url_for('attivita_ist.riepilogo_ore', anno=anno) }}" class="btn btn-sm" style="background:#0369a1;color:white;">{{ icon('check') }} Riepilogo ore</a>
         <a href="{{ url_for('attivita_ist.lista', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('building') }} Elenco/gestione eventi</a>
