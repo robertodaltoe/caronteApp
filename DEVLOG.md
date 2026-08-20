@@ -4,6 +4,33 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 14 — Generatore CdC: anno di default sbagliato (Cowork)
+
+Roberto: "se seleziono la pagina non ho modo di selezionare l'anno
+2026-2027. considera che la generazione del piano delle attività è
+un'attività preparatoria per il nuovo anno scolastico come
+assegnazioni e richiesta organico". Bug reale: `routes/generatore_cdc.py`
+usava `_anno_scolastico()` (calcolato dalla data odierna — oggi
+2025-2026, il cambio scatta a settembre) invece di
+`_anno_default_piano()` (l'anno con dati reali nel piano studi/calcolo
+organico, la stessa fonte già usata da Formazione e Piano Annuale in
+questa sessione) — e non c'era nemmeno un selettore anno a pillole per
+correggerlo a mano, a differenza di ogni altra pagina anno-scoped
+dell'app.
+
+Corretto in `index()` e `vincoli_manuali()`: default a
+`_anno_default_piano()`, aggiunto il selettore a pillole standard
+(nascosto se c'è un solo anno con Assegnazioni, come nelle altre
+pagine — oggi il caso reale, esiste solo il 2026-2027). Aggiunta
+`_anni_disponibili_assegnazioni()` per calcolare l'elenco dagli anni
+con Assegnazioni già inserite.
+
+Verificato: 1 test nuovo che blocca il comportamento (pagina aperta
+senza `?anno=` esplicito deve mostrare l'anno con dati nel piano
+studi, non quello odierno) + verifica a video sul reale — la pagina
+ora si apre di default su "a.s. 2026-2027" su entrambe le pagine.
+153/153 test passano (152 + 1 nuovo).
+
 ## Sessione 66 addendum 13 — Fase 3: Generatore Consigli di Classe (Cowork)
 
 Fase 3 del project plan approvato — la parte più impegnativa: bozza

@@ -6,6 +6,19 @@
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
     <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Generatore Consigli di classe</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('calendar') }} Vincoli manuali — a.s. {{ anno }}</h1>
+    {% if anni_disponibili|length > 1 %}
+    <div style="display:flex; gap:4px;">
+        {% for a in anni_disponibili %}
+        <a href="{{ url_for('generatore_cdc.vincoli_manuali', anno=a) }}"
+           style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                  text-decoration:none;
+                  {% if a == anno %}background:var(--blu); color:white;
+                  {% else %}background:#eef1f5; color:#374151;{% endif %}">
+            {{ a }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px;">
     Da impostare PRIMA di generare la bozza: una scadenza ("il CdC della 5A entro il 20")

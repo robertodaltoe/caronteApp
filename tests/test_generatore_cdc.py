@@ -208,3 +208,39 @@ def test_docenti_reali_per_classe_dalle_assegnazioni(db_session):
 
     mappa = gcdc.docenti_reali_per_classe(ANNO)
     assert mappa['3A LLI'] == {d1.id}
+
+
+# ── Anno di default: attività preparatoria per il nuovo anno ────────────────
+
+def test_pagina_generatore_apre_di_default_sullanno_in_preparazione(app, db_session, monkeypatch):
+    """Il Piano Annuale è un'attività preparatoria per il nuovo anno,
+    come Assegnazioni/richiesta organico — la pagina deve aprirsi di
+    default sull'anno in preparazione (_anno_default_piano), non
+    sull'anno scolastico corrente calcolato dalla data odierna. Bug
+    segnalato da Roberto: nessun modo di selezionare 2026-2027."""
+    from routes.generatore_cdc import generatore_cdc_bp
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(generatore_cdc_bp)
+
+    from models.piano_studi import PianoStudi
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+    db.session.add(PianoStudi(
+        anno_scol=ANNO, indirizzo='LLI', anno_corso=3,
+        id_classe_concorso=cc.id, ore_settimanali=4))
+    db.session.commit()
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.get('/generatore-cdc')  # nessun ?anno= esplicito
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['anno'] == ANNO

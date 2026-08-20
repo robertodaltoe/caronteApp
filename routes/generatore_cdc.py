@@ -18,6 +18,19 @@ def _anno_scolastico(d=None):
     return f'{d.year}-{d.year+1}' if d.month >= 9 else f'{d.year-1}-{d.year}'
 
 
+def _anni_disponibili_assegnazioni(anno_corrente):
+    """Anni con Assegnazioni già inserite, più recenti prima — stesso
+    ruolo di _anno_default_piano() ma come elenco per il selettore a
+    pillole. Il piano annuale è un'attività preparatoria per il nuovo
+    anno (come Assegnazioni/richiesta organico), quindi l'anno di
+    default deve essere quello in preparazione, non quello corrente."""
+    from models.assegnazione import AssegnazioneDocente
+    anni = sorted({a.anno_scol for a in AssegnazioneDocente.query.all()}, reverse=True)
+    if anno_corrente not in anni:
+        anni.insert(0, anno_corrente)
+    return anni
+
+
 # ── VINCOLI ORARIO FISSI (finestre settimanali indisponibili) ────────────────
 
 @generatore_cdc_bp.route('/generatore-cdc/vincoli-orario', methods=['GET', 'POST'])
@@ -53,7 +66,9 @@ def vincoli_orario():
 
 @generatore_cdc_bp.route('/generatore-cdc/vincoli-manuali', methods=['GET', 'POST'])
 def vincoli_manuali():
-    anno = request.args.get('anno', _anno_scolastico())
+    from routes.impostazione_anno import _anno_default_piano
+    anno = request.args.get('anno', _anno_default_piano())
+    anni_disponibili = _anni_disponibili_assegnazioni(anno)
 
     if request.method == 'POST':
         azione = request.form.get('azione')
@@ -80,7 +95,7 @@ def vincoli_manuali():
     vincoli = VincoloGeneratoreCdc.query.filter_by(anno_scol=anno).order_by(
         VincoloGeneratoreCdc.classe).all()
     return render_template('generatore_cdc/vincoli_manuali.html',
-        vincoli=vincoli, anno=anno, tipi=TIPI_VINCOLO_CDC)
+        vincoli=vincoli, anno=anno, anni_disponibili=anni_disponibili, tipi=TIPI_VINCOLO_CDC)
 
 
 # ── GENERATORE ────────────────────────────────────────────────────────────────
@@ -88,8 +103,10 @@ def vincoli_manuali():
 @generatore_cdc_bp.route('/generatore-cdc', methods=['GET', 'POST'])
 def index():
     from modules.generatore_cdc import docenti_reali_per_classe, genera_bozza_cdc
+    from routes.impostazione_anno import _anno_default_piano
 
-    anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_scolastico()
+    anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_default_piano()
+    anni_disponibili = _anni_disponibili_assegnazioni(anno)
     classi_disponibili = sorted(docenti_reali_per_classe(anno).keys())
 
     if request.method == 'POST' and request.form.get('azione') == 'genera':
@@ -144,4 +161,4 @@ def index():
         return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
 
     return render_template('generatore_cdc/index.html',
-        anno=anno, classi_disponibili=classi_disponibili)
+        anno=anno, anni_disponibili=anni_disponibili, classi_disponibili=classi_disponibili)

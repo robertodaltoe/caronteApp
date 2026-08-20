@@ -5,7 +5,20 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
     <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('compass') }} Generatore Consigli di classe — a.s. {{ anno }}</h1>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        {% if anni_disponibili|length > 1 %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('generatore_cdc.index', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno %}background:var(--blu); color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
         <a href="{{ url_for('generatore_cdc.vincoli_orario') }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('clock') }} Vincoli orario fissi</a>
         <a href="{{ url_for('generatore_cdc.vincoli_manuali', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('calendar') }} Vincoli manuali</a>
         <a href="{{ url_for('attivita_ist.lista', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('building') }} Attività istituzionali</a>
