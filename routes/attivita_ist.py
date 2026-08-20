@@ -130,6 +130,91 @@ def _preset_partecipanti(attivita):
     return risultato
 
 
+def _iscrivi_docente_a_eventi(id_docente, eventi):
+    """
+    Nucleo comune a iscrivi_docente_a_obbligatori/_classe/_dipartimento:
+    aggiunge id_docente come partecipante (preset=True) a ciascun evento
+    della lista, saltando chi non è in servizio a quella data e chi è
+    già iscritto. Ritorna il numero di righe aggiunte.
+    """
+    from models.attivita_ist import AttivitaIstPartecipante
+
+    esclusi_per_data = {}
+    aggiunti = 0
+    for ev in eventi:
+        if ev.data not in esclusi_per_data:
+            esclusi_per_data[ev.data] = _non_in_servizio_per_data(ev.data)
+        if id_docente in esclusi_per_data[ev.data]:
+            continue
+        dup = AttivitaIstPartecipante.query.filter_by(
+            id_attivita=ev.id, id_docente=id_docente).first()
+        if not dup:
+            db.session.add(AttivitaIstPartecipante(
+                id_attivita=ev.id, id_docente=id_docente, preset=True))
+            aggiunti += 1
+
+    if aggiunti:
+        db.session.commit()
+    return aggiunti
+
+
+def iscrivi_docente_a_eventi_classe(id_docente, classi_label):
+    """
+    Iscrive un docente agli eventi futuri di Consiglio di classe/
+    scrutinio già creati per le classi indicate — chiamata da
+    routes/assegnazioni.py (salva/aggiorna_ore/nomina) quando gli si
+    assegnano ore su una classe. Usa le Assegnazioni come segnale (non
+    l'orario, che _preset_partecipanti usa per un motivo diverso — dare
+    la lista più aggiornata possibile vicino alla data dell'evento — ma
+    che si stabilizza troppo tardi per essere un buon trigger qui,
+    vedi CLAUDE.md): quando Roberto assegna una classe, è già il
+    segnale giusto, non serve aspettare l'orario.
+
+    classi_label: iterabile di stringhe nel formato di
+    AttivitaIst.classe / OrarioDocente.classe (es. "3A LLI" —
+    AssegnazioneClasse.label_classe è già in questo formato).
+    """
+    if not classi_label:
+        return 0
+    from datetime import date
+    from models.attivita_ist import AttivitaIst
+
+    oggi = date.today()
+    eventi = AttivitaIst.query.filter(
+        AttivitaIst.data >= oggi,
+        AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio')),
+        AttivitaIst.classe.in_(list(classi_label)),
+    ).all()
+    return _iscrivi_docente_a_eventi(id_docente, eventi)
+
+
+def iscrivi_docente_a_eventi_dipartimento(id_docente, id_dipartimento):
+    """
+    Iscrive un docente agli eventi futuri di dipartimento/riunione
+    materia/riunione referenti già creati per il dipartimento indicato
+    — chiamata da routes/assegnazioni.py::_sync_docente_materie() dopo
+    aver sincronizzato una nuova DocenteMateria (stesso segnale, non
+    serve aspettare altro).
+
+    GLO resta fuori anche da questo: il preset del GLO è sempre vuoto
+    (solo manuale, vedi _preset_partecipanti) perché la partecipazione
+    dipende dall'alunno seguito, non dalla classe o dal dipartimento —
+    non esiste un dato di assegnazione da cui derivarla automaticamente.
+    """
+    if not id_dipartimento:
+        return 0
+    from datetime import date
+    from models.attivita_ist import AttivitaIst
+
+    oggi = date.today()
+    eventi = AttivitaIst.query.filter(
+        AttivitaIst.data >= oggi,
+        AttivitaIst.tipo.in_(('dipartimento', 'riunione_materia', 'riunione_referenti')),
+        AttivitaIst.id_dipartimento == id_dipartimento,
+    ).all()
+    return _iscrivi_docente_a_eventi(id_docente, eventi)
+
+
 def iscrivi_docente_a_obbligatori(docente):
     """
     Iscrive un docente appena attivato (nuovo o riattivato, vedi
@@ -153,7 +238,7 @@ def iscrivi_docente_a_obbligatori(docente):
     per la data, o se non ci sono eventi futuri di questi tipi).
     """
     from datetime import date
-    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    from models.attivita_ist import AttivitaIst
     from models.formazione import CorsoFormazione
 
     oggi = date.today()
@@ -166,26 +251,10 @@ def iscrivi_docente_a_obbligatori(docente):
 
     corsi_volontari_evento_ids = {
         c.id_attivita for c in CorsoFormazione.query.filter_by(obbligatorio_tutti=False).all()}
+    eventi = [ev for ev in eventi
+              if not (ev.tipo == 'formazione' and ev.id in corsi_volontari_evento_ids)]
 
-    esclusi_per_data = {}
-    aggiunti = 0
-    for ev in eventi:
-        if ev.tipo == 'formazione' and ev.id in corsi_volontari_evento_ids:
-            continue
-        if ev.data not in esclusi_per_data:
-            esclusi_per_data[ev.data] = _non_in_servizio_per_data(ev.data)
-        if docente.id in esclusi_per_data[ev.data]:
-            continue
-        dup = AttivitaIstPartecipante.query.filter_by(
-            id_attivita=ev.id, id_docente=docente.id).first()
-        if not dup:
-            db.session.add(AttivitaIstPartecipante(
-                id_attivita=ev.id, id_docente=docente.id, preset=True))
-            aggiunti += 1
-
-    if aggiunti:
-        db.session.commit()
-    return aggiunti
+    return _iscrivi_docente_a_eventi(docente.id, eventi)
 
 
 def _auto_presenze(attivita):

@@ -74,13 +74,20 @@ def _sync_docente_materie(id_docente, asgn, anno_scol):
     per la pulizia simmetrica quando le ore vengono tolte). Non tocca
     mai righe già presenti, nemmeno per cambiarne l'origine: se una
     materia era già stata aggiunta a mano (origine='manuale') resta tale.
+
+    Iscrive anche il docente agli eventi futuri di dipartimento/
+    riunione materia già creati per il dipartimento di ogni nuova
+    materia (vedi routes/attivita_ist.py::iscrivi_docente_a_eventi_dipartimento)
+    — stesso segnale, non serve un aggancio separato.
     """
-    from models.materia import DocenteMateria
+    from models.materia import DocenteMateria, Materia
+    from routes.attivita_ist import iscrivi_docente_a_eventi_dipartimento
 
     materie_ids = {ac.id_materia for ac in asgn.classi if ac.id_materia}
     if not materie_ids:
         return
 
+    nuove = []
     for id_mat in materie_ids:
         esiste = DocenteMateria.query.filter_by(
             id_docente=id_docente,
@@ -92,7 +99,14 @@ def _sync_docente_materie(id_docente, asgn, anno_scol):
                 id_materia=id_mat,
                 anno_scol=anno_scol,
                 origine='auto'))
+            nuove.append(id_mat)
     db.session.commit()
+
+    dipartimenti_ids = {m.id_dipartimento for m in
+                        Materia.query.filter(Materia.id.in_(nuove)).all()
+                        if m.id_dipartimento}
+    for id_dip in dipartimenti_ids:
+        iscrivi_docente_a_eventi_dipartimento(id_docente, id_dip)
 
 
 def _pulisci_docente_materie_orfane(id_docente, anno_scol):
@@ -523,9 +537,15 @@ def salva():
 
     db.session.commit()
 
-    # Sincronizza DocenteMateria se è un docente reale
+    # Sincronizza DocenteMateria se è un docente reale, e iscrive il
+    # docente agli eventi futuri (Consigli/scrutini per le classi appena
+    # assegnate, dipartimenti/riunioni materia dentro _sync_docente_materie)
+    # già creati per queste classi — vedi routes/attivita_ist.py.
     if id_doc:
         _sync_docente_materie(id_doc, asgn, anno)
+        from routes.attivita_ist import iscrivi_docente_a_eventi_classe
+        iscrivi_docente_a_eventi_classe(
+            id_doc, [ac.label_classe for ac in asgn.classi])
 
     flash(f'Assegnazione {asgn.display_name} salvata.', 'success')
     ancora = request.form.get('ancora', '')
@@ -646,9 +666,14 @@ def aggiorna_ore(asgn_id):
         db.session.add(ac)
     db.session.commit()
 
-    # Sincronizza DocenteMateria se docente reale
-    if asgn.id_docente and id_mat:
-        _sync_docente_materie(asgn.id_docente, asgn, asgn.anno_scol)
+    # Sincronizza DocenteMateria se docente reale, e iscrive il docente
+    # agli eventi futuri di Consiglio di classe/scrutinio già creati per
+    # questa classe — vedi routes/attivita_ist.py.
+    if asgn.id_docente:
+        if id_mat:
+            _sync_docente_materie(asgn.id_docente, asgn, asgn.anno_scol)
+        from routes.attivita_ist import iscrivi_docente_a_eventi_classe
+        iscrivi_docente_a_eventi_classe(asgn.id_docente, [ac.label_classe])
 
     tot = _tot_ore(asgn_id)
 
@@ -758,8 +783,14 @@ def nomina(asgn_id):
         asgn.id_docente = id_doc
         asgn.nome_placeholder = None
         db.session.commit()
-        # Il docente nominato eredita le materie del placeholder
+        # Il docente nominato eredita le materie del placeholder, e si
+        # iscrive agli eventi futuri già creati per le classi che il
+        # placeholder copriva (nessuno lo avrebbe fatto prima: finché
+        # era un placeholder, id_docente era vuoto).
         _sync_docente_materie(id_doc, asgn, asgn.anno_scol)
+        from routes.attivita_ist import iscrivi_docente_a_eventi_classe
+        iscrivi_docente_a_eventi_classe(
+            id_doc, [ac.label_classe for ac in asgn.classi])
         flash(f'Nominato: {doc.cognome} {doc.nome} — materie sincronizzate.', 'success')
     return redirect(url_for('assegnazioni.index', anno=asgn.anno_scol))
 

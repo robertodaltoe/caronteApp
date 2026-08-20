@@ -48,6 +48,8 @@ def app():
         from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,  # noqa
                                           AttivitaIstPresenza)
         from models.formazione import CorsoFormazione  # noqa
+        from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse  # noqa
+        from models.piano_studi import PianoStudi  # noqa
         db.create_all()
         yield app
         db.session.remove()

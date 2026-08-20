@@ -4,6 +4,56 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 4 — Iscrizione automatica anche per classe/dipartimento (Cowork)
+
+Seguito diretto dell'addendum 3: Roberto ha chiesto se, assegnando una
+classe a un docente, questo verrebbe iscritto anche a Consigli di
+classe/dipartimenti/riunioni materia/GLO già creati. Risposta iniziale:
+no, e lì il motivo non era "manca l'aggancio" ma che
+`_preset_partecipanti()` per questi tipi guarda l'**orario**
+(`OrarioDocente.classe`/`DocenteMateria`), non le Assegnazioni — un
+aggancio alle Assegnazioni non avrebbe comunque coinciso con la fonte
+dati usata dal preset. Roberto ha fatto notare, correttamente, che le
+Assegnazioni SONO già il segnale giusto ("quando assegno, non cambio
+l'assegnazione classe") — non serve che l'aggancio replichi la stessa
+fonte dati di `_preset_partecipanti()` (che ha un compito diverso: dare
+la lista più aggiornata vicino alla data dell'evento), può benissimo
+usare le Assegnazioni come proprio segnale indipendente.
+
+Aggiunte due funzioni in `routes/attivita_ist.py`, con un nucleo comune
+`_iscrivi_docente_a_eventi()` condiviso anche da
+`iscrivi_docente_a_obbligatori()` (rifattorizzata sullo stesso helper):
+- `iscrivi_docente_a_eventi_classe(id_docente, classi_label)` — Consigli
+  di classe/scrutini futuri per le classi indicate. Note:
+  `AssegnazioneClasse.label_classe` produce già lo stesso formato di
+  `AttivitaIst.classe`/`OrarioDocente.classe` (es. "3A LLI"), nessuna
+  conversione necessaria.
+- `iscrivi_docente_a_eventi_dipartimento(id_docente, id_dipartimento)` —
+  dipartimenti/riunioni materia/riunioni referenti futuri per quel
+  dipartimento.
+
+Agganciate in `routes/assegnazioni.py` in tutti e 3 i punti dove un
+docente reale si lega a una classe: `salva()` (form assegnazione),
+`aggiorna_ore()` (endpoint AJAX della griglia interattiva — il percorso
+usato davvero dall'interfaccia), `nomina()` (placeholder → docente
+reale). Il lato dipartimenti è agganciato dentro `_sync_docente_materie()`
+stessa (già chiamata da tutti e 3 i punti), non serve ripeterlo.
+
+GLO resta l'unico caso davvero irriducibile: il suo preset è sempre
+vuoto e manuale (dipende dall'alunno seguito, non dalla classe/
+dipartimento) — non esiste alcun dato di assegnazione da cui derivarlo,
+spiegato a Roberto invece di forzare una soluzione.
+
+Verificato: 8 test nuovi (`tests/test_iscrizione_automatica_assegnazione.py`,
+sia sulle funzioni isolate sia sulle route reali `/assegnazioni/salva`
+e `/assegnazioni/<id>/nomina` con blueprint registrato su un'app di
+test), più import dei modelli mancanti (`AssegnazioneDocente`,
+`AssegnazioneClasse`, `PianoStudi`) in `tests/conftest.py`. Smoke test
+di `/assegnazioni`, `/attivita-ist`, `/docenti` su copia del
+database.db reale (nessun evento futuro di questi tipi esiste ancora
+in produzione, quindi nessun comportamento visibile da verificare lì
+oltre all'assenza di errori). 122/122 test passano (114 + 8 nuovi).
+
 ## Sessione 66 addendum 3 — Iscrizione automatica docente a eventi obbligatori (Cowork)
 
 Roberto: "quando aggiungerò un nuovo docente, quello verrà inserito in
