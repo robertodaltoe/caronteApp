@@ -4,6 +4,34 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 7 — Stesso bug di overflow tabella su /attivita-ist (Cowork)
+
+Roberto ha segnalato che anche `templates/attivita_ist/lista.html`
+(la pagina principale di Attività istituzionali, non toccata
+nell'addendum 5) aveva lo stesso problema: tabella 1663px dentro un
+contenitore da 1240px, `overflow-x` non gestito → colonne
+Bucket/N.doc/Azioni irraggiungibili, confermato via JS prima del fix
+esattamente come nell'addendum 5. Preesistente, non introdotto in
+questa sessione.
+
+Stesso fix: `overflow-x:auto` + `table-layout:fixed` nel macro
+condiviso `tabella_eventi()` (usato sia per gli eventi futuri sia per
+quelli già svolti), con `white-space:normal` sulla colonna Titolo per
+i titoli lunghi. Le colonne Data/Tipo/Bucket/Doc. avevano bisogno di
+qualche px in più (con `table-layout:fixed` un contenuto più largo
+della colonna viene tagliato silenziosamente, non si allarga più da
+solo come con `auto`) e l'etichetta "N. doc." è stata accorciata a
+"Doc." per stare nella larghezza assegnata. Verificato via JS che la
+tabella combacia esattamente col contenitore. Nessuna modifica alla
+logica, solo al template — 128/128 test invariati.
+
+Dato che questo pattern (tabella larga + `.card` senza scroll interno)
+si è ripetuto due volte in pagine diverse, vale la pena, se emergono
+altre segnalazioni simili, controllare anche le altre pagine con
+tabelle non ancora passate in rassegna in questa sessione (es.
+`dipartimenti.html`, `presenze.html`) invece di aspettare che si
+ripresentino una per una.
+
 ## Sessione 66 addendum 6 — Fase 2: Vista Piano Annuale + Riepilogo ore (Cowork)
 
 Fase 2 del project plan approvato: due nuove pagine di sola lettura in
