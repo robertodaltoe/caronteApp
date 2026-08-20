@@ -302,3 +302,55 @@ def test_conferma_scrutinio_crea_eventi_tipo_scrutinio(app, db_session):
     ev = AttivitaIst.query.filter_by(tipo='scrutinio', classe='1A LLI').first()
     assert ev is not None
     assert ev.titolo == 'Scrutinio 1A LLI'
+
+
+# ── GLO nello stesso generatore ──────────────────────────────────────────────
+
+def test_genera_glo_richiede_comunque_selezione_classi(app, db_session, monkeypatch):
+    """Richiesta di Roberto: selezionando GLO si sceglie comunque
+    l'elenco classi del turno, stesso form degli altri tipi — l'unica
+    differenza è l'insieme docenti usato per evitare sovrapposizioni
+    (l'intera classe, per eccesso, non solo chi segue quello specifico
+    alunno — non c'è un dato più preciso da cui partire)."""
+    _registra(app)
+    _fissa_docenti(monkeypatch, {'2A LLI': {7}})
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'glo',
+            'classi': ['2A LLI'],
+            'data_inizio': '2026-09-14', 'data_fine': '2026-09-18',
+            'ora_inizio_giorno': '14:00', 'ora_fine_giorno': '18:00',
+            'durata_min': '45',
+        })
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['tipo'] == 'glo'
+    assert catturato['kwargs']['tipo_label'] == 'GLO'
+    assert catturato['kwargs']['bozza'][0]['classe'] == '2A LLI'
+    assert catturato['kwargs']['bozza'][0]['conflitto'] is False
+
+
+def test_conferma_glo_crea_evento_tipo_glo(app, db_session):
+    _registra(app)
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'glo',
+            'n_righe': '1',
+            'classe_0': '2A LLI', 'data_0': '2026-09-14',
+            'ora_inizio_0': '14:00', 'ora_fine_0': '14:45',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst
+    ev = AttivitaIst.query.filter_by(tipo='glo', classe='2A LLI').first()
+    assert ev is not None
+    assert ev.titolo == 'GLO 2A LLI'

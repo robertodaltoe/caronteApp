@@ -4,6 +4,31 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 16 — Generatore: aggiunto GLO (Cowork)
+
+Roberto: "mettiamo anche GLO come selezione. Se imposto GLO però devo
+selezionare le classi che fanno parte del turno". Aggiunto come terzo
+tipo in `TIPI_GENERABILI` (45 min di default) — stesso form, stesso
+selettore classi già usato per Consigli/Scrutini, nessuna differenza
+di interfaccia.
+
+Punto segnalato esplicitamente nel codice (non deciso in silenzio):
+altrove nell'app `_preset_partecipanti()` tratta il GLO come "solo
+manuale" — nessun preset automatico, perché la composizione reale
+dipende dall'alunno seguito (sostegno + pochi curricolari), non
+dall'intera classe. Qui invece, non avendo un dato più preciso da cui
+partire, il generatore usa comunque l'insieme docenti dell'INTERA
+classe come segnale di conflitto — una stima per eccesso: nessun
+rischio di doppio impegno, ma potrebbe evitare sovrapposizioni non
+realmente necessarie e proporre meno slot del possibile. I
+partecipanti proposti restano comunque modificabili come sempre dalla
+pagina presenze.
+
+Verificato: 2 test nuovi (`tests/test_generatore_cdc.py` — GLO
+richiede comunque le classi, conferma crea eventi tipo GLO) + verifica
+a video che l'opzione compaia nel selettore. 157/157 test passano
+(155 + 2 nuovi).
+
 ## Sessione 66 addendum 15 — Generatore: anche gli scrutini (Cowork)
 
 Roberto ha proposto di estendere il generatore: turni multipli,
