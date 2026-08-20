@@ -12,6 +12,16 @@ from datetime import date
 
 generatore_cdc_bp = Blueprint('generatore_cdc', __name__)
 
+# Tipi generabili con lo stesso motore (stessa logica di preset/bucket
+# di _preset_partecipanti per 'consiglio_classe'/'scrutinio' — vedi
+# routes/attivita_ist.py). Il Collegio docenti resta fuori di
+# proposito: coinvolge tutti i docenti insieme, non ha nulla da mettere
+# in parallelo (non è "tante classi che si dividono gli slot").
+TIPI_GENERABILI = {
+    'consiglio_classe': {'label': 'Consiglio di classe', 'durata_default': 60},
+    'scrutinio':         {'label': 'Scrutinio',           'durata_default': 45},
+}
+
 
 def _anno_scolastico(d=None):
     d = d or date.today()
@@ -110,6 +120,9 @@ def index():
     classi_disponibili = sorted(docenti_reali_per_classe(anno).keys())
 
     if request.method == 'POST' and request.form.get('azione') == 'genera':
+        tipo = request.form.get('tipo', 'consiglio_classe')
+        if tipo not in TIPI_GENERABILI:
+            tipo = 'consiglio_classe'
         classi_sel = request.form.getlist('classi')
         data_inizio = date.fromisoformat(request.form['data_inizio'])
         data_fine = date.fromisoformat(request.form['data_fine'])
@@ -129,11 +142,15 @@ def index():
 
         return render_template('generatore_cdc/bozza.html',
             anno=anno, bozza=bozza, durata_min=durata_min,
-            classi_ds=classi_ds)
+            classi_ds=classi_ds, tipo=tipo, tipo_label=TIPI_GENERABILI[tipo]['label'])
 
     if request.method == 'POST' and request.form.get('azione') == 'conferma':
         from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
         from modules.generatore_cdc import docenti_reali_per_classe as _drc
+        tipo = request.form.get('tipo', 'consiglio_classe')
+        if tipo not in TIPI_GENERABILI:
+            tipo = 'consiglio_classe'
+        tipo_label = TIPI_GENERABILI[tipo]['label']
         n_ini = int(request.form.get('n_righe', 0))
         docenti_map = _drc(anno)
         creati = 0
@@ -146,7 +163,7 @@ def index():
             if not (classe and data_s and ora_ini and ora_fin):
                 continue  # riga lasciata vuota/in conflitto: non creata, va piazzata a mano
             ev = AttivitaIst(
-                tipo='consiglio_classe', titolo=f'Consiglio di classe {classe}',
+                tipo=tipo, titolo=f'{tipo_label} {classe}',
                 data=date.fromisoformat(data_s), ora_inizio=ora_ini, ora_fine=ora_fin,
                 classe=classe, origine='import_piano', richiede_ds=richiede_ds,
             )
@@ -157,8 +174,9 @@ def index():
                     id_attivita=ev.id, id_docente=id_doc, preset=True))
             creati += 1
         db.session.commit()
-        flash(f'{creati} Consigli di classe creati.', 'success')
+        flash(f'{creati} eventi "{tipo_label}" creati.', 'success')
         return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
 
     return render_template('generatore_cdc/index.html',
-        anno=anno, anni_disponibili=anni_disponibili, classi_disponibili=classi_disponibili)
+        anno=anno, anni_disponibili=anni_disponibili, classi_disponibili=classi_disponibili,
+        tipi_generabili=TIPI_GENERABILI)

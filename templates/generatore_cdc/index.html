@@ -25,8 +25,8 @@
     </div>
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
-    Genera una bozza di calendarizzazione per i Consigli di classe scelti: raggruppa in
-    parallelo le classi che non condividono docenti, rispettando i vincoli orario fissi e
+    Genera una bozza di calendarizzazione per le classi scelte: raggruppa in
+    parallelo quelle che non condividono docenti, rispettando i vincoli orario fissi e
     quelli manuali già impostati. La bozza resta modificabile — nulla viene creato finché
     non la confermi.
 </p>
@@ -35,6 +35,19 @@
     <form method="post" action="{{ url_for('generatore_cdc.index') }}">
         <input type="hidden" name="azione" value="genera">
         <input type="hidden" name="anno_scol" value="{{ anno }}">
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Tipo di riunione</label>
+            <select name="tipo" id="sel-tipo" onchange="aggiornaDurata()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                {% for k, v in tipi_generabili.items() %}
+                <option value="{{ k }}" data-durata="{{ v.durata_default }}">{{ v.label }}</option>
+                {% endfor %}
+            </select>
+            <p style="color:var(--grigio); font-size:.78rem; margin-top:4px;">
+                Stessa logica di raggruppamento per entrambi (nessun docente condiviso nello
+                stesso slot) — cambia solo la durata di default, modificabile qui sotto.
+            </p>
+        </div>
 
         <div style="margin-bottom:16px;">
             <label style="display:block; font-weight:600; margin-bottom:6px;">Classi da calendarizzare</label>
@@ -77,7 +90,7 @@
             </div>
             <div>
                 <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Durata (min)</label>
-                <input type="number" name="durata_min" value="60" min="15" step="15" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:90px;">
+                <input type="number" name="durata_min" id="inp-durata" value="60" min="15" step="15" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:90px;">
             </div>
         </div>
 
@@ -107,6 +120,11 @@
 <script>
 function selTutte(sel) {
     document.querySelectorAll('.chk-classe').forEach(function(c) { c.checked = sel; });
+}
+function aggiornaDurata() {
+    var sel = document.getElementById('sel-tipo');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('inp-durata').value = opt.dataset.durata;
 }
 </script>
 {% endblock %}

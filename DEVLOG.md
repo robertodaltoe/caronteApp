@@ -4,6 +4,37 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 15 — Generatore: anche gli scrutini (Cowork)
+
+Roberto ha proposto di estendere il generatore: turni multipli,
+scrutini con la stessa regola dei Consigli, Collegio/dipartimenti/
+materia nello stesso strumento, vista condivisibile con le
+sospensioni. Discusso insieme prima di implementare (domanda
+esplicita "sei d'accordo?"): confermato che scrutini si estendono
+bene con lo stesso motore (stessa logica di preset/bucket di
+`_preset_partecipanti` per `consiglio_classe`/`scrutinio`), i
+dipartimenti/materia richiedono un raggruppamento per dipartimento
+invece che per classe (motore gemello, non un'opzione in più), e il
+Collegio docenti non si adatta allo schema (coinvolge tutti insieme,
+niente da mettere in parallelo) — va tenuto fuori dall'algoritmo.
+Roberto ha scelto di partire dagli scrutini, il resto in seguito.
+
+Aggiunto un selettore "Tipo di riunione" (Consiglio di classe /
+Scrutinio) in cima al form del generatore, con durata di default
+diversa (60 min / 45 min, aggiornata via JS alla scelta) — la logica
+di raggruppamento (`genera_bozza_cdc`) resta identica, non sapeva né
+sa nulla del tipo: il tipo entra in gioco solo nella conferma finale,
+per il campo `AttivitaIst.tipo` e il titolo dell'evento.
+
+Verificato: 3 test nuovi (`tests/test_generatore_cdc.py` — genera con
+tipo scrutinio produce bozza corretta, conferma crea eventi con
+tipo/titolo giusti) + verifica a video che la durata si aggiorni da
+sola cambiando il tipo. 155/155 test passano (153 + 3, uno in più del
+previsto perché il test dell'addendum 14 era già conteggiato).
+
+Prossimo passo scelto da Roberto: turni multipli nello stesso invio,
+poi dipartimenti/materia, poi vista condivisibile con le sospensioni.
+
 ## Sessione 66 addendum 14 — Generatore CdC: anno di default sbagliato (Cowork)
 
 Roberto: "se seleziono la pagina non ho modo di selezionare l'anno

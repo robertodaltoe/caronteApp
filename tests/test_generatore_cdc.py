@@ -244,3 +244,61 @@ def test_pagina_generatore_apre_di_default_sullanno_in_preparazione(app, db_sess
         assert r.status_code == 200
 
     assert catturato['kwargs']['anno'] == ANNO
+
+
+# ── Scrutini nello stesso generatore ─────────────────────────────────────────
+
+def _registra(app):
+    from routes.generatore_cdc import generatore_cdc_bp
+    from routes.attivita_ist import attivita_ist_bp
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(generatore_cdc_bp)
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(attivita_ist_bp)
+
+
+def test_genera_scrutinio_usa_tipo_e_durata_corretti(app, db_session, monkeypatch):
+    """Stessa logica di raggruppamento dei Consigli, ma tipo/durata di
+    default diversi — richiesto da Roberto: gli scrutini seguono la
+    stessa regola dei Consigli di classe."""
+    _registra(app)
+    _fissa_docenti(monkeypatch, {'1A LLI': {1}})
+
+    catturato = {}
+    import routes.generatore_cdc as mod
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'scrutinio',
+            'classi': ['1A LLI'],
+            'data_inizio': '2026-09-14', 'data_fine': '2026-09-18',
+            'ora_inizio_giorno': '14:00', 'ora_fine_giorno': '18:00',
+            'durata_min': '45',
+        })
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['tipo'] == 'scrutinio'
+    assert catturato['kwargs']['tipo_label'] == 'Scrutinio'
+    assert catturato['kwargs']['bozza'][0]['conflitto'] is False
+
+
+def test_conferma_scrutinio_crea_eventi_tipo_scrutinio(app, db_session):
+    _registra(app)
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'scrutinio',
+            'n_righe': '1',
+            'classe_0': '1A LLI', 'data_0': '2026-09-14',
+            'ora_inizio_0': '14:00', 'ora_fine_0': '14:45',
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+    from models.attivita_ist import AttivitaIst
+    ev = AttivitaIst.query.filter_by(tipo='scrutinio', classe='1A LLI').first()
+    assert ev is not None
+    assert ev.titolo == 'Scrutinio 1A LLI'

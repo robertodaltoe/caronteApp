@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% from '_icons.html' import icon %}
-{% block title %}Bozza Consigli di classe{% endblock %}
+{% block title %}Bozza {{ tipo_label }}{% endblock %}
 
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
     <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Rigenera</a>
-    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('check') }} Bozza Consigli di classe — a.s. {{ anno }}</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('check') }} Bozza {{ tipo_label }} — a.s. {{ anno }}</h1>
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:18px;">
     Proposta modificabile: correggi data/ora dove serve (in particolare le righe in conflitto,
@@ -24,6 +24,7 @@
 <form method="post" action="{{ url_for('generatore_cdc.index') }}">
     <input type="hidden" name="azione" value="conferma">
     <input type="hidden" name="anno_scol" value="{{ anno }}">
+    <input type="hidden" name="tipo" value="{{ tipo }}">
     <input type="hidden" name="n_righe" value="{{ bozza|length }}">
 
     <div class="card" style="padding:0; overflow:hidden;">
