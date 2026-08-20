@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 5 — Fix stile tabella Piano della Formazione (Cowork)
+
+Roberto: "la tabella non segue per niente lo standard dell'app". Due
+problemi distinti, trovati confrontando con `templates/utenti/lista.html`
+e `templates/attivita_ist/piano_personale_lista.html`:
+
+1. La tabella non era dentro un `<div class="card">` — mancavano
+   sfondo/bordi arrotondati/ombra standard, e il badge "obbligatorio"
+   era un pill fatto a mano invece della classe `.badge` già in uso
+   ovunque nell'app.
+2. Più serio: la tabella (7 colonne, titoli di corso reali fino a ~150
+   caratteri, es. "Indicazioni operative didattiche d'Istituto
+   (prassi); Relazioni e funzionamento della segreteria; Buone prassi
+   procedurali e scadenze didattiche") si allargava a 1836px dentro un
+   contenitore di 772-1240px. Il CSS globale (`.card{overflow:hidden}`)
+   NON mostra una scrollbar in questo caso — taglia via in silenzio le
+   colonne Modalità/Periodo/Iscritti/Azioni, rendendo i pulsanti
+   modifica/elimina letteralmente irraggiungibili. Confermato via
+   JS (`getBoundingClientRect`) prima e dopo il fix, non solo a
+   schermata.
+
+Fix: adottato lo stesso pattern già usato per tabelle con contenuto
+lungo altrove (`piano_personale_lista.html`) —
+`<div class="card"><div style="overflow-x:auto;"><table
+style="table-layout:fixed; min-width:920px;">`, con `white-space:normal;
+word-wrap:break-word` sulle colonne di testo libero (Titolo, Tipologia)
+così il contenuto va a capo nella colonna invece di forzarne
+l'allargamento. Verificato: tabella ora esattamente larga quanto il
+contenitore (1240px = 1240px), nessun taglio, tutte le azioni
+raggiungibili. 6/6 test di `test_formazione.py` invariati (nessuna
+logica toccata, solo template).
+
 ## Sessione 66 addendum 4 — Iscrizione automatica anche per classe/dipartimento (Cowork)
 
 Seguito diretto dell'addendum 3: Roberto ha chiesto se, assegnando una

@@ -30,47 +30,52 @@
     scuola-famiglia nel monte 40h, non in quello dei Consigli di classe.
 </p>
 
-<table style="table-layout:auto; width:100%;">
-    <thead>
-        <tr>
-            <th>Titolo</th>
-            <th style="width:160px;">Tipologia</th>
-            <th style="width:70px; text-align:center;">Ore</th>
-            <th style="width:110px;">Modalità</th>
-            <th style="width:180px;">Periodo</th>
-            <th style="width:90px; text-align:center;">Iscritti</th>
-            <th style="width:110px; text-align:center;">Azioni</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for c in corsi %}
-        <tr>
-            <td>
-                {{ c.titolo }}
-                {% if c.obbligatorio_tutti %}
-                <span style="display:inline-block; margin-left:6px; padding:1px 8px; border-radius:10px; font-size:.7rem; font-weight:700; background:#dbeafe; color:#1e40af;">obbligatorio</span>
-                {% endif %}
-            </td>
-            <td>{{ c.tipologia or '—' }}</td>
-            <td style="text-align:center;">{{ c.ore }}</td>
-            <td>{{ c.modalita_label }}</td>
-            <td>{{ c.periodo_label }}</td>
-            <td style="text-align:center;">{{ c.n_iscritti }}</td>
-            <td style="text-align:center;">
-                <div style="display:flex; gap:4px; justify-content:center;">
-                    <a href="{{ url_for('formazione.form', id=c.id) }}" class="btn btn-sm btn-primary" title="Modifica">{{ icon('edit') }}</a>
-                    <form method="post" action="{{ url_for('formazione.elimina', id=c.id) }}"
-                          onsubmit="return confirm('Eliminare il corso {{ c.titolo|e }}? Vengono rimossi anche l\'evento istituzionale collegato e le iscrizioni.');">
-                        <button type="submit" class="btn btn-sm btn-danger" title="Elimina">{{ icon('trash') }}</button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:24px;">
-            Nessun corso di formazione per l'anno {{ anno }}.
-        </td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:920px;">
+        <thead>
+            <tr>
+                <th style="width:280px;">Titolo</th>
+                <th style="width:190px;">Tipologia</th>
+                <th style="width:60px; text-align:center;">Ore</th>
+                <th style="width:100px;">Modalità</th>
+                <th style="width:150px;">Periodo</th>
+                <th style="width:70px; text-align:center;">Iscritti</th>
+                <th style="width:70px; text-align:center;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in corsi %}
+            <tr>
+                <td style="white-space:normal; word-wrap:break-word;">
+                    <strong>{{ c.titolo }}</strong>
+                    {% if c.obbligatorio_tutti %}
+                    <span class="badge badge-blu">obbligatorio</span>
+                    {% endif %}
+                </td>
+                <td style="white-space:normal; word-wrap:break-word;">{{ c.tipologia or '—' }}</td>
+                <td style="text-align:center;">{{ c.ore }}</td>
+                <td>{{ c.modalita_label }}</td>
+                <td style="font-size:.82rem; color:var(--grigio); white-space:normal;">{{ c.periodo_label }}</td>
+                <td style="text-align:center;">{{ c.n_iscritti }}</td>
+                <td style="text-align:center;">
+                    <div style="display:flex; gap:4px; justify-content:center;">
+                        <a href="{{ url_for('formazione.form', id=c.id) }}" class="btn btn-primary btn-sm" title="Modifica">{{ icon('edit') }}</a>
+                        <form method="post" action="{{ url_for('formazione.elimina', id=c.id) }}"
+                              onsubmit="return confirm('Eliminare il corso {{ c.titolo|e }}? Vengono rimossi anche l\'evento istituzionale collegato e le iscrizioni.');"
+                              style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm" title="Elimina">{{ icon('trash') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" style="text-align:center; color:var(--grigio); padding:24px;">
+                Nessun corso di formazione per l'anno {{ anno }}.
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
 {% endblock %}
