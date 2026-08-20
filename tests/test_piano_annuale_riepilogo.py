@@ -111,6 +111,29 @@ def test_riepilogo_ore_per_docente_confronta_col_bucket(app, db_session, monkeyp
     assert righe[0]['eccede_a'] is False
 
 
+def test_riepilogo_ore_esclude_docente_gia_uscito_per_lanno_mostrato(app, db_session, monkeypatch):
+    """Un docente convocato a un evento PRIMA che la sua uscita fosse
+    segnalata (riga AttivitaIstPartecipante non si aggiorna da sola)
+    non deve comparire nel riepilogo per l'anno in cui non è più in
+    servizio — bug segnalato da Roberto dopo il fix delle tendine."""
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    d = crea_docente('Uscente', tipo_contratto='TI')
+    d.anno_scol_uscita = ANNO
+    d.motivo_uscita = 'pensionamento'
+    ev = AttivitaIst(tipo='collegio', titolo='Collegio', data=date(2026, 9, 2),
+                      durata_min=120, origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id, preset=True))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['riepilogo_docenti'] == []
+
+
 def test_riepilogo_ore_docente_senza_eventi_non_compare(app, db_session, monkeypatch):
     catturato = _registra_blueprint_con_cattura(app, monkeypatch)
     crea_docente('Bianchi')

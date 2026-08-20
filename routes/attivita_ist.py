@@ -406,8 +406,16 @@ def riepilogo_ore():
         acc = ore_docente.setdefault(id_doc, [0.0, 0.0])
         acc[0 if ev.bucket == BUCKET_A else 1] += ev.durata_ore
 
+    # Esclude chi non è (più) in servizio nell'anno mostrato: le righe
+    # AttivitaIstPartecipante non si aggiornano da sole quando un
+    # docente viene segnalato uscente DOPO essere stato convocato (es.
+    # un Collegio di inizio anno creato prima che l'uscita fosse nota) —
+    # senza questo filtro il riepilogo mostrerebbe ore per docenti già
+    # non più in servizio per l'anno selezionato.
+    esclusi_rif = _non_in_servizio_per_data(ini)
     docenti = {d.id: d for d in Docente.query.filter(
-        Docente.id.in_(ore_docente.keys())).all()}
+        Docente.id.in_(ore_docente.keys())).all()
+        if d.id not in esclusi_rif}
     riepilogo_docenti = []
     for id_doc, (ore_a, ore_b) in ore_docente.items():
         doc = docenti.get(id_doc)

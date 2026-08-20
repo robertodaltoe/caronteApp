@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 9 — Stesso bug anche nel Riepilogo ore (Cowork)
+
+Seguito diretto dell'addendum 8: Roberto ha rifatto la verifica e
+trovato lo stesso problema in `riepilogo_ore()`, non nelle tendine
+stavolta ma nel report — 83 docenti mostrati per il 2026-2027 contro
+i ~57 realmente in servizio quell'anno (93 attivi totali, 34 con
+`anno_scol_uscita<=2026-2027`).
+
+Causa diversa dall'addendum precedente: qui il problema non è una
+tendina che propone nuove selezioni, ma il fatto che le righe
+`AttivitaIstPartecipante` di un evento già esistente (es. "Collegio
+dei docenti — settembre 2026") non si aggiornano da sole quando
+l'uscita di un docente viene segnalata DOPO che è già stato convocato
+— pattern "campi congelati alla creazione" già documentato in
+CLAUDE.md. Il report leggeva quelle righe così com'erano, senza
+rivalidare lo stato di servizio dei docenti al momento della lettura.
+
+Fix scelto deliberatamente **read-only**: `riepilogo_ore()` ora
+esclude dal report chi non è in servizio per l'anno mostrato
+(`_non_in_servizio_per_data`), senza toccare/cancellare le righe
+`AttivitaIstPartecipante` esistenti — un conto è correggere cosa si
+*mostra* nel riepilogo, un altro è decidere se quell'evento già
+svolto/pianificato debba davvero perdere quel partecipante (dato
+storico, potenzialmente voluto). Nessuna scrittura sul DB per questo
+fix.
+
+Verificato: 1 test nuovo in `tests/test_piano_annuale_riepilogo.py`
+(docente con partecipazione registrata PRIMA dell'uscita, verificato
+che sparisca dal riepilogo dell'anno in cui non è più in servizio).
+Confermato sul database.db reale: righe da 83 a 57, ALAIMO Giuseppe
+non più presente. 134/134 test passano (133 + 1 nuovo).
+
 ## Sessione 66 addendum 8 — Docenti fuori servizio comparivano nelle tendine (Cowork)
 
 Roberto: "verifica la correttezza del richiamo dei docenti in funzione
