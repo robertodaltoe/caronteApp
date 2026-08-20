@@ -486,6 +486,19 @@ def form(id=None):
     # Pre-selezione docenti per preset
     preset_ids = _preset_partecipanti(evento) if evento else []
     docenti_selezionati = {p.id_docente for p in evento.partecipanti} if evento else set()
+
+    # Esclude dall'elenco selezionabile chi non è in servizio alla data
+    # dell'evento (uscita già segnalata per quell'anno, non ancora
+    # arrivato...), a meno che non sia già preset/selezionato — per non
+    # farlo mai sparire silenziosamente da una selezione esistente, solo
+    # evitare di proporne di nuovi non più in servizio (vedi anche
+    # routes/formazione.py::form(), stesso principio).
+    data_rif = evento.data if evento else date.fromisoformat(
+        request.args.get('data', date.today().isoformat()))
+    esclusi_rif = _non_in_servizio_per_data(data_rif)
+    gia_coinvolti = set(preset_ids) | docenti_selezionati
+    docenti = [d for d in docenti if d.id not in esclusi_rif or d.id in gia_coinvolti]
+
     return render_template('attivita_ist/form.html',
         evento=evento, docenti=docenti, dipartimenti=dipartimenti,
         classi=classi_db, tipi=TIPI_ATTIVITA,
@@ -552,7 +565,6 @@ def presenze(id):
     for i in Indisponibilita.query.filter_by(data=evento.data).all():
         indisponibilita_giorno.setdefault(i.id_docente, []).append(i)
 
-    docenti_extra = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     presenze_map  = {p.id_docente: p for p in evento.presenze}
 
     # Docenti convocati (già presenti in elenco) ma non più in servizio alla
@@ -561,6 +573,14 @@ def presenze(id):
     # Include anche, per gli eventi di luglio/agosto, chi ha un contratto già
     # scaduto (supplenti brevi, TD fino a GS) — vedi _non_in_servizio_per_data.
     non_in_servizio_ids = _non_in_servizio_per_data(evento.data)
+
+    # Stesso filtro applicato anche alla tendina "+ Aggiungi docente": non
+    # ha senso proporre di aggiungere qualcuno già non in servizio a quella
+    # data (chi è già stato convocato prima di uscire resta comunque
+    # visibile in elenco, solo segnalato — vedi non_in_servizio_ids sopra).
+    docenti_extra = [d for d in Docente.query.filter_by(attivo=True).all()
+                     if d.id not in non_in_servizio_ids]
+    docenti_extra.sort(key=lambda d: d.cognome)
 
     return render_template('attivita_ist/presenze.html',
         evento=evento, presenze_map=presenze_map,

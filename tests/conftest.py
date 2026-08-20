@@ -51,6 +51,8 @@ def app():
         from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse  # noqa
         from models.piano_studi import PianoStudi  # noqa
         from models.config_app import ConfigApp  # noqa
+        from models.piano_attivita_personale import (PianoAttivitaPersonale,  # noqa
+                                                       PianoAttivitaPersonaleVoce)
         db.create_all()
         yield app
         db.session.remove()

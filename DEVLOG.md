@@ -4,6 +4,55 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 8 — Docenti fuori servizio comparivano nelle tendine (Cowork)
+
+Roberto: "verifica la correttezza del richiamo dei docenti in funzione
+dell'a.s. selezionato. in 2026-2027 compaiono anche i docenti che sono
+già stati indicati fuori servizio". Confermato sul DB reale: molti
+docenti hanno `anno_scol_uscita='2026-2027'` (fine_td, pensionamento,
+trasferimento — segnalati dal passo 7) ma restano `attivo=True` fino a
+fine dell'anno corrente (2025-2026), come corretto — il bug era che
+tre tendine di selezione manuale filtravano solo per `attivo=True`,
+ignorando `anno_scol_uscita`, mentre il preset automatico
+(`_preset_partecipanti`, via `_non_in_servizio_per_data` /
+`_docenti_non_in_servizio` di routes/docenti.py) lo gestiva già
+correttamente da tempo — stesso pattern di bug ricorrente già
+documentato in CLAUDE.md (fix analogo già fatto 3 volte per altri
+punti: recupero agosto/giugno, attivita_ist, incarichi.py), qui
+ripresentatosi in punti non ancora coperti.
+
+Tre punti corretti, tutti con lo stesso principio — escludere chi non
+è in servizio alla data di riferimento MA senza mai far sparire un
+docente già selezionato/convocato in precedenza (solo evitare di
+proporne di nuovi):
+- `routes/formazione.py::form()` — tendina "iscrivi un docente":
+  nuova lista `docenti_selezionabili` (filtrata) accanto a `docenti`
+  (completa, invariata, usata per l'elenco "già iscritto" così un
+  docente iscritto prima di uscire resta visibile).
+- `routes/attivita_ist.py::form()` — checkbox partecipanti: filtrata
+  la stessa `docenti` ma con eccezione esplicita per chi è già
+  preset/selezionato (`gia_coinvolti`).
+- `routes/attivita_ist.py::presenze()` — tendina "+ Aggiungi docente":
+  `docenti_extra` ora filtrata con `non_in_servizio_ids`, già calcolata
+  lì per un altro scopo (segnalare i convocati usciti) — bug proprio
+  accanto al codice che already gestiva correttamente l'avviso.
+
+Verificato: 5 test nuovi (`tests/test_esclusione_non_in_servizio_form.py`)
+con lo stesso approccio "monkeypatch di render_template" già usato per
+Fase 2 (il fixture app leggero non ha il template_folder reale).
+Aggiunto anche l'import di `PianoAttivitaPersonale`/`PianoAttivitaPersonaleVoce`
+mancante in `tests/conftest.py` (serviva a `_preset_partecipanti()`).
+Verificato anche sul database.db reale: ALAIMO Giuseppe (uscita
+2026-2027) non compare più né nella tendina Formazione né nei checkbox
+di un nuovo evento del 2026-2027. 133/133 test passano (128 + 5 nuovi).
+
+Non toccati in questo giro (stesso bug, ma non ancora segnalato/
+verificato): righe 907/945/1025 di routes/attivita_ist.py (roster
+docenti-materie, sostituzione scrutinio) — usano lo stesso
+`Docente.query.filter_by(attivo=True)` senza filtro anno. Da
+sistemare se/quando emerge un caso concreto, invece di un'estensione
+preventiva non richiesta.
+
 ## Sessione 66 addendum 7 — Stesso bug di overflow tabella su /attivita-ist (Cowork)
 
 Roberto ha segnalato che anche `templates/attivita_ist/lista.html`

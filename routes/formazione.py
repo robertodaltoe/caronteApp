@@ -97,9 +97,25 @@ def form(id=None):
         flash(f'Corso {"aggiornato" if id else "creato"}: {titolo}', 'success')
         return redirect(url_for('formazione.lista', anno=anno_scol))
 
+    # Per la tendina "iscrivi un docente" filtra chi non è in servizio
+    # alla data del corso (uscita già segnalata per l'anno del corso,
+    # non ancora arrivato, ecc. — vedi _non_in_servizio_per_data):
+    # senza questo filtro un docente con anno_scol_uscita già impostato
+    # per l'anno del corso comparirebbe comunque tra i selezionabili,
+    # pur restando attivo=True fino a fine dell'anno corrente. La lista
+    # 'docenti' completa resta invariata per mostrare comunque chi è
+    # già iscritto anche se nel frattempo è uscito (stesso principio
+    # già usato per i partecipanti di AttivitaIst, non sparisce chi è
+    # già stato convocato, solo segnalato altrove).
+    from routes.attivita_ist import _non_in_servizio_per_data
+    data_rif = corso.data_inizio if corso else date.today()
+    esclusi_rif = _non_in_servizio_per_data(data_rif)
+    docenti_selezionabili = [d for d in docenti if d.id not in esclusi_rif]
+
     iscritti_ids = {p.id_docente for p in corso.attivita.partecipanti} if corso else set()
     return render_template('formazione/form.html',
-        corso=corso, docenti=docenti, iscritti_ids=iscritti_ids,
+        corso=corso, docenti=docenti, docenti_selezionabili=docenti_selezionabili,
+        iscritti_ids=iscritti_ids,
         modalita=MODALITA, anno_default=_anno_scolastico())
 
 

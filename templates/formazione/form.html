@@ -84,7 +84,7 @@
           style="display:flex; gap:8px; margin-bottom:14px;">
         <select name="id_docente" required style="flex:1; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px;">
             <option value="">— iscrivi un docente —</option>
-            {% for d in docenti if d.id not in iscritti_ids %}
+            {% for d in docenti_selezionabili if d.id not in iscritti_ids %}
             <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
             {% endfor %}
         </select>
