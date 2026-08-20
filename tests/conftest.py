@@ -50,6 +50,7 @@ def app():
         from models.formazione import CorsoFormazione  # noqa
         from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse  # noqa
         from models.piano_studi import PianoStudi  # noqa
+        from models.config_app import ConfigApp  # noqa
         db.create_all()
         yield app
         db.session.remove()

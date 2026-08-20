@@ -314,6 +314,118 @@ def lista():
     )
 
 
+# ── VISTA PIANO ANNUALE (Fase 2 del Piano Annuale delle Attività) ────────────
+
+@attivita_ist_bp.route('/attivita-ist/piano-annuale')
+def piano_annuale():
+    """
+    Vista mensile di AttivitaIst raggruppata per giorno, con intestazioni
+    di sezione — stesso ruolo dei fogli mensili di
+    BOZZA_PIANO_ATTIVITA_2026_27.xlsx, ma calcolata dai dati già in app
+    invece di un foglio da tenere allineato a mano (Fase 2 del project
+    plan). L'ordinamento cronologico degli eventi (già settembre→agosto,
+    l'anno scolastico è già in ordine di data) basta a raggruppare i
+    mesi nell'ordine giusto, senza bisogno di riordinarli a mano.
+    """
+    from config_anno import intervallo_anno_scolastico
+    from routes.impostazione_anno import _anno_default_piano
+    from modules.prospetto_supplenze import MESI_IT
+
+    anno = request.args.get('anno', _anno_default_piano())
+    anni_disponibili = sorted(
+        {_anno_scolastico(e.data) for e in AttivitaIst.query.all()}, reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    ini, fine = intervallo_anno_scolastico(anno)
+    eventi = AttivitaIst.query.filter(
+        AttivitaIst.data >= ini, AttivitaIst.data <= fine
+    ).order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all()
+
+    mesi = []  # [(etichetta, {data: [eventi]})]
+    chiave_mese_corrente = None
+    giorni_correnti = None
+    for ev in eventi:
+        chiave = (ev.data.year, ev.data.month)
+        if chiave != chiave_mese_corrente:
+            chiave_mese_corrente = chiave
+            giorni_correnti = {}
+            mesi.append((f'{MESI_IT[ev.data.month]} {ev.data.year}', giorni_correnti))
+        giorni_correnti.setdefault(ev.data, []).append(ev)
+
+    return render_template('attivita_ist/piano_annuale.html',
+        mesi=mesi, anno=anno, anni_disponibili=anni_disponibili,
+        tipi=TIPI_ATTIVITA, oggi=date.today(), n_eventi=len(eventi))
+
+
+# ── RIEPILOGO ORE (Fase 2) ────────────────────────────────────────────────────
+
+@attivita_ist_bp.route('/attivita-ist/riepilogo-ore')
+def riepilogo_ore():
+    """
+    Due report, stesso ruolo del foglio "Riepilogo ore" del piano
+    cartaceo (Fase 2 del project plan):
+    - ore per classe (Consigli + Scrutini), da AttivitaIst.durata_ore;
+    - ore per docente su Collegio/Consigli/Formazione confrontate col
+      bucket A/B (40h), per far emergere un'eccedenza prima che si
+      presenti — riusa quota_ore_bucket() già scritta per il Piano
+      Attività Personale (Sessione 57), non un calcolo parallelo.
+    """
+    from config_anno import intervallo_anno_scolastico
+    from routes.impostazione_anno import _anno_default_piano
+    from models.attivita_ist import BUCKET_A, BUCKET_B
+    from models.piano_attivita_personale import quota_ore_bucket
+
+    anno = request.args.get('anno', _anno_default_piano())
+    anni_disponibili = sorted(
+        {_anno_scolastico(e.data) for e in AttivitaIst.query.all()}, reverse=True)
+    if anno not in anni_disponibili:
+        anni_disponibili.insert(0, anno)
+
+    ini, fine = intervallo_anno_scolastico(anno)
+
+    # Ore per classe (Consigli + Scrutini)
+    eventi_classe = AttivitaIst.query.filter(
+        AttivitaIst.data >= ini, AttivitaIst.data <= fine,
+        AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio')),
+        AttivitaIst.classe.isnot(None),
+    ).all()
+    ore_per_classe = {}
+    for ev in eventi_classe:
+        ore_per_classe[ev.classe] = ore_per_classe.get(ev.classe, 0) + ev.durata_ore
+    ore_per_classe = sorted(ore_per_classe.items())
+
+    # Ore per docente vs bucket A/B
+    righe = (db.session.query(AttivitaIst, AttivitaIstPartecipante.id_docente)
+             .join(AttivitaIstPartecipante, AttivitaIstPartecipante.id_attivita == AttivitaIst.id)
+             .filter(AttivitaIst.data >= ini, AttivitaIst.data <= fine).all())
+    ore_docente = {}  # {id_docente: [ore_a, ore_b]}
+    for ev, id_doc in righe:
+        if ev.bucket not in (BUCKET_A, BUCKET_B):
+            continue
+        acc = ore_docente.setdefault(id_doc, [0.0, 0.0])
+        acc[0 if ev.bucket == BUCKET_A else 1] += ev.durata_ore
+
+    docenti = {d.id: d for d in Docente.query.filter(
+        Docente.id.in_(ore_docente.keys())).all()}
+    riepilogo_docenti = []
+    for id_doc, (ore_a, ore_b) in ore_docente.items():
+        doc = docenti.get(id_doc)
+        if not doc:
+            continue
+        quota_a, quota_b = quota_ore_bucket(doc, anno)
+        riepilogo_docenti.append(dict(
+            docente=doc, ore_a=round(ore_a, 1), ore_b=round(ore_b, 1),
+            quota_a=quota_a, quota_b=quota_b,
+            eccede_a=ore_a > quota_a, eccede_b=ore_b > quota_b,
+        ))
+    riepilogo_docenti.sort(key=lambda r: (r['docente'].cognome, r['docente'].nome))
+
+    return render_template('attivita_ist/riepilogo_ore.html',
+        anno=anno, anni_disponibili=anni_disponibili,
+        ore_per_classe=ore_per_classe, riepilogo_docenti=riepilogo_docenti)
+
+
 # ── NUOVO / MODIFICA ─────────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist/nuova', methods=['GET', 'POST'])

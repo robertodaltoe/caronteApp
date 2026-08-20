@@ -33,6 +33,8 @@
     <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('building') }} Attività Istituzionali</h1>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ url_for('attivita_ist.form') }}" class="btn btn-success btn-sm">+ Nuovo evento</a>
+        <a href="{{ url_for('attivita_ist.piano_annuale') }}" class="btn btn-sm" style="background:var(--blu);color:white;">{{ icon('list') }} Piano Annuale</a>
+        <a href="{{ url_for('attivita_ist.riepilogo_ore') }}" class="btn btn-sm" style="background:#0369a1;color:white;">{{ icon('check') }} Riepilogo ore</a>
         <a href="{{ url_for('attivita_ist.import_piano_xlsx') }}" class="btn btn-sm btn-primary">{{ icon('download') }} Import piano da xlsx</a>
         <a href="{{ url_for('attivita_ist.dipartimenti') }}" class="btn btn-sm" style="background:var(--viola);color:white;">{{ icon('layers') }} Dipartimenti/Materie</a>
         {% if puo_vedere('piano_personale') %}

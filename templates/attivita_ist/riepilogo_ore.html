@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Riepilogo Ore — Piano Annuale{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('check') }} Riepilogo ore — a.s. {{ anno }}</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        {% if anni_disponibili|length > 1 %}
+        <div style="display:flex; gap:4px;">
+            {% for a in anni_disponibili %}
+            <a href="{{ url_for('attivita_ist.riepilogo_ore', anno=a) }}"
+               style="padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+                      text-decoration:none;
+                      {% if a == anno %}background:var(--blu); color:white;
+                      {% else %}background:#eef1f5; color:#374151;{% endif %}">
+                {{ a }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ url_for('attivita_ist.piano_annuale', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('list') }} Piano Annuale</a>
+    </div>
+</div>
+
+<h2 style="font-size:1.05rem; color:var(--blu); margin:22px 0 10px;">Ore per classe (Consigli + Scrutini)</h2>
+{% if not ore_per_classe %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">Nessun Consiglio/Scrutinio registrato per l'anno {{ anno }}.</div>
+{% else %}
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:400px;">
+        <thead>
+            <tr>
+                <th style="width:200px;">Classe</th>
+                <th style="text-align:center;">Ore totali</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for classe, ore in ore_per_classe %}
+            <tr>
+                <td><span class="badge badge-blu">{{ classe }}</span></td>
+                <td style="text-align:center; font-weight:700;">{{ '%.1f'|format(ore) }}h</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+<h2 style="font-size:1.05rem; color:var(--blu); margin:26px 0 10px;">
+    Ore per docente vs bucket CCNL (Collegio/Consigli/Formazione)
+</h2>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:10px;">
+    Bucket A e B, 40h/anno ciascuno per una cattedra piena — proporzionati
+    per chi ha cattedra incompleta. Un'eccedenza qui segnala di verificare
+    prima che si presenti, non blocca nulla automaticamente.
+</p>
+{% if not riepilogo_docenti %}
+<div class="card" style="text-align:center; padding:24px; color:var(--grigio);">Nessun docente con eventi previsti per l'anno {{ anno }}.</div>
+{% else %}
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:640px;">
+        <thead>
+            <tr>
+                <th style="width:220px;">Docente</th>
+                <th style="text-align:center;">Bucket A</th>
+                <th style="text-align:center;">Bucket B</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in riepilogo_docenti %}
+            <tr>
+                <td><strong>{{ r.docente.cognome }}</strong> {{ r.docente.nome }}</td>
+                <td style="text-align:center; {% if r.eccede_a %}color:var(--rosso); font-weight:700;{% endif %}">
+                    {{ r.ore_a }}h / {{ r.quota_a }}h
+                    {% if r.eccede_a %}<br><span class="badge badge-rosso" style="font-size:.68rem;">eccede</span>{% endif %}
+                </td>
+                <td style="text-align:center; {% if r.eccede_b %}color:var(--rosso); font-weight:700;{% endif %}">
+                    {{ r.ore_b }}h / {{ r.quota_b }}h
+                    {% if r.eccede_b %}<br><span class="badge badge-rosso" style="font-size:.68rem;">eccede</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

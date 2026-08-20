@@ -4,6 +4,52 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 6 — Fase 2: Vista Piano Annuale + Riepilogo ore (Cowork)
+
+Fase 2 del project plan approvato: due nuove pagine di sola lettura in
+`routes/attivita_ist.py`, stesso ruolo dei fogli "mensili" e "Riepilogo
+ore" del piano cartaceo, ma calcolate dai dati già in app.
+
+- **`/attivita-ist/piano-annuale`**: vista mensile di `AttivitaIst`
+  raggruppata per giorno, con intestazioni di sezione. L'ordinamento
+  cronologico degli eventi (già settembre→agosto per costruzione, un
+  anno scolastico è già in ordine di data) basta a raggruppare i mesi
+  nell'ordine giusto senza bisogno di riordinarli a mano — nessuna
+  lista `MESI_IT` da re-ordinare, solo raggruppamento consecutivo.
+  Riusa `modules/prospetto_supplenze.py::MESI_IT` per le etichette
+  invece di affidarsi a `strftime('%B')` (dipendente dal locale di
+  sistema, con fallback a catena già visto fallire in `app.py`).
+- **`/attivita-ist/riepilogo-ore`**: due report — ore per classe
+  (Consigli + Scrutini, da `AttivitaIst.durata_ore`) e ore per docente
+  su Collegio/Consigli/Formazione confrontate col bucket A/B, che riusa
+  **`quota_ore_bucket()`** già scritta per il Piano Attività Personale
+  (Sessione 57) invece di un calcolo di quota parallelo — funziona
+  automaticamente sia per cattedra piena (40h) sia proporzionale
+  (cattedra incompleta), nessuna logica duplicata. Un'eccedenza è solo
+  segnalata (badge rosso "eccede"), non blocca nulla.
+
+Tenuto a mente il bug di stile appena corretto (addendum 5): entrambe
+le tabelle usano da subito `overflow-x:auto` + `table-layout:fixed`
+dentro `.card`, verificato via JS (`getBoundingClientRect`) che
+nessuna delle due eccede il contenitore anche coi titoli di corso più
+lunghi già in produzione.
+
+Verificato: 6 test nuovi (`tests/test_piano_annuale_riepilogo.py`) —
+raggruppamento mese/giorno, somma ore per classe, confronto bucket con
+e senza eccedenza, docente senza eventi che non compare. Il fixture
+`app` leggero dei test non ha il template_folder reale né i context
+processor dell'app (stesso limite già noto, vedi
+`test_piano_attivita_personale.py`): monkeypatch di `render_template`
+per catturare i dati calcolati dalla route invece di renderizzare
+l'HTML, così i test verificano la logica anche senza i template reali.
+Aggiunto anche l'import di `ConfigApp` mancante in `tests/conftest.py`
+(serviva a `quota_ore_bucket()`). Verificato a video sul server con
+CARONTE_SKIP_LOGIN, solo lettura, contro il database.db reale (già
+popolato dal Collegio e dai 12 corsi Formazione importati). 128/128
+test passano (122 + 6 nuovi).
+
+Prossimo passo: Fase 3 (Generatore Consigli di Classe).
+
 ## Sessione 66 addendum 5 — Fix stile tabella Piano della Formazione (Cowork)
 
 Roberto: "la tabella non segue per niente lo standard dell'app". Due
