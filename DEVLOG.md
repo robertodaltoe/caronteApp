@@ -4,6 +4,17 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 11 — Conferma aggiornamento live placeholder (Cowork)
+
+Roberto: "e se inserisco un nuovo placeholder si aggiorna l'elenco?"
+Sì per costruzione — `riepilogo_ore()` non ha nessuna cache, rilegge
+`AssegnazioneDocente` a ogni richiesta. Aggiunto un test dedicato che
+lo blocca esplicitamente (carica la pagina, crea un placeholder DOPO,
+ricarica, verifica che compaia) invece di lasciarlo solo implicito nel
+comportamento della route — utile soprattutto se in futuro qualcuno
+aggiungesse una cache qui senza pensare a invalidarla. 138/138 test
+passano (137 + 1 nuovo).
+
 ## Sessione 66 addendum 10 — Placeholder supplenti nel Riepilogo ore (Cowork)
 
 Richiesta di Roberto: nel Riepilogo ore per docente, vedere anche i

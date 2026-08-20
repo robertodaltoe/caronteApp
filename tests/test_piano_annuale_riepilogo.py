@@ -227,6 +227,30 @@ def test_riepilogo_ore_placeholder_non_conta_ore_scrutinio(app, db_session, monk
     assert placeholder_righe == []  # nessuna ora di bucket B, la riga non compare
 
 
+def test_riepilogo_ore_mostra_placeholder_inserito_dopo_il_primo_caricamento(app, db_session, monkeypatch):
+    """La route non ha nessuna cache: un placeholder creato DOPO aver
+    già aperto la pagina deve comparire alla richiesta successiva senza
+    bisogno di alcuna azione — risposta alla domanda di Roberto se
+    l'elenco si aggiorna da solo quando ne inserisce uno nuovo."""
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    db.session.add(AttivitaIst(tipo='consiglio_classe', titolo='CdC 4A RIM',
+                                data=date(2026, 10, 1), classe='4A RIM',
+                                durata_min=60, origine='manuale'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        assert not any(r['is_placeholder'] for r in catturato['kwargs']['riepilogo_docenti'])
+
+        # Inserito ORA, dopo il primo caricamento della pagina
+        _placeholder('Supplente nuovo', 'A-11', ['4A RIM'])
+
+        c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        placeholder_righe = [r for r in catturato['kwargs']['riepilogo_docenti'] if r['is_placeholder']]
+        assert len(placeholder_righe) == 1
+        assert placeholder_righe[0]['etichetta'] == 'Supplente nuovo — A-11'
+
+
 def test_riepilogo_ore_placeholder_sparisce_dopo_nomina(app, db_session, monkeypatch):
     catturato = _registra_blueprint_con_cattura(app, monkeypatch)
     asgn = _placeholder('Supplente 3', 'A012', ['2B AFM'])
