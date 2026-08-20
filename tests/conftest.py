@@ -45,6 +45,9 @@ def app():
         from models.aula import Aula  # noqa
         from models.utente import Utente  # noqa
         from models.log_accesso import LogAccesso  # noqa
+        from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,  # noqa
+                                          AttivitaIstPresenza)
+        from models.formazione import CorsoFormazione  # noqa
         db.create_all()
         yield app
         db.session.remove()

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica corso' if corso else 'Nuovo corso' }} — Formazione{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:16px;">
+    {{ icon('layers') }} {{ 'Modifica corso' if corso else 'Nuovo corso di formazione' }}
+</h1>
+
+<div class="card" style="padding:20px; max-width:640px; margin-bottom:24px;">
+    <form method="post">
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-weight:600; margin-bottom:4px;">Titolo</label>
+            <input type="text" name="titolo" required value="{{ corso.titolo if corso else '' }}"
+                   style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+        </div>
+        <div style="display:flex; gap:14px; margin-bottom:14px;">
+            <div style="flex:2;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Tipologia</label>
+                <input type="text" name="tipologia" placeholder="es. sicurezza, digitale, disciplinare..."
+                       value="{{ corso.tipologia if corso else '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Ore</label>
+                <input type="number" name="ore" step="0.5" min="0" required
+                       value="{{ corso.ore if corso else '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Modalità</label>
+                <select name="modalita" style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                    {% for k, v in modalita.items() %}
+                    <option value="{{ k }}" {% if corso and corso.modalita == k %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:14px; margin-bottom:14px;">
+            <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Data inizio</label>
+                <input type="date" name="data_inizio" required
+                       value="{{ corso.data_inizio.isoformat() if corso else '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Data fine</label>
+                <input type="date" name="data_fine"
+                       value="{{ corso.data_fine.isoformat() if corso else '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Anno scolastico</label>
+                <input type="text" name="anno_scol" placeholder="es. 2026-2027"
+                       value="{{ corso.anno_scol if corso else anno_default }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+                <input type="checkbox" name="obbligatorio_tutti" {% if corso and corso.obbligatorio_tutti %}checked{% endif %}>
+                Obbligatorio per tutti i docenti in servizio
+            </label>
+            <p style="color:#6b7280; font-size:.82rem; margin:4px 0 0 26px;">
+                Se non spuntato, il corso è riservato a chi si iscrive singolarmente
+                (gestibile qui sotto dopo il salvataggio).
+            </p>
+        </div>
+        <div style="margin-bottom:18px;">
+            <label style="display:block; font-weight:600; margin-bottom:4px;">Note</label>
+            <textarea name="note" rows="2" style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">{{ corso.note if corso else '' }}</textarea>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button type="submit" class="btn btn-success">{{ 'Salva modifiche' if corso else 'Crea corso' }}</button>
+            <a href="{{ url_for('formazione.lista') }}" class="btn" style="background:#e5eaf0;color:var(--blu);">Annulla</a>
+        </div>
+    </form>
+</div>
+
+{% if corso and not corso.obbligatorio_tutti %}
+<div class="card" style="padding:20px; max-width:640px;">
+    <h2 style="font-size:1.05rem; margin-bottom:10px;">Iscrizioni ({{ iscritti_ids|length }})</h2>
+    <form method="post" action="{{ url_for('formazione.iscrivi', id=corso.id) }}"
+          style="display:flex; gap:8px; margin-bottom:14px;">
+        <select name="id_docente" required style="flex:1; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            <option value="">— iscrivi un docente —</option>
+            {% for d in docenti if d.id not in iscritti_ids %}
+            <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Iscrivi</button>
+    </form>
+    <ul style="list-style:none; padding:0; margin:0;">
+        {% for d in docenti if d.id in iscritti_ids %}
+        <li style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+            <span>{{ d.cognome }} {{ d.nome }}</span>
+            <form method="post" action="{{ url_for('formazione.disiscrivi', id=corso.id) }}">
+                <input type="hidden" name="id_docente" value="{{ d.id }}">
+                <button type="submit" class="btn btn-sm btn-danger" title="Rimuovi">{{ icon('trash') }}</button>
+            </form>
+        </li>
+        {% else %}
+        <li style="color:#9ca3af; padding:8px 0;">Nessun docente iscritto.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% elif corso %}
+<div class="card" style="padding:16px 20px; max-width:640px; color:#6b7280; font-size:.88rem;">
+    Corso obbligatorio per tutti i docenti in servizio ({{ iscritti_ids|length }} coinvolti automaticamente) —
+    per escludere singolarmente un docente, usa la gestione presenze dell'evento
+    collegato in <a href="{{ url_for('attivita_ist.lista') }}">Attività istituzionali</a>.
+</div>
+{% endif %}
+{% endblock %}

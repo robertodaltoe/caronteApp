@@ -4,6 +4,41 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum — Fase 1: Piano della Formazione (Cowork)
+
+Nuovo modello `models/formazione.py::CorsoFormazione` + blueprint
+`routes/formazione.py` (`/formazione`), come da Fase 1 del piano
+approvato. Scelta di design: niente tabella "iscrizioni" separata —
+ogni corso ha un `id_attivita` collegato a un `AttivitaIst`
+(`tipo='formazione'`, bucket A) creato/aggiornato insieme al corso, e
+le iscrizioni sono le stesse righe `AttivitaIstPartecipante` di
+quell'evento (`preset=True` per i corsi obbligatori per tutti,
+`preset=False` per le iscrizioni volontarie) — riusa integralmente il
+meccanismo bucket/presenze/Piano Attività Personale già esistente per
+gli altri eventi istituzionali, invece di un conteggio ore parallelo
+da mantenere allineato a mano (pattern "due meccanismi paralleli"
+esplicitamente da evitare, vedi CLAUDE.md).
+
+Corso obbligatorio → alla creazione aggiunge automaticamente tutti i
+docenti in servizio (riusa `_non_in_servizio_per_data()` di
+`routes/attivita_ist.py`, stessa esclusione già in uso per gli altri
+eventi). Corso volontario → nessun partecipante iniziale, iscrizione/
+disiscrizione singola da pagina di modifica corso. Pagina di gestione
+raggiungibile da Attività → Piano della Formazione (permesso riusato:
+stessa sezione `attivita_istituzionali`, nessuna nuova voce nella
+matrice permessi).
+
+Verificato: su copia del DB con Flask test client (creazione corso
+obbligatorio/volontario, iscrizione/disiscrizione, modifica, eliminazione
+con cascade dell'evento collegato), poi visivamente nel browser (lista
+vuota, form nuovo corso, voce in navbar) col server puntato sul
+database.db reale ma solo in lettura (nessun submit, verificato dopo
+che `corsi_formazione` restava a 0 righe). Aggiunti 6 test di
+regressione (`tests/test_formazione.py`) + import dei nuovi modelli in
+`tests/conftest.py`. 107/107 test passano (101 + 6 nuovi).
+
+Prossimo passo: Fase 2 (Vista Piano Annuale + Riepilogo ore).
+
 ## Sessione 66 — Piano Annuale delle Attività: analisi/piano + Fase 0 calendario (Cowork)
 
 **Contesto:** Roberto ha condiviso il foglio Google

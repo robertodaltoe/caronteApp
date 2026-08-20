@@ -147,6 +147,8 @@ def create_app(avvio_con_reloader=True):
     app.register_blueprint(aule_bp)
     from routes.attivita_ist import attivita_ist_bp
     app.register_blueprint(attivita_ist_bp)
+    from routes.formazione import formazione_bp
+    app.register_blueprint(formazione_bp)
     from routes.impostazioni import impostazioni_bp
     from routes.cambio_anno import cambio_anno_bp
     from routes.assegnazioni import assegnazioni_bp
@@ -302,6 +304,7 @@ def create_app(avvio_con_reloader=True):
         from models.sync_tombstone import SyncTombstone  # noqa
         from models.permesso_ruolo import PermessoRuolo  # noqa
         from models.piano_attivita_personale import PianoAttivitaPersonale, PianoAttivitaPersonaleVoce  # noqa
+        from models.formazione import CorsoFormazione  # noqa
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()

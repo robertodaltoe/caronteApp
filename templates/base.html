@@ -514,6 +514,7 @@
             {% endif %}
             {% if puo_vedere('attivita_istituzionali') %}
             <a href="{{ url_for('attivita_ist.lista') }}"><span class="nav-ic">{{ icon('building') }}</span> Attività istituzionali</a>
+            <a href="{{ url_for('formazione.lista') }}"><span class="nav-ic">{{ icon('layers') }}</span> Piano della Formazione</a>
             {% endif %}
             {% if puo_vedere('attivita_differite') %}
             <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
