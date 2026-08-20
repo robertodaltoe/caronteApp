@@ -4,7 +4,7 @@
 
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-    <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Generatore Consigli di classe</a>
+    <a href="{{ url_for('generatore_cdc.index', anno=anno) }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Genera piano delle attività</a>
     <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('calendar') }} Vincoli manuali — a.s. {{ anno }}</h1>
     {% if anni_disponibili|length > 1 %}
     <div style="display:flex; gap:4px;">

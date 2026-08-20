@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from '_icons.html' import icon %}
-{% block title %}Generatore Consigli di classe{% endblock %}
+{% block title %}Genera piano delle attività{% endblock %}
 
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;">
-    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('compass') }} Generatore Consigli di classe — a.s. {{ anno }}</h1>
+    <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('compass') }} Genera piano delle attività — a.s. {{ anno }}</h1>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         {% if anni_disponibili|length > 1 %}
         <div style="display:flex; gap:4px;">

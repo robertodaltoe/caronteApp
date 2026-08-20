@@ -4,6 +4,51 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 22 — Riorganizzazione navbar/Impostazioni per il Piano Annuale (Cowork)
+
+Roberto: il Generatore CdC e il Piano della Formazione non sono
+funzioni da usare tutti i giorni (sono attività di *preparazione*
+dell'anno), quindi via dal menu "Attività" — dove invece resta comodo
+un link diretto alla vista di sola lettura del piano. Richiesta
+precisa: "non lo terrei nel piano delle attività ma lo sposterei
+nelle impostazioni nella sezione della preparazione del nuovo anno
+scolastico e una pagina di collegamento per la visualizzazione in
+calendario scolastico che si chiama Piano delle attività. Idem per
+piano della formazione, via da navbar e inserimento della doppia voce
+in impostazioni."
+
+- `templates/base.html`: dal menu "Attività" tolti "Piano della
+  Formazione" e "Generatore Consigli di classe"; aggiunto "Piano delle
+  attività" che punta alla vista a schermo già esistente
+  (`attivita_ist.piano_annuale`, gli export PDF/Excel restano
+  raggiungibili da lì).
+- `templates/impostazioni/index.html`: nella sezione "Anno
+  scolastico" (quella con Hub impostazione anno, Docenti per anno,
+  Classi attive, ecc. — esattamente la "sezione della preparazione
+  del nuovo anno" richiesta), aggiunte le due voci "Genera piano delle
+  attività" (→ `generatore_cdc.index`) e "Piano della formazione" (→
+  `formazione.lista`).
+- Rinominato il generatore da "Generatore Consigli di classe" a
+  "Genera piano delle attività" ovunque compaia (titolo pagina, h1,
+  4 link di ritorno nelle sotto-pagine vincoli/dipartimenti/eventi
+  unici) — coerente col nuovo nome scelto da Roberto.
+
+Nella stessa richiesta, due correzioni estetiche alla pagina
+Impostazioni: tolto "— 9 passi" dall'etichetta "Hub impostazione
+anno" (il numero cambia se si aggiungono passi, meglio non
+promettere un conteggio); le caselle KPI in alto (Sezioni attive/CC
+confermate/Docenti TI/Docenti attivi) erano centrate ma il centraggio
+non veniva preciso a video — cambiate da `text-align:center` a
+`text-align:left` in `.kpi` (CSS della pagina).
+
+Verificato a video sul server con `database.db` reale (sola lettura):
+menu Attività senza le due voci rimosse e con "Piano delle attività"
+al loro posto, sezione Anno scolastico di Impostazioni con le due
+nuove voci, titolo scheda browser del generatore aggiornato a "Genera
+piano delle attività — IIS Da Vinci", KPI allineate a sinistra, "Hub
+impostazione anno" senza il conteggio passi. Nessuna logica toccata,
+solo template — 175/175 test passano invariati.
+
 ## Sessione 66 addendum 21 — Export Piano Annuale in Excel, stile identico al modello originale (Cowork)
 
 Dopo l'export PDF, Roberto ha chiarito che il formato condivisibile

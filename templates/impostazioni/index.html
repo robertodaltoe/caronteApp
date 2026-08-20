@@ -18,7 +18,7 @@
 .imp-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 @media(max-width:700px){ .imp-grid { grid-template-columns:1fr; } }
 .kpi-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-.kpi { background:var(--blu-light); border-radius:8px; padding:8px 14px; text-align:center; flex:1; min-width:80px; }
+.kpi { background:var(--blu-light); border-radius:8px; padding:8px 14px; text-align:left; flex:1; min-width:80px; }
 .kpi-n { font-size:1.4rem; font-weight:800; color:var(--blu); }
 .kpi-l { font-size:.68rem; color:var(--grigio); margin-top:1px; }
 </style>
@@ -60,7 +60,7 @@
     {% if puo_vedere('organico') %}
     <a href="{{ url_for('impostazione_anno.index') }}" class="imp-link"
        style="border-color:var(--bronzo); background:var(--bronzo-bg);">
-        {{ icon('list') }} Hub impostazione anno — 9 passi
+        {{ icon('list') }} Hub impostazione anno
         <span style="color:var(--bronzo); font-weight:700;">{{ icon('arrow') }}</span>
     </a>
     {% endif %}
@@ -102,6 +102,16 @@
         <a href="{{ url_for('impostazione_anno.calcolo_organico') }}" class="imp-link">
             {{ icon('grid-alt') }} Calcolo organico
             <span class="badge-count">{{ n_cc_confermate }}/{{ n_cc_tot }}</span>
+        </a>
+        {% endif %}
+        {% if puo_vedere('attivita_istituzionali') %}
+        <a href="{{ url_for('generatore_cdc.index') }}" class="imp-link">
+            {{ icon('compass') }} Genera piano delle attività
+            <span>{{ icon('arrow') }}</span>
+        </a>
+        <a href="{{ url_for('formazione.lista') }}" class="imp-link">
+            {{ icon('layers') }} Piano della formazione
+            <span>{{ icon('arrow') }}</span>
         </a>
         {% endif %}
     </div>
