@@ -439,11 +439,24 @@ def riepilogo_ore():
     # docente reale, tramite gli AttivitaIstPartecipante creati da
     # iscrivi_docente_a_eventi_classe().
     from models.assegnazione import AssegnazioneDocente
+    from models.formazione import CorsoFormazione
     ore_classe_bucket_b = {}
     for ev in eventi_classe:
         if ev.tipo != 'consiglio_classe':
             continue
         ore_classe_bucket_b[ev.classe] = ore_classe_bucket_b.get(ev.classe, 0) + ev.durata_ore
+
+    # Ore di Formazione obbligatoria (bucket A): valgono per chiunque
+    # sia in servizio a prescindere da chi sarà — anche un placeholder
+    # ancora da nominare le dovrà, quindi contano già ora (richiesta di
+    # Roberto). Stesso valore per tutti i placeholder, calcolato una
+    # sola volta fuori dal loro ciclo.
+    corsi_obbligatori_ids = {c.id_attivita for c in CorsoFormazione.query.filter_by(
+        anno_scol=anno, obbligatorio_tutti=True).all()}
+    ore_a_formazione_obbl = round(sum(
+        ev.durata_ore for ev in AttivitaIst.query.filter(
+            AttivitaIst.id.in_(corsi_obbligatori_ids)).all()
+    ), 1) if corsi_obbligatori_ids else 0.0
 
     placeholder_asgn = AssegnazioneDocente.query.filter(
         AssegnazioneDocente.anno_scol == anno,
@@ -453,13 +466,13 @@ def riepilogo_ore():
     for asgn in placeholder_asgn:
         classi_label = {ac.label_classe for ac in asgn.classi}
         ore_b_ph = round(sum(ore_classe_bucket_b.get(lbl, 0) for lbl in classi_label), 1)
-        if ore_b_ph <= 0:
+        if ore_b_ph <= 0 and ore_a_formazione_obbl <= 0:
             continue
         codice_cc = asgn.classe_concorso.codice if asgn.classe_concorso else '?'
         riepilogo_docenti.append(dict(
             docente=None, etichetta=f'{asgn.nome_placeholder} — {codice_cc}',
             is_placeholder=True,
-            ore_a=0.0, ore_b=ore_b_ph, quota_a=None, quota_b=None,
+            ore_a=ore_a_formazione_obbl, ore_b=ore_b_ph, quota_a=None, quota_b=None,
             eccede_a=False, eccede_b=False,
         ))
 

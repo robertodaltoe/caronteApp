@@ -209,6 +209,34 @@ def test_riepilogo_ore_mostra_placeholder_con_ore_consigli_classe(app, db_sessio
     assert placeholder_righe[0]['ore_b'] == 1.5  # 90 min
 
 
+def test_riepilogo_ore_placeholder_conta_formazione_obbligatoria(app, db_session, monkeypatch):
+    """La Formazione obbligatoria vale per chiunque sia in servizio, a
+    prescindere da chi sarà — anche un placeholder ancora da nominare
+    la deve, quindi conta già ora (richiesta di Roberto)."""
+    from models.formazione import CorsoFormazione
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    _placeholder('Supplente Sicurezza', 'A026', [])  # nessuna classe assegnata
+
+    ev = AttivitaIst(tipo='formazione', titolo='Sicurezza', data=date(2026, 9, 15),
+                      durata_min=30, origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(CorsoFormazione(
+        id_attivita=ev.id, titolo='Sicurezza', ore=0.5, modalita='presenza',
+        data_inizio=date(2026, 9, 15), data_fine=date(2026, 9, 15),
+        obbligatorio_tutti=True, anno_scol=ANNO))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        assert r.status_code == 200
+
+    placeholder_righe = [r for r in catturato['kwargs']['riepilogo_docenti'] if r['is_placeholder']]
+    assert len(placeholder_righe) == 1
+    assert placeholder_righe[0]['ore_a'] == 0.5
+    assert placeholder_righe[0]['ore_b'] == 0.0
+
+
 def test_riepilogo_ore_placeholder_non_conta_ore_scrutinio(app, db_session, monkeypatch):
     """Gli scrutini sono fuori bucket (BUCKET_NO): non devono contribuire
     alle ore mostrate per un placeholder, solo i Consigli di classe."""

@@ -75,8 +75,8 @@
             <tr{% if r.is_placeholder %} style="color:var(--grigio); font-style:italic;"{% endif %}>
                 {% if r.is_placeholder %}
                 <td>{{ r.etichetta }} <span class="badge badge-grigio" style="font-style:normal; font-size:.68rem;">da nominare</span></td>
-                <td style="text-align:center;">—</td>
-                <td style="text-align:center;">{{ r.ore_b }}h</td>
+                <td style="text-align:center;">{% if r.ore_a > 0 %}{{ r.ore_a }}h{% else %}—{% endif %}</td>
+                <td style="text-align:center;">{% if r.ore_b > 0 %}{{ r.ore_b }}h{% else %}—{% endif %}</td>
                 {% else %}
                 <td><strong>{{ r.docente.cognome }}</strong> {{ r.docente.nome }}</td>
                 <td style="text-align:center; {% if r.eccede_a %}color:var(--rosso); font-weight:700;{% endif %}">

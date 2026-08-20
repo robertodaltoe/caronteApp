@@ -4,6 +4,42 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 12 — Import Consigli settembre + formazione obbligatoria sui placeholder (Cowork)
+
+Per dare al riepilogo dati veri da mostrare (finora 0 Consigli di
+classe per il 2026-2027), importati i 10 Consigli di classe prime già
+presenti nel foglio "settembre I" (venerdì 18/09/2026, 1h ciascuno).
+Rilette due righe ambigue del foglio via nuovo tab del browser (il
+tab precedente aveva smesso di comporre gli screenshot — problema
+del pannello, non del foglio): "CAT 1A" e "LLI 1B" comparivano due
+volte con solo l'orario diverso. Segnalato a Roberto invece di
+assumere, confermato che sono in realtà l'altra sezione (1B CAT e 1A
+LLI) scritta per errore nella bozza, non una doppia sessione.
+
+Backfill dei partecipanti per questi 10 eventi usando le Assegnazioni
+reali già esistenti per l'anno (47 partecipanti aggiunti) — necessario
+perché creati via script diretto, non tramite la route che lo avrebbe
+fatto da sola.
+
+Seconda richiesta di Roberto: ai placeholder nel riepilogo andrebbero
+assegnate anche le ore di Formazione obbligatoria (bucket A), non solo
+i Consigli di classe (bucket B) — la formazione obbligatoria vale per
+chiunque sia in servizio, a prescindere da chi occuperà poi il posto.
+Aggiunto in `riepilogo_ore()`: somma delle ore dei corsi Formazione
+con `obbligatorio_tutti=True` per l'anno, calcolata una sola volta
+(stesso valore per ogni placeholder, non dipende dalle sue classi) e
+sommata a `ore_a`. La riga placeholder ora compare anche con sole ore
+di bucket A, senza bisogno di classi assegnate.
+
+Verificato: entrambe le importazioni su copia prima, backup cifrato
+(`database_20260820_2029_pre_import_cdc_settembre.db.enc`) e poi sul
+reale, `PRAGMA integrity_check` ok. 2 test nuovi
+(`tests/test_piano_annuale_riepilogo.py`). Confermato a video: 22
+placeholder reali in elenco, tutti con 0.5h di Formazione obbligatoria,
+alcuni anche con ore di bucket B dai Consigli appena importati (es.
+"SUPPLENTE 1 — AS48": 0.5h / 3.0h). 139/139 test passano (138 + 1
+netto, un test di conferma live-update dell'addendum 11 già contava).
+
 ## Sessione 66 addendum 11 — Conferma aggiornamento live placeholder (Cowork)
 
 Roberto: "e se inserisco un nuovo placeholder si aggiorna l'elenco?"
