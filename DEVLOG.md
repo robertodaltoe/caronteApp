@@ -4,6 +4,41 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 10 — Placeholder supplenti nel Riepilogo ore (Cowork)
+
+Richiesta di Roberto: nel Riepilogo ore per docente, vedere anche i
+placeholder di Assegnazioni ancora da nominare ("Supplente 1", "da
+assegnare internamente"...), etichettati come "NomePlaceholder — codice
+CC" (es. "SUPPLENTE 1 — AS48"), che spariscono da soli quando il
+supplente viene nominato.
+
+Implementato in `riepilogo_ore()`: per ogni `AssegnazioneDocente` con
+`id_docente IS NULL` e `nome_placeholder` valorizzato per l'anno
+mostrato, somma le ore di bucket B (solo Consigli di classe — gli
+scrutini sono BUCKET_NO, fuori conteggio, esclusi di proposito) per le
+classi già assegnate (`AssegnazioneClasse.label_classe`, stesso
+formato di `AttivitaIst.classe`, riusato senza conversioni). Righe
+mostrate solo se ci sono ore reali da mostrare (niente righe vuote per
+placeholder senza eventi ancora programmati sulle loro classi). Bucket
+A e quota non hanno senso per un placeholder (non è un docente con
+ore di contratto note): colonna A mostrata come "—", niente confronto
+eccedenza.
+
+La sparizione automatica dopo la nomina non ha richiesto nuovo codice:
+`routes/assegnazioni.py::nomina()` già azzera `nome_placeholder` (la
+query dei placeholder smette di trovarlo) e già chiama
+`iscrivi_docente_a_eventi_classe()` (addendum 4) che crea gli
+`AttivitaIstPartecipante` reali — le stesse ore ricompaiono
+automaticamente sotto il nome del docente vero, stesso principio già
+descritto da Roberto ("si aggiornano in automatico").
+
+Verificato: 3 test nuovi (`tests/test_piano_annuale_riepilogo.py`) —
+placeholder con ore da Consigli di classe, esclusione degli scrutini,
+sparizione dopo nomina. Verificato anche su copia del database.db
+reale con un evento di prova (rimosso subito dopo, mai nel DB reale):
+"SUPPLENTE 1 — AS48" compare con "da nominare" e le ore corrette.
+137/137 test passano (134 + 3 nuovi).
+
 ## Sessione 66 addendum 9 — Stesso bug anche nel Riepilogo ore (Cowork)
 
 Seguito diretto dell'addendum 8: Roberto ha rifatto la verifica e

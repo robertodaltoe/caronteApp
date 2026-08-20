@@ -423,11 +423,48 @@ def riepilogo_ore():
             continue
         quota_a, quota_b = quota_ore_bucket(doc, anno)
         riepilogo_docenti.append(dict(
-            docente=doc, ore_a=round(ore_a, 1), ore_b=round(ore_b, 1),
+            docente=doc, is_placeholder=False,
+            ore_a=round(ore_a, 1), ore_b=round(ore_b, 1),
             quota_a=quota_a, quota_b=quota_b,
             eccede_a=ore_a > quota_a, eccede_b=ore_b > quota_b,
         ))
-    riepilogo_docenti.sort(key=lambda r: (r['docente'].cognome, r['docente'].nome))
+
+    # Placeholder di Assegnazioni ancora da nominare (supplente non
+    # ancora individuato): mostrano le ore di bucket B (Consigli di
+    # classe, non gli scrutini — fuori bucket) già prevedibili dalle
+    # classi assegnate, così da vedere il carico atteso prima ancora
+    # che arrivi il titolare. Spariscono da sole non appena la
+    # AssegnazioneDocente viene nominata (routes/assegnazioni.py::
+    # nomina) — a quel punto le ore ricompaiono sotto il nome del
+    # docente reale, tramite gli AttivitaIstPartecipante creati da
+    # iscrivi_docente_a_eventi_classe().
+    from models.assegnazione import AssegnazioneDocente
+    ore_classe_bucket_b = {}
+    for ev in eventi_classe:
+        if ev.tipo != 'consiglio_classe':
+            continue
+        ore_classe_bucket_b[ev.classe] = ore_classe_bucket_b.get(ev.classe, 0) + ev.durata_ore
+
+    placeholder_asgn = AssegnazioneDocente.query.filter(
+        AssegnazioneDocente.anno_scol == anno,
+        AssegnazioneDocente.id_docente.is_(None),
+        AssegnazioneDocente.nome_placeholder.isnot(None),
+    ).all()
+    for asgn in placeholder_asgn:
+        classi_label = {ac.label_classe for ac in asgn.classi}
+        ore_b_ph = round(sum(ore_classe_bucket_b.get(lbl, 0) for lbl in classi_label), 1)
+        if ore_b_ph <= 0:
+            continue
+        codice_cc = asgn.classe_concorso.codice if asgn.classe_concorso else '?'
+        riepilogo_docenti.append(dict(
+            docente=None, etichetta=f'{asgn.nome_placeholder} — {codice_cc}',
+            is_placeholder=True,
+            ore_a=0.0, ore_b=ore_b_ph, quota_a=None, quota_b=None,
+            eccede_a=False, eccede_b=False,
+        ))
+
+    riepilogo_docenti.sort(key=lambda r: (r['docente'].cognome, r['docente'].nome)
+                            if r['docente'] else (r['etichetta'], ''))
 
     return render_template('attivita_ist/riepilogo_ore.html',
         anno=anno, anni_disponibili=anni_disponibili,

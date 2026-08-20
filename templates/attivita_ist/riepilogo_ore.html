@@ -72,7 +72,12 @@
         </thead>
         <tbody>
             {% for r in riepilogo_docenti %}
-            <tr>
+            <tr{% if r.is_placeholder %} style="color:var(--grigio); font-style:italic;"{% endif %}>
+                {% if r.is_placeholder %}
+                <td>{{ r.etichetta }} <span class="badge badge-grigio" style="font-style:normal; font-size:.68rem;">da nominare</span></td>
+                <td style="text-align:center;">—</td>
+                <td style="text-align:center;">{{ r.ore_b }}h</td>
+                {% else %}
                 <td><strong>{{ r.docente.cognome }}</strong> {{ r.docente.nome }}</td>
                 <td style="text-align:center; {% if r.eccede_a %}color:var(--rosso); font-weight:700;{% endif %}">
                     {{ r.ore_a }}h / {{ r.quota_a }}h
@@ -82,6 +87,7 @@
                     {{ r.ore_b }}h / {{ r.quota_b }}h
                     {% if r.eccede_b %}<br><span class="badge badge-rosso" style="font-size:.68rem;">eccede</span>{% endif %}
                 </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

@@ -11,9 +11,35 @@ i dati calcolati dalla route invece di renderizzare l'HTML reale.
 from datetime import date
 from models import db
 from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+from models.classe_concorso import ClasseConcorso
 from tests.conftest import crea_docente
 
 ANNO = '2026-2027'
+
+
+def _cc(codice='AS48'):
+    cc = ClasseConcorso(codice=codice, nome='Scienze motorie')
+    db.session.add(cc)
+    db.session.commit()
+    return cc
+
+
+def _placeholder(nome, codice_cc, classi_label):
+    cc = _cc(codice_cc)
+    asgn = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                nome_placeholder=nome, tipo='supplente')
+    db.session.add(asgn)
+    db.session.flush()
+    for lbl in classi_label:
+        anno_corso, resto = lbl.split(' ', 1)
+        sezione = anno_corso[-1] if anno_corso[-1] in 'AB' else 'A'
+        anno_n = int(anno_corso[:-1]) if anno_corso[-1] in 'AB' else int(anno_corso)
+        db.session.add(AssegnazioneClasse(
+            id_assegnazione=asgn.id, indirizzo=resto,
+            anno_corso=anno_n, sezione=sezione, ore=4))
+    db.session.commit()
+    return asgn
 
 
 def _registra_blueprint_con_cattura(app, monkeypatch):
@@ -161,3 +187,62 @@ def test_riepilogo_ore_eccedenza_segnalata(app, db_session, monkeypatch):
     riga = catturato['kwargs']['riepilogo_docenti'][0]
     assert riga['ore_a'] == 50.0
     assert riga['eccede_a'] is True
+
+
+# ── Placeholder di Assegnazioni non ancora nominati ──────────────────────────
+
+def test_riepilogo_ore_mostra_placeholder_con_ore_consigli_classe(app, db_session, monkeypatch):
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    _placeholder('Supplente 1', 'AS48', ['3A LLI'])
+    db.session.add(AttivitaIst(tipo='consiglio_classe', titolo='CdC 3A LLI',
+                                data=date(2026, 10, 1), classe='3A LLI',
+                                durata_min=90, origine='manuale'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        assert r.status_code == 200
+
+    placeholder_righe = [r for r in catturato['kwargs']['riepilogo_docenti'] if r['is_placeholder']]
+    assert len(placeholder_righe) == 1
+    assert placeholder_righe[0]['etichetta'] == 'Supplente 1 — AS48'
+    assert placeholder_righe[0]['ore_b'] == 1.5  # 90 min
+
+
+def test_riepilogo_ore_placeholder_non_conta_ore_scrutinio(app, db_session, monkeypatch):
+    """Gli scrutini sono fuori bucket (BUCKET_NO): non devono contribuire
+    alle ore mostrate per un placeholder, solo i Consigli di classe."""
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    _placeholder('Supplente 2', 'A026', ['1A CAT'])
+    db.session.add(AttivitaIst(tipo='scrutinio', titolo='Scrutinio 1A CAT',
+                                data=date(2027, 6, 10), classe='1A CAT',
+                                durata_min=120, origine='manuale'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        assert r.status_code == 200
+
+    placeholder_righe = [r for r in catturato['kwargs']['riepilogo_docenti'] if r['is_placeholder']]
+    assert placeholder_righe == []  # nessuna ora di bucket B, la riga non compare
+
+
+def test_riepilogo_ore_placeholder_sparisce_dopo_nomina(app, db_session, monkeypatch):
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    asgn = _placeholder('Supplente 3', 'A012', ['2B AFM'])
+    db.session.add(AttivitaIst(tipo='consiglio_classe', titolo='CdC 2B AFM',
+                                data=date(2026, 10, 1), classe='2B AFM',
+                                durata_min=60, origine='manuale'))
+    db.session.commit()
+
+    d = crea_docente('Reale')
+    asgn.id_docente = d.id
+    asgn.nome_placeholder = None
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/riepilogo-ore?anno={ANNO}')
+        assert r.status_code == 200
+
+    righe = catturato['kwargs']['riepilogo_docenti']
+    assert not any(r['is_placeholder'] for r in righe)  # niente più placeholder
