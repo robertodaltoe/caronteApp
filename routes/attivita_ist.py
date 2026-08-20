@@ -7,6 +7,7 @@ from models.docente import Docente
 from models.assenza import Assenza
 from datetime import date, datetime
 import json
+import re
 
 attivita_ist_bp = Blueprint('attivita_ist', __name__)
 
@@ -314,24 +315,27 @@ def lista():
     )
 
 
-# ── VISTA PIANO ANNUALE (Fase 2 del Piano Annuale delle Attività) ────────────
-
-@attivita_ist_bp.route('/attivita-ist/piano-annuale')
-def piano_annuale():
+def _righe_piano_annuale(anno):
     """
-    Vista mensile di AttivitaIst raggruppata per giorno, con intestazioni
-    di sezione — stesso ruolo dei fogli mensili di
-    BOZZA_PIANO_ATTIVITA_2026_27.xlsx, ma calcolata dai dati già in app
-    invece di un foglio da tenere allineato a mano (Fase 2 del project
-    plan). L'ordinamento cronologico degli eventi (già settembre→agosto,
-    l'anno scolastico è già in ordine di data) basta a raggruppare i
-    mesi nell'ordine giusto, senza bisogno di riordinarli a mano.
+    Costruisce la struttura dati condivisa fra la vista a schermo e
+    l'export PDF del Piano Annuale — stesso identico modello del
+    foglio fornito da Roberto (BOZZA_PIANO_ATTIVITA_2026_27.xlsx):
+    colonne Attività | Indirizzo | Classe | Inizio | Fine | Ore |
+    Categoria, righe raggruppate per giorno dentro i fogli mensili, con
+    le sospensioni/vacanze e il termine lezioni segnati come nel
+    calendario colorato del foglio "Introduzione" — non solo gli
+    eventi, anche i giorni di non-lezione compaiono nel piano.
+
+    Ritorna (mesi, anni_disponibili, n_eventi) dove mesi è
+    [(etichetta_mese, [(data, tipo_giorno, contenuto), ...])] — righe
+    già ordinate cronologicamente, tipo_giorno è 'eventi' o
+    'sospensione' o 'termine_lezioni'.
     """
     from config_anno import intervallo_anno_scolastico
-    from routes.impostazione_anno import _anno_default_piano
+    from config_calendario import get_data_fine_lezioni
+    from models.sospensione import SospensioneDidattica
     from modules.prospetto_supplenze import MESI_IT
 
-    anno = request.args.get('anno', _anno_default_piano())
     anni_disponibili = sorted(
         {_anno_scolastico(e.data) for e in AttivitaIst.query.all()}, reverse=True)
     if anno not in anni_disponibili:
@@ -342,20 +346,103 @@ def piano_annuale():
         AttivitaIst.data >= ini, AttivitaIst.data <= fine
     ).order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all()
 
-    mesi = []  # [(etichetta, {data: [eventi]})]
-    chiave_mese_corrente = None
-    giorni_correnti = None
+    # Arricchisce ogni evento con le colonne esatte del foglio: Indirizzo
+    # e Classe separati (il modello li tiene insieme in un'unica label
+    # "3A LLI"), Categoria = etichetta del tipo.
     for ev in eventi:
-        chiave = (ev.data.year, ev.data.month)
+        m = re.match(r'(\d+[AB]?)\s+(.+)', ev.classe) if ev.classe else None
+        ev.col_classe = m.group(1) if m else ''
+        ev.col_indirizzo = m.group(2) if m else ''
+        ev.col_categoria = ev.tipo_label
+
+    marcatori = []  # (data, tipo, contenuto)
+    for s in SospensioneDidattica.query.filter(
+            SospensioneDidattica.data_fine >= ini,
+            SospensioneDidattica.data_inizio <= fine).order_by(SospensioneDidattica.data_inizio).all():
+        marcatori.append((max(s.data_inizio, ini), 'sospensione', s))
+
+    termine = get_data_fine_lezioni(anno)
+    if termine and ini <= termine <= fine:
+        marcatori.append((termine, 'termine_lezioni', None))
+
+    per_giorno = {}  # data -> {'eventi': [...], 'marcatori': [...]}
+    for ev in eventi:
+        per_giorno.setdefault(ev.data, {'eventi': [], 'marcatori': []})['eventi'].append(ev)
+    for data_m, tipo_m, contenuto in marcatori:
+        per_giorno.setdefault(data_m, {'eventi': [], 'marcatori': []})['marcatori'].append(
+            (tipo_m, contenuto))
+
+    mesi = []
+    chiave_mese_corrente = None
+    righe_mese_corrente = None
+    for data_g in sorted(per_giorno.keys()):
+        chiave = (data_g.year, data_g.month)
         if chiave != chiave_mese_corrente:
             chiave_mese_corrente = chiave
-            giorni_correnti = {}
-            mesi.append((f'{MESI_IT[ev.data.month]} {ev.data.year}', giorni_correnti))
-        giorni_correnti.setdefault(ev.data, []).append(ev)
+            righe_mese_corrente = []
+            mesi.append((f'{MESI_IT[data_g.month]} {data_g.year}', righe_mese_corrente))
+        giorno = per_giorno[data_g]
+        for tipo_m, contenuto in giorno['marcatori']:
+            righe_mese_corrente.append((data_g, tipo_m, contenuto))
+        if giorno['eventi']:
+            righe_mese_corrente.append((data_g, 'eventi', giorno['eventi']))
+
+    return mesi, anni_disponibili, len(eventi)
+
+
+# ── VISTA PIANO ANNUALE (Fase 2 del Piano Annuale delle Attività) ────────────
+
+@attivita_ist_bp.route('/attivita-ist/piano-annuale')
+def piano_annuale():
+    """
+    Vista mensile di AttivitaIst raggruppata per giorno, con intestazioni
+    di sezione — stesso modello del foglio fornito da Roberto
+    (BOZZA_PIANO_ATTIVITA_2026_27.xlsx): colonne Attività | Indirizzo |
+    Classe | Inizio | Fine | Ore | Categoria, con sospensioni/vacanze e
+    termine lezioni segnati come nel calendario colorato originale —
+    non solo gli eventi (Fase 2 del project plan, poi Fase 4
+    "pubblicazione" per l'export PDF, vedi piano_annuale_pdf()).
+    """
+    from routes.impostazione_anno import _anno_default_piano
+    anno = request.args.get('anno', _anno_default_piano())
+    mesi, anni_disponibili, n_eventi = _righe_piano_annuale(anno)
 
     return render_template('attivita_ist/piano_annuale.html',
         mesi=mesi, anno=anno, anni_disponibili=anni_disponibili,
-        tipi=TIPI_ATTIVITA, oggi=date.today(), n_eventi=len(eventi))
+        tipi=TIPI_ATTIVITA, oggi=date.today(), n_eventi=n_eventi)
+
+
+@attivita_ist_bp.route('/attivita-ist/piano-annuale/pdf')
+def piano_annuale_pdf():
+    """
+    Export PDF dello stesso modello mostrato a schermo — Fase 4
+    (pubblicazione) del project plan: solo PDF scaricabile, confermato
+    con Roberto, niente pagina pubblica in stile "display".
+    """
+    import io
+    from flask import send_file
+    from routes.impostazione_anno import _anno_default_piano
+    from modules.pdf_fonts import contesto_open_sans
+
+    anno = request.args.get('anno', _anno_default_piano())
+    mesi, _anni_disponibili, n_eventi = _righe_piano_annuale(anno)
+
+    html_content = render_template('attivita_ist/piano_annuale_print.html',
+        mesi=mesi, anno=anno, tipi=TIPI_ATTIVITA, oggi=date.today(),
+        n_eventi=n_eventi, **contesto_open_sans())
+
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return send_file(
+            io.BytesIO(pdf_bytes), mimetype='application/pdf', as_attachment=True,
+            download_name=f'piano_annuale_{anno}_{date.today().isoformat()}.pdf')
+    except (ImportError, OSError):
+        # WeasyPrint assente (ImportError) o le sue librerie di sistema
+        # native mancano (OSError da cffi — caso tipico in sandbox
+        # Linux senza pango/cairo, non solo "non pip-installato") —
+        # fallback HTML in entrambi i casi, non è un bug fuori dal Mac.
+        return html_content
 
 
 # ── RIEPILOGO ORE (Fase 2) ────────────────────────────────────────────────────

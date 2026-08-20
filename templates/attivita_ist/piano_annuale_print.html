@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Piano Annuale delle Attività — {{ anno }}</title>
+<style>
+{# Stesso schema font di templates/report/singolo_print.html: WeasyPrint
+   renderizza via HTML(string=...) senza base_url, un font da file statico
+   o Google Fonts non si risolverebbe in modo affidabile. #}
+* { box-sizing:border-box; margin:0; padding:0; }
+@font-face {
+    font-family: 'Open Sans'; font-weight: 400; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_400 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 600; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_600 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 700; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_700 }}) format('woff2');
+}
+body { font-family: 'Open Sans', Arial, sans-serif; font-size:8.5pt;
+       color:#1e2939; padding:8px 12px; }
+h1 { font-size:15pt; color:#7a1c17; margin-bottom:2px; }
+.sub { font-size:8.5pt; color:#6b7280; margin-bottom:14px; }
+h2.mese { font-family:'Open Sans'; font-weight:700; font-size:10.5pt; color:white;
+    background:#7a1c17; padding:5px 10px; border-radius:4px; margin:14px 0 6px;
+    text-transform:capitalize; page-break-after:avoid; }
+h2.mese:first-of-type { margin-top:0; }
+table { width:100%; border-collapse:collapse; margin-bottom:4px; }
+th { background:#f3f0ec; color:#374151; text-align:left; padding:4px 6px;
+     font-size:7.5pt; text-transform:uppercase; letter-spacing:.3px;
+     border-bottom:1.5px solid #d1c9bd; }
+td { padding:4px 6px; border-bottom:1px solid #eee; vertical-align:top; }
+tr { page-break-inside:avoid; }
+.riga-sospensione td { background:#dbeafe; color:#1e40af; font-weight:700; }
+.riga-termine td { background:#dcfce7; color:#166534; font-weight:700; }
+.tipo-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }
+.dot-collegio          { background:#3b82f6; }
+.dot-consiglio_classe  { background:#8b5cf6; }
+.dot-dipartimento      { background:#10b981; }
+.dot-riunione_materia  { background:#6ee7b7; }
+.dot-glo               { background:#eab308; }
+.dot-incontro_famiglie { background:#ec4899; }
+.dot-scrutinio         { background:#6b7280; }
+.dot-formazione        { background:#0ea5e9; }
+.dot-riunione_referenti{ background:#84cc16; }
+.dot-altro              { background:#d1d5db; }
+.footer { margin-top:16px; font-size:7pt; color:#9ca3af;
+          border-top:1px solid #e5eaf0; padding-top:6px; }
+@page { size: A4 landscape; margin: 10mm 12mm; }
+</style>
+</head>
+<body>
+
+<h1>Piano Annuale delle Attività — a.s. {{ anno }}</h1>
+<div class="sub">{{ n_eventi }} eventi — generato il {{ oggi.strftime('%d/%m/%Y') }} — IIS "Leonardo da Vinci", Chiavenna</div>
+
+{% for etichetta_mese, righe in mesi %}
+<h2 class="mese">{{ etichetta_mese }}</h2>
+<table>
+    <thead>
+        <tr>
+            <th style="width:16%;">Giorno</th>
+            <th style="width:28%;">Attività</th>
+            <th style="width:10%;">Indirizzo</th>
+            <th style="width:8%;">Classe</th>
+            <th style="width:9%;">Inizio</th>
+            <th style="width:9%;">Fine</th>
+            <th style="width:6%;">Ore</th>
+            <th style="width:14%;">Categoria</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for data_r, tipo_r, contenuto in righe %}
+            {% if tipo_r == 'sospensione' %}
+            <tr class="riga-sospensione">
+                <td colspan="8">
+                    {{ data_r.strftime('%d/%m') }}{% if contenuto.data_fine != contenuto.data_inizio %}–{{ contenuto.data_fine.strftime('%d/%m/%Y') }}{% endif %}
+                    — {{ contenuto.descrizione }} ({{ contenuto.tipo_label }})
+                </td>
+            </tr>
+            {% elif tipo_r == 'termine_lezioni' %}
+            <tr class="riga-termine">
+                <td colspan="8">{{ data_r.strftime('%d/%m/%Y') }} — Termine lezioni</td>
+            </tr>
+            {% else %}
+                {% for e in contenuto %}
+                <tr>
+                    {% if loop.first %}
+                    <td rowspan="{{ contenuto|length }}" style="font-weight:700; text-transform:capitalize;">
+                        {{ data_r.strftime('%A %d/%m') }}
+                    </td>
+                    {% endif %}
+                    <td><span class="tipo-dot dot-{{ e.tipo }}"></span>{{ e.titolo }}</td>
+                    <td>{{ e.col_indirizzo or '—' }}</td>
+                    <td>{{ e.col_classe or '—' }}</td>
+                    <td>{{ e.ora_inizio or '—' }}</td>
+                    <td>{{ e.ora_fine or '—' }}</td>
+                    <td>{{ '%.1f'|format(e.durata_ore) }}</td>
+                    <td>{{ e.col_categoria }}</td>
+                </tr>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endfor %}
+
+<div class="footer">CaronteApp · Piano Annuale delle Attività · documento interno, non sostituisce le delibere degli organi collegiali</div>
+
+</body>
+</html>

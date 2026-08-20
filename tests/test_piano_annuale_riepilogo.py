@@ -80,9 +80,9 @@ def test_piano_annuale_raggruppa_per_mese_e_giorno(app, db_session, monkeypatch)
     # Ordine cronologico dell'anno scolastico: settembre prima di giugno
     assert etichette.index('settembre 2026') < etichette.index('giugno 2027')
 
-    giorni_settembre = mesi[etichette.index('settembre 2026')][1]
-    eventi_2_settembre = giorni_settembre[date(2026, 9, 2)]
-    assert len(eventi_2_settembre) == 2  # i due eventi dello stesso giorno raggruppati
+    righe_settembre = mesi[etichette.index('settembre 2026')][1]
+    riga_2_settembre = next(r for r in righe_settembre if r[0] == date(2026, 9, 2) and r[1] == 'eventi')
+    assert len(riga_2_settembre[2]) == 2  # i due eventi dello stesso giorno raggruppati
 
 
 def test_piano_annuale_anno_vuoto(app, db_session, monkeypatch):
@@ -298,3 +298,81 @@ def test_riepilogo_ore_placeholder_sparisce_dopo_nomina(app, db_session, monkeyp
 
     righe = catturato['kwargs']['riepilogo_docenti']
     assert not any(r['is_placeholder'] for r in righe)  # niente più placeholder
+
+
+# ── Piano Annuale: stesso modello del foglio (sospensioni/termine lezioni) ──
+
+def test_piano_annuale_mostra_sospensioni_e_termine_lezioni(app, db_session, monkeypatch):
+    """Richiesta di Roberto: usare esattamente il modello del foglio
+    fornito — non solo gli eventi, anche le sospensioni delle lezioni
+    e il termine lezioni vanno indicati nel piano."""
+    from models.sospensione import SospensioneDidattica
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+
+    db.session.add(SospensioneDidattica(
+        data_inizio=date(2026, 12, 23), data_fine=date(2027, 1, 6),
+        descrizione='Vacanze natalizie', tipo='vacanze_natale'))
+    db.session.add(AttivitaIst(tipo='collegio', titolo='Collegio', data=date(2026, 9, 2),
+                                origine='manuale'))
+    db.session.commit()
+
+    from config_calendario import set_data_fine_lezioni
+    set_data_fine_lezioni(ANNO, date(2027, 6, 8))
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/piano-annuale?anno={ANNO}')
+        assert r.status_code == 200
+
+    mesi = dict(catturato['kwargs']['mesi'])
+    righe_dic = mesi['dicembre 2026']
+    assert any(r[1] == 'sospensione' and r[2].descrizione == 'Vacanze natalizie' for r in righe_dic)
+
+    righe_giu = mesi['giugno 2027']
+    assert any(r[1] == 'termine_lezioni' for r in righe_giu)
+
+
+def test_piano_annuale_evento_ha_colonne_indirizzo_classe_categoria(app, db_session, monkeypatch):
+    """Le colonne devono corrispondere esattamente a quelle del foglio
+    (Attività | Indirizzo | Classe | Inizio | Fine | Ore | Categoria) —
+    il modello tiene indirizzo+classe in un'unica label, qui vanno
+    separati come nel foglio."""
+    catturato = _registra_blueprint_con_cattura(app, monkeypatch)
+    db.session.add(AttivitaIst(tipo='consiglio_classe', titolo='CdC 3A LLI',
+                                data=date(2026, 10, 1), classe='3A LLI',
+                                durata_min=60, origine='manuale'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/piano-annuale?anno={ANNO}')
+        assert r.status_code == 200
+
+    mesi = dict(catturato['kwargs']['mesi'])
+    riga_ott = next(r for r in mesi['ottobre 2026'] if r[1] == 'eventi')
+    ev = riga_ott[2][0]
+    assert ev.col_classe == '3A'
+    assert ev.col_indirizzo == 'LLI'
+    assert ev.col_categoria == 'Consiglio di classe'
+
+
+def test_piano_annuale_pdf_genera_o_fallback_html(app, db_session, monkeypatch):
+    """Verifica che la route PDF risponda comunque (PDF vero se
+    WeasyPrint è installato, altrimenti fallback HTML — mai un errore,
+    coerente con le altre route PDF dell'app, vedi routes/report.py).
+    Il fixture 'app' leggero non ha il template_folder reale (stesso
+    limite di sempre): monkeypatch di render_template per un HTML
+    minimo valido, così il test isola solo il percorso
+    WeasyPrint/fallback, non il rendering Jinja del template vero."""
+    from routes.attivita_ist import attivita_ist_bp
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(attivita_ist_bp)
+    import routes.attivita_ist as mod
+    monkeypatch.setattr(mod, 'render_template', lambda *a, **k: '<html><body>ok</body></html>')
+
+    db.session.add(AttivitaIst(tipo='collegio', titolo='Collegio', data=date(2026, 9, 2),
+                                origine='manuale'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/piano-annuale/pdf?anno={ANNO}')
+        assert r.status_code == 200
+        assert r.content_type in ('application/pdf', 'text/html; charset=utf-8')

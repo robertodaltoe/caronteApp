@@ -4,6 +4,52 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 20 — Vista Piano Annuale condivisibile + export PDF (Cowork)
+
+Ultimo pezzo dell'estensione: "procedi, usa esattamente il modello che
+ti ho fornito" — la vista `piano_annuale` doveva riprodurre fedelmente
+il modello originale in foglio elettronico di Roberto: colonne
+Attività/Indirizzo/Classe/Inizio/Fine/Ore/Categoria raggruppate per
+giorno, con sospensioni delle lezioni e termine lezioni segnati nel
+mezzo del calendario come nell'originale, non solo gli eventi.
+
+**Modello dati** — `mesi` passa da `[(etichetta, {data: [eventi]})]` a
+`[(etichetta, [(data, tipo_riga, contenuto)])]`, dove `tipo_riga` è
+`'evento'`/`'sospensione'`/`'termine_lezioni'`: permette di intercalare
+banner di calendario (sospensione in blu, termine lezioni in verde)
+tra i giorni con eventi, nell'ordine cronologico esatto del foglio
+originale. Estratto in un helper condiviso `_righe_piano_annuale(anno)`
+in `routes/attivita_ist.py`, usato sia dalla vista a schermo sia dal
+nuovo export PDF — stessa logica, una sola fonte (pattern "due
+meccanismi paralleli" da evitare, vedi CLAUDE.md).
+
+**Export PDF** (`/attivita-ist/piano-annuale/pdf`) — nuovo
+`templates/attivita_ist/piano_annuale_print.html`, stesso schema font
+embedded di `report/singolo_print.html` (WeasyPrint via
+`HTML(string=...)`, niente `base_url` quindi font must essere
+base64), A4 landscape. Fallback se WeasyPrint non è disponibile: nel
+codice esistente di `routes/report.py` il fallback cattura solo
+`ImportError`, ma in sandbox Linux WeasyPrint è installato mentre
+mancano le librerie di sistema (pango/cairo) — l'errore reale è
+`OSError: cannot load library 'libgobject-2.0-0'`, non
+`ImportError`. Corretto nella mia nuova route con
+`except (ImportError, OSError)`; segnalato (non toccato, fuori
+scope) che `routes/report.py` ha la stessa lacuna nelle sue due route
+PDF.
+
+Verificato su dati reali con server avviato sul `database.db` vero
+(sola lettura): colonne corrette per Settembre 2026 (Collegio +
+Formazione), banner "Vacanze natalizie" in Dicembre 2026, banner
+"Termine lezioni" 08/06/2027 in Giugno 2027, export PDF via fetch
+diretto → 200, `application/pdf`, 22KB (WeasyPrint disponibile su
+questo Mac). 4 test nuovi + 1 sistemato in
+`tests/test_piano_annuale_riepilogo.py` per il nuovo formato a tuple.
+169/169 test passano.
+
+Con questo la vista condivisibile del Piano Annuale è completa e
+l'intera epica "Piano Annuale delle Attività" (Fasi 0-4 più
+l'estensione del generatore concordata con Roberto) è conclusa.
+
 ## Sessione 66 addendum 19 — Referenti dipartimento + Eventi unici (Cowork)
 
 Roberto ha precisato due punti sui dipartimenti prima di passare alla

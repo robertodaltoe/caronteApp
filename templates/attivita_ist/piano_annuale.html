@@ -10,21 +10,7 @@
     margin: 22px 0 12px; text-transform: capitalize;
 }
 .mese-header:first-of-type { margin-top: 0; }
-.giorno-blocco { margin-bottom: 14px; }
-.giorno-header {
-    display: flex; align-items: baseline; gap: 8px;
-    font-size: .88rem; font-weight: 700; color: var(--blu);
-    padding: 4px 0 6px; border-bottom: 2px solid var(--blu-light);
-    margin-bottom: 6px; text-transform: capitalize;
-}
-.giorno-header .n-eventi { font-weight: 400; color: var(--grigio); font-size: .78rem; text-transform: none; }
-.evento-riga {
-    display: flex; align-items: center; gap: 10px;
-    padding: 7px 10px; border-radius: 6px; font-size: .86rem;
-}
-.evento-riga:hover { background: var(--blu-light); }
-.evento-riga .orario { width: 90px; flex-shrink: 0; color: var(--grigio); font-size: .8rem; white-space: nowrap; }
-.evento-riga .tipo-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tipo-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
 .dot-collegio          { background: #3b82f6; }
 .dot-consiglio_classe  { background: #8b5cf6; }
 .dot-dipartimento      { background: #10b981; }
@@ -55,13 +41,16 @@
             {% endfor %}
         </div>
         {% endif %}
+        <a href="{{ url_for('attivita_ist.piano_annuale_pdf', anno=anno) }}" class="btn btn-sm" style="background:var(--verde);color:white;">{{ icon('download') }} Esporta PDF</a>
         <a href="{{ url_for('attivita_ist.riepilogo_ore', anno=anno) }}" class="btn btn-sm" style="background:#0369a1;color:white;">{{ icon('check') }} Riepilogo ore</a>
         <a href="{{ url_for('attivita_ist.lista', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">{{ icon('building') }} Elenco/gestione eventi</a>
     </div>
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:18px;">
-    {{ n_eventi }} eventi nell'anno — vista di sola lettura, stesso ruolo dei fogli mensili
-    del piano cartaceo. Per creare/modificare un evento usa "Elenco/gestione eventi".
+    {{ n_eventi }} eventi nell'anno — stesso modello del piano condiviso (colonne
+    Attività/Indirizzo/Classe/Inizio/Fine/Ore/Categoria, sospensioni e termine lezioni
+    segnati come nel calendario). Vista di sola lettura: per creare/modificare un
+    evento usa "Elenco/gestione eventi".
 </p>
 
 {% if not mesi %}
@@ -70,32 +59,67 @@
 </div>
 {% endif %}
 
-{% for etichetta_mese, giorni in mesi %}
+{% for etichetta_mese, righe in mesi %}
 <div class="mese-header">{{ etichetta_mese }}</div>
-<div class="card">
-    {% for data, eventi_giorno in giorni.items() %}
-    <div class="giorno-blocco">
-        <div class="giorno-header">
-            {{ data.strftime('%A %d/%m') }}
-            <span class="n-eventi">({{ eventi_giorno|length }} event{{ 'o' if eventi_giorno|length == 1 else 'i' }})</span>
-        </div>
-        {% for e in eventi_giorno %}
-        <div class="evento-riga">
-            <span class="orario">
-                {% if e.ora_inizio %}{{ e.ora_inizio }}{% if e.ora_fine %}–{{ e.ora_fine }}{% endif %}{% else %}—{% endif %}
-            </span>
-            <span class="tipo-dot dot-{{ e.tipo }}"></span>
-            <span style="flex:1;">
-                <strong>{{ e.titolo }}</strong>
-                {%- if e.classe %} <span class="badge badge-blu" style="font-size:.7rem;">{{ e.classe }}</span>{% endif %}
-                {%- if e.dipartimento %} <span style="font-size:.72rem; color:var(--grigio);">{{ e.dipartimento.sigla }}</span>{% endif %}
-            </span>
-            <span style="font-size:.76rem; color:var(--grigio); white-space:nowrap;">{{ e.tipo_label }}</span>
-            <a href="{{ url_for('attivita_ist.form', id=e.id) }}" class="btn btn-primary btn-sm" style="padding:3px 8px;" title="Modifica">{{ icon('edit') }}</a>
-        </div>
-        {% endfor %}
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:900px;">
+        <thead>
+            <tr>
+                <th style="width:140px;">Giorno</th>
+                <th>Attività</th>
+                <th style="width:80px;">Indirizzo</th>
+                <th style="width:60px;">Classe</th>
+                <th style="width:80px;">Inizio</th>
+                <th style="width:80px;">Fine</th>
+                <th style="width:65px; text-align:center;">Ore</th>
+                <th style="width:160px;">Categoria</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data_r, tipo_r, contenuto in righe %}
+                {% if tipo_r == 'sospensione' %}
+                <tr style="background:#dbeafe;">
+                    <td colspan="8" style="font-weight:700; color:#1e40af;">
+                        {{ icon('calendar') }}
+                        {{ data_r.strftime('%d/%m') }}{% if contenuto.data_fine != contenuto.data_inizio %}–{{ contenuto.data_fine.strftime('%d/%m/%Y') }}{% endif %}
+                        — {{ contenuto.descrizione }} <span style="font-weight:400; font-size:.78rem;">({{ contenuto.tipo_label }})</span>
+                    </td>
+                </tr>
+                {% elif tipo_r == 'termine_lezioni' %}
+                <tr style="background:#dcfce7;">
+                    <td colspan="8" style="font-weight:700; color:#166534;">
+                        {{ icon('check') }} {{ data_r.strftime('%d/%m/%Y') }} — Termine lezioni
+                    </td>
+                </tr>
+                {% else %}
+                    {% for e in contenuto %}
+                    <tr>
+                        {% if loop.first %}
+                        <td rowspan="{{ contenuto|length }}" style="font-weight:700; vertical-align:top; text-transform:capitalize;">
+                            {{ data_r.strftime('%A %d/%m') }}
+                        </td>
+                        {% endif %}
+                        <td>
+                            <span class="tipo-dot dot-{{ e.tipo }}"></span>{{ e.titolo }}
+                            {%- if e.dipartimento %} <span style="font-size:.72rem; color:var(--grigio);">{{ e.dipartimento.sigla }}</span>{% endif %}
+                        </td>
+                        <td>{{ e.col_indirizzo or '—' }}</td>
+                        <td>{{ e.col_classe or '—' }}</td>
+                        <td>{{ e.ora_inizio or '—' }}</td>
+                        <td>{{ e.ora_fine or '—' }}</td>
+                        <td style="text-align:center;">{{ '%.1f'|format(e.durata_ore) }}</td>
+                        <td>
+                            {{ e.col_categoria }}
+                            <a href="{{ url_for('attivita_ist.form', id=e.id) }}" class="btn btn-primary btn-sm" style="padding:2px 7px; margin-left:4px;" title="Modifica">{{ icon('edit') }}</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
     </div>
-    {% endfor %}
 </div>
 {% endfor %}
 {% endblock %}
