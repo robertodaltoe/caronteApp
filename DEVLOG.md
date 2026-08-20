@@ -4,6 +4,62 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 — Piano Annuale delle Attività: analisi/piano + Fase 0 calendario (Cowork)
+
+**Contesto:** Roberto ha condiviso il foglio Google
+`BOZZA_PIANO_ATTIVITA_2026_27.xlsx` (12 fogli: Introduzione, Piano
+della formazione, Riepilogo ore + 9 fogli mensili) e ha chiesto
+un'analisi di fattibilità completa per integrarlo in CaronteApp,
+collegandolo a calendario scolastico e assegnazione classi, con un
+generatore di Consigli di classe in parallelo — esplicitamente "un
+project plan prima di scriverlo e implementarlo".
+
+Prodotto un artifact ("Piano Annuale delle Attività") con: mappa di
+cosa esiste già (bucket CCNL art.44 in `models/attivita_ist.py`,
+`SospensioneDidattica`, Assegnazioni, `_preset_partecipanti()`), gap
+analysis, principio del generatore CdC (insiemi docenti per classe
+dalle **Assegnazioni**, non dall'orario — l'orario si stabilizza
+troppo tardi rispetto all'approvazione del piano annuale), e un piano
+a 5 fasi (0. Calendario, 1. Piano Formazione, 2. Vista+Riepilogo ore,
+3. Generatore CdC, 4. Pubblicazione PDF). Raffinato attraverso ~15
+round di commenti diretti sull'artifact: niente vincolo di stesso
+anno/indirizzo tra classi (solo docenti non condivisi, con
+raggruppamento per indirizzo come preferenza secondaria non
+vincolante), vincoli fissi di orario (martedì CAT/AFM/ROM 13:30-15:30,
+3ª/4ª LLI 12:30-13:30), presenza obbligatoria alle riunioni anche nei
+giorni personalmente liberi da lezione, presenza del DS impostabile
+per riunione/blocco come vincolo forte di sovrapposizione, vincoli
+manuali pre-generazione, pubblicazione solo PDF (niente pagina
+pubblica).
+
+Punto delicato: il bucket CCNL per la Formazione. Roberto ha chiesto
+inizialmente di metterla nello stesso bucket dei Consigli di classe;
+verificata la normativa su sua richiesta esplicita (CCNL art.29 comma
+3, Cassazione n.7320/2019), la formazione obbligatoria rientra invece
+nelle 40 ore del **Collegio docenti** (bucket A), non in quelle dei
+Consigli di classe (bucket B) — corrisponde già a come
+`TIPI_ATTIVITA` classifica oggi i due tipi, quindi nessuna modifica al
+codice esistente su questo punto. Roberto ha confermato la lettura
+normativa.
+
+**Fase 0 completata** (calendario scolastico 2026-2027): letto
+`Calendario_2026_27.pdf` (delibera CdI n.199 del 29/06/2026) fornito
+da Roberto, confermate con lui le date esatte (le chiusure uffici del
+7/24/31 dicembre + 24/31 marzo NON sono sospensione didattica, sono
+chiusura uffici — escluse). Popolato `sospensioni_didattiche` con 6
+righe per il 2026-2027 (Immacolata 7-8 dic, vacanze natalizie 23 dic
+-6 gen, Carnevale 8-9 feb, vacanze pasquali 24-31 mar, 1 maggio, 2
+giugno) e `data_fine_lezioni_2026-2027` = 8 giugno 2027 via
+`config_calendario.py`. Verificato prima su copia del DB, poi backup
+cifrato (`database_20260820_1636_pre_seed_calendario_2026_27.db.enc`)
+e applicato al DB reale, `PRAGMA integrity_check` ok, 101/101 test
+passano. Nota: "inizio lezioni" (14 settembre 2026) non ha un campo
+dedicato in nessun punto dell'app — non inventato un nuovo
+`config_app`/modello per questo finché non emerge un uso reale.
+
+Prossimo passo: Fase 1 (Piano della Formazione — nuovo modello +
+iscrizioni per singola voce).
+
 ## Sessione 65 — Assegnazioni: classe con sola compresenza spariva (Cowork)
 
 **Contesto:** Roberto: B-02-ING (ITP Conversazione Inglese) ha ore
