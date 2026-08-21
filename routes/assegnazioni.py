@@ -143,7 +143,7 @@ AREE = [
     {'nome': 'Area Umanistica',
      'cc':   ['A-11', 'A-12', 'A-18', 'A-19']},
     {'nome': 'Matematica e Scienze',
-     'cc':   ['A-20', 'A-26', 'A-27', 'A-34', 'A-41', 'A-47', 'A-50']},
+     'cc':   ['A-20', 'A-21', 'A-26', 'A-27', 'A-34', 'A-41', 'A-47', 'A-50']},
     {'nome': 'Tecnici Geo/Cost',
      'cc':   ['A-37', 'A-51', 'B-03', 'B-12', 'B-14', 'B-16', 'B-17']},
     {'nome': 'Lingue',

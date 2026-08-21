@@ -4,6 +4,42 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 23 — A-21 Geografia mancante in Assegnazioni (Cowork)
+
+Roberto: "in assegnazioni non mi compare a21 e non sono stati
+aggiornati i codici delle classi di concorso". Prima di tutto,
+affrontata una domanda collegata sull'export xlsx delle Assegnazioni:
+Roberto vedeva "SUPPLENTE 1" sotto A-19 nonostante avesse eliminato
+quel placeholder — verificato sul DB reale che non è un placeholder
+salvato: è una riga calcolata al volo dall'export
+(`_p9_scrivi_blocco_cc_assegnazioni`) quando un docente reale copre
+meno ore del suo monte ore (LOFFI Andrea, 9/18 ore su A-19) — nessun
+bug, comportamento voluto, spiegato senza modificare codice.
+
+Il vero bug: `routes/assegnazioni.py::AREE` è un elenco fisso scritto
+a mano di codici CC per area disciplinare (Area Umanistica, Matematica
+e Scienze, ecc.) — `_build_area()` itera SOLO su quell'elenco, quindi
+qualunque `ClasseConcorso` il cui codice non ci sia scritto non
+compare mai in Assegnazioni, indipendentemente da quanto sia attiva o
+da quante ore abbia nel piano di studi. A-21 (Geografia) esisteva in
+anagrafica, attiva, con ore reali nel piano studi 2026-2027 (1A/1B
+AFM, 1A/1B CAT — 8h totali) ma non era mai stata scritta in nessuna
+delle 8 liste di `AREE`: dimenticanza al momento della sua creazione,
+non un problema di dati. Corretto aggiungendo `'A-21'` al gruppo
+"Matematica e Scienze" (routes/assegnazioni.py:146).
+
+Verificato: confrontati programmaticamente tutti i codici
+`ClasseConcorso.attiva` con l'unione di tutte le liste `AREE` — solo
+`ADSS` (sostegno, gestito da un modulo separato, `orario_sostegno`)
+restava fuori, correttamente. A video sul `database.db` reale (sola
+lettura): A-21 ora compare in "Matematica e Scienze" con le sue 8h
+reali e "0 COI" (nessun docente ancora assegnato). Aggiunto
+`tests/test_assegnazioni_aree_cc.py` — 2 test, incluso uno strutturale
+che confronta ogni `ClasseConcorso` attiva non-sostegno con l'unione
+di `AREE`, per impedire che lo stesso problema si ripeta in futuro con
+una nuova classe di concorso dimenticata. 177/177 test passano (175 +
+2 nuovi).
+
 ## Sessione 66 addendum 22 — Riorganizzazione navbar/Impostazioni per il Piano Annuale (Cowork)
 
 Roberto: il Generatore CdC e il Piano della Formazione non sono
