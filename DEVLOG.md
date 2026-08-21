@@ -4,6 +4,61 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 24 — Tasto "nomina" su placeholder rotto in HTML (Cowork)
+
+Seguito dell'addendum 23: Roberto precisa che il problema non è un
+errore di validazione ("ore eccessive") ma che il click sull'icona
+⇄︎ (sostituisci placeholder con docente reale, A-50) non produce
+letteralmente nessuna reazione — niente modale, niente errore
+visibile.
+
+**Errore mio nel procedere**: per riprodurre il click in sicurezza
+avevo provato a far puntare un secondo processo Flask a una copia del
+database sovrascrivendo `app.config['SQLALCHEMY_DATABASE_URI']` dopo
+`create_app()`. L'override non ha avuto effetto — `create_app()` lega
+il motore SQLAlchemy al `database.db` reale già durante le migrazioni
+automatiche eseguite al suo interno, prima che il mio override potesse
+agire — quindi un test end-to-end della nomina (placeholder "Supplente
+(12h)"/Nervi-Ferrari su A-50, id 53) è finito scritto per errore sul
+database reale. Backup cifrato creato subito
+(`data/backup/database_20260821_2035_pre_fix_scrittura_accidentale_nomina_test.db.enc`),
+poi ripristinato con precisione riga per riga confrontando con una
+copia presa prima del test: `assegnazioni_docenti` id 53 rimesso
+esattamente com'era, più le 2 righe `docente_materie` e le 4 righe
+`attivita_ist_partecipanti` create come effetto collaterata della
+nomina (sincronizzazione materie/iscrizione eventi) eliminate.
+`PRAGMA integrity_check` ok dopo il ripristino. Lezione per il futuro:
+per riprodurre in sicurezza un flusso che scrive, copiare l'intera
+cartella dell'app (non solo il file DB) e lanciarla da lì — `base_dir`
+si calcola da `__file__` dentro `create_app()`, un override di
+config a runtime non è affidabile con questa architettura.
+
+**Causa reale, trovata dopo**: in
+`templates/assegnazioni/index.html`, il bottone ⇄︎ usava
+`onclick="apriNomina({{ a.id }}, {{ a.nome_placeholder|tojson }})"`
+— il filtro `|tojson` di Flask produce una stringa avvolta in
+virgolette `"..."` pensata per essere incorporata dentro un tag
+`<script>`, non dentro un attributo HTML già delimitato da virgolette.
+Il risultato per QUALSIASI placeholder (non serve un carattere
+speciale) è HTML rotto: `onclick="apriNomina(53, "Supplente
+(12h)")"` — il parser HTML chiude l'attributo `onclick` al primo `"`
+incontrato, lasciando `apriNomina(53, ` come valore reale
+dell'attributo: JavaScript troncato e non valido, il click non fa
+letteralmente nulla, coerente con quanto descritto. La mia prima
+verifica (chiamando `apriNomina()` a mano dalla console) non l'aveva
+notato perché bypassa l'HTML rotto.
+
+Corretto sostituendo `onclick`+`tojson` con attributi `data-asgn-id`/
+`data-placeholder` (escape HTML corretto e automatico di Jinja, verificato
+anche con un nome contenente virgolette: `&#34;`) e un
+`addEventListener` in `DOMContentLoaded` al posto dell'handler inline
+— pattern robusto anche per futuri placeholder con caratteri speciali
+nel nome. Verificato con un click reale del mouse (non da console) su
+una copia isolata dell'intera cartella dell'app puntata a una copia
+del database (questa volta il modo giusto per farlo): il modale si
+apre correttamente mostrando "Supplente Toracca". 177/177 test
+passano (nessun test nuovo: è un fix di solo markup/JS, non c'è logica
+di dominio da testare).
 ## Sessione 66 addendum 23 — A-21 Geografia mancante in Assegnazioni (Cowork)
 
 Roberto: "in assegnazioni non mi compare a21 e non sono stati

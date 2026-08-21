@@ -407,7 +407,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                 <td class="td-sticky-r col-azioni" style="white-space:nowrap;">
                     {% if not a.docente %}
                     <button type="button" title="Nomina un docente reale al posto di questo placeholder"
-                            onclick="apriNomina({{ a.id }}, {{ a.nome_placeholder|tojson }})"
+                            class="btn-nomina" data-asgn-id="{{ a.id }}" data-placeholder="{{ a.nome_placeholder }}"
                             style="background:none; border:none; cursor:pointer;
                                    color:var(--bronzo); font-size:.85rem;">⇄︎</button>
                     {% endif %}
@@ -747,6 +747,11 @@ function chiudiNomina() {
     document.getElementById('nomina-backdrop').style.display = 'none';
     document.getElementById('nomina-modal').style.display = 'none';
 }
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.btn-nomina').forEach(btn => {
+        btn.addEventListener('click', () => apriNomina(btn.dataset.asgnId, btn.dataset.placeholder));
+    });
+});
 
 function schedAutosave() {
     clearTimeout(_autoT);
