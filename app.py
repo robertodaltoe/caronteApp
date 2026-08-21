@@ -305,6 +305,7 @@ def create_app(avvio_con_reloader=True):
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
         from models.permesso_ruolo import PermessoRuolo  # noqa
+        from models.docente import DocenteContrattoAnno  # noqa
         from models.piano_attivita_personale import PianoAttivitaPersonale, PianoAttivitaPersonaleVoce  # noqa
         from models.formazione import CorsoFormazione  # noqa
         from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa

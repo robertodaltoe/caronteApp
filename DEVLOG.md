@@ -4,6 +4,63 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 27 — Contratto per anno scolastico, non solo "corrente" (Cowork)
+
+Seguito diretto dell'addendum 26: Tramontana, Ghezzi (IRC, TD annuale)
+e Agrò (TD 30/6 nel 2025-2026, TI dal 2026-2027) avevano tutti
+`anno_scol_inizio='2026-2027'` pur essendo in servizio nel 2025-2026 —
+sparivano dall'anagrafica di quell'anno. Causa strutturale: `Docente`
+è una riga sola per persona, non una per anno; impostare
+`anno_scol_inizio` alla nuova annualità per prepararla (pratica comune
+per IRC/TD annuale, che vanno rinominati ogni anno anche restando la
+stessa persona) cancella la finestra di servizio dell'anno in corso.
+Chiesto a Roberto come vuole gestire "stesso docente, contratto
+diverso da un anno all'altro" (caso reale: un TD che entra in ruolo,
+come Agrò) prima di correggere — confermata la linea proposta.
+
+**Nuovo modello** `models/docente.py::DocenteContrattoAnno` — una riga
+per docente per anno scolastico, con `tipo_contratto` per QUELL'anno
+specifico. Ha priorità su `Docente.tipo_contratto` (che resta il
+"corrente/più recente") per i calcoli relativi a un anno passato o in
+chiusura — usato da:
+- `routes/attivita_ist.py::_non_in_servizio_per_data()` (controllo
+  contratto di luglio/agosto — CONTRATTI_OK);
+- `routes/recupero_costanti.py::docenti_idonei_periodo()` (stesso
+  controllo per le prove di recupero di agosto).
+
+Se non esiste una riga storica per un anno, si ricade sul
+`tipo_contratto` corrente — comportamento invariato per tutti i
+docenti che non hanno mai avuto un cambio di contratto tra un anno e
+l'altro (la stragrande maggioranza).
+
+**UI**: nuova sezione "Contratto {{anno}}" per ogni docente nella
+pagina Impostazioni → Docenti per anno (passo 7), sotto ai controlli
+di uscita/AP/aspettativa già esistenti — un menu a tendina + "Salva"
+per registrare il contratto specifico di quell'anno senza toccare il
+campo corrente. Nuova azione `imposta_contratto_anno` nella route
+`docenti_anno()`.
+
+**Correzione dati reale** (backup cifrato prima —
+`data/backup/database_20260821_2244_pre_tabella_docenti_contratti_
+anno.db.enc`): rimosso `anno_scol_inizio` (rimesso a NULL, mai
+avrebbe dovuto essere impostato per un rinnovo di personale già in
+servizio) per Ghezzi, Tramontana e Agrò; per Agrò aggiunta la riga
+storica `DocenteContrattoAnno(2025-2026, TD_GS)`. `PRAGMA
+integrity_check` ok. Verificato: tutti e tre ora compaiono
+nell'anagrafica sia 2025-2026 sia 2026-2027; Agrò risulta "non in
+servizio" al 31/08/2026 per il motivo giusto (contratto storico
+TD_GS, non più anno_scol_inizio futuro) e correttamente in servizio
+dal 01/09/2026 (TI); verificato anche che compaia ora correttamente
+come "da sostituire" sui suoi 4 scrutini reali del 31/08 (fix
+addendum 26).
+
+Verificato: 2 test nuovi in `tests/test_esclusione_non_in_servizio_
+form.py` (uso del contratto storico sia in `_non_in_servizio_per_data`
+sia in `docenti_idonei_periodo`), import del nuovo modello aggiunto a
+`tests/conftest.py` e `app.py` (per `db.create_all()`). A video sul
+reale: pagina "Docenti per anno" 2025-2026 mostra correttamente
+"Contratto 2025-2026: TD 30 giugno" per Agrò. 185/185 test passano
+(183 + 2 nuovi).
 ## Sessione 66 addendum 26 — Audit "docente non in servizio" su tutta l'app (Cowork)
 
 Dopo il fix a `sostituzione_scrutinio()` (addendum 25), Roberto ha

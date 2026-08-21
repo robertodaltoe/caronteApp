@@ -259,6 +259,37 @@
                 {% endif %}
             </form>
         </div>
+        {% if contratti_anno_map.get(d.id) or d.tipo_contratto != 'TI' %}
+        {# Contratto specifico per {{ anno }} — separato dal tipo_contratto
+           "corrente" del docente: serve per un docente con contratto
+           annuale (TD/IRC) il cui contratto sta per cambiare (es. entra
+           in ruolo), senza perdere quale contratto aveva davvero
+           nell'anno che si sta ancora chiudendo. #}
+        <div style="grid-column:1/-1; display:flex; align-items:center; gap:6px;
+                    padding:3px 10px 3px 26px; font-size:.7rem; color:var(--grigio);">
+            <span>Contratto {{ anno }}:
+                {% if contratti_anno_map.get(d.id) %}
+                <strong style="color:var(--blu);">{{ tipo_contratto_labels.get(contratti_anno_map[d.id], contratti_anno_map[d.id]) }}</strong>
+                {% else %}
+                <em>non specificato — usa il contratto corrente ({{ d.tipo_contratto_label }})</em>
+                {% endif %}
+            </span>
+            <form method="post" style="margin:0; display:flex; gap:3px; align-items:center;">
+                <input type="hidden" name="id_docente" value="{{ d.id }}">
+                <input type="hidden" name="anno_scol" value="{{ anno }}">
+                <input type="hidden" name="azione" value="imposta_contratto_anno">
+                <select name="tipo_contratto_anno" style="padding:1px 3px; border:1px solid #d1d5db;
+                        border-radius:4px; font-size:.68rem;">
+                    {% for val, lbl in tipo_contratto_labels.items() %}
+                    <option value="{{ val }}" {% if contratti_anno_map.get(d.id) == val %}selected{% endif %}>{{ lbl }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" style="background:none; border:1px solid #d1d5db; border-radius:4px;
+                        cursor:pointer; padding:1px 5px; font-size:.68rem; color:#374151;">
+                    Salva</button>
+            </form>
+        </div>
+        {% endif %}
         {% endfor %}
     </div>
 </div>

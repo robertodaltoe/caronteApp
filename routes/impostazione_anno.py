@@ -1585,6 +1585,27 @@ def docenti_anno():
             db.session.commit()
             flash(f'{d.cognome} {d.nome}: status ripristinato a presente.', 'success')
 
+        elif azione == 'imposta_contratto_anno' and d:
+            # Registra il contratto DI QUESTO anno_f senza toccare
+            # Docente.tipo_contratto (il "corrente"/più recente) — serve
+            # a preparare il prossimo anno per un docente con contratto
+            # annuale che sta per cambiare (es. TD che entra in ruolo,
+            # diventa TI) senza perdere il contratto vero dell'anno che
+            # si sta ancora chiudendo. Vedi models.docente.
+            # DocenteContrattoAnno — segnalato da Roberto, caso Agrò.
+            from models.docente import DocenteContrattoAnno
+            tipo_c = request.form.get('tipo_contratto_anno', '').strip()
+            if tipo_c:
+                riga = DocenteContrattoAnno.query.filter_by(
+                    id_docente=d.id, anno_scol=anno_f).first()
+                if riga:
+                    riga.tipo_contratto = tipo_c
+                else:
+                    db.session.add(DocenteContrattoAnno(
+                        id_docente=d.id, anno_scol=anno_f, tipo_contratto=tipo_c))
+                db.session.commit()
+                flash(f'{d.cognome} {d.nome}: contratto {anno_f} registrato.', 'success')
+
         elif azione == 'annulla_uscita' and d:
             d.anno_scol_uscita = None
             d.motivo_uscita    = None
@@ -1677,11 +1698,18 @@ def docenti_anno():
     if anno not in anni_disponibili:
         anni_disponibili.insert(0, anno)
 
+    from models.docente import DocenteContrattoAnno, TIPO_CONTRATTO_LABELS
+    contratti_anno_map = {
+        c.id_docente: c.tipo_contratto for c in
+        DocenteContrattoAnno.query.filter_by(anno_scol=anno).all()
+    }
+
     return render_template('impostazione_anno/docenti_anno.html',
         anno=anno, anni_disponibili=anni_disponibili,
         docenti_gestione=docenti_gestione, uscenti=uscenti,
         ap_uscenti=ap_uscenti, ap_entranti=ap_entranti,
-        td_anno=td_anno)
+        td_anno=td_anno, contratti_anno_map=contratti_anno_map,
+        tipo_contratto_labels=TIPO_CONTRATTO_LABELS)
 
 
 # ── CONFRONTO TI ↔ ORGANICO USR ──────────────────────────────────────

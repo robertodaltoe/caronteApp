@@ -264,3 +264,44 @@ class CoppiaDocenteItp(db.Model):
 
     def __repr__(self):
         return f"<CoppiaDocenteItp {self.titolare.cognome if self.titolare else '?'} + {self.itp.cognome if self.itp else '?'}>"
+
+
+class DocenteContrattoAnno(db.Model):
+    """
+    Tipo di contratto di un docente PER UN ANNO SCOLASTICO SPECIFICO.
+
+    Docente.tipo_contratto è un campo unico, sempre sovrascritto: va bene
+    per "qual è il contratto attuale/più recente", ma un docente con
+    contratto annuale (IRC, TD annuale, TD fino a GS...) può cambiare
+    tipo da un anno all'altro pur restando la stessa persona — es. un TD
+    che entra in ruolo e diventa TI l'anno dopo (caso reale: Agrò,
+    TD 30/6 nel 2025-2026, TI dal 2026-2027). Se si limita ad aggiornare
+    Docente.tipo_contratto per preparare il nuovo anno, si perde il
+    contratto vero dell'anno che sta ancora finendo — sbagliando i
+    calcoli "in servizio a questa data" per quell'anno (es. idoneità
+    per i recuperi/scrutini di agosto, che guardano proprio il tipo di
+    contratto — vedi routes/attivita_ist.py::_non_in_servizio_per_data
+    e routes/recupero_costanti.py::CONTRATTI_OK).
+
+    Una riga per docente per anno: se esiste, ha priorità sul campo
+    Docente.tipo_contratto (sempre "corrente") per i calcoli relativi a
+    quello specifico anno_scol.
+    """
+    __tablename__ = 'docenti_contratti_anno'
+
+    id             = db.Column(db.Integer, primary_key=True)
+    id_docente     = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False)
+    anno_scol      = db.Column(db.String(9), nullable=False)
+    tipo_contratto = db.Column(db.String(20), nullable=False)
+    note           = db.Column(db.String(200), nullable=True)
+    creato_il      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    docente = db.relationship('Docente', backref=db.backref(
+        'contratti_anno', cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('id_docente', 'anno_scol', name='uq_docente_contratto_anno'),
+    )
+
+    def __repr__(self):
+        return f"<DocenteContrattoAnno {self.docente.cognome if self.docente else '?'} {self.anno_scol} {self.tipo_contratto}>"

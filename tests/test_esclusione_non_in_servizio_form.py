@@ -349,3 +349,49 @@ def test_esami_integrativi_esclude_docente_non_in_servizio_da_disponibile_e_idon
     riga = catturato['kwargs']['righe'][0]['materie'][0]
     assert riga['disponibile_1'] is False
     assert d_non_arrivato.id not in {d.id for d in riga['docenti_idonei']}
+
+
+# ── Contratto storico per anno (DocenteContrattoAnno) ───────────────────────
+
+def test_agosto_usa_contratto_storico_non_quello_corrente(app, db_session):
+    """Roberto: Agrò aveva contratto TD_GS (scaduto a fine giugno) nel
+    2025-2026, ma il suo tipo_contratto è stato aggiornato a 'TI' per
+    prepararlo al 2026-2027. Senza una riga storica per il 2025-2026,
+    _non_in_servizio_per_data lo avrebbe considerato erroneamente in
+    servizio ad agosto 2025-2026 guardando solo il contratto corrente
+    (TI, idoneo). Con la riga storica registrata, deve invece risultare
+    non in servizio per quell'agosto specifico."""
+    from models.docente import DocenteContrattoAnno
+    from routes.attivita_ist import _non_in_servizio_per_data
+
+    d = crea_docente('AgroTest', tipo_contratto='TI')  # contratto corrente/nuovo
+
+    # Senza riga storica: il contratto corrente (TI) è idoneo, quindi
+    # in servizio ad agosto.
+    assert d.id not in _non_in_servizio_per_data(date(2026, 8, 20))
+
+    # Con la riga storica per il 2025-2026 (TD_GS, scaduto a giugno):
+    # non in servizio a quell'agosto.
+    db.session.add(DocenteContrattoAnno(id_docente=d.id, anno_scol='2025-2026',
+                                         tipo_contratto='TD_GS'))
+    db.session.commit()
+    assert d.id in _non_in_servizio_per_data(date(2026, 8, 20))
+
+    # Il 2026-2027 (nessuna riga storica per quell'anno) resta invariato:
+    # usa il contratto corrente TI, idoneo.
+    assert d.id not in _non_in_servizio_per_data(date(2027, 8, 20))
+
+
+def test_docenti_idonei_periodo_agosto_usa_contratto_storico(app, db_session):
+    from models.docente import DocenteContrattoAnno
+    from routes.recupero_costanti import docenti_idonei_periodo
+
+    d = crea_docente('AgroTest2', tipo_contratto='TI')
+    db.session.add(DocenteContrattoAnno(id_docente=d.id, anno_scol='2025-2026',
+                                         tipo_contratto='TD_GS'))
+    db.session.commit()
+
+    ids_2526 = {x.id for x in docenti_idonei_periodo('2025-2026')}
+    ids_2627 = {x.id for x in docenti_idonei_periodo('2026-2027')}
+    assert d.id not in ids_2526
+    assert d.id in ids_2627

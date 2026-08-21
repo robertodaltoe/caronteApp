@@ -42,6 +42,17 @@ def _non_in_servizio_per_data(data_evento):
        lo sono, fino al 31 agosto compreso. Stessa regola già in uso in
        routes/recupero_costanti.py::CONTRATTI_OK per le prove di recupero
        di agosto — riusata qui invece di reinventarla.
+
+       Il contratto usato per questo controllo è quello STORICO
+       dell'anno dell'evento (models.docente.DocenteContrattoAnno), se
+       registrato — non Docente.tipo_contratto "corrente", che può
+       essere già stato aggiornato al contratto del prossimo anno
+       mentre si prepara la transizione (es. un TD che entra in ruolo:
+       tipo_contratto diventa 'TI' per il nuovo anno, ma per l'agosto
+       dell'anno che si sta chiudendo va comunque valutato col
+       contratto che aveva allora — segnalato da Roberto, caso Agrò).
+       Se non esiste una riga storica per quell'anno, si ricade sul
+       campo corrente (comportamento invariato per tutti gli altri).
     """
     from routes.docenti import _docenti_non_in_servizio
     anno_evento = _anno_scolastico(data_evento)
@@ -54,11 +65,15 @@ def _non_in_servizio_per_data(data_evento):
 
     if data_evento.month in (7, 8):
         from routes.recupero_costanti import CONTRATTI_OK
-        esclusi |= {d.id for d in Docente.query.filter(
-            Docente.attivo == True,
-            db.or_(Docente.tipo_contratto == None,
-                   ~Docente.tipo_contratto.in_(CONTRATTI_OK))
-        ).all()}
+        from models.docente import DocenteContrattoAnno
+        contratti_storici = {
+            c.id_docente: c.tipo_contratto for c in
+            DocenteContrattoAnno.query.filter_by(anno_scol=anno_evento).all()
+        }
+        for d in Docente.query.filter_by(attivo=True).all():
+            tipo = contratti_storici.get(d.id, d.tipo_contratto)
+            if not tipo or tipo not in CONTRATTI_OK:
+                esclusi.add(d.id)
 
     return esclusi
 

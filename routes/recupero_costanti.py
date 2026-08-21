@@ -47,10 +47,22 @@ def docenti_idonei_periodo(anno_scol):
     Docenti idonei come somministratore/assistente per le prove di
     recupero di agosto (contratto idoneo — CONTRATTI_OK — e in servizio
     in anno_scol), ordinati per cognome. Vedi docenti_in_servizio_query().
+
+    Il tipo di contratto guardato è quello STORICO dell'anno indicato
+    (models.docente.DocenteContrattoAnno), se registrato — non
+    Docente.tipo_contratto "corrente", che può già riflettere il
+    contratto del prossimo anno mentre si prepara la transizione (es.
+    un TD che entra in ruolo: idem controllo in
+    routes/attivita_ist.py::_non_in_servizio_per_data, stessa causa).
     """
-    return (docenti_in_servizio_query(anno_scol)
-            .filter(Docente.tipo_contratto.in_(CONTRATTI_OK))
-            .order_by(Docente.cognome).all())
+    from models.docente import DocenteContrattoAnno
+    contratti_storici = {
+        c.id_docente: c.tipo_contratto for c in
+        DocenteContrattoAnno.query.filter_by(anno_scol=anno_scol).all()
+    }
+    candidati = docenti_in_servizio_query(anno_scol).order_by(Docente.cognome).all()
+    return [d for d in candidati
+            if contratti_storici.get(d.id, d.tipo_contratto) in CONTRATTI_OK]
 
 TIPO_PROVA_LABEL = {
     'scritto':       '✎︎️ Scritto',
