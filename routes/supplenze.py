@@ -72,7 +72,14 @@ def nuova():
 
     oggi     = date.today()
     data_str = request.args.get('data', oggi.isoformat())
-    docenti  = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    # Esclude i docenti non in servizio alla data della supplenza (stesso
+    # controllo di routes/dashboard.py e attivita_ist.py::
+    # _preset_partecipanti) — senza, un docente non ancora arrivato o già
+    # uscito compariva comunque come assente/sostituto selezionabile.
+    from routes.attivita_ist import _non_in_servizio_per_data
+    esclusi_servizio = _non_in_servizio_per_data(date.fromisoformat(data_str))
+    docenti  = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+                if d.id not in esclusi_servizio]
     return render_template('supplenza_form.html',
         docenti=docenti, data_sel=data_str, ore=ORA_LABEL,
         classi_attive=_classi_attive())
@@ -211,7 +218,14 @@ def api_suggerimenti():
     if id_assente:
         assenti_ids.add(id_assente)
 
-    esclusi = assenti_ids | occupati_ids | indisp_ids
+    # Docenti non in servizio a questa data (non ancora arrivati, già
+    # usciti, o — a luglio/agosto — con contratto già scaduto): stesso
+    # controllo di routes/dashboard.py e attivita_ist.py::
+    # _preset_partecipanti, mancava qui nel motore di suggerimento.
+    from routes.attivita_ist import _non_in_servizio_per_data
+    esclusi_servizio = _non_in_servizio_per_data(data_sel)
+
+    esclusi = assenti_ids | occupati_ids | indisp_ids | esclusi_servizio
 
     # ── Saldo banca ore per docente — effettivo e previsto ──
     # Scoped all'anno scolastico corrente (stessa convenzione usata in
@@ -446,7 +460,7 @@ def api_suggerimenti():
                 assenti_reali_ids.add(a.id_docente)  # range 1-9 = tutto giorno
             elif a.ora_inizio <= ora <= a.ora_fine:
                 assenti_reali_ids.add(a.id_docente)  # permesso orario ora specifica
-        esclusi_fuori = occupati_ids | indisp_ids | assenti_reali_ids
+        esclusi_fuori = occupati_ids | indisp_ids | assenti_reali_ids | esclusi_servizio
         tutti_incluso_assenti = {
             d.id: d for d in Docente.query.filter_by(attivo=True).all()
             if d.id not in esclusi_fuori and d.id != id_assente
@@ -562,7 +576,14 @@ def _fmt_saldo(minuti):
 @supplenze_bp.route('/supplenze/<int:id>/modifica', methods=['GET', 'POST'])
 def modifica(id):
     s = Supplenza.query.get_or_404(id)
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    # Esclude i docenti non in servizio alla data della supplenza, ma
+    # senza nascondere assente/sostituto già selezionati su questa riga
+    # (stesso principio già usato per formazione/attivita_ist: chi è già
+    # scelto resta visibile anche se nel frattempo risulta uscito).
+    from routes.attivita_ist import _non_in_servizio_per_data
+    esclusi_servizio = _non_in_servizio_per_data(s.data) - {s.id_assente, s.id_sostituto}
+    docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+               if d.id not in esclusi_servizio]
 
     if request.method == 'POST':
         from concorrenza import versione_cambiata

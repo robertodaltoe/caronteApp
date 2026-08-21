@@ -1236,9 +1236,21 @@ def sostituzione_scrutinio(id):
         flash('Sostituzione registrata.', 'success')
         return redirect(url_for('attivita_ist.sostituzione_scrutinio', id=id))
 
+    # Docenti non in servizio a questa data (stesso controllo di
+    # _preset_partecipanti). Usato sia per i candidati sostituti sotto,
+    # sia qui per gli assenti: un partecipante non più in servizio va
+    # sempre considerato "da sostituire", anche se la sua riga presenze
+    # è rimasta sullo stato di default 'presente' perché nessuno l'ha
+    # ancora aggiornata a mano — altrimenti la pagina "Sostituzioni"
+    # risulta vuota nonostante il badge "non più in servizio" mostrato
+    # nella pagina presenze (bug segnalato da Roberto: Agrò, non in
+    # servizio dal 31/08, non compariva come assente da sostituire).
+    esclusi_servizio = _non_in_servizio_per_data(evento.data)
+
     # Docenti assenti a questo scrutinio
     presenze_assenti = [p for p in evento.presenze
-                        if p.stato in ('assente', 'giustificato')]
+                        if p.stato in ('assente', 'giustificato')
+                        or p.id_docente in esclusi_servizio]
 
     # Classi dello scrutinio (per escludere i docenti di quella classe)
     classe_scrutinio = evento.classe  # es. '3A LSC'
@@ -1255,7 +1267,6 @@ def sostituzione_scrutinio(id):
     # servizio a questa data (stesso controllo di _preset_partecipanti —
     # senza, un docente con anno_scol_inizio futuro comparirebbe come
     # possibile sostituto per uno scrutinio prima di essere arrivato).
-    esclusi_servizio = _non_in_servizio_per_data(evento.data)
     tutti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     candidati_base = [d for d in tutti
                       if d.id not in docenti_classe_ids and d.id not in esclusi_servizio]

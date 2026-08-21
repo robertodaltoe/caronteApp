@@ -4,6 +4,77 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 26 — Audit "docente non in servizio" su tutta l'app (Cowork)
+
+Dopo il fix a `sostituzione_scrutinio()` (addendum 25), Roberto ha
+chiesto di controllare se lo stesso bug (liste di docenti selezionabili
+senza controllo sulla data di servizio) si ripetesse altrove. Delegata
+a un subagent un'analisi sistematica di tutti i punti dell'app che
+costruiscono un elenco di docenti "candidabili" legato a una data o un
+anno scolastico specifico. Risultato: **9 bug confermati**, alcuni casi
+dubbi da chiarire, e un elenco di punti già corretti (formazione,
+attivita_ist, dashboard_anno, incarichi, banca_ore, recupero_giugno/
+agosto — tutti già usano `_non_in_servizio_per_data`/`_docenti_per_anno`
+correttamente).
+
+Corretti i 3 a maggior impatto, confermati da Roberto:
+
+1. **`routes/dashboard.py::index()`** — il menu "Assegna sostituto"
+   sulla dashboard principale (il controllo più usato ogni giorno)
+   costruiva `docenti_attivi` senza nessun filtro sul servizio.
+2. **`routes/supplenze.py`** — `api_suggerimenti()` (il motore di
+   suggerimento sostituti, sia il gruppo principale `tutti` sia il
+   gruppo "fuori aula" `tutti_incluso_assenti`), `nuova()` e
+   `modifica()` (quest'ultima senza nascondere un sostituto già
+   assegnato, anche se nel frattempo risulta uscito — stesso principio
+   già usato per formazione/attivita_ist).
+3. **`routes/esami_integrativi.py`** — `_docente_disponibile()`
+   controllava solo `attivo`, non il servizio alla data dell'esame; e
+   `docenti_idonei` (l'elenco proposto per la commissione, derivato da
+   `OrarioDocente`) non veniva mai riverificato contro lo stato del
+   docente. Area particolarmente a rischio: gli esami integrativi
+   cadono proprio a settembre, il momento di transizione anno con più
+   arrivi/uscite.
+
+Tutti e tre riusano `_non_in_servizio_per_data()`
+(routes/attivita_ist.py), lo stesso helper già esistente — nessuna
+logica duplicata. Verificato: 5 test nuovi in
+`tests/test_esclusione_non_in_servizio_form.py` (dashboard, supplenze
+nuova/modifica — incluso il caso "sostituto già assegnato resta
+visibile" — esami integrativi disponibilità+commissione). Aggiunti gli
+import mancanti (`EsameIntegrativoCandidato`/`Materia`) in
+`tests/conftest.py`. 183/183 test passano (178 + 5 nuovi).
+
+**Due segnalazioni di Roberto durante la verifica, indagate a fondo:**
+
+- *"Agrò risulta col badge 'non più in servizio' ma la pagina
+  Sostituzioni non mostra nessuno da sostituire"* — bug reale, diverso
+  da quello appena corretto. `presenze_assenti` in
+  `sostituzione_scrutinio()` guardava solo `AttivitaIstPresenza.stato`
+  (che resta sul default `'presente'` finché nessuno lo cambia a
+  mano), mai il fatto che il docente non sia più in servizio. Corretto
+  includendo anche chi risulta `_non_in_servizio_per_data()` a
+  prescindere dallo stato registrato — verificato su Agrò (id 2, 4
+  scrutini reali del 31/08): ora compare correttamente come da
+  sostituire in tutti e 4. Nuovo test dedicato.
+
+- *Tramontana, Ghezzi (IRC, TD annuale) e Agrò stesso (TI dal
+  2026-2027, TD-fino-a-GS nel 2025-2026) hanno tutti
+  `anno_scol_inizio='2026-2027'` pur essendo correntemente in servizio
+  nel 2025-2026* — segnalato ma **non toccato**: non è un refuso come
+  Micheletti/Facchi (addendum 25), è un limite strutturale del modello
+  `Docente` (una riga sola per persona, non una per anno) quando si
+  prepara l'anno successivo per personale con contratto annuale che va
+  rinnovato ogni volta (IRC, TD annuale) — impostare
+  `anno_scol_inizio` alla nuova annualità per prepararla cancella la
+  finestra di servizio dell'anno in corso. Per Agrò il problema è
+  doppio: anche `tipo_contratto` è stato aggiornato a 'TI' (il suo
+  status 2026-2027), perdendo il fatto che nel 2025-2026 era TD-GS —
+  motivo per cui il suo "non in servizio" al 31/08 risulta corretto
+  ma per la ragione sbagliata (anno_scol_inizio futuro invece del vero
+  contratto TD-GS scaduto). Serve una decisione di Roberto su come
+  rappresentare "stesso docente, contratto diverso anno per anno"
+  prima di correggere qualcosa — segnalato, non deciso.
 ## Sessione 66 addendum 25 — Docenti in anagrafica errata + sostituti scrutini agosto (Cowork)
 
 Tre richieste in sequenza, tutte sullo stesso filo: Roberto aveva

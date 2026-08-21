@@ -37,10 +37,18 @@ def index():
         .all()
     indisponibilita = _accorpa_indisponibilita(indisp_raw)
 
-    docenti_attivi = Docente.query\
-        .filter_by(attivo=True)\
-        .order_by(Docente.cognome)\
-        .all()
+    # Esclude i docenti non in servizio alla data selezionata (non ancora
+    # arrivati, già usciti, o — a luglio/agosto — con contratto già
+    # scaduto) dal menu "Assegna sostituto": senza questo controllo un
+    # docente compariva come possibile sostituto anche prima del suo
+    # anno_scol_inizio o dopo la sua uscita — stesso controllo già usato
+    # da routes/attivita_ist.py::_preset_partecipanti().
+    from routes.attivita_ist import _non_in_servizio_per_data
+    esclusi_servizio = _non_in_servizio_per_data(data_sel)
+    docenti_attivi = [d for d in Docente.query
+                      .filter_by(attivo=True)
+                      .order_by(Docente.cognome).all()
+                      if d.id not in esclusi_servizio]
 
     stats = {
         'totale':    len(supplenze),

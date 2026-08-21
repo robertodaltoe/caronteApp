@@ -208,3 +208,144 @@ def test_sostituzione_scrutinio_esclude_docente_non_ancora_in_servizio(app, db_s
     ids_disponibili = {d.id for d in riga['docenti_disponibili']}
     assert d_non_arrivato.id not in ids_candidati
     assert d_non_arrivato.id not in ids_disponibili
+
+
+def test_sostituzione_scrutinio_mostra_da_sostituire_anche_se_presenza_stato_presente(app, db_session, monkeypatch):
+    """Roberto: Agrò risulta correttamente col badge "non più in servizio"
+    nella pagina presenze per uno scrutinio del 31/08 (contratto TD fino
+    a GS, scaduto), ma "Sostituzioni" non lo mostra come qualcuno da
+    sostituire. Causa: la sua riga AttivitaIstPresenza è rimasta sullo
+    stato di default 'presente' (nessuno l'ha mai aggiornata a mano) —
+    presenze_assenti guardava solo lo stato, mai il fatto che il docente
+    non sia più in servizio a quella data."""
+    import routes.attivita_ist as mod
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod.attivita_ist_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d_non_servizio = crea_docente('NonInServizioPresente')
+    d_non_servizio.anno_scol_uscita = '2025-2026'
+    d_non_servizio.motivo_uscita = 'trasferimento'
+
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio finale', classe='4A LSC',
+                      data=date(2026, 8, 31), origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    from models.attivita_ist import AttivitaIstPresenza
+    # stato di default 'presente', mai toccato — proprio come il caso reale
+    db.session.add(AttivitaIstPresenza(id_attivita=ev.id, id_docente=d_non_servizio.id))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/{ev.id}/sostituzioni')
+        assert r.status_code == 200
+
+    righe = catturato['kwargs']['righe']
+    assert len(righe) == 1
+    assert righe[0]['assente'].id == d_non_servizio.id
+
+
+# ── Dashboard: menu "Assegna sostituto" ─────────────────────────────────────
+
+def test_dashboard_esclude_docente_non_ancora_in_servizio_dal_menu_sostituto(app, db_session, monkeypatch):
+    import routes.dashboard as mod
+    if 'dashboard' not in app.blueprints:
+        app.register_blueprint(mod.dashboard_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d_non_arrivato = crea_docente('NonArrivatoDash')
+    d_non_arrivato.anno_scol_inizio = '2026-2027'
+    d_attivo = crea_docente('AttivoDash')
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get('/dashboard?data=2026-05-15')
+        assert r.status_code == 200
+
+    ids = {d.id for d in catturato['kwargs']['docenti']}
+    assert d_non_arrivato.id not in ids
+    assert d_attivo.id in ids
+
+
+# ── Supplenze: form nuova/modifica ───────────────────────────────────────────
+
+def test_supplenze_nuova_esclude_docente_non_ancora_in_servizio(app, db_session, monkeypatch):
+    import routes.supplenze as mod
+    if 'supplenze' not in app.blueprints:
+        app.register_blueprint(mod.supplenze_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d_non_arrivato = crea_docente('NonArrivatoSupp')
+    d_non_arrivato.anno_scol_inizio = '2026-2027'
+    d_attivo = crea_docente('AttivoSupp')
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get('/supplenze/nuova?data=2026-05-15')
+        assert r.status_code == 200
+
+    ids = {d.id for d in catturato['kwargs']['docenti']}
+    assert d_non_arrivato.id not in ids
+    assert d_attivo.id in ids
+
+
+def test_supplenze_modifica_non_nasconde_sostituto_gia_assegnato(app, db_session, monkeypatch):
+    """Un sostituto già assegnato su una supplenza esistente resta
+    visibile nel form anche se nel frattempo risulta non più in
+    servizio a quella data — stesso principio già usato per gli altri
+    form di questo file."""
+    import routes.supplenze as mod
+    from models.supplenza import Supplenza
+    if 'supplenze' not in app.blueprints:
+        app.register_blueprint(mod.supplenze_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d_sost = crea_docente('SostGiaAssegnato')
+    d_sost.anno_scol_inizio = '2026-2027'
+    s = Supplenza(data=date(2026, 5, 15), ora=1, classe='1A', id_sostituto=None)
+    db.session.add(s)
+    db.session.flush()
+    s.id_sostituto = d_sost.id
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/supplenze/{s.id}/modifica')
+        assert r.status_code == 200
+
+    ids = {d.id for d in catturato['kwargs']['docenti']}
+    assert d_sost.id in ids
+
+
+# ── Esami Integrativi: commissione/docenti idonei ────────────────────────────
+
+def test_esami_integrativi_esclude_docente_non_in_servizio_da_disponibile_e_idonei(app, db_session, monkeypatch):
+    import routes.esami_integrativi as mod
+    if 'esami_integrativi' not in app.blueprints:
+        app.register_blueprint(mod.esami_integrativi_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    from models.esami_integrativi import EsameIntegrativoCandidato, EsameIntegrativoMateria
+    from models.orario_docente import OrarioDocente
+
+    d_non_arrivato = crea_docente('NonArrivatoEsami')
+    d_non_arrivato.anno_scol_inizio = '2026-2027'
+    db.session.commit()
+    db.session.add(OrarioDocente(id_docente=d_non_arrivato.id, giorno=0, ora=1,
+                                  classe='1A', materia='MATEMATICA'))
+
+    cand = EsameIntegrativoCandidato(anno_scol=mod.ANNO, cognome='Rossi', nome='Mario',
+                                      classe_destinazione='1A')
+    db.session.add(cand)
+    db.session.flush()
+    mat = EsameIntegrativoMateria(id_candidato=cand.id, materia='MATEMATICA',
+                                   data=date(2025, 9, 5), id_docente_1=d_non_arrivato.id)
+    db.session.add(mat)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get('/esami-integrativi/calendario')
+        assert r.status_code == 200
+
+    riga = catturato['kwargs']['righe'][0]['materie'][0]
+    assert riga['disponibile_1'] is False
+    assert d_non_arrivato.id not in {d.id for d in riga['docenti_idonei']}

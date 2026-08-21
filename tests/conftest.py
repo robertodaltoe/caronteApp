@@ -57,6 +57,8 @@ def app():
         from models.sospensione import SospensioneDidattica  # noqa
         from models.incarico import CategoriaIncarico, TipoIncarico, IncaricaDocente  # noqa
         from models.sostituzione_scrutinio import SostituzioneScrutinio  # noqa
+        from models.esami_integrativi import (EsameIntegrativoCandidato,  # noqa
+                                               EsameIntegrativoMateria)
         db.create_all()
         yield app
         db.session.remove()

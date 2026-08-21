@@ -45,11 +45,22 @@ def _docenti_idonei_materia(materia):
 
 
 def _docente_disponibile(id_docente, data):
-    """Contratto attivo + nessuna assenza registrata in quella data."""
+    """
+    Contratto attivo, in servizio a quella data, nessuna assenza
+    registrata. Gli Esami Integrativi cadono a settembre, proprio nel
+    momento di transizione anno in cui più docenti arrivano/escono —
+    senza il controllo sul servizio (stesso di
+    routes/attivita_ist.py::_non_in_servizio_per_data), un docente non
+    ancora arrivato per il nuovo anno poteva risultare comunque
+    disponibile a esaminare una materia.
+    """
     if not id_docente or not data:
         return True
     d = Docente.query.get(id_docente)
     if not d or not d.attivo:
+        return False
+    from routes.attivita_ist import _non_in_servizio_per_data
+    if id_docente in _non_in_servizio_per_data(data):
         return False
     from models.assenza import Assenza
     ass = Assenza.query.filter_by(id_docente=id_docente, data=data).first()
@@ -198,6 +209,13 @@ def calendario():
             disponibile_1 = _docente_disponibile(mat.id_docente_1, mat.data) if mat.docente_1 else None
             disponibile_2 = _docente_disponibile(mat.id_docente_2, mat.data) if mat.docente_2 else None
             docenti_idonei = _docenti_idonei_materia(mat.materia)
+            if mat.data:
+                # Esclude dal menu chi non è in servizio alla data della
+                # materia — _docenti_idonei_materia deriva solo da
+                # OrarioDocente, senza ricontrollare lo stato del docente.
+                from routes.attivita_ist import _non_in_servizio_per_data
+                esclusi_serv = _non_in_servizio_per_data(mat.data)
+                docenti_idonei = [d for d in docenti_idonei if d.id not in esclusi_serv]
             materie_riga.append({
                 'materia_obj': mat,
                 'disponibile_1': disponibile_1,
