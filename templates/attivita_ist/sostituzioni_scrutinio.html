@@ -110,7 +110,7 @@
         {% for cand, score, segnali, riun_prec, riun_succ in riga.candidati %}
         {% set prio_row = 'priorita-1' if score <= 10 else ('priorita-2' if score <= 20 else ('priorita-3' if score <= 30 else 'priorita-altro')) %}
         <div class="cand-row {{ prio_row }}"
-             onclick="selezionaCandidat({{ riga.assente.id }}, {{ cand.id }}, '{{ cand.cognome }}{% if cand.nome %} {{ cand.nome[0] }}.{% endif %}')">
+             data-assente-id="{{ riga.assente.id }}" data-candidato-id="{{ cand.id }}">
             {# Un pallino per ogni segnale presente (non solo quello
                scelto per l'ordinamento) — colore/numero si leggono
                nella legenda in alto. #}
@@ -197,7 +197,7 @@
 {% endif %}
 
 <script>
-function selezionaCandidat(assenteId, candidatoId, nome) {
+function selezionaCandidat(assenteId, candidatoId) {
     const sel = document.getElementById('sel-sost-' + assenteId);
     if (sel) {
         sel.value = candidatoId;
@@ -210,5 +210,20 @@ function selezionaCandidat(assenteId, candidatoId, nome) {
         }, 1500);
     }
 }
+// Click sulla riga candidato: letto da data-assente-id/data-candidato-id
+// invece di un onclick con nome interpolato — un cognome con apostrofo
+// (es. "DAL TOE'") rompeva la stringa JS incorporata nell'attributo:
+// il parser HTML decodifica le entity di un attributo PRIMA che il
+// motore JS legga l'handler, quindi anche l'apostrofo HTML-escaped da
+// Jinja tornava un apostrofo letterale a runtime, troncando la
+// chiamata a selezionaCandidat() — click silenziosamente senza
+// effetto (segnalato da Roberto).
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.cand-row').forEach(row => {
+        row.addEventListener('click', () => {
+            selezionaCandidat(row.dataset.assenteId, row.dataset.candidatoId);
+        });
+    });
+});
 </script>
 {% endblock %}

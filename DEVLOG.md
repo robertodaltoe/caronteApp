@@ -4,6 +4,46 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 34 — Sostituzioni scrutinio: click su Dal Toè non autocompilava (Cowork)
+
+Prima segnalazione di Roberto in questo giro ("Patrini con 2B LLI"):
+indagine completa, nessun bug trovato — verificato che la pagina
+Sostituzioni legge le classi SOLO dall'orario reale corrente
+(`OrarioDocente`), mai dalle Assegnazioni: Patrini compare come
+candidata per un 2B LLI perché davvero non ha conflitti con quella
+classe nel 2025-2026, la sua assegnazione 2026-2027 non c'entra e non
+viene mai letta da questa pagina (verificato anche `DocenteMateria`:
+l'unica riga che ha è taggata correttamente 2026-2027). Confermato a
+Roberto senza modificare nulla.
+
+Seconda segnalazione, stessa pagina: cliccando su "Dal Toè" tra i
+candidati, il selettore "Sostituto nominato" non si autocompila.
+Causa trovata: stesso bug della "nomina" in Assegnazioni (addendum 24)
+ma con un meccanismo diverso — qui non c'era `tojson`, ma
+interpolazione diretta di `cand.cognome` dentro una stringa JS a
+apici singoli nell'attributo `onclick`. Il cognome reale è `DAL TOE'`
+(con apostrofo): Jinja lo scrive come entity HTML (`&#39;`) per
+sicurezza, ma il parser HTML del browser decodifica le entity di un
+attributo PRIMA che il motore JS legga l'handler — l'apostrofo torna
+letterale a runtime, troncando la chiamata a `selezionaCandidat()` a
+metà stringa: click silenziosamente senza effetto, esattamente come
+osservato.
+
+Corretto con lo stesso pattern già usato per la nomina in
+Assegnazioni: `data-assente-id`/`data-candidato-id` (mai interpolati
+in una stringa JS) + `addEventListener` in `DOMContentLoaded`, invece
+di un `onclick` con testo libero incorporato — robusto per qualsiasi
+carattere nel nome, non solo l'apostrofo. Cercato lo stesso schema
+altrove (`onclick="...'{{ ... }}...'"` in altri 8 file): nessun altro
+punto interpola un cognome/nome libero, tutti gli altri casi usano id
+numerici o codici fissi (classe, indirizzo, sigla) che non possono
+contenere apostrofi — nessun'altra correzione necessaria.
+
+Verificato: 191/191 test invariati (fix solo template/JS). A video:
+click reale su una riga candidato popola correttamente il selettore;
+verificato anche iniettando "DAL TOE' Roberto" come testo di una riga
+di prova — il click funziona lo stesso, perché il nuovo meccanismo
+non interpola mai il nome in JavaScript.
 ## Sessione 66 addendum 33 — Sostituzioni scrutinio: tutti i segnali, non solo il primo (Cowork)
 
 Roberto: nella lista candidati sostituti vedeva quasi sempre e solo
