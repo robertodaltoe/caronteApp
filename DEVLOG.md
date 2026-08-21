@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 29 — Pagina "Docenti per anno": mostrare il contratto storico (Cowork)
+
+Due segnalazioni consecutive di Roberto sulla pagina Impostazioni →
+Docenti per anno (passo 7), entrambe conseguenze dirette
+dell'addendum 27/28 lasciate a metà.
+
+1. *"Non capisco dove gestire il cambio di contratto — per Agrò non
+   vedo niente, solo per Religione"*. Causa: la sezione "Contratto
+   {{anno}}" (il controllo per registrare il contratto storico) era
+   nascosta con `{% if contratti_anno_map.get(d.id) or d.tipo_contratto
+   != 'TI' %}` — visibile solo per chi ha già un contratto non-TI o già
+   una riga storica. Proprio Agrò, il caso che il controllo doveva
+   coprire (un TD diventato TI), è quello che spariva: essendo TI ORA,
+   la condizione lo escludeva. Tolto il filtro, il controllo è visibile
+   per ogni docente, come tutti gli altri pulsanti della stessa riga
+   (Esce/AP/Aspettativa).
+
+2. *"Nella lista 2025-2026, Agrò non dovrebbe comparire come TD GS?"*
+   — giusto, e infatti non compariva: l'etichetta accanto al nome
+   (`d.tipo_contratto_label`) e la scelta "pensionamento" vs "fine
+   incarico" nel menu di uscita leggevano ancora `d.tipo_contratto`
+   corrente, non il contratto storico di quell'anno — stesso bug
+   dell'addendum 28, stavolta nella tabella stessa invece che nei
+   conteggi. Corretto con `{% set tipo_eff =
+   contratti_anno_map.get(d.id, d.tipo_contratto) %}` riusato in tutti
+   e tre i punti della riga.
+
+Verificato a video sul reale: pagina 2025-2026 mostra ora "AGRÒ Andrea
+(TD 30 giugno)" con "fine incarico" come opzione di uscita corretta
+(non più "pensionamento") e la sezione "Contratto 2025-2026: TD 30
+giugno" sotto; pagina 2026-2027 mostra "AGRÒ Andrea" senza etichetta
+(è TI, il suo contratto corrente) e "Contratto 2026-2027: non
+specificato — usa il contratto corrente (TI)". Solo template, nessuna
+logica nuova da testare — 186/186 test invariati.
 ## Sessione 66 addendum 28 — Contratto storico anche in conteggi/export TI (Cowork)
 
 Roberto ha chiesto se l'addendum 27 (DocenteContrattoAnno) si

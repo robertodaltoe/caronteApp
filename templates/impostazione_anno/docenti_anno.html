@@ -208,14 +208,19 @@
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:6px;">
         {% for d in docenti_gestione %}
         {% set status = d.status_presenza or 'presente' %}
+        {# Contratto DI QUESTO anno (storico se registrato, altrimenti il
+           corrente) — non il campo "corrente" grezzo: un docente TI ora
+           che nel {{ anno }} era ancora TD (es. Agrò) va mostrato/
+           trattato qui col contratto che aveva ALLORA. #}
+        {% set tipo_eff = contratti_anno_map.get(d.id, d.tipo_contratto) %}
         <div style="display:flex; align-items:center; gap:6px; padding:6px 10px;
                     background:{{ '#fffbeb' if status == 'ap_uscente' else ('#e0f9ff' if status == 'aspettativa' else '#f9fafb') }};
                     border:1px solid {{ '#fde68a' if status == 'ap_uscente' else ('#bae6fd' if status == 'aspettativa' else '#e5e7eb') }};
                     border-radius:6px; font-size:.8rem;">
             <span style="flex:1; font-weight:{{ '600' if status != 'presente' else '400' }};">
                 {{ d.cognome }} {{ d.nome }}
-                {% if d.tipo_contratto != 'TI' %}
-                <span style="font-size:.68rem; color:var(--grigio);">({{ d.tipo_contratto_label }})</span>
+                {% if tipo_eff != 'TI' %}
+                <span style="font-size:.68rem; color:var(--grigio);">({{ tipo_contratto_labels.get(tipo_eff, tipo_eff) }})</span>
                 {% endif %}
                 {% if status == 'ap_uscente' %}
                 <span style="font-size:.68rem; color:#f59e0b;">→︎ AP uscente</span>
@@ -230,7 +235,7 @@
                 <select name="motivo" style="padding:2px 4px; border:1px solid #d1d5db;
                         border-radius:4px; font-size:.68rem; color:#6b7280;">
                     <option value="trasferimento">trasf.</option>
-                    {% if d.tipo_contratto == 'TI' %}
+                    {% if tipo_eff == 'TI' %}
                     <option value="pensionamento">pens.</option>
                     {% else %}
                     <option value="fine_td">fine incarico</option>
@@ -240,7 +245,7 @@
                         style="background:none; border:1px solid #fca5a5; border-radius:4px;
                                cursor:pointer; padding:2px 5px; font-size:.68rem; color:#dc2626;">
                     {{ icon('close') }} Esce</button>
-                {% if d.tipo_contratto == 'TI' %}
+                {% if tipo_eff == 'TI' %}
                 {# AP/aspettativa: mobilità sull'organico USR, ha senso solo per i TI #}
                 <button type="submit" name="azione" value="segna_ap_uscente"
                         style="background:none; border:1px solid #fde68a; border-radius:4px;
@@ -259,12 +264,17 @@
                 {% endif %}
             </form>
         </div>
-        {% if contratti_anno_map.get(d.id) or d.tipo_contratto != 'TI' %}
         {# Contratto specifico per {{ anno }} — separato dal tipo_contratto
            "corrente" del docente: serve per un docente con contratto
            annuale (TD/IRC) il cui contratto sta per cambiare (es. entra
            in ruolo), senza perdere quale contratto aveva davvero
-           nell'anno che si sta ancora chiudendo. #}
+           nell'anno che si sta ancora chiudendo. Visibile per TUTTI i
+           docenti, non solo i non-TI: è proprio un TI corrente (dopo
+           essere entrato in ruolo) che ha bisogno di specificare il
+           contratto DIVERSO che aveva in un anno passato — nascondere
+           il controllo quando tipo_contratto è già 'TI' lo rendeva
+           irraggiungibile esattamente nel caso che doveva coprire
+           (segnalato da Roberto: Agrò, TD nel 25-26 diventato TI). #}
         <div style="grid-column:1/-1; display:flex; align-items:center; gap:6px;
                     padding:3px 10px 3px 26px; font-size:.7rem; color:var(--grigio);">
             <span>Contratto {{ anno }}:
@@ -289,7 +299,6 @@
                     Salva</button>
             </form>
         </div>
-        {% endif %}
         {% endfor %}
     </div>
 </div>
