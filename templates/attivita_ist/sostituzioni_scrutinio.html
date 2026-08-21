@@ -18,6 +18,18 @@
 .p2 { background:#dbeafe; color:#1e40af; }
 .p3 { background:var(--viola-bg); color:#5b21b6; }
 .p4 { background:#f3f4f6; color:#6b7280; }
+{# Pallini segnale: uno per ogni segnale presente nel candidato (non
+   solo quello che ha determinato l'ordinamento) — stessi colori del
+   badge singolo di prima e della legenda, così restano leggibili
+   senza bisogno di testo. #}
+.segnali-dots { display:flex; gap:2px; flex-shrink:0; }
+.segnale-dot { width:16px; height:16px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:.6rem;
+    font-weight:700; color:white; }
+.segnale-dot.s1 { background:var(--verde); }
+.segnale-dot.s2 { background:#1e40af; }
+.segnale-dot.s3 { background:#5b21b6; }
+.segnale-dot.s4 { background:#9ca3af; }
 .assente-card { border:1px solid var(--rosso-bg); border-radius:8px; padding:14px 16px;
     margin-bottom:16px; background:var(--rosso-bg); }
 .sost-registrata { border-color:#86efac; background:var(--verde-bg); }
@@ -95,13 +107,18 @@
                     margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px;">
             Candidati suggeriti
         </div>
-        {% for cand, score, riun_prec, riun_succ in riga.candidati %}
-        {% set prio = 'p1' if score <= 10 else ('p2' if score <= 20 else ('p3' if score <= 30 else 'p4')) %}
+        {% for cand, score, segnali, riun_prec, riun_succ in riga.candidati %}
         {% set prio_row = 'priorita-1' if score <= 10 else ('priorita-2' if score <= 20 else ('priorita-3' if score <= 30 else 'priorita-altro')) %}
         <div class="cand-row {{ prio_row }}"
              onclick="selezionaCandidat({{ riga.assente.id }}, {{ cand.id }}, '{{ cand.cognome }}{% if cand.nome %} {{ cand.nome[0] }}.{% endif %}')">
-            <span class="prio-badge {{ prio }}">
-                {% if score <= 10 %}① mat.{% elif score <= 20 %}② dip.{% elif score <= 30 %}③ riunione{% else %}④{% endif %}
+            {# Un pallino per ogni segnale presente (non solo quello
+               scelto per l'ordinamento) — colore/numero si leggono
+               nella legenda in alto. #}
+            <span class="segnali-dots">
+                {% if 1 in segnali %}<span class="segnale-dot s1" title="① stessa materia">①</span>{% endif %}
+                {% if 2 in segnali %}<span class="segnale-dot s2" title="② stesso dipartimento">②</span>{% endif %}
+                {% if 3 in segnali %}<span class="segnale-dot s3" title="③ altra riunione lo stesso giorno">③</span>{% endif %}
+                {% if 4 in segnali %}<span class="segnale-dot s4" title="④ disponibile">④</span>{% endif %}
             </span>
             <span style="font-weight:700; font-size:.9rem; flex:1;">
                 {{ cand.cognome }}{% if cand.nome %} {{ cand.nome[0] }}.{% endif %}

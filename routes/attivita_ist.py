@@ -1347,29 +1347,37 @@ def sostituzione_scrutinio(id):
                 succ, succ_ini = ev2, ev2_ini
         return prec, succ
 
-    def _score_candidato(d, assente_id, riun_prec, riun_succ):
+    def _segnali_candidato(d, assente_id, riun_prec, riun_succ):
         """
-        Priorità (score più basso = priorità più alta):
-        1. Stessa materia dell'assente               (10)
-        2. Stesso dipartimento                        (20)
-        3. Libero e ha un'altra riunione lo stesso giorno:
-           - PRIMA di questo scrutinio (già a scuola, è la scelta più
-             comoda) — range 21-25, più vicina nel tempo = priorità
-             maggiore
-           - DOPO questo scrutinio (deve comunque tornare/restare) —
-             range 26-30, stessa logica di vicinanza oraria
-           A parità di condizioni, "prima" batte sempre "dopo": chi è
-           già a scuola per un altro impegno è la scelta più pratica,
-           chi ha impegni solo dopo potrebbe non essere ancora arrivato.
-        4. Generico disponibile, nessun'altra riunione quel giorno (50)
+        Calcola TUTTI i segnali di priorità applicabili a questo
+        candidato, non solo il migliore — prima, un return anticipato
+        al primo segnale trovato (es. stessa materia) impediva di
+        vedere se ne fossero presenti anche altri (es. anche una
+        riunione lo stesso giorno): un candidato finiva sempre
+        etichettato con un solo segnale, quello con priorità più alta,
+        anche quando ne aveva altri (segnalato da Roberto: vedeva quasi
+        sempre solo "③ riunione" e voleva sapere se c'erano anche gli
+        altri segnali).
 
-        Segnalato da Roberto (Task 47): la versione precedente non
-        distingueva riunioni prima/dopo né la vicinanza oraria — un
-        docente con riunione lontana nel pomeriggio finiva ordinato
-        alla pari (o meglio) di uno realmente comodo per l'orario.
+        Ritorna (score_ordinamento, segnali) dove segnali è un set di
+        interi tra {1,2,3,4}:
+        1. Stessa materia dell'assente
+        2. Stesso dipartimento
+        3. Libero e ha un'altra riunione lo stesso giorno (prima o
+           dopo questo scrutinio)
+        4. Generico disponibile — SOLO se nessun altro segnale è
+           presente, altrimenti non aggiunge informazione.
+
+        Lo score di ordinamento resta identico a prima (stesso segnale
+        migliore decide, con lo stesso dettaglio fine di vicinanza
+        oraria per "riunione" — Task 47): serve solo a ordinare la
+        lista, i segnali INFORMATIVI da mostrare sono tutti quelli
+        presenti in "segnali", non solo quello scelto per l'ordine.
         """
-        if d.id in assenti_giorno: return 999  # non disponibile
-        if d.id in impegnati_altri: return 998
+        if d.id in assenti_giorno: return 999, set()  # non disponibile
+        if d.id in impegnati_altri: return 998, set()
+
+        segnali = set()
 
         # Materia dell'assente — anno scolastico dell'evento (evento.data),
         # non "oggi": uno scrutinio programmato per un anno diverso da
@@ -1381,33 +1389,45 @@ def sostituzione_scrutinio(id):
             id_docente=d.id, anno_scol=anno_evento).all()}
 
         if assente_mat_ids & cand_mat_ids:
-            return 10  # stessa materia
+            segnali.add(1)  # stessa materia
 
         if assente_mat_ids and cand_mat_ids:
-            # Stesso dipartimento?
             assente_dips = {m.id_dipartimento for m in Materia.query.filter(
                 Materia.id.in_(assente_mat_ids)).all()}
             cand_dips = {m.id_dipartimento for m in Materia.query.filter(
                 Materia.id.in_(cand_mat_ids)).all()}
             if assente_dips & cand_dips:
-                return 20
+                segnali.add(2)  # stesso dipartimento
 
-        # Riunione prima: quanto è vicina (in minuti) al termine dello
-        # scrutinio? Più è vicina, più il docente è "comodo" — score
-        # 21 (subito prima) fino a 25 (fino a 8h prima, poi resta a 25).
-        if riun_prec:
-            prec_fin = _to_min(riun_prec.ora_fine) if riun_prec.ora_fine else _to_min(riun_prec.ora_inizio) + 45
-            gap = max(0, ev_ini - prec_fin)
-            return 21 + min(gap / 480, 1) * 4
+        if riun_prec or riun_succ:
+            segnali.add(3)  # altra riunione lo stesso giorno
 
-        # Riunione dopo: stessa logica ma range 26-30, sempre dopo
-        # (peggiore) di "riunione prima" a parità di vicinanza.
-        if riun_succ:
-            succ_ini = _to_min(riun_succ.ora_inizio)
-            gap = max(0, succ_ini - ev_fin)
-            return 26 + min(gap / 480, 1) * 4
+        if not segnali:
+            segnali.add(4)  # generico disponibile
 
-        return 50  # generico, nessun'altra riunione quel giorno
+        if 1 in segnali:
+            score = 10
+        elif 2 in segnali:
+            score = 20
+        elif 3 in segnali:
+            # Riunione prima: quanto è vicina (in minuti) al termine
+            # dello scrutinio? Più è vicina, più il docente è "comodo"
+            # — score 21 (subito prima) fino a 25 (fino a 8h prima).
+            # Riunione dopo: stessa logica ma 26-30, sempre dopo
+            # (peggiore) di "prima" a parità di vicinanza — chi è già
+            # a scuola per un altro impegno è la scelta più pratica.
+            if riun_prec:
+                prec_fin = _to_min(riun_prec.ora_fine) if riun_prec.ora_fine else _to_min(riun_prec.ora_inizio) + 45
+                gap = max(0, ev_ini - prec_fin)
+                score = 21 + min(gap / 480, 1) * 4
+            else:
+                succ_ini = _to_min(riun_succ.ora_inizio)
+                gap = max(0, succ_ini - ev_fin)
+                score = 26 + min(gap / 480, 1) * 4
+        else:
+            score = 50  # generico, nessun'altra riunione quel giorno
+
+        return score, segnali
 
     # Calcola score per ogni candidato rispetto a ogni assente
     sostituzioni_attuali = {s.id_assente: s for s in
@@ -1429,7 +1449,7 @@ def sostituzione_scrutinio(id):
                           and d.id not in gia_impegnati_riunione]
         cands_prec_succ = {d.id: _riunione_prec_succ(d.id) for d in candidati_riga}
         cands_scored = sorted(
-            [(d, _score_candidato(d, assente.id, *cands_prec_succ[d.id]),
+            [(d, *_segnali_candidato(d, assente.id, *cands_prec_succ[d.id]),
               *cands_prec_succ[d.id])
              for d in candidati_riga],
             key=lambda x: x[1]

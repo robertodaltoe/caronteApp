@@ -4,6 +4,39 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 33 — Sostituzioni scrutinio: tutti i segnali, non solo il primo (Cowork)
+
+Roberto: nella lista candidati sostituti vedeva quasi sempre e solo
+"③ altra riunione lo stesso giorno" — chiesto di vedere anche gli
+altri segnali della logica quando presenti (es. stessa materia),
+proponendo lui stesso la soluzione: un pallino colorato col numero,
+leggibile in legenda, invece di un'unica etichetta testuale.
+
+Causa: `_score_candidato()` usciva con un `return` non appena trovava
+il PRIMO segnale applicabile (materia > dipartimento > riunione >
+generico) — un candidato con sia "stessa materia" sia "riunione lo
+stesso giorno" veniva etichettato solo "① mat.", la riunione restava
+invisibile anche se vera. Rinominata in `_segnali_candidato()`:
+calcola ora TUTTI i segnali applicabili in un set (`{1,2,3,4}`)
+invece di fermarsi al primo, mantenendo lo stesso punteggio di
+ordinamento di prima (il segnale migliore decide sempre la posizione
+in lista — comportamento di sort invariato, Task 47).
+
+Template (`sostituzioni_scrutinio.html`): il badge testuale singolo
+sostituito con `.segnali-dots`, un pallino colorato per ogni segnale
+presente (stessi colori della legenda già esistente in cima alla
+pagina — verde①/blu②/viola③/grigio④), con tooltip sul testo esteso.
+
+Verificato: 2 test nuovi in `tests/test_sostituzione_scrutinio_
+segnali.py` (un candidato con materia+riunione mostra entrambi i
+segnali — anzi tre, perché stessa materia implica anche stesso
+dipartimento — un altro con sola riunione mostra solo quello,
+l'ordinamento resta invariato; un candidato senza alcun segnale
+mostra solo "④ disponibile"). A video sui dati reali: su 56 righe
+candidato di uno scrutinio reale, già 1 mostra correttamente due
+pallini insieme ("② ③ BUIARELLI G."), prima invisibile perché il
+primo segnale trovato (dipartimento) copriva la riunione. 191/191
+test passano (189 + 2 nuovi).
 ## Sessione 66 addendum 32 — Link "nomina sostituto" mancante per assenze normali (Cowork)
 
 Roberto: per sostituire un docente in permesso (es. Del Curto),
