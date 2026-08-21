@@ -205,6 +205,24 @@
         "presente" (default). AP e aspettativa si applicano solo ai TI
         (mobilità sull'organico USR).
     </div>
+
+    {# Form "vuoto" per la conferma cumulativa dei contratti — i
+       selettori vivono dentro ogni riga docente (per restare vicini al
+       nome), ma sono collegati qui tramite l'attributo form="...", per
+       non dover annidare un form dentro l'altro (ogni riga ha già il
+       proprio form per Esce/AP/Asp). Un solo invio conferma tutti i
+       contratti insieme, invece di salvarli uno per uno — richiesto da
+       Roberto dopo aver visto che il salvataggio riga per riga non è
+       praticabile con ~100 docenti. #}
+    <form id="form-contratti-anno" method="post">
+        <input type="hidden" name="azione" value="conferma_contratti_anno">
+        <input type="hidden" name="anno_scol" value="{{ anno }}">
+    </form>
+    <div style="display:flex; justify-content:flex-end; margin-bottom:6px;">
+        <button type="submit" form="form-contratti-anno" class="btn btn-primary btn-sm">
+            {{ icon('check') }} Conferma tutti i contratti {{ anno }}</button>
+    </div>
+
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:6px;">
         {% for d in docenti_gestione %}
         {% set status = d.status_presenza or 'presente' %}
@@ -278,26 +296,17 @@
         <div style="grid-column:1/-1; display:flex; align-items:center; gap:6px;
                     padding:3px 10px 3px 26px; font-size:.7rem; color:var(--grigio);">
             <span>Contratto {{ anno }}:
-                {% if contratti_anno_map.get(d.id) %}
-                <strong style="color:var(--blu);">{{ tipo_contratto_labels.get(contratti_anno_map[d.id], contratti_anno_map[d.id]) }}</strong>
-                {% else %}
-                <em>non specificato — usa il contratto corrente ({{ d.tipo_contratto_label }})</em>
+                {% if not contratti_anno_map.get(d.id) %}
+                <em>non confermato</em>
                 {% endif %}
             </span>
-            <form method="post" style="margin:0; display:flex; gap:3px; align-items:center;">
-                <input type="hidden" name="id_docente" value="{{ d.id }}">
-                <input type="hidden" name="anno_scol" value="{{ anno }}">
-                <input type="hidden" name="azione" value="imposta_contratto_anno">
-                <select name="tipo_contratto_anno" style="padding:1px 3px; border:1px solid #d1d5db;
-                        border-radius:4px; font-size:.68rem;">
-                    {% for val, lbl in tipo_contratto_labels.items() %}
-                    <option value="{{ val }}" {% if contratti_anno_map.get(d.id) == val %}selected{% endif %}>{{ lbl }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" style="background:none; border:1px solid #d1d5db; border-radius:4px;
-                        cursor:pointer; padding:1px 5px; font-size:.68rem; color:#374151;">
-                    Salva</button>
-            </form>
+            <select name="tipo_contratto_{{ d.id }}" form="form-contratti-anno"
+                    style="padding:1px 3px; border:1px solid {{ '#d1d5db' if contratti_anno_map.get(d.id) else '#fca5a5' }};
+                           border-radius:4px; font-size:.68rem;">
+                {% for val, lbl in tipo_contratto_labels.items() %}
+                <option value="{{ val }}" {% if tipo_eff == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
         </div>
         {% endfor %}
     </div>

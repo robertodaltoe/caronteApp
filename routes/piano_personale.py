@@ -55,10 +55,20 @@ def lista():
         {anno})
     anni_disponibili = sorted(anni_disponibili, reverse=True)
 
+    # Esclude i docenti non in servizio in anno (non ancora arrivati,
+    # già usciti) — stesso controllo di routes/attivita_ist.py::
+    # _preset_partecipanti, mancava qui: un docente con anno_scol_inizio
+    # futuro poteva comparire come da compilare per un anno in cui non
+    # è ancora in servizio.
+    from routes.attivita_ist import _non_in_servizio_per_data
+    from config_anno import intervallo_anno_scolastico
+    _inizio_anno, _ = intervallo_anno_scolastico(anno)
+    esclusi_servizio = _non_in_servizio_per_data(_inizio_anno)
     docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
-               if deve_compilare_piano(d, anno)]
+               if d.id not in esclusi_servizio and deve_compilare_piano(d, anno)]
     piani = {p.id_docente: p for p in PianoAttivitaPersonale.query.filter_by(anno_scol=anno).all()}
 
+    from models.docente import tipo_contratto_label_per_anno
     righe = []
     for d in docenti:
         p = piani.get(d.id)
@@ -68,6 +78,7 @@ def lista():
             'docente': d, 'frazione': frazione_cattedra(d, anno),
             'piano': p, 'quota_a': quota_a, 'quota_b': quota_b,
             'ore_a': ore_a, 'ore_b': ore_b,
+            'contratto_label': tipo_contratto_label_per_anno(d, anno),
         })
 
     return render_template('attivita_ist/piano_personale_lista.html',

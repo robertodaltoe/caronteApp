@@ -86,7 +86,7 @@
         {% for r in righe %}
         <tr>
             <td><strong>{{ r.docente.cognome }}</strong>{% if r.docente.nome %} {{ r.docente.nome[0] }}.{% endif %}
-                <div style="font-size:.72rem; color:var(--grigio);">{{ r.docente.tipo_contratto_label }}</div>
+                <div style="font-size:.72rem; color:var(--grigio);">{{ r.contratto_label }}</div>
             </td>
             <td style="text-align:center; font-size:.84rem;">{{ (r.frazione * 100) | round | int }}%</td>
             <td style="font-size:.82rem;">

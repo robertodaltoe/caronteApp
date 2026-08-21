@@ -105,12 +105,26 @@ def lista():
         PianoAttivitaPersonale.id_docente.in_(coinvolti_ids)).all()} if coinvolti_ids else {}
     piano_personale_stato = {did: piani_stato.get(did, 'nessuno') for did in coinvolti_ids}
 
+    # Contratto DI QUESTO anno (storico se registrato, altrimenti il
+    # corrente) — l'anagrafica è filtrata per anno_sel, l'etichetta del
+    # contratto deve rifletterlo: un TI ora che nell'anno mostrato era
+    # ancora TD (es. Agrò) va etichettato col contratto che aveva
+    # ALLORA. Vedi models.docente.DocenteContrattoAnno.
+    from models.docente import DocenteContrattoAnno, TIPO_CONTRATTO_LABELS, TIPO_CONTRATTO_LABELS_BREVI
+    contratti_anno_map = {
+        c.id_docente: c.tipo_contratto for c in
+        DocenteContrattoAnno.query.filter_by(anno_scol=anno_sel).all()
+    }
+
     return render_template('docenti.html', docenti=docenti,
                            anno_sel=anno_sel, anni_disponibili=anni_disponibili,
                            anno_default=anno_default,
                            mostra_inattivi=mostra_inattivi,
                            docenti_inattivi=docenti_inattivi,
-                           piano_personale_stato=piano_personale_stato)
+                           piano_personale_stato=piano_personale_stato,
+                           contratti_anno_map=contratti_anno_map,
+                           tipo_contratto_labels=TIPO_CONTRATTO_LABELS,
+                           tipo_contratto_labels_brevi=TIPO_CONTRATTO_LABELS_BREVI)
 
 
 @docenti_bp.route('/docenti/<int:id>/riattiva', methods=['POST'])

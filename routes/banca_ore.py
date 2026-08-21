@@ -127,8 +127,10 @@ def singolo(id):
     if ruolo_utente in ('ds', 'dsga', 'segreteria'):
         ore_ist = get_ore_ist_docente(id, anno=anno)
 
+    from models.docente import tipo_contratto_label_per_anno
     return render_template('banca_ore/singolo.html',
         docente=d,
+        contratto_label_anno=tipo_contratto_label_per_anno(d, anno),
         anno=anno, anno_corrente=anno_corrente,
         anni_disponibili=_anni_disponibili(),
         saldi=saldi,

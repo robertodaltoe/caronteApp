@@ -417,3 +417,83 @@ def test_tipo_contratto_per_anno_usa_storico_quando_esiste(app, db_session):
     assert tipo_contratto_label_per_anno(d, '2025-2026') == 'TD 30 giugno'
     # L'anno senza riga storica resta sul corrente.
     assert tipo_contratto_per_anno(d, '2026-2027') == 'TI'
+
+
+def test_conferma_contratti_anno_cumulativa(app, db_session):
+    """Roberto: vuole confermare i contratti di tutti i docenti con un
+    solo invio (selettori precompilati per riga), non uno alla volta.
+    L'azione 'conferma_contratti_anno' legge tutti i campi
+    tipo_contratto_<id> presenti nel POST e registra/aggiorna una
+    DocenteContrattoAnno per ciascuno in un colpo solo."""
+    from models.docente import DocenteContrattoAnno
+    import routes.impostazione_anno as mod
+    if 'impostazione_anno' not in app.blueprints:
+        app.register_blueprint(mod.impostazione_anno_bp)
+
+    d1 = crea_docente('Uno', tipo_contratto='TI')
+    d2 = crea_docente('Due', tipo_contratto='IRC')
+    # d2 ha già una riga storica per l'anno: deve essere AGGIORNATA, non
+    # duplicata, se il selettore la conferma con un valore diverso.
+    db.session.add(DocenteContrattoAnno(id_docente=d2.id, anno_scol='2025-2026',
+                                         tipo_contratto='TD_annuale'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post('/impostazione-anno/docenti-anno', data={
+            'azione': 'conferma_contratti_anno',
+            'anno_scol': '2025-2026',
+            f'tipo_contratto_{d1.id}': 'TI',
+            f'tipo_contratto_{d2.id}': 'IRC',
+        })
+        assert r.status_code == 302
+
+    righe = {r.id_docente: r.tipo_contratto for r in
+             DocenteContrattoAnno.query.filter_by(anno_scol='2025-2026').all()}
+    assert righe[d1.id] == 'TI'
+    assert righe[d2.id] == 'IRC'  # aggiornata, non duplicata
+    assert DocenteContrattoAnno.query.filter_by(anno_scol='2025-2026').count() == 2
+
+
+def test_anagrafica_docenti_mostra_contratto_storico(app, db_session, monkeypatch):
+    """Roberto: nella pagina Anagrafica Docenti (/docenti?anno=...) un
+    docente TI ora ma TD nell'anno mostrato (es. Agrò) continuava a
+    comparire etichettato 'TI' — la pagina leggeva ancora il contratto
+    corrente, non quello storico registrato per quell'anno."""
+    from models.docente import DocenteContrattoAnno
+    import routes.docenti as mod
+    if 'docenti' not in app.blueprints:
+        app.register_blueprint(mod.docenti_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d = crea_docente('AgroLista', tipo_contratto='TI')
+    db.session.add(DocenteContrattoAnno(id_docente=d.id, anno_scol='2025-2026',
+                                         tipo_contratto='TD_GS'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get('/docenti?anno=2025-2026')
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['contratti_anno_map'].get(d.id) == 'TD_GS'
+
+
+def test_piano_personale_lista_esclude_non_ancora_in_servizio(app, db_session, monkeypatch):
+    """Stesso controllo mancante altrove (dashboard, supplenze, esami
+    integrativi): un docente con anno_scol_inizio futuro non deve
+    comparire tra chi deve compilare il Piano Attività Personale per un
+    anno in cui non è ancora arrivato."""
+    import routes.piano_personale as mod
+    if 'piano_personale' not in app.blueprints:
+        app.register_blueprint(mod.piano_personale_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d_non_arrivato = crea_docente('NonArrivatoPiano', tipo_contratto='TI')
+    d_non_arrivato.anno_scol_inizio = '2026-2027'
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get('/attivita-ist/piano-personale?anno=2025-2026')
+        assert r.status_code == 200
+
+    ids = {riga['docente'].id for riga in catturato['kwargs']['righe']}
+    assert d_non_arrivato.id not in ids

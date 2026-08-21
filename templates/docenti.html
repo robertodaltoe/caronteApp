@@ -105,8 +105,9 @@
         <td class="wrap" style="color:var(--grigio); font-size:.88rem;">{{ d.materia_effettiva or '—' }}</td>
         <td style="text-align:center;">{{ d.ore_contratto }}h</td>
         <td>
-            {% if d.tipo_contratto %}
-                <span class="badge badge-grigio" title="{{ d.tipo_contratto_label }}">{{ d.tipo_contratto_label_breve }}</span>
+            {% set tipo_eff = contratti_anno_map.get(d.id, d.tipo_contratto) %}
+            {% if tipo_eff %}
+                <span class="badge badge-grigio" title="{{ tipo_contratto_labels.get(tipo_eff, tipo_eff) }}">{{ tipo_contratto_labels_brevi.get(tipo_eff, tipo_eff) }}</span>
             {% else %}
                 <span style="color:var(--giallo); font-size:.8rem;">{{ icon('warning') }} da completare</span>
             {% endif %}

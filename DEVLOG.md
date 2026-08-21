@@ -4,6 +4,75 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 30 — Conferma cumulativa dei contratti anno (Cowork)
+
+Roberto: salvare il contratto un docente alla volta (~97 righe) non è
+praticabile — chiesto un selettore per ognuno con un solo invio
+cumulativo per confermarli tutti insieme.
+
+Sostituito il mini-form per riga (select + pulsante "Salva" singolo)
+con un unico form invisibile (`#form-contratti-anno`, solo i campi
+nascosti azione/anno_scol) e un pulsante "Conferma tutti i contratti
+{{anno}}" in alto; ogni select per riga resta visivamente accanto al
+nome del docente ma è collegato al form esterno con l'attributo HTML5
+`form="form-contratti-anno"` — evita di annidare un form dentro
+l'altro (ogni riga ha già il proprio form per Esce/AP/Aspettativa).
+Ogni select è precompilato col contratto effettivo (`tipo_eff`:
+storico se già registrato, altrimenti il corrente), col bordo rosso e
+l'etichetta "non confermato" per chi non ha ancora una riga storica
+per quell'anno — così si vede a colpo d'occhio chi manca. Nuova
+azione `conferma_contratti_anno` nella route: legge tutti i campi
+`tipo_contratto_<id>` presenti nel POST e fa upsert (aggiorna se la
+riga storica esiste già, altrimenti la crea) per ciascuno in un colpo
+solo.
+
+Verificato: nuovo test `test_conferma_contratti_anno_cumulativa`
+(upsert corretto, non duplica una riga già esistente). A video con un
+click reale (non simulato via console) su una copia isolata
+dell'intera app: `FormData` del form conferma che il browser raccoglie
+correttamente tutti i 97 select esterni via `form="..."` (100 campi
+totali: 97 + azione + anno_scol + csrf_token), invio riuscito
+("Contratti 2025-2026 confermati per 97 docenti."), verificato anche
+che il valore di Agrò fosse già precompilato a "TD_GS" prima
+dell'invio. Database reale non toccato dal test (copia isolata separata
+come da lezione dell'addendum 26); trovate però 9 righe reali già
+presenti nel `database.db` vero, create da Roberto stesso poco prima
+usando il "Salva" singolo — confermato dai timestamp, non un mio
+errore. 187/187 test passano (186 + 1 nuovo).
+
+## Sessione 66 addendum 31 — Contratto storico anche in Anagrafica/Banca Ore/Piano personale (Cowork)
+
+Ancora Roberto, ancora Agrò: "in /docenti?anno=2025-2026 lo vedo
+etichettato TI" — giusto, altro punto mancante. Cercato ogni residuo
+uso di `tipo_contratto_label`/`tipo_contratto_label_breve` (proprietà
+che leggono sempre il campo corrente) nei template rimasti:
+
+- `routes/docenti.py::lista()` — l'Anagrafica Docenti stessa, il
+  punto segnalato. Anno-scoped (`_docenti_per_anno(anno_sel)`), ora
+  passa `contratti_anno_map` al template come già fatto per Docenti
+  per anno/dashboard-anno/export.
+- `routes/banca_ore.py::singolo()` — scheda banca ore di un docente,
+  anno-scoped (`anno = request.args.get('anno', ...)`).
+- `routes/piano_personale.py::lista()` — Piano Attività Personale,
+  anno-scoped. Qui in più mancava anche il controllo "in servizio"
+  (uno dei 9 casi già trovati dall'audit dell'addendum 26 e mai
+  corretto): `docenti = [d for d in Docente.query.filter_by(attivo=
+  True)... if deve_compilare_piano(d, anno)]` non escludeva chi non è
+  ancora arrivato per l'anno mostrato — aggiunto
+  `_non_in_servizio_per_data()` come ovunque altro.
+
+Lasciati invariati (non anno-scoped, o intenzionalmente "adesso"):
+`docente_form.html` (sta modificando il contratto corrente, è
+corretto che mostri quello), `report/singolo.html`/`singolo_print.html`
+(saldo banca ore complessivo, nessun parametro anno), `docenti/
+esporta_dati.html` (export GDPR, istantanea dello stato attuale).
+
+Verificato: 2 test nuovi (Anagrafica Docenti mostra il contratto
+storico; Piano Attività Personale esclude chi non è ancora in
+servizio). A video sul reale: `/docenti?anno=2025-2026` mostra ora
+"AGRÒ Andrea ... TD 30/6", `/docenti?anno=2026-2027` mostra "TI" —
+entrambi corretti. 189/189 test passano (187 + 2 nuovi).
+
 ## Sessione 66 addendum 29 — Pagina "Docenti per anno": mostrare il contratto storico (Cowork)
 
 Due segnalazioni consecutive di Roberto sulla pagina Impostazioni →
