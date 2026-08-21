@@ -4,6 +4,34 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 32 — Link "nomina sostituto" mancante per assenze normali (Cowork)
+
+Roberto: per sostituire un docente in permesso (es. Del Curto),
+l'etichetta del motivo assenza "copre o non fa comparire" il link
+"nomina sostituto" nella pagina Presenze di uno scrutinio. Trovata la
+causa: in `templates/attivita_ist/presenze.html` il link era annidato
+dentro `{% if p.id_docente in non_in_servizio_ids %}` insieme al
+badge "non più in servizio" — un docente regolarmente in servizio ma
+assente per un permesso normale (badge-assenza, non badge-non-
+servizio) non rientrava mai in quella condizione, quindi il link non
+compariva affatto (non un problema di sovrapposizione grafica — CSS
+verificato, nessun posizionamento assoluto, i due elementi sono
+semplicemente inline in sequenza).
+
+Corretto scollegando il link dalla condizione "non più in servizio":
+ora compare ogni volta che il docente va sostituito per lo scrutinio,
+cioè quando è "non più in servizio" OPPURE quando il suo stato
+presenza è assente/giustificato — stessa condizione già usata in
+`sostituzione_scrutinio()` per calcolare `presenze_assenti`
+(addendum 25). Verificato sul caso reale di Roberto: Del Curto (id
+26), non flaggato non_in_servizio (è regolarmente TI), risultava già
+`giustificato` su 6 scrutini reali del 31/08 — prima del fix il link
+non sarebbe mai comparso per lui. A video: ora "DEL CURTO L. 📄
+Permesso personale/familiare → nomina sostituto" compaiono insieme
+correttamente. Solo template, nessun test automatico aggiunto (questo
+file non viene renderizzato realmente nella suite, solo le route
+Python — verifica affidata al controllo dal vivo). 189/189 test
+invariati.
 ## Sessione 66 addendum 30 — Conferma cumulativa dei contratti anno (Cowork)
 
 Roberto: salvare il contratto un docente alla volta (~97 righe) non è

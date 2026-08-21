@@ -89,10 +89,19 @@
             <span class="badge-non-servizio" title="Non risulta più in servizio: verifica se va nominato un sostituto.">
                 {{ icon('warning') }} non più in servizio
             </span>
-            {% if evento.tipo == 'scrutinio' %}
+            {% endif %}
+            {# Link "nomina sostituto" — visibile ogni volta che questo
+               docente va sostituito per lo scrutinio, non solo quando
+               non è più in servizio: anche un docente regolarmente in
+               servizio ma assente per un permesso/motivo normale (es.
+               segnalato da Roberto: Del Curto) ha bisogno di un
+               sostituto — l'etichetta del motivo assenza da sola non
+               basta, andava affiancata dal link, non lo sostituiva.
+               Stessa condizione già usata in sostituzione_scrutinio()
+               per calcolare chi è "da sostituire" (presenze_assenti). #}
+            {% if evento.tipo == 'scrutinio' and (p.id_docente in non_in_servizio_ids or p.stato in ('assente', 'giustificato')) %}
             <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=evento.id) }}"
                style="font-size:.7rem; margin-left:4px;">→︎ nomina sostituto</a>
-            {% endif %}
             {% endif %}
         </div>
         <div style="display:flex; gap:6px;">
