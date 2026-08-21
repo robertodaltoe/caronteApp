@@ -171,3 +171,40 @@ def test_presenze_esclude_docente_uscito_da_aggiungi(app, db_session, monkeypatc
     ids = {d.id for d in catturato['kwargs']['docenti_extra']}
     assert d_uscito.id not in ids
     assert d_attivo.id in ids
+
+
+# ── Attività istituzionali: sostituzioni scrutinio ──────────────────────────
+
+def test_sostituzione_scrutinio_esclude_docente_non_ancora_in_servizio(app, db_session, monkeypatch):
+    """Roberto: un docente con anno_scol_inizio 2026-2027 (non ancora
+    arrivato) non deve comparire come possibile sostituto per uno
+    scrutinio del 31/08/2026 — quella data è ancora anno scolastico
+    2025-2026. La route non riusava _non_in_servizio_per_data() come
+    _preset_partecipanti(), quindi il candidato compariva comunque."""
+    import routes.attivita_ist as mod
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod.attivita_ist_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    d_non_arrivato = crea_docente('NonArrivato')
+    d_non_arrivato.anno_scol_inizio = '2026-2027'
+    d_assente = crea_docente('Assente')
+    db.session.commit()
+
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio finale', classe='3A LSC',
+                      data=date(2026, 8, 31), origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    from models.attivita_ist import AttivitaIstPresenza
+    db.session.add(AttivitaIstPresenza(id_attivita=ev.id, id_docente=d_assente.id, stato='assente'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/{ev.id}/sostituzioni')
+        assert r.status_code == 200
+
+    riga = catturato['kwargs']['righe'][0]
+    ids_candidati = {d.id for d, *_ in riga['candidati']}
+    ids_disponibili = {d.id for d in riga['docenti_disponibili']}
+    assert d_non_arrivato.id not in ids_candidati
+    assert d_non_arrivato.id not in ids_disponibili

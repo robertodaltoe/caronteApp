@@ -1251,9 +1251,14 @@ def sostituzione_scrutinio(id):
                 classe=classe_scrutinio).all()
         }
 
-    # Tutti i docenti attivi NON della classe
+    # Tutti i docenti attivi NON della classe, esclusi quelli non in
+    # servizio a questa data (stesso controllo di _preset_partecipanti —
+    # senza, un docente con anno_scol_inizio futuro comparirebbe come
+    # possibile sostituto per uno scrutinio prima di essere arrivato).
+    esclusi_servizio = _non_in_servizio_per_data(evento.data)
     tutti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
-    candidati_base = [d for d in tutti if d.id not in docenti_classe_ids]
+    candidati_base = [d for d in tutti
+                      if d.id not in docenti_classe_ids and d.id not in esclusi_servizio]
 
     # Assenti quel giorno (non disponibili)
     assenti_giorno = {a.id_docente for a in AssenzaM.query.filter_by(data=evento.data).all()}

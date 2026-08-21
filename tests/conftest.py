@@ -56,6 +56,7 @@ def app():
         from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa
         from models.sospensione import SospensioneDidattica  # noqa
         from models.incarico import CategoriaIncarico, TipoIncarico, IncaricaDocente  # noqa
+        from models.sostituzione_scrutinio import SostituzioneScrutinio  # noqa
         db.create_all()
         yield app
         db.session.remove()

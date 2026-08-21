@@ -4,6 +4,59 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 25 — Docenti in anagrafica errata + sostituti scrutini agosto (Cowork)
+
+Tre richieste in sequenza, tutte sullo stesso filo: Roberto aveva
+inserito MICHELETTI Simona e FACCHI Riccardo in anagrafica senza
+impostare correttamente da quando prendono servizio.
+
+**Diagnosi**: `Docente.anno_scol_inizio` era `NULL` per entrambi
+(NULL = "titolare storico, sempre in servizio" nella logica di
+`_docenti_per_anno()`) invece di `'2026-2027'` — per questo
+comparivano anche nell'elenco docenti 2025-2026. Chiesto "mostrami gli
+ultimi 5 inserimenti" per trovare il secondo caso (FACCHI) senza dover
+scorrere tutta l'anagrafica: bastava ordinare per `id DESC LIMIT 5` e
+controllare `anno_scol_inizio` — FRANCO Manuela, tra i 5, era invece
+già corretta. Backup cifrato + fix diretto sul campo per entrambi
+(`data/backup/database_20260821_2139_..._micheletti.db.enc` e
+`..._2142_..._facchi.db.enc`), verificato che sparissero dal 2025-2026
+restando nel 2026-2027.
+
+**Secondo bug trovato di rimbalzo**: Roberto ha poi chiesto di
+verificare che i due non comparissero più come possibili sostituti per
+gli scrutini finali del 31/08/2026 (ancora anno scolastico 2025-2026,
+non 2026-2027 — l'anno cambia il 1° settembre). La route
+`sostituzione_scrutinio()` (tasto "Sostituzioni" sugli eventi di tipo
+scrutinio) costruiva `candidati_base` da
+`Docente.query.filter_by(attivo=True)` senza mai passare da
+`_non_in_servizio_per_data()` — lo stesso controllo già usato da
+`_preset_partecipanti()` per lo stesso identico scopo, semplicemente
+dimenticato qui. Aggiunta la stessa esclusione (routes/attivita_ist.py,
+funzione `sostituzione_scrutinio`).
+
+**Dati da ripulire**: prima della correzione di `anno_scol_inizio`,
+Micheletti e Facchi erano già stati iscritti come partecipanti attesi
+a 7 eventi di scrutinio del 31/08/2026 (via
+`iscrivi_docente_a_eventi_classe()`, scattata quando erano stati
+nominati su un'Assegnazione — legittima in sé, solo basata su un
+anno_scol_inizio ancora sbagliato al momento). Backup cifrato
+(`data/backup/database_20260821_2147_..._micheletti_facchi.db.enc`) e
+le 7 righe `attivita_ist_partecipanti` eliminate — verificato prima
+con un controllo su TUTTI gli eventi collegati ai due (non solo quelli
+del 31/08) che le uniche righe fuori posto fossero proprio quelle 7,
+le altre (collegio 01/09, formazione 15/09, consigli di classe 18/09,
+tutte 2026-2027) erano corrette e lasciate intatte.
+
+Verificato: nuovo test
+`test_sostituzione_scrutinio_esclude_docente_non_ancora_in_servizio`
+in `tests/test_esclusione_non_in_servizio_form.py` (stesso file/stile
+degli altri test su questo stesso controllo, per formazione/form
+evento/presenze — mancava solo per le sostituzioni scrutinio).
+Aggiunto anche l'import di `SostituzioneScrutinio` mancante in
+`tests/conftest.py`. A video sul reale: `_non_in_servizio_per_data()`
+esclude correttamente Micheletti e Facchi dal 31/08/2026 e li include
+regolarmente dal 01/09/2026. 178/178 test passano (177 + 1 nuovo).
+`PRAGMA integrity_check` ok dopo ogni scrittura.
 ## Sessione 66 addendum 24 — Tasto "nomina" su placeholder rotto in HTML (Cowork)
 
 Seguito dell'addendum 23: Roberto precisa che il problema non è un
