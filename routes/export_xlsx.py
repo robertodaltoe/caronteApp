@@ -259,13 +259,14 @@ def _export_p7(anno):
     r = _title(ws, 'Docenti per anno scolastico', anno)
     r = _hdr(ws, r, ['Cognome', 'Nome', 'Tipo contratto', 'Status',
                       'Ore max', 'CC principale', 'Scuola AP'])
+    from models.docente import tipo_contratto_label_per_anno
     for d in _docenti_per_anno(anno):
         from models.classe_concorso import ClasseConcorso
         cc = ClasseConcorso.query.get(d.id_classe_concorso) if d.id_classe_concorso else None
         status_map = {'presente': 'Presente', 'ap_entrante': 'AP Entrante',
                       'ap_uscente': 'AP Uscente', 'aspettativa': 'Aspettativa'}
         bg = GIAL if d.status_presenza in ('ap_uscente', 'aspettativa') else None
-        r = _row(ws, r, [d.cognome, d.nome, d.tipo_contratto_label if d.tipo_contratto else '',
+        r = _row(ws, r, [d.cognome, d.nome, tipo_contratto_label_per_anno(d, anno),
                           status_map.get(d.status_presenza or 'presente', ''),
                           d.ore_max_effettive, cc.codice if cc else '', d.scuola_ap or ''],
                  bg=bg)
@@ -301,7 +302,8 @@ def _export_p8(anno):
               CattedraOrganico.query.filter_by(
             anno_scol=anno, id_classe_concorso=cc.id, tipo='diritto').first()
         n_usr = cat.n_docenti if cat else 0
-        n_ti  = sum(1 for d in docenti_cc if d.tipo_contratto == 'TI')
+        from models.docente import tipo_contratto_per_anno
+        n_ti  = sum(1 for d in docenti_cc if tipo_contratto_per_anno(d, anno) == 'TI')
         scarto = n_ti - n_usr
         bg = VERD_L if scarto == 0 else GIAL if abs(scarto) == 1 else 'fde8e8'
         for i, d in enumerate(docenti_cc):
@@ -694,6 +696,7 @@ def _export_p10(anno):
 
     r = _title(ws, 'Docenti ↔ Materie', anno)
     r = _hdr(ws, r, ['Docente', 'Tipo contratto', 'Materie assegnate'])
+    from models.docente import tipo_contratto_label_per_anno
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     for d in docenti:
         materie = DocenteMateria.query.filter_by(
@@ -701,7 +704,7 @@ def _export_p10(anno):
         if not materie:
             continue
         nomi = ', '.join(m.materia.nome_breve or m.materia.nome for m in materie)
-        r = _row(ws, r, [f'{d.cognome} {d.nome}', d.tipo_contratto_label if d.tipo_contratto else '', nomi])
+        r = _row(ws, r, [f'{d.cognome} {d.nome}', tipo_contratto_label_per_anno(d, anno), nomi])
     _border_all(ws, 4, r-1, 1, 3)
     return wb
 

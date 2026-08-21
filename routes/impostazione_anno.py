@@ -587,13 +587,17 @@ def docenti_classi_concorso():
         .filter(ClasseConcorso.id.in_(ids_con_cattedra))
         .order_by(ClasseConcorso.codice).all())
 
+    from models.docente import tipo_contratto_per_anno
     confronto = []
     for cc in cc_con_dati:
-        n_ti = (db.session.query(db.func.count(DocenteClasseConcorso.id))
-                .join(Docente, DocenteClasseConcorso.id_docente == Docente.id)
-                .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
-                        Docente.attivo == True, Docente.tipo_contratto == 'TI')
-                .scalar() or 0)
+        # Contratto DI QUESTO anno (storico se registrato) — vedi
+        # DocenteContrattoAnno: un TD che entra in ruolo l'anno dopo non
+        # va contato come TI negli anni in cui non lo era ancora.
+        docenti_cc = (Docente.query
+            .join(DocenteClasseConcorso, DocenteClasseConcorso.id_docente == Docente.id)
+            .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
+                    Docente.attivo == True).all())
+        n_ti = sum(1 for d in docenti_cc if tipo_contratto_per_anno(d, anno) == 'TI')
         cat = None
         for tipo_tentativo in ('fatto', 'diritto'):
             cat = CattedraOrganico.query.filter_by(
@@ -1757,13 +1761,12 @@ def confronto_organico():
         # TI titolari della scuola collegati a questa CC
         # (tutti i TI, indipendentemente da status_presenza —
         #  perché l'USR li conta tutti nel DOC)
-        n_ti_app = (db.session.query(db.func.count(DocenteClasseConcorso.id))
-                    .join(Docente, DocenteClasseConcorso.id_docente == Docente.id)
-                    .filter(
-                        DocenteClasseConcorso.id_classe_concorso == cc.id,
-                        Docente.attivo == True,
-                        Docente.tipo_contratto == 'TI')
-                    .scalar() or 0)
+        from models.docente import tipo_contratto_per_anno
+        docenti_cc_ti = (Docente.query
+            .join(DocenteClasseConcorso, DocenteClasseConcorso.id_docente == Docente.id)
+            .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
+                    Docente.attivo == True).all())
+        n_ti_app = sum(1 for d in docenti_cc_ti if tipo_contratto_per_anno(d, anno) == 'TI')
 
         # DOC dall'organico USR — di fatto se presente (è la
         # fotografia più aggiornata e reale della dotazione, calcolata

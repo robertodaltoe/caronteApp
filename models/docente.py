@@ -305,3 +305,27 @@ class DocenteContrattoAnno(db.Model):
 
     def __repr__(self):
         return f"<DocenteContrattoAnno {self.docente.cognome if self.docente else '?'} {self.anno_scol} {self.tipo_contratto}>"
+
+
+def tipo_contratto_per_anno(docente, anno_scol):
+    """
+    Tipo di contratto di un docente PER UN ANNO SCOLASTICO SPECIFICO:
+    usa la riga storica (DocenteContrattoAnno) se esiste, altrimenti
+    ricade su Docente.tipo_contratto "corrente" — stesso fallback già
+    usato in routes/attivita_ist.py::_non_in_servizio_per_data e
+    routes/recupero_costanti.py::docenti_idonei_periodo. Da usare
+    ovunque si mostri/valuti il contratto di un docente in una vista
+    esplicitamente legata a un anno diverso da quello corrente (export,
+    riepiloghi) — altrimenti si rischia di mostrare il contratto
+    sbagliato per chi ha cambiato tipo tra un anno e l'altro (es. un TD
+    che entra in ruolo, caso reale Agrò).
+    """
+    riga = DocenteContrattoAnno.query.filter_by(
+        id_docente=docente.id, anno_scol=anno_scol).first()
+    return riga.tipo_contratto if riga else docente.tipo_contratto
+
+
+def tipo_contratto_label_per_anno(docente, anno_scol):
+    """Etichetta leggibile dell'esito di tipo_contratto_per_anno()."""
+    tipo = tipo_contratto_per_anno(docente, anno_scol)
+    return TIPO_CONTRATTO_LABELS.get(tipo, tipo) if tipo else ''

@@ -25,9 +25,13 @@ def index():
 
     # ── Docenti ───────────────────────────────────────────────────
     from routes.impostazione_anno import _docenti_per_anno
+    from models.docente import tipo_contratto_per_anno
     docenti = _docenti_per_anno(anno)
     n_docenti = len(docenti)
-    n_ti = sum(1 for d in docenti if d.tipo_contratto == 'TI')
+    # Contratto DI QUESTO anno (storico se registrato, altrimenti quello
+    # corrente) — un docente TD che entra in ruolo l'anno dopo (es.
+    # Agrò) non va contato come TI per un anno in cui non lo era ancora.
+    n_ti = sum(1 for d in docenti if tipo_contratto_per_anno(d, anno) == 'TI')
     n_td = n_docenti - n_ti
     n_aspettativa = sum(1 for d in docenti if d.status_presenza == 'aspettativa')
     n_ap_uscente  = sum(1 for d in docenti if d.status_presenza == 'ap_uscente')
@@ -91,11 +95,15 @@ def index():
             if cat:
                 break
         n_usr = cat.n_docenti if cat else 0
-        n_ti_cc = (db.session.query(db.func.count(DocenteClasseConcorso.id))
-                   .join(Docente, DocenteClasseConcorso.id_docente == Docente.id)
-                   .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
-                           Docente.attivo == True, Docente.tipo_contratto == 'TI')
-                   .scalar() or 0)
+        # Contratto DI QUESTO anno (storico se registrato) — un TI
+        # "corrente" che in questo anno era ancora TD non va contato tra
+        # i titolari TI di allora (stesso motivo del conteggio sopra).
+        docenti_cc = (Docente.query
+                      .join(DocenteClasseConcorso,
+                            DocenteClasseConcorso.id_docente == Docente.id)
+                      .filter(DocenteClasseConcorso.id_classe_concorso == cc.id,
+                              Docente.attivo == True).all())
+        n_ti_cc = sum(1 for d in docenti_cc if tipo_contratto_per_anno(d, anno) == 'TI')
         tipo_usr = cat.tipo if cat else None
         scarto = n_ti_cc - n_usr
         if scarto != 0:

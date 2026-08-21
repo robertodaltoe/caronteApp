@@ -4,6 +4,44 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 28 — Contratto storico anche in conteggi/export TI (Cowork)
+
+Roberto ha chiesto se l'addendum 27 (DocenteContrattoAnno) si
+integrasse con "tutte le funzionalità dell'app" — risposta onesta:
+no, non con quelle non ancora controllate. Cercato ogni altro punto
+che legge `Docente.tipo_contratto` direttamente: trovati 5 conteggi/
+export scoped-per-anno che mostravano ancora il contratto CORRENTE
+invece di quello storico, esattamente lo stesso bug dell'addendum 27
+ma in punti diversi — coerente con un pattern già noto in questo
+codebase (CLAUDE.md: "un fix applicato al posto sbagliato perché la
+stessa verifica è duplicata altrove", già capitato con TI↔Organico
+USR — Task 24/25).
+
+Estratto un helper riusabile,
+`models/docente.py::tipo_contratto_per_anno()` /
+`tipo_contratto_label_per_anno()` (stesso fallback: storico se
+registrato, altrimenti il campo corrente), e applicato a:
+- `routes/dashboard_anno.py::index()` — conteggio "N. TI" del
+  riepilogo anno, e il confronto TI↔Organico USR inline nella stessa
+  pagina;
+- `routes/impostazione_anno.py` — lo stesso confronto TI↔Organico USR
+  duplicato in altri due punti (dashboard anno "passo 8" inline, e la
+  pagina standalone `confronto_organico()`, passo 8b);
+- `routes/export_xlsx.py` — export "Docenti per anno scolastico"
+  (passo 7), export "Docenti ↔ Materie" (passo 10), export "Docenti ↔
+  Classi di concorso" col confronto TI↔USR (passo 8).
+
+Lasciato invariato l'unico punto NON scoped-per-anno
+(`routes/impostazione_anno.py::_docenti_per_anno`, filtro sull'anno
+FUTURO — lì non esiste storico da guardare per definizione) e
+`routes/impostazioni.py` (conteggio "N. TI" sulla home Impostazioni,
+esplicitamente "adesso", non un anno specifico).
+
+Verificato: nuovo test `test_tipo_contratto_per_anno_usa_storico_
+quando_esiste` in `tests/test_esclusione_non_in_servizio_form.py`. A
+video sui dati reali: il conteggio TI 2025-2026 non include più Agrò
+(51 invece di 52), quello 2026-2027 sì (61, lui incluso). 186/186 test
+passano (185 + 1 nuovo).
 ## Sessione 66 addendum 27 — Contratto per anno scolastico, non solo "corrente" (Cowork)
 
 Seguito diretto dell'addendum 26: Tramontana, Ghezzi (IRC, TD annuale)

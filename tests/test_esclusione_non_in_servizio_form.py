@@ -395,3 +395,25 @@ def test_docenti_idonei_periodo_agosto_usa_contratto_storico(app, db_session):
     ids_2627 = {x.id for x in docenti_idonei_periodo('2026-2027')}
     assert d.id not in ids_2526
     assert d.id in ids_2627
+
+
+def test_tipo_contratto_per_anno_usa_storico_quando_esiste(app, db_session):
+    """Copertura dell'helper riusato da dashboard_anno.py ed
+    export_xlsx.py per i conteggi/etichette "TI" legati a un anno
+    specifico (stesso bug: un TD che entra in ruolo, es. Agrò, non va
+    contato/mostrato come TI per un anno in cui non lo era ancora)."""
+    from models.docente import (DocenteContrattoAnno, tipo_contratto_per_anno,
+                                 tipo_contratto_label_per_anno)
+
+    d = crea_docente('AgroHelper', tipo_contratto='TI')
+    # Senza riga storica: ricade sul corrente.
+    assert tipo_contratto_per_anno(d, '2025-2026') == 'TI'
+    assert tipo_contratto_label_per_anno(d, '2025-2026') == 'TI — Indeterminato'
+
+    db.session.add(DocenteContrattoAnno(id_docente=d.id, anno_scol='2025-2026',
+                                         tipo_contratto='TD_GS'))
+    db.session.commit()
+    assert tipo_contratto_per_anno(d, '2025-2026') == 'TD_GS'
+    assert tipo_contratto_label_per_anno(d, '2025-2026') == 'TD 30 giugno'
+    # L'anno senza riga storica resta sul corrente.
+    assert tipo_contratto_per_anno(d, '2026-2027') == 'TI'
