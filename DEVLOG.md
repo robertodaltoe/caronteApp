@@ -4,6 +4,46 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 41 — la vicinanza oraria non era più il criterio dominante (Cowork)
+
+Seguito immediato all'addendum precedente: col fallback sul campo
+libero, materia (①, score fisso 10) e dipartimento (②, score fisso
+20) scattavano molto più spesso — ma battevano SEMPRE il livello ③
+(vicinanza oraria, score 21-30 con gradazione fine), anche quando il
+candidato con la materia in comune non aveva nessun altro impegno
+quel giorno mentre un altro era già a scuola per una riunione appena
+prima. Roberto: "la condizione dell'orario non è più rispettata,
+quella è la più importante" — prima del fix precedente quasi nessuno
+arrivava a ①/②, quindi di fatto l'ordinamento era già sempre guidato
+dalla vicinanza oraria; col fallback più diffuso, quel comportamento
+si è rotto.
+
+Proposta discussa e confermata con Roberto: la vicinanza oraria resta
+il criterio DOMINANTE in ogni caso; materia e dipartimento diventano
+un bonus fine che pesa solo a parità (o quasi) di fascia oraria, non
+il contrario. Riscritta la formula in `_segnali_candidato()`
+(`routes/attivita_ist.py`): tre fasce ben separate e senza
+sovrapposizione anche col bonus massimo — riunione prima (0-4),
+riunione dopo (10-14, sempre peggio di "prima" a parità di vicinanza),
+nessuna riunione quel giorno (40, va richiamato apposta) — con un
+bonus di -2 per la materia in comune e -1 per il dipartimento in
+comune all'interno della fascia. I 4 pallini restano tutti visibili
+come prima (nessun cambiamento alla logica di `segnali`, solo allo
+`score` di ordinamento).
+
+Verificato con nuovo test `test_vicinanza_oraria_batte_la_materia_in_
+comune` in `tests/test_sostituzione_scrutinio_segnali.py` (un
+candidato con solo la materia in comune ma nessun impegno vicino
+finisce DOPO uno senza materia in comune ma con una riunione appena
+prima). Aggiornato anche un commento obsoleto nel test precedente
+(l'ordine tra i due candidati di quel test resta invariato, ma ora per
+un motivo diverso: bonus di materia a parità di fascia oraria, non
+più "materia sempre prima di riunione"). 200/200 test passano
+(199 + 1 nuovo). Verificato anche live in sola lettura sull'evento 88
+reale: per tutti e 6 gli assenti, i primi candidati in lista hanno
+tutti `riun_prec=True` (già a scuola poco prima), con materia/
+dipartimento che affinano l'ordine solo dentro quel gruppo.
+
 ## Sessione 66 addendum 40 — segnali ①②  quasi mai visibili in Sostituzioni scrutini (Cowork)
 
 Roberto continuava a vedere quasi solo "③ riunione" nei candidati di

@@ -93,8 +93,9 @@ def test_candidato_con_piu_segnali_li_mostra_tutti(app, db_session, monkeypatch)
     assert segnali_per_id[cand_doppio.id] == {1, 2, 3}
     assert segnali_per_id[cand_solo_riunione.id] == {3}  # solo riunione
 
-    # L'ordinamento resta invariato: chi ha la materia (score 10) viene
-    # prima di chi ha solo la riunione (score >= 21).
+    # A parità di comodità oraria (entrambi hanno la stessa riunione
+    # prima dello scrutinio), chi condivide anche la materia va prima
+    # (bonus a parità di fascia oraria — vedi addendum 41).
     ids_ordinati = [d.id for d, *_ in candidati]
     assert ids_ordinati.index(cand_doppio.id) < ids_ordinati.index(cand_solo_riunione.id)
 
@@ -168,3 +169,64 @@ def test_segnale_materia_usa_il_campo_libero_se_manca_docentemateria(app, db_ses
     segnali_per_id = {d.id: segnali for d, score, segnali, riun_prec, riun_succ in candidati}
     assert 1 in segnali_per_id[cand_stessa_materia.id]  # stessa materia via campo libero
     assert 1 not in segnali_per_id[cand_altra_materia.id]
+
+
+def test_vicinanza_oraria_batte_la_materia_in_comune(app, db_session, monkeypatch):
+    """Roberto, dopo il fix precedente: la vicinanza oraria deve restare
+    il criterio DOMINANTE — un candidato con un impegno subito prima
+    dello scrutinio (comodissimo, già a scuola) deve venire prima di uno
+    che condivide la materia con l'assente ma non ha nessun altro
+    impegno quel giorno (va richiamato apposta). Materia/dipartimento
+    restano un bonus fine solo a parità di fascia oraria, non un
+    criterio che scavalca l'orario."""
+    import routes.attivita_ist as mod
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod.attivita_ist_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    dip = Dipartimento(nome='Scientifico', sigla='SCI')
+    db.session.add(dip)
+    db.session.flush()
+    mat = _materia('Fisica', 'FIS', dip)
+
+    assente = crea_docente('Assente3')
+    # Stessa materia dell'assente, ma nessun altro impegno quel giorno —
+    # va richiamato apposta.
+    cand_solo_materia = crea_docente('SoloMateria')
+    # Nessuna materia in comune, ma ha una riunione appena prima dello
+    # scrutinio — è già a scuola, il più comodo da chiamare.
+    cand_solo_orario = crea_docente('SoloOrario')
+    db.session.commit()
+
+    anno = mod._anno_scolastico(date(2026, 8, 31))
+    db.session.add(DocenteMateria(id_docente=assente.id, id_materia=mat.id, anno_scol=anno))
+    db.session.add(DocenteMateria(id_docente=cand_solo_materia.id, id_materia=mat.id, anno_scol=anno))
+    db.session.commit()
+
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio finale', classe='2B LSC',
+                      data=date(2026, 8, 31), ora_inizio='10:00', ora_fine='11:00',
+                      origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPresenza(id_attivita=ev.id, id_docente=assente.id, stato='assente'))
+    db.session.commit()
+
+    riun = AttivitaIst(tipo='collegio', titolo='Collegio', data=date(2026, 8, 31),
+                        ora_inizio='09:30', ora_fine='09:55', origine='manuale')
+    db.session.add(riun)
+    db.session.flush()
+    from models.attivita_ist import AttivitaIstPartecipante
+    db.session.add(AttivitaIstPartecipante(id_attivita=riun.id, id_docente=cand_solo_orario.id, preset=True))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/{ev.id}/sostituzioni')
+        assert r.status_code == 200
+
+    candidati = catturato['kwargs']['righe'][0]['candidati']
+    segnali_per_id = {d.id: segnali for d, score, segnali, riun_prec, riun_succ in candidati}
+    assert segnali_per_id[cand_solo_materia.id] == {1, 2}  # stessa materia implica stesso dip.
+    assert segnali_per_id[cand_solo_orario.id] == {3}
+
+    ids_ordinati = [d.id for d, *_ in candidati]
+    assert ids_ordinati.index(cand_solo_orario.id) < ids_ordinati.index(cand_solo_materia.id)

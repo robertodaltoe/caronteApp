@@ -1467,27 +1467,39 @@ def sostituzione_scrutinio(id):
         if not segnali:
             segnali.add(4)  # generico disponibile
 
-        if 1 in segnali:
-            score = 10
-        elif 2 in segnali:
-            score = 20
-        elif 3 in segnali:
-            # Riunione prima: quanto è vicina (in minuti) al termine
-            # dello scrutinio? Più è vicina, più il docente è "comodo"
-            # — score 21 (subito prima) fino a 25 (fino a 8h prima).
-            # Riunione dopo: stessa logica ma 26-30, sempre dopo
-            # (peggiore) di "prima" a parità di vicinanza — chi è già
-            # a scuola per un altro impegno è la scelta più pratica.
-            if riun_prec:
-                prec_fin = _to_min(riun_prec.ora_fine) if riun_prec.ora_fine else _to_min(riun_prec.ora_inizio) + 45
-                gap = max(0, ev_ini - prec_fin)
-                score = 21 + min(gap / 480, 1) * 4
-            else:
-                succ_ini = _to_min(riun_succ.ora_inizio)
-                gap = max(0, succ_ini - ev_fin)
-                score = 26 + min(gap / 480, 1) * 4
+        # Ordinamento: la vicinanza oraria (③) è il criterio dominante —
+        # un docente già a scuola per un altro impegno vicino è la scelta
+        # più pratica, va richiamato apposta solo se nessuno è nei
+        # paraggi. Materia (①) e dipartimento (②) restano visibili come
+        # segnali ma pesano solo come bonus fine, a parità (o quasi) di
+        # comodità oraria — prima di questo fix erano il criterio
+        # dominante, e un match di materia scavalcava un candidato molto
+        # più comodo in orario, cosa che Roberto non voleva più vedere.
+        # Fasce ben separate (nessuna si sovrappone anche col bonus
+        # massimo) cosi' il bonus non fa mai scavalcare una fascia oraria
+        # peggiore:
+        #   riunione prima:  0-4   (comodissimo)
+        #   riunione dopo:  10-14  (comodo, ma dopo è meno pratico di prima)
+        #   nessuna riunione quel giorno: 40 (va richiamato apposta)
+        if riun_prec:
+            prec_fin = _to_min(riun_prec.ora_fine) if riun_prec.ora_fine else _to_min(riun_prec.ora_inizio) + 45
+            gap = max(0, ev_ini - prec_fin)
+            orario_score = min(gap / 480, 1) * 4
+        elif riun_succ:
+            succ_ini = _to_min(riun_succ.ora_inizio)
+            gap = max(0, succ_ini - ev_fin)
+            orario_score = 10 + min(gap / 480, 1) * 4
         else:
-            score = 50  # generico, nessun'altra riunione quel giorno
+            orario_score = 40
+
+        if 1 in segnali:
+            bonus = -2  # stessa materia
+        elif 2 in segnali:
+            bonus = -1  # stesso dipartimento
+        else:
+            bonus = 0
+
+        score = orario_score + bonus
 
         return score, segnali
 
