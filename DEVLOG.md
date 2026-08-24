@@ -4,6 +4,46 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 38 — anno_scol_ore_max mai salvato dal form (Cowork)
+
+Roberto continuava a vedere 18h invece di 9h per Palermo nel 2025-2026
+nonostante avesse impostato l'override dalla scheda docente. Non era
+il gap di sincronizzazione ipotizzato la volta scorsa: leggendo
+`routes/docenti.py::modifica()` trovato un bug reale, indipendente dai
+dati — `d.ore_max_anno = int(request.form.get('ore_max_anno')...)`
+veniva salvato, ma **`d.anno_scol_ore_max` non veniva mai letto dal
+form né assegnato**, nonostante il campo `<select
+name="anno_scol_ore_max">` esista nel template. Risultato: l'override
+restava sempre "orfano" del suo anno, quindi
+`ore_max_effettive_per_anno(anno)` non trovava mai corrispondenza e
+ricadeva sempre sul contratto base — l'override numerico non aveva
+mai alcun effetto, per nessun docente, da quando esiste il campo.
+
+Corretto aggiungendo l'assegnazione mancante, stesso pattern già
+corretto (per contrasto, la coppia analoga `part_time_prog`/
+`anno_scol_part_time_prog` poco più sotto nella stessa funzione era
+invece già salvata correttamente insieme).
+
+Verificato: nuovo test `test_modifica_docente_salva_lanno_dellore_max_
+override` in `tests/test_assegnazioni_ore_max_anno.py` — un salvataggio
+con ore_max_anno=9/anno_scol_ore_max='2025-2026' ora produce
+`ore_max_effettive_per_anno('2025-2026') == 9` e
+`ore_max_effettive_per_anno('2026-2027') == 18`. Aggiunto anche
+l'import mancante di `ColloquiEccezione` in `tests/conftest.py`
+(la route `modifica()` tocca anche quella tabella). 197/197 test
+passano (196 + 1 nuovo).
+
+**Nota per Roberto**: il salvataggio precedente di Palermo (fatto
+prima di questo fix) probabilmente NON ha registrato l'anno — vale la
+pena riaprire la sua scheda e reimpostare l'override per essere
+sicuri che sia salvato correttamente adesso.
+
+Chiesta anche conferma sulla sezione "Materie insegnate (a.s.
+corrente)" della scheda docente: usa `get_anno_corrente()` (l'anno
+operativo, che cambia il 1° settembre), non l'anno di preparazione —
+per questo le materie appena assegnate per il 2026-2027 non compaiono
+ancora lì. Confermata l'ipotesi di Roberto, non ancora deciso se/come
+renderla anno-aware (proposta in attesa di risposta).
 ## Sessione 66 addendum 37 — Presenze: card "Sostituti individuati" (Cowork)
 
 Roberto: nella pagina Presenze di uno scrutinio, oltre a Presenti/

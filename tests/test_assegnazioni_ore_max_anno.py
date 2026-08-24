@@ -74,3 +74,40 @@ def test_nomina_rispetta_ore_max_dellanno_non_il_contratto_base(app, db_session)
 
     db.session.refresh(asgn_2627)
     assert asgn_2627.id_docente == doc.id  # accettata: 10h <= 18h del 2026-2027
+
+
+def test_modifica_docente_salva_lanno_dellore_max_override(app, db_session):
+    """Roberto: impostava "Ore max (override)" = 9 per il 2025-2026 dalla
+    scheda docente, ma continuava a vedere 18 (il contratto base) in
+    anagrafica per quell'anno. Causa: routes/docenti.py::modifica()
+    salvava ore_max_anno dal form ma non anno_scol_ore_max — il campo
+    accoppiato che dice A QUALE anno si riferisce quel numero — quindi
+    l'override non trovava mai corrispondenza con l'anno richiesto e
+    ore_max_effettive_per_anno() ricadeva sempre sul contratto base."""
+    import routes.docenti as mod
+    from concorrenza import versione_str
+    if 'docenti' not in app.blueprints:
+        app.register_blueprint(mod.docenti_bp)
+
+    d = crea_docente('PalermoModifica', tipo_contratto='TI')
+    d.ore_contratto = 18
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/docenti/{d.id}/modifica', data={
+            'cognome': d.cognome, 'nome': d.nome,
+            'ore_contratto': '18',
+            'ore_max_anno': '9',
+            'anno_scol_ore_max': '2025-2026',
+            'tipo_contratto': 'TI',
+            'ruolo': 'titolare',
+            'tipo_servizio': 'full',
+            'versione': versione_str(d.modificato_il),
+        })
+        assert r.status_code == 302
+
+    db.session.refresh(d)
+    assert d.ore_max_anno == 9
+    assert d.anno_scol_ore_max == '2025-2026'
+    assert d.ore_max_effettive_per_anno('2025-2026') == 9
+    assert d.ore_max_effettive_per_anno('2026-2027') == 18

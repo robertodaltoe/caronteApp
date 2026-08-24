@@ -215,6 +215,14 @@ def modifica(id):
         d.nome           = request.form['nome'].strip().title()
         d.ore_contratto  = int(request.form.get('ore_contratto', 18) or 0)
         d.ore_max_anno   = int(request.form.get('ore_max_anno') or 0) or None
+        # L'anno a cui si riferisce ore_max_anno non veniva mai salvato:
+        # il form invia anche "anno_scol_ore_max", ma la route leggeva
+        # solo il numero — l'override restava sempre inefficace perché
+        # ore_max_effettive_per_anno() lo confronta con l'anno richiesto
+        # e non trovava mai corrispondenza (segnalato da Roberto: caso
+        # Palermo, l'override a 9h per il 2025-2026 non aveva mai effetto).
+        d.anno_scol_ore_max = (request.form.get('anno_scol_ore_max', '').strip()
+                               or None) if d.ore_max_anno else None
         d.email          = request.form.get('email', '').strip()
         d.tipo_contratto = request.form.get('tipo_contratto', '').strip()
         d.ruolo          = request.form.get('ruolo', 'titolare').strip()

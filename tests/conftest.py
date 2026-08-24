@@ -59,6 +59,7 @@ def app():
         from models.sostituzione_scrutinio import SostituzioneScrutinio  # noqa
         from models.esami_integrativi import (EsameIntegrativoCandidato,  # noqa
                                                EsameIntegrativoMateria)
+        from models.colloqui_eccezione import ColloquiEccezione  # noqa
         db.create_all()
         yield app
         db.session.remove()
