@@ -355,10 +355,26 @@
 <div style="display:flex; flex-direction:column; gap:14px;">
 
     {# ── 4. Materie insegnate ─────────────────────────────────────── #}
+    {% set materie_anno_corrente = (anno_sel_materie == anno_corrente_materie) %}
     <div class="card" style="padding:16px 18px;">
-        <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:8px;">
-            {{ icon('layers') }} Materie insegnate (a.s. corrente)
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+            <div style="font-weight:700; color:var(--blu); font-size:.9rem;">
+                {{ icon('layers') }} Materie insegnate
+            </div>
+            <select onchange="location.href='{{ url_for('docenti.modifica', id=docente.id) }}?anno_materie='+this.value"
+                    style="font-size:.78rem; padding:2px 6px; border:1px solid #e5e7eb; border-radius:6px;">
+                {% for a in anni_materie %}
+                <option value="{{ a }}" {% if a == anno_sel_materie %}selected{% endif %}>{{ a }}{% if a == anno_corrente_materie %} (corrente){% endif %}</option>
+                {% endfor %}
+            </select>
         </div>
+        {% if not materie_anno_corrente %}
+        <div style="font-size:.72rem; color:var(--grigio); background:#fafbfc; border:1px solid #e5e7eb;
+                    border-radius:6px; padding:6px 8px; margin-bottom:8px;">
+            Stai consultando l'a.s. {{ anno_sel_materie }} in sola lettura — le materie di questo anno si
+            modificano dalla scheda docente quando quell'anno è quello corrente, oppure da Assegnazioni.
+        </div>
+        {% endif %}
         <div id="mat-badges" style="display:flex; flex-wrap:wrap; gap:4px; min-height:20px; margin-bottom:8px;"></div>
         <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:240px; overflow-y:auto; background:#fafbfc;">
             {% if materie %}
@@ -372,11 +388,14 @@
                 </div>
                 {% for m in dip.list %}
                 <label style="display:flex; align-items:center; gap:8px; padding:5px 10px;
-                               cursor:pointer; border-bottom:1px solid #f0f2f5; font-size:.82rem;"
+                               {% if materie_anno_corrente %}cursor:pointer;{% endif %} border-bottom:1px solid #f0f2f5; font-size:.82rem;"
+                       {% if materie_anno_corrente %}
                        onmouseover="this.style.background='#f0f4f8'"
-                       onmouseout="this.style.background=''">
+                       onmouseout="this.style.background=''"
+                       {% endif %}>
                     <input type="checkbox" name="materie_ids" value="{{ m.id }}"
                            {% if m.id in mat_assegnate %}checked{% endif %}
+                           {% if not materie_anno_corrente %}disabled{% endif %}
                            class="mat-cb"
                            data-sigla="{{ m.sigla }}"
                            data-nome="{{ m.nome }}"

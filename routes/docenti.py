@@ -345,8 +345,19 @@ def modifica(id):
                    .order_by(Dipartimento.ordine, Materia.nome).all())
     else:
         materie = []
+    # "Materie insegnate" e' per anno_scol (assegnate da Assegnazioni): di
+    # default mostra l'anno corrente, ma Roberto vuole poter risalire anche
+    # agli anni passati/futuri — selettore anno accanto al box, valorizzato
+    # da querystring cosi' i link prev/next della scheda non lo perdono.
+    anni_materie = sorted(
+        {r.anno_scol for r in DocenteMateria.query.with_entities(DocenteMateria.anno_scol)
+         .filter_by(id_docente=id).distinct().all()} | {get_anno_corrente()},
+        reverse=True)
+    anno_sel_materie = request.args.get('anno_materie') or get_anno_corrente()
+    if anno_sel_materie not in anni_materie:
+        anni_materie = sorted(set(anni_materie) | {anno_sel_materie}, reverse=True)
     mat_assegnate = {dm.id_materia for dm in DocenteMateria.query.filter_by(
-        id_docente=id, anno_scol=get_anno_corrente()).all()}
+        id_docente=id, anno_scol=anno_sel_materie).all()}
     titolari_disponibili = (Docente.query
         .filter(Docente.attivo == True, Docente.ruolo == 'titolare', Docente.id != d.id)
         .order_by(Docente.cognome).all())
@@ -401,6 +412,8 @@ def modifica(id):
 
     return render_template('docente_form.html', docente=d,
                            materie=materie, mat_assegnate=mat_assegnate,
+        anni_materie=anni_materie, anno_sel_materie=anno_sel_materie,
+        anno_corrente_materie=get_anno_corrente(),
         giorni=list(enumerate(GIORNI)), eccezioni=eccezioni,
         id_prev=id_prev, id_next=id_next,
         titolari_disponibili=titolari_disponibili,

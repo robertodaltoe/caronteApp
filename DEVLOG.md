@@ -4,6 +4,39 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 39 — selettore anno nel box "Materie insegnate" (Cowork)
+
+Seguito alla domanda dell'addendum precedente: Roberto ha confermato
+che vuole poter risalire storicamente alle materie assegnate per
+qualunque anno, non solo l'anno corrente. Aggiunto un `<select>` anno
+accanto al box "Materie insegnate" nella scheda docente
+(`templates/docente_form.html`), valorizzato via querystring
+`?anno_materie=AAAA-AAAA`.
+
+`routes/docenti.py::modifica()` (percorso GET) ora calcola
+`anni_materie` (unione degli anni presenti in `DocenteMateria` per
+quel docente più l'anno corrente) e `anno_sel_materie` (default
+`get_anno_corrente()`, sovrascrivibile dalla querystring), e filtra
+`mat_assegnate` su quell'anno invece che sempre sull'anno corrente.
+
+Il box resta **modificabile solo per l'anno corrente**: per gli altri
+anni le checkbox sono `disabled` con una nota esplicativa, perché il
+salvataggio (`_sync_materia_roster`, poco più sotto nella stessa
+route) scrive sempre con `get_anno_corrente()` — permettere la
+modifica su un anno diverso da quello mostrato in sola lettura
+avrebbe salvato silenziosamente nell'anno sbagliato. Non toccato
+`_sync_materia_roster`: cambiarlo per accettare un anno arbitrario è
+un'estensione più ampia, non richiesta ora.
+
+Verificato con nuovo test `test_scheda_docente_mostra_materie_
+dellanno_selezionato` in `tests/test_docenti_materie_selettore_anno.py`
+(GET senza querystring esclude una materia assegnata solo per
+2026-2027, GET con `?anno_materie=2026-2027` la include). 198/198 test
+passano (197 + 1 nuovo). Verificato anche live in sola lettura su una
+copia isolata di `database.db` (docente Palermo, id 63): entrambe le
+richieste rispondono 200, il box mostra correttamente il selettore e
+la nota di sola lettura per l'anno non corrente.
+
 ## Sessione 66 addendum 38 — anno_scol_ore_max mai salvato dal form (Cowork)
 
 Roberto continuava a vedere 18h invece di 9h per Palermo nel 2025-2026
