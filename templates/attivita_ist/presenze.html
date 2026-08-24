@@ -82,6 +82,18 @@
         <div style="font-size:1.6rem; font-weight:800; color:var(--blu);">{{ evento.presenze|length }}</div>
         <div style="font-size:.78rem; color:var(--grigio);">Totale</div>
     </div>
+    {% if evento.tipo == 'scrutinio' and n_da_sostituire > 0 %}
+    {% set completo = n_sostituti_individuati == n_da_sostituire %}
+    <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=evento.id) }}"
+       class="cnt-box" style="text-decoration:none; cursor:pointer; display:block;
+       background:{{ 'var(--verde-bg)' if completo else 'var(--viola-bg)' }};"
+       title="Apri la pagina Sostituzioni">
+        <div style="font-size:1.6rem; font-weight:800; color:{{ 'var(--verde)' if completo else '#5b21b6' }};">
+            {{ n_sostituti_individuati }}/{{ n_da_sostituire }}
+        </div>
+        <div style="font-size:.78rem; color:{{ 'var(--verde)' if completo else '#5b21b6' }};">Sostituti individuati</div>
+    </a>
+    {% endif %}
     {% if n_parz > 0 %}
     <div class="cnt-box" style="background:var(--giallo-bg);">
         <div style="font-size:1.6rem; font-weight:800; color:var(--giallo);">{{ n_parz }}</div>

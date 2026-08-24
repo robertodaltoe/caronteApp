@@ -818,6 +818,26 @@ def presenze(id):
     evento_prec = db.session.get(AttivitaIst, ids_ordinati[idx - 1]) if idx > 0 else None
     evento_succ = db.session.get(AttivitaIst, ids_ordinati[idx + 1]) if idx < len(ids_ordinati) - 1 else None
 
+    # Card "Sostituti individuati" (solo scrutini): quanti dei docenti
+    # da sostituire (assenti/giustificati o non in servizio — stessa
+    # regola di sostituzione_scrutinio()::presenze_assenti) hanno già
+    # una SostituzioneScrutinio con sostituto nominato — richiesto da
+    # Roberto per vedere a colpo d'occhio quanto resta da fare senza
+    # aprire la pagina Sostituzioni.
+    n_da_sostituire = n_sostituti_individuati = 0
+    if evento.tipo == 'scrutinio':
+        from models.sostituzione_scrutinio import SostituzioneScrutinio
+        da_sostituire_ids = {p.id_docente for p in evento.presenze
+                              if p.stato in ('assente', 'giustificato')
+                              or p.id_docente in non_in_servizio_ids}
+        n_da_sostituire = len(da_sostituire_ids)
+        if da_sostituire_ids:
+            n_sostituti_individuati = SostituzioneScrutinio.query.filter(
+                SostituzioneScrutinio.id_attivita == evento.id,
+                SostituzioneScrutinio.id_assente.in_(da_sostituire_ids),
+                SostituzioneScrutinio.id_sostituto.isnot(None),
+            ).count()
+
     return render_template('attivita_ist/presenze.html',
         evento=evento, presenze_map=presenze_map,
         assenze_giorno=assenze_giorno,
@@ -825,6 +845,8 @@ def presenze(id):
         docenti_extra=docenti_extra,
         non_in_servizio_ids=non_in_servizio_ids,
         evento_prec=evento_prec, evento_succ=evento_succ,
+        n_da_sostituire=n_da_sostituire,
+        n_sostituti_individuati=n_sostituti_individuati,
     )
 
 

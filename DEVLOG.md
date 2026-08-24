@@ -4,6 +4,31 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 37 — Presenze: card "Sostituti individuati" (Cowork)
+
+Roberto: nella pagina Presenze di uno scrutinio, oltre a Presenti/
+Assenti/Giustificati/Totale, vuole vedere a colpo d'occhio quanti
+sostituti ha già individuato rispetto agli assenti, senza aprire la
+pagina Sostituzioni.
+
+`routes/attivita_ist.py::presenze()`: per gli eventi di tipo
+scrutinio calcola `n_da_sostituire` (assenti/giustificati o non in
+servizio — stessa regola già usata in `sostituzione_scrutinio()` per
+`presenze_assenti`, addendum 25) e `n_sostituti_individuati` (quante
+`SostituzioneScrutinio` di quell'evento hanno già un sostituto
+nominato tra quei docenti). Nuova card "X/Y Sostituti individuati" nel
+`.contatore`, cliccabile (porta dritto alla pagina Sostituzioni),
+verde se completo (X==Y) altrimenti viola — stesso colore già usato
+per il segnale "③ riunione" nella pagina Sostituzioni, per coerenza.
+Nascosta del tutto per eventi non-scrutinio o senza nessuno da
+sostituire.
+
+Verificato: 2 test nuovi in `tests/test_presenze_card_sostituti.py`
+(conteggio corretto su assenti+non-in-servizio con un solo sostituto
+già nominato; nessuna card per un evento non-scrutinio). A video sul
+reale: due scrutini diversi mostrano "7/7" e "2/2" in verde
+(Roberto aveva già nominato tutti i sostituti), un terzo senza assenti
+non mostra la card. 196/196 test passano (194 + 2 nuovi).
 ## Sessione 66 addendum 36 — Cattedra spezzata → cattedra intera: ore per anno ovunque (Cowork)
 
 Caso reale di Roberto: Palermo, cattedra spezzata su due scuole (9 ore
