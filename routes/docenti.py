@@ -178,6 +178,9 @@ def nuovo():
             ore_max_anno   = int(request.form.get('ore_max_anno') or 0) or None,
             altra_scuola   = (request.form.get('altra_scuola','').strip() or None) if request.form.get('tipo_servizio') == 'multi_sede' else None,
             giorni_presenza= (','.join(request.form.getlist('giorni_presenza')) or None) if request.form.get('tipo_servizio') == 'multi_sede' else None,
+            sostegno_aggiuntivo     = 'sostegno_aggiuntivo' in request.form,
+            ore_sostegno_aggiuntivo = (int(request.form.get('ore_sostegno_aggiuntivo') or 0) or None
+                                        if 'sostegno_aggiuntivo' in request.form else None),
             attivo         = True
         )
         id_tit_rif = request.form.get('id_titolare_riferimento', '').strip()
@@ -226,6 +229,9 @@ def modifica(id):
         d.email          = request.form.get('email', '').strip()
         d.tipo_contratto = request.form.get('tipo_contratto', '').strip()
         d.ruolo          = request.form.get('ruolo', 'titolare').strip()
+        d.sostegno_aggiuntivo = 'sostegno_aggiuntivo' in request.form
+        d.ore_sostegno_aggiuntivo = (int(request.form.get('ore_sostegno_aggiuntivo') or 0) or None
+                                      if d.sostegno_aggiuntivo else None)
 
         # Abbinamenti titolare+materia (un ITP può affiancare più titolari
         # su materie/laboratori diversi). Sostituisce sempre l'elenco
@@ -286,17 +292,44 @@ def modifica(id):
             d.ora_uscita_json = _json.dumps(ou) if ou else None
         else:
             d.ora_uscita_json = None
+        # Colloqui: per-anno (DocenteColloquiAnno), non più sul campo
+        # unico Docente.colloqui_giorno/ora_inizio/ora_fine — Roberto:
+        # i giorni di colloqui del 2025-2026 potevano essere diversi da
+        # quelli del 2026-2027, e la scheda ha ora un selettore anno
+        # (come "Materie insegnate") per editare l'uno o l'altro senza
+        # sovrascriverli a vicenda. "anno_colloqui" arriva come campo
+        # nascosto dal form: è l'anno che la sezione colloqui della
+        # pagina stava mostrando al momento del salvataggio.
+        anno_colloqui = request.form.get('anno_colloqui', '').strip() or get_anno_corrente()
+        from models.docente import DocenteColloquiAnno
+        riga_coll = DocenteColloquiAnno.query.filter_by(
+            id_docente=d.id, anno_scol=anno_colloqui).first()
+        if not riga_coll:
+            riga_coll = DocenteColloquiAnno(id_docente=d.id, anno_scol=anno_colloqui)
+            db.session.add(riga_coll)
         cg = request.form.get('colloqui_giorno', '').strip()
-        d.colloqui_giorno     = int(cg) if cg != '' else None
+        riga_coll.giorno     = int(cg) if cg != '' else None
         ci = request.form.get('colloqui_ora_inizio', '').strip()
-        d.colloqui_ora_inizio = int(ci) if ci else None
+        riga_coll.ora_inizio = int(ci) if ci else None
         cf = request.form.get('colloqui_ora_fine', '').strip()
-        d.colloqui_ora_fine   = int(cf) if cf else None
+        riga_coll.ora_fine   = int(cf) if cf else None
         d.attivo         = 'attivo' in request.form
         d.nome_display   = f"{d.cognome} {d.nome[0]}." if d.nome else d.cognome
 
-        # Gestione eccezioni colloqui (range settimanali)
-        ColloquiEccezione.query.filter_by(id_docente=d.id).delete()
+        # Eccezioni colloqui (range di date con colloqui spostati al
+        # pomeriggio/online): la scheda mostra e permette di modificare
+        # solo quelle dell'anno selezionato (stesso motivo di sopra) —
+        # va quindi cancellato/ricreato solo ciò che ricade nell'anno in
+        # questione, non l'intero storico del docente, altrimenti
+        # salvare mentre si guarda il 2026-2027 cancellerebbe anche le
+        # eccezioni del 2025-2026 non mostrate in quel momento nel form.
+        from config_anno import intervallo_anno_scolastico
+        _ecc_ini, _ecc_fine = intervallo_anno_scolastico(anno_colloqui)
+        ColloquiEccezione.query.filter(
+            ColloquiEccezione.id_docente == d.id,
+            ColloquiEccezione.data >= _ecc_ini,
+            ColloquiEccezione.data <= _ecc_fine,
+        ).delete()
         date_ini_l   = request.form.getlist('eccezione_data[]')
         date_fine_l  = request.form.getlist('eccezione_data_fine[]')
         note_ecc_l   = request.form.getlist('eccezione_note[]')
@@ -323,8 +356,28 @@ def modifica(id):
         flash(f"Docente {d.nome_completo} aggiornato.", 'success')
         return redirect(url_for('docenti.lista'))
 
-    eccezioni = ColloquiEccezione.query.filter_by(id_docente=d.id)\
-        .order_by(ColloquiEccezione.data).all()
+    # Colloqui per-anno: stesso pattern del selettore "Materie insegnate"
+    # — di default l'anno corrente, valorizzabile da querystring così i
+    # link prev/next non lo perdono. Le eccezioni mostrate/modificabili
+    # sono solo quelle che cadono nel periodo di quell'anno (vedi anche
+    # il commento nel salvataggio POST sul perché la cancellazione va
+    # limitata allo stesso intervallo).
+    from models.docente import DocenteColloquiAnno
+    from config_anno import intervallo_anno_scolastico
+    anni_colloqui = sorted(
+        {r.anno_scol for r in DocenteColloquiAnno.query.with_entities(DocenteColloquiAnno.anno_scol)
+         .filter_by(id_docente=id).distinct().all()} | {get_anno_corrente()},
+        reverse=True)
+    anno_sel_colloqui = request.args.get('anno_colloqui') or get_anno_corrente()
+    if anno_sel_colloqui not in anni_colloqui:
+        anni_colloqui = sorted(set(anni_colloqui) | {anno_sel_colloqui}, reverse=True)
+    colloqui_eff = d.colloqui_effettivi_per_anno(anno_sel_colloqui)
+    _ecc_ini, _ecc_fine = intervallo_anno_scolastico(anno_sel_colloqui)
+    eccezioni = (ColloquiEccezione.query
+                 .filter(ColloquiEccezione.id_docente == d.id,
+                         ColloquiEccezione.data >= _ecc_ini,
+                         ColloquiEccezione.data <= _ecc_fine)
+                 .order_by(ColloquiEccezione.data).all())
     # Navigazione prev/next tra docenti attivi (ordine alfabetico)
     tutti = [doc.id for doc in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()]
     idx   = tutti.index(id) if id in tutti else -1
@@ -414,6 +467,8 @@ def modifica(id):
                            materie=materie, mat_assegnate=mat_assegnate,
         anni_materie=anni_materie, anno_sel_materie=anno_sel_materie,
         anno_corrente_materie=get_anno_corrente(),
+        anni_colloqui=anni_colloqui, anno_sel_colloqui=anno_sel_colloqui,
+        colloqui_eff=colloqui_eff,
         giorni=list(enumerate(GIORNI)), eccezioni=eccezioni,
         id_prev=id_prev, id_next=id_next,
         titolari_disponibili=titolari_disponibili,

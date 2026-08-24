@@ -305,7 +305,7 @@ def create_app(avvio_con_reloader=True):
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
         from models.permesso_ruolo import PermessoRuolo  # noqa
-        from models.docente import DocenteContrattoAnno  # noqa
+        from models.docente import DocenteContrattoAnno, DocenteColloquiAnno  # noqa
         from models.piano_attivita_personale import PianoAttivitaPersonale, PianoAttivitaPersonaleVoce  # noqa
         from models.formazione import CorsoFormazione  # noqa
         from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa
@@ -499,6 +499,8 @@ def _auto_migrate():
         ('supplenze',       'creato_da', 'VARCHAR(80)', None),
         ('indisponibilita', 'creato_da', 'VARCHAR(80)', None),
         ('attivita_ist', 'richiede_ds', 'BOOLEAN', 0),
+        ('docenti', 'sostegno_aggiuntivo',     'BOOLEAN', 0),
+        ('docenti', 'ore_sostegno_aggiuntivo', 'INTEGER', None),
     ]
 
     with db.engine.connect() as conn:

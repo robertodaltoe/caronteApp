@@ -1,6 +1,21 @@
 from models import db
 from datetime import datetime
 
+_GIORNI_COLLOQUI       = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
+_GIORNI_COLLOQUI_BREVI = ['Lun','Mar','Mer','Gio','Ven','Sab']
+
+
+def _colloqui_label(giorno, ora_inizio, ora_fine, breve=False):
+    if giorno is None:
+        return None
+    g = (_GIORNI_COLLOQUI_BREVI if breve else _GIORNI_COLLOQUI)[giorno]
+    suffisso = 'ª' if breve else 'ª ora'
+    if ora_inizio and ora_fine:
+        return f"{g} {ora_inizio}ª–{ora_fine}{suffisso}"
+    elif ora_inizio:
+        return f"{g} {ora_inizio}{suffisso}"
+    return g
+
 # Etichette leggibili per Docente.tipo_contratto — unica fonte di verità,
 # usata da tutti i form e le pagine che mostrano il tipo di contratto.
 # Nota (chiarito da Roberto, sessione Task 47): i valori memorizzati non
@@ -59,6 +74,17 @@ class Docente(db.Model):
     # assegna (es. nei recuperi) confluiscono nel conteggio del titolare.
     id_titolare_riferimento = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     titolare_riferimento    = db.relationship('Docente', remote_side=[id], foreign_keys=[id_titolare_riferimento])
+    # Caso reale segnalato da Roberto (Luzzi, 2025-2026): un docente può
+    # avere ANCHE un incarico di sostegno oltre al ruolo principale (es.
+    # ITP di Informatica 9h + Sostegno 9h nello stesso anno) — "ruolo"
+    # sopra resta un valore solo (titolare/itp/sostegno), non basta a
+    # rappresentare la combinazione. Soluzione mirata a questo caso
+    # ricorrente, non un redesign a "incarichi multipli": un flag +
+    # un numero di ore in più, che si aggiunge al ruolo principale senza
+    # sostituirlo. L'orario del sostegno resta comunque tracciato a
+    # parte in OrarioSostegno (già indipendente da "ruolo").
+    sostegno_aggiuntivo     = db.Column(db.Boolean, nullable=True, default=False)
+    ore_sostegno_aggiuntivo = db.Column(db.Integer, nullable=True)
     # Docenti su più scuole
     altra_scuola    = db.Column(db.String(120), nullable=True)   # nome istituto secondario
     giorni_presenza = db.Column(db.String(20),  nullable=True)   # es. '0,2,4' = lun/mer/ven
@@ -180,29 +206,57 @@ class Docente(db.Model):
 
     @property
     def colloqui_label(self):
-        GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
-        if self.colloqui_giorno is None:
-            return None
-        g = GIORNI[self.colloqui_giorno]
-        if self.colloqui_ora_inizio and self.colloqui_ora_fine:
-            return f"{g} {self.colloqui_ora_inizio}ª–{self.colloqui_ora_fine}ª ora"
-        elif self.colloqui_ora_inizio:
-            return f"{g} {self.colloqui_ora_inizio}ª ora"
-        return g
+        return _colloqui_label(self.colloqui_giorno, self.colloqui_ora_inizio, self.colloqui_ora_fine)
 
     @property
     def colloqui_label_breve(self):
         """Come colloqui_label ma compatta (es. "Lun 1ª–2ª"), per colonne
         strette dove "Lunedì 1ª–2ª ora" costringe la tabella a scrollare."""
-        GIORNI_BREVI = ['Lun','Mar','Mer','Gio','Ven','Sab']
-        if self.colloqui_giorno is None:
-            return None
-        g = GIORNI_BREVI[self.colloqui_giorno]
-        if self.colloqui_ora_inizio and self.colloqui_ora_fine:
-            return f"{g} {self.colloqui_ora_inizio}ª–{self.colloqui_ora_fine}ª"
-        elif self.colloqui_ora_inizio:
-            return f"{g} {self.colloqui_ora_inizio}ª"
-        return g
+        return _colloqui_label(self.colloqui_giorno, self.colloqui_ora_inizio, self.colloqui_ora_fine, breve=True)
+
+    def colloqui_effettivi_per_anno(self, anno_scol=None):
+        """
+        Giorno/ora dei colloqui per un anno scolastico specifico —
+        segnalato da Roberto: colloqui_giorno/ora_inizio/ora_fine erano
+        campi unici "congelati", non potevano differire tra il 2025-2026
+        e il 2026-2027 (stesso problema già visto per ore_max_anno e
+        Materie insegnate).
+
+        A differenza di tipo_contratto_per_anno() (che ricade sempre e
+        solo sul campo base "corrente"), qui il fallback risale
+        all'override esplicito più recente NON successivo all'anno
+        richiesto, e solo in ultima istanza sui campi base — perché qui
+        la scheda docente permette di editare qualunque anno tramite
+        selettore (non solo l'anno corrente), quindi "ultimo noto" deve
+        seguire l'ultima modifica esplicita fatta da Roberto, non
+        restare ancorato al valore-seme pre-esistente.
+
+        Ritorna un dict {'giorno', 'ora_inizio', 'ora_fine', 'esplicito'}
+        — esplicito=False quando il valore mostrato è ereditato (nessuna
+        riga impostata apposta per questo anno), usato in scheda docente
+        e anagrafica per distinguerlo visivamente da un dato inserito
+        apposta per l'anno in questione.
+        """
+        if anno_scol:
+            riga = DocenteColloquiAnno.query.filter_by(
+                id_docente=self.id, anno_scol=anno_scol).first()
+            if riga:
+                return {'giorno': riga.giorno, 'ora_inizio': riga.ora_inizio,
+                        'ora_fine': riga.ora_fine, 'esplicito': True}
+            precedente = (DocenteColloquiAnno.query
+                          .filter(DocenteColloquiAnno.id_docente == self.id,
+                                  DocenteColloquiAnno.anno_scol < anno_scol)
+                          .order_by(DocenteColloquiAnno.anno_scol.desc())
+                          .first())
+            if precedente:
+                return {'giorno': precedente.giorno, 'ora_inizio': precedente.ora_inizio,
+                        'ora_fine': precedente.ora_fine, 'esplicito': False}
+        return {'giorno': self.colloqui_giorno, 'ora_inizio': self.colloqui_ora_inizio,
+                'ora_fine': self.colloqui_ora_fine, 'esplicito': False}
+
+    def colloqui_label_per_anno(self, anno_scol=None, breve=False):
+        eff = self.colloqui_effettivi_per_anno(anno_scol)
+        return _colloqui_label(eff['giorno'], eff['ora_inizio'], eff['ora_fine'], breve=breve)
 
     supplenze_svolte  = db.relationship('Supplenza',        foreign_keys='Supplenza.id_sostituto',  backref='sostituto',  lazy=True)
     supplenze_assente = db.relationship('Supplenza',        foreign_keys='Supplenza.id_assente',    backref='assente',    lazy=True)
@@ -329,3 +383,35 @@ def tipo_contratto_label_per_anno(docente, anno_scol):
     """Etichetta leggibile dell'esito di tipo_contratto_per_anno()."""
     tipo = tipo_contratto_per_anno(docente, anno_scol)
     return TIPO_CONTRATTO_LABELS.get(tipo, tipo) if tipo else ''
+
+
+class DocenteColloquiAnno(db.Model):
+    """
+    Giorno/ora dei colloqui di un docente PER UN ANNO SCOLASTICO
+    SPECIFICO — vedi Docente.colloqui_effettivi_per_anno() per la logica
+    di fallback (stesso motivo di DocenteContrattoAnno: Docente.
+    colloqui_giorno/ora_inizio/ora_fine sono campi unici, non possono
+    differire tra un anno e l'altro).
+
+    Una riga per docente per anno: se esiste, ha priorità sui campi
+    base per quello specifico anno_scol.
+    """
+    __tablename__ = 'docenti_colloqui_anno'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    id_docente  = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False)
+    anno_scol   = db.Column(db.String(9), nullable=False)
+    giorno      = db.Column(db.Integer, nullable=True)   # 0=lun…5=sab, None=nessun colloquio
+    ora_inizio  = db.Column(db.Integer, nullable=True)
+    ora_fine    = db.Column(db.Integer, nullable=True)
+    creato_il   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    docente = db.relationship('Docente', backref=db.backref(
+        'colloqui_anno', cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('id_docente', 'anno_scol', name='uq_docente_colloqui_anno'),
+    )
+
+    def __repr__(self):
+        return f"<DocenteColloquiAnno {self.docente.cognome if self.docente else '?'} {self.anno_scol}>"

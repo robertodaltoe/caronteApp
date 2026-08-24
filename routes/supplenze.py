@@ -197,20 +197,37 @@ def api_suggerimenti():
                    IndisponibilitaRicorrente.ora == ora)
         ).all()
     }
-    # 5. Colloqui fissi dal profilo docente
-    #    ma escludi docenti con eccezione colloqui per questa data
+    # 5. Colloqui fissi dal profilo docente — per l'anno scolastico DI
+    #    data_sel (Docente.colloqui_giorno/ora_inizio/ora_fine potevano
+    #    differire tra un anno e l'altro — vedi
+    #    Docente.colloqui_effettivi_per_anno), non l'anno corrente: un
+    #    suggerimento per un recupero di agosto registrato su una data
+    #    di un anno passato deve rispettare i colloqui di QUELL'anno.
+    #    Esclude anche i docenti con un'eccezione colloqui che copre
+    #    questa data — prima confrontava solo il campo "data" ignorando
+    #    "data_fine", quindi un'eccezione su un intero periodo (es. una
+    #    settimana) valeva di fatto solo per il primo giorno.
     from models.colloqui_eccezione import ColloquiEccezione
+    from routes.attivita_ist import _anno_scolastico
+    anno_colloqui = _anno_scolastico(data_sel)
     eccezioni_colloqui = {
         e.id_docente for e in
-        ColloquiEccezione.query.filter_by(data=data_sel).all()
+        ColloquiEccezione.query.filter(db.or_(
+            db.and_(ColloquiEccezione.data_fine.is_(None),
+                    ColloquiEccezione.data == data_sel),
+            db.and_(ColloquiEccezione.data_fine.isnot(None),
+                    ColloquiEccezione.data <= data_sel,
+                    ColloquiEccezione.data_fine >= data_sel),
+        )).all()
     }
     for d in Docente.query.filter_by(attivo=True).all():
         if d.id in eccezioni_colloqui:
             continue  # colloquio spostato al pomeriggio — disponibile
-        if (d.colloqui_giorno == giorno and
-            d.colloqui_ora_inizio is not None and
-            d.colloqui_ora_fine is not None and
-            d.colloqui_ora_inizio <= ora <= d.colloqui_ora_fine):
+        coll = d.colloqui_effettivi_per_anno(anno_colloqui)
+        if (coll['giorno'] == giorno and
+            coll['ora_inizio'] is not None and
+            coll['ora_fine'] is not None and
+            coll['ora_inizio'] <= ora <= coll['ora_fine']):
             indisp_ids.add(d.id)
     # Applica anche le eccezioni alle indisponibilità ricorrenti
     indisp_ids -= eccezioni_colloqui
@@ -329,6 +346,10 @@ def api_suggerimenti():
             badge_tipo = {'label': 'ITP', 'color': '#7c3aed', 'bg': '#f5f3ff'}
         elif ruolo_doc == 'sostegno':
             badge_tipo = {'label': 'SOS', 'color': '#0d9488', 'bg': '#f0fdfa'}
+        elif getattr(doc, 'sostegno_aggiuntivo', False):
+            # Ruolo principale diverso da sostegno, ma con un incarico di
+            # sostegno aggiuntivo (caso Luzzi) — vedi Docente.sostegno_aggiuntivo.
+            badge_tipo = {'label': '+SOS', 'color': '#0d9488', 'bg': '#f0fdfa'}
         # Multi-sede: verifica se la supplenza è in un giorno fuori presenza
         giorni_pres = getattr(doc, 'giorni_presenza_list', [])
         multi_sede  = getattr(doc, 'multi_sede', False)

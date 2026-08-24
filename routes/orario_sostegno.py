@@ -151,8 +151,14 @@ def index():
         return redirect(url_for('orario_sostegno.index',
             id_docente=request.args.get('id_docente', '')))
 
-    docenti_sostegno = Docente.query.filter_by(
-        ruolo='sostegno', attivo=True).order_by(Docente.cognome).all()
+    # Include anche chi ha un incarico di sostegno AGGIUNTIVO (ruolo
+    # principale diverso, es. ITP) — segnalato da Roberto: un docente
+    # così non compariva qui, quindi non era possibile assegnargli un
+    # orario di sostegno nonostante lo svolgesse davvero (caso Luzzi).
+    docenti_sostegno = Docente.query.filter(
+        Docente.attivo == True,
+        db.or_(Docente.ruolo == 'sostegno', Docente.sostegno_aggiuntivo == True)
+    ).order_by(Docente.cognome).all()
 
     filtro_docente = request.args.get('id_docente', type=int)
     query = OrarioSostegno.query

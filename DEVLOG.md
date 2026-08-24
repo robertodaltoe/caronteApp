@@ -4,6 +4,92 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 43 — colloqui per anno + doppio ruolo (sostegno aggiuntivo) (Cowork)
+
+Due richieste distinte su Anagrafica docenti, entrambe confermate con
+Roberto prima di implementare (scelta guidata) vista la portata
+architetturale.
+
+**1. Colloqui settimanali fissi + eccezioni per anno.**
+`Docente.colloqui_giorno`/`ora_inizio`/`ora_fine` erano campi unici
+"congelati" — stesso problema già risolto per `ore_max_anno`/
+`tipo_contratto`/Materie insegnate. Nuovo modello `DocenteColloquiAnno`
+(`models/docente.py`, tabella `docenti_colloqui_anno`, una riga per
+docente per anno). A differenza di `tipo_contratto_per_anno()` (che
+ricade sempre sul campo base), qui il fallback (`Docente.
+colloqui_effettivi_per_anno()`) risale all'override esplicito più
+recente NON successivo all'anno richiesto — "ultimo noto" nel senso
+chiesto da Roberto: un anno senza override eredita l'ultima modifica
+esplicita fatta, non un valore-seme fermo. Solo in ultima istanza
+ricade sui campi base (docenti mai toccati da questa modifica).
+
+Scheda docente (`docente_form.html`): stesso pattern del selettore
+"Materie insegnate" (querystring `anno_colloqui`), con distinzione
+visiva esplicita chiesta da Roberto — quando il valore mostrato è
+ereditato (non impostato apposta per l'anno in questione), sezione in
+opacità ridotta + nota "valore ereditato, non impostato apposta per
+il [anno]" in grigio chiaro. Stessa distinzione (colore più chiaro)
+nella colonna Colloqui dell'anagrafica principale (`docenti.html`),
+via `Docente.colloqui_effettivi_per_anno(anno_sel)`.
+
+Le eccezioni colloqui (`ColloquiEccezione`, già scoped per data/
+data_fine) vengono ora filtrate in scheda per il periodo dell'anno
+selezionato (`config_anno.intervallo_anno_scolastico`). Rischio di
+data-loss individuato e corretto durante l'implementazione (non
+segnalato da Roberto): il salvataggio del form cancellava PRIMA
+**tutte** le eccezioni del docente e le ricreava da quanto inviato —
+mostrando solo quelle di un anno, avrebbe cancellato anche quelle
+degli altri anni non presenti nel form in quel momento. Corretto
+limitando cancellazione/ricreazione al solo intervallo dell'anno
+selezionato.
+
+Bonus fix trovato per lo stesso motivo in `routes/supplenze.py`
+(motore suggerimenti supplenza): (a) leggeva sempre
+`Docente.colloqui_giorno` "così com'è" invece che per l'anno della
+data del suggerimento — ora usa `colloqui_effettivi_per_anno(anno_
+scolastico_della_data)`; (b) il filtro delle eccezioni colloqui
+confrontava solo `data == data_sel`, ignorando `data_fine` —
+un'eccezione su un periodo di più giorni valeva di fatto solo per il
+primo giorno.
+
+Verificato con 7 nuovi test in `tests/test_docenti_colloqui_per_anno.py`
+(due anni non si sovrascrivono, fallback all'ultimo esplicito
+precedente, fallback finale sul campo base, scheda mostra l'anno
+selezionato, salvataggio non cancella eccezioni di un altro anno,
+suggerimento supplenza usa l'anno della data, eccezione a periodo
+copre tutti i giorni). Verificato anche live in sola lettura/scrittura
+su copia isolata di `database.db` (docente ABRAMINI, id 1): box
+colloqui e colonna anagrafica mostrano correttamente la nota "valore
+ereditato" con colore più chiaro quando pertinente.
+
+**2. Doppio ruolo (es. Luzzi 2025-2026: ITP Informatica 9h + Sostegno
+9h nello stesso anno).** `Docente.ruolo` è un radio esclusivo
+(titolare/itp/sostegno) — non rappresentabile. Confermato con Roberto:
+soluzione mirata al caso ricorrente, non un redesign a incarichi
+multipli. Aggiunto `Docente.sostegno_aggiuntivo` (bool) +
+`ore_sostegno_aggiuntivo` (int), che convive col ruolo principale
+invece di sostituirlo — un checkbox "Ha ANCHE un incarico di sostegno"
+in scheda docente, sotto ai tre radio esistenti.
+
+Aggiornati i 2 punti del codice che filtravano `ruolo=='sostegno'` in
+modo esclusivo, escludendo chi ha SOLO il flag aggiuntivo:
+`routes/orario_sostegno.py` (menu assegnazione orario — prima un ITP
+con sostegno aggiuntivo non ci compariva affatto, impedendo di
+assegnargli l'orario di sostegno) e `routes/supplenze.py` (badge_tipo
+nel motore suggerimenti — trovato però che questo campo non è
+attualmente letto da nessun template/JS, fix di correttezza ma senza
+effetto visibile finché resta non cablato). Badge "+SOSTEGNO" aggiunto
+in anagrafica (`docenti.html`) accanto al badge di ruolo principale
+quando presente.
+
+Verificato con 3 nuovi test in
+`tests/test_docente_sostegno_aggiuntivo.py` (salvataggio, azzeramento
+alla deselezione, comparsa nel menu Orario sostegno). 214/214 test
+passano (204 + 7 colloqui + 3 sostegno aggiuntivo).
+Verificato anche live su copia isolata: colonna nuova creata
+correttamente dall'auto-migrazione, badge "ITP" + "+SOSTEGNO" visibili
+insieme in anagrafica, docente compare nel menu di Orario sostegno.
+
 ## Sessione 66 addendum 42 — pagina riepilogo "Protocollazione scrutini" (Cowork)
 
 Richiesta di Roberto: per protocollare le sostituzioni di un blocco di

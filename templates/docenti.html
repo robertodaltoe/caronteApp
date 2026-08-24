@@ -96,6 +96,12 @@
                           color:#0d9488; border:1px solid #5eead4; border-radius:4px;
                           padding:1px 6px; font-weight:700; margin-left:4px;">SOSTEGNO</span>
             {% endif %}
+            {% if d.sostegno_aggiuntivo and d.ruolo != 'sostegno' %}
+            <span style="display:inline-block; font-size:.68rem; background:#f0fdfa;
+                          color:#0d9488; border:1px solid #5eead4; border-radius:4px;
+                          padding:1px 6px; font-weight:700; margin-left:4px;"
+                  title="Ha anche un incarico di sostegno{% if d.ore_sostegno_aggiuntivo %} ({{ d.ore_sostegno_aggiuntivo }}h){% endif %}">+SOSTEGNO</span>
+            {% endif %}
         </td>
         <td style="white-space:nowrap;">
             {% if d.nome %}{{ d.nome }}
@@ -132,9 +138,11 @@
                 </a>
             {% endif %}
         </td>
-        <td style="text-align:center; white-space:nowrap; font-size:.78rem; color:var(--grigio);"
-            title="{{ d.colloqui_label or '' }}">
-            {{ d.colloqui_label_breve or '—' }}
+        {% set coll_eff = d.colloqui_effettivi_per_anno(anno_sel) %}
+        <td style="text-align:center; white-space:nowrap; font-size:.78rem;
+                   color:{{ 'var(--grigio)' if coll_eff.esplicito else '#c0c5cc' }};"
+            title="{{ d.colloqui_label_per_anno(anno_sel) or '' }}{% if not coll_eff.esplicito %} (ereditato, non impostato apposta per il {{ anno_sel }}){% endif %}">
+            {{ d.colloqui_label_per_anno(anno_sel, breve=True) or '—' }}
         </td>
         <td style="text-align:center;">
             {% if d.attivo %}

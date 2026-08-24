@@ -286,6 +286,27 @@
             </label>
         </div>
 
+        <div style="margin-bottom:12px; padding-top:10px; border-top:1px solid #e5e7eb;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:.82rem;">
+                <input type="checkbox" name="sostegno_aggiuntivo" value="1"
+                       {% if docente and docente.sostegno_aggiuntivo %}checked{% endif %}
+                       onchange="document.getElementById('blocco-sostegno-agg').style.display = this.checked ? 'flex' : 'none';"
+                       style="width:15px; height:15px;">
+                Ha ANCHE un incarico di sostegno, oltre al ruolo sopra
+                <span style="font-size:.7rem; color:var(--grigio);">— es. cattedra ITP + spezzone sostegno nello stesso anno</span>
+            </label>
+            <div id="blocco-sostegno-agg" style="display:{{ 'flex' if docente and docente.sostegno_aggiuntivo else 'none' }};
+                        align-items:center; gap:8px; margin-top:8px; padding-left:23px;">
+                <label style="font-size:.76rem; color:var(--grigio);">Ore di sostegno aggiuntive</label>
+                <input type="number" name="ore_sostegno_aggiuntivo" min="0" max="18"
+                       value="{{ docente.ore_sostegno_aggiuntivo if docente and docente.ore_sostegno_aggiuntivo else '' }}"
+                       style="width:70px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                <span style="font-size:.76rem; color:var(--grigio);">h/sett.
+                    {% if docente %}— l'orario si assegna da <a href="{{ url_for('orario_sostegno.index') }}" style="color:var(--blu);">Orario sostegno</a>{% endif %}
+                </span>
+            </div>
+        </div>
+
         <div id="blocco-titolare-rif" style="{{ '' if ruolo_val=='itp' else 'display:none;' }}">
             <div style="font-size:.76rem; font-weight:700; color:var(--grigio); margin-bottom:6px;">
                 Titolari di riferimento
@@ -536,18 +557,32 @@
 
     {# ── 5. Colloqui settimanali ──────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">
-        <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:12px;">
-            {{ icon('person') }}{{ icon('person') }}{{ icon('person') }} Colloqui settimanali fissi
-            <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
-                — esclusi dai suggerimenti supplenze
-            </span>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px;">
+            <div style="font-weight:700; color:var(--blu); font-size:.9rem;">
+                {{ icon('person') }}{{ icon('person') }}{{ icon('person') }} Colloqui settimanali fissi
+            </div>
+            {% if docente %}
+            <select onchange="location.href='{{ url_for('docenti.modifica', id=docente.id) }}?anno_colloqui='+this.value"
+                    style="font-size:.78rem; padding:2px 6px; border:1px solid #e5e7eb; border-radius:6px;">
+                {% for a in anni_colloqui %}
+                <option value="{{ a }}" {% if a == anno_sel_colloqui %}selected{% endif %}>{{ a }}{% if a == anno_corrente_materie %} (corrente){% endif %}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
         </div>
-        <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="font-size:.72rem; font-weight:400; color:var(--grigio); margin-bottom:12px;">
+            — esclusi dai suggerimenti supplenze
+            {% if docente and not colloqui_eff.esplicito %}
+            <span style="color:#9ca3af;">· valore ereditato, non impostato apposta per il {{ anno_sel_colloqui }}</span>
+            {% endif %}
+        </div>
+        {% if docente %}<input type="hidden" name="anno_colloqui" value="{{ anno_sel_colloqui }}">{% endif %}
+        <div style="display:flex; gap:10px; align-items:flex-end;{% if docente and not colloqui_eff.esplicito %} opacity:.6;{% endif %}">
             <div class="form-group" style="flex:3; margin-bottom:0;">
                 <label>Giorno</label>
                 <select name="colloqui_giorno">
                     <option value="">— nessuno —</option>
-                    {% set cg = docente.colloqui_giorno if docente else None %}
+                    {% set cg = colloqui_eff.giorno if docente else None %}
                     {% for v, lbl in [(0,'Lunedì'),(1,'Martedì'),(2,'Mercoledì'),(3,'Giovedì'),(4,'Venerdì'),(5,'Sabato')] %}
                     <option value="{{ v }}" {% if cg==v %}selected{% endif %}>{{ lbl }}</option>
                     {% endfor %}
@@ -558,7 +593,7 @@
                 <select name="colloqui_ora_inizio">
                     <option value="">—</option>
                     {% for o in range(1,10) %}
-                    <option value="{{ o }}" {% if docente and docente.colloqui_ora_inizio==o %}selected{% endif %}>{{ o }}ª</option>
+                    <option value="{{ o }}" {% if docente and colloqui_eff.ora_inizio==o %}selected{% endif %}>{{ o }}ª</option>
                     {% endfor %}
                 </select>
             </div>
@@ -567,7 +602,7 @@
                 <select name="colloqui_ora_fine">
                     <option value="">—</option>
                     {% for o in range(1,10) %}
-                    <option value="{{ o }}" {% if docente and docente.colloqui_ora_fine==o %}selected{% endif %}>{{ o }}ª</option>
+                    <option value="{{ o }}" {% if docente and colloqui_eff.ora_fine==o %}selected{% endif %}>{{ o }}ª</option>
                     {% endfor %}
                 </select>
             </div>
@@ -575,12 +610,12 @@
     </div>
 
     {# ── 6. Eccezioni colloqui ────────────────────────────────────── #}
-    {% if docente and docente.colloqui_giorno is not none %}
+    {% if docente and colloqui_eff.giorno is not none %}
     <div class="card" style="padding:16px 18px;">
         <div style="font-weight:700; color:var(--blu); font-size:.9rem; margin-bottom:6px;">
             {{ icon('grid') }} Eccezioni colloqui
             <span style="font-size:.72rem; font-weight:400; color:var(--grigio);">
-                — periodi con colloqui al pomeriggio/online
+                — periodi con colloqui al pomeriggio/online, a.s. {{ anno_sel_colloqui }}
             </span>
         </div>
         <div style="font-size:.76rem; color:var(--grigio); margin-bottom:10px;">
