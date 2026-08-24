@@ -807,12 +807,24 @@ def presenze(id):
                      if d.id not in non_in_servizio_ids]
     docenti_extra.sort(key=lambda d: d.cognome)
 
+    # Navigazione al precedente/successivo: scorre TUTTI gli eventi in
+    # ordine cronologico (stesso ordinamento della Lista), anche su
+    # giorni diversi — richiesto da Roberto per gestire le presenze di
+    # una classe dopo l'altra (es. i 27 scrutini di un giorno) senza
+    # tornare ogni volta alla lista completa.
+    ids_ordinati = [r[0] for r in db.session.query(AttivitaIst.id)
+                     .order_by(AttivitaIst.data, AttivitaIst.ora_inizio, AttivitaIst.id).all()]
+    idx = ids_ordinati.index(evento.id)
+    evento_prec = db.session.get(AttivitaIst, ids_ordinati[idx - 1]) if idx > 0 else None
+    evento_succ = db.session.get(AttivitaIst, ids_ordinati[idx + 1]) if idx < len(ids_ordinati) - 1 else None
+
     return render_template('attivita_ist/presenze.html',
         evento=evento, presenze_map=presenze_map,
         assenze_giorno=assenze_giorno,
         indisponibilita_giorno=indisponibilita_giorno,
         docenti_extra=docenti_extra,
         non_in_servizio_ids=non_in_servizio_ids,
+        evento_prec=evento_prec, evento_succ=evento_succ,
     )
 
 

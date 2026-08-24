@@ -36,7 +36,28 @@
             {% if evento.durata_ore > 0 %} · <strong>{{ '%.1f'|format(evento.durata_ore) }}h</strong>{% endif %}
         </p>
     </div>
-    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Lista</a>
+    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        {# Naviga al precedente/successivo tra TUTTI gli eventi in ordine
+           cronologico, anche su giorni diversi (es. per scorrere le
+           classi di uno scrutinio senza tornare ogni volta alla Lista). #}
+        {% if evento_prec %}
+        <a href="{{ url_for('attivita_ist.presenze', id=evento_prec.id) }}" class="btn btn-sm"
+           style="background:#e5eaf0; color:var(--blu);" title="{{ evento_prec.titolo }}">
+            {{ icon('arrow-left') }} {{ evento_prec.data.strftime('%d/%m') }} · {{ evento_prec.classe or evento_prec.titolo }}
+        </a>
+        {% else %}
+        <span class="btn btn-sm" style="background:#f3f4f6; color:#c1c8d1; cursor:default;">{{ icon('arrow-left') }}</span>
+        {% endif %}
+        <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Lista</a>
+        {% if evento_succ %}
+        <a href="{{ url_for('attivita_ist.presenze', id=evento_succ.id) }}" class="btn btn-sm"
+           style="background:#e5eaf0; color:var(--blu);" title="{{ evento_succ.titolo }}">
+            {{ evento_succ.data.strftime('%d/%m') }} · {{ evento_succ.classe or evento_succ.titolo }} {{ icon('arrow') }}
+        </a>
+        {% else %}
+        <span class="btn btn-sm" style="background:#f3f4f6; color:#c1c8d1; cursor:default;">{{ icon('arrow') }}</span>
+        {% endif %}
+    </div>
 </div>
 
 <!-- CONTATORI -->

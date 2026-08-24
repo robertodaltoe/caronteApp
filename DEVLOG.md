@@ -4,6 +4,30 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 35 — Presenze: navigazione precedente/successivo tra tutti gli eventi (Cowork)
+
+Roberto: gestendo le presenze di molte classi in sequenza (es. i 27
+scrutini di un giorno), l'unico modo per passare da una all'altra era
+tornare alla Lista e ripescare l'evento successivo ogni volta.
+Chiarito con lui l'ambito: precedente/successivo devono scorrere
+TUTTI gli eventi in ordine cronologico, anche su giorni diversi (non
+solo quelli dello stesso giorno).
+
+`routes/attivita_ist.py::presenze()`: calcola l'evento precedente e
+successivo ordinando per `(data, ora_inizio, id)` — stesso
+ordinamento già usato dalla pagina Lista, per coerenza. Aggiunti due
+link nell'intestazione della pagina Presenze, accanto al pulsante
+"Lista" già esistente, con etichetta data + classe (o titolo se
+l'evento non ha una classe, es. un Collegio).
+
+Verificato: 2 test nuovi in `tests/test_presenze_navigazione.py`
+(l'ordinamento è cronologico anche con eventi inseriti fuori ordine
+su giorni diversi; il primo/ultimo evento non hanno precedente/
+successivo). A video sul reale: dallo scrutinio 1A CAT del 31/08 il
+precedente porta correttamente al 19/06 (Esame di Maturità, giorno
+completamente diverso), il successivo scorre 1A CAT → 2A CAT → 3A CAT
+in sequenza — verificato con un click reale che l'URL cambia
+correttamente. 193/193 test passano (191 + 2 nuovi).
 ## Sessione 66 addendum 34 — Sostituzioni scrutinio: click su Dal Toè non autocompilava (Cowork)
 
 Prima segnalazione di Roberto in questo giro ("Patrini con 2B LLI"):
