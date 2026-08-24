@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Protocollazione scrutini{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+    <div>
+        <h1 style="font-size:1.3rem; color:var(--blu);">
+            {{ icon('list') }} Protocollazione scrutini
+        </h1>
+        <p style="font-size:.84rem; color:var(--grigio);">
+            {% if data_da or data_a %}
+            Sostituzioni assegnate dal {{ data_da or '…' }} al {{ data_a or '…' }}
+            {% else %}
+            Sostituzioni assegnate non ancora protocollate (tutti gli scrutini)
+            {% endif %}
+        </p>
+    </div>
+    <div style="display:flex; gap:6px;">
+        <a href="{{ url_for('attivita_ist.protocollazione_scrutini_export', data_da=data_da, data_a=data_a) }}"
+           class="btn btn-sm" style="background:var(--verde-bg); color:var(--verde);">
+            {{ icon('download') }} Esporta Excel
+        </a>
+        <a href="{{ url_for('attivita_ist.lista') }}"
+           class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">Lista attività</a>
+    </div>
+</div>
+
+<form method="get" class="card" style="padding:12px 14px; margin-bottom:16px;
+            display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Dal</label>
+        <input type="date" name="data_da" value="{{ data_da or '' }}"
+               style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+    </div>
+    <div>
+        <label style="font-size:.75rem; color:var(--grigio); display:block;">Al</label>
+        <input type="date" name="data_a" value="{{ data_a or '' }}"
+               style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Filtra</button>
+    {% if data_da or data_a %}
+    <a href="{{ url_for('attivita_ist.protocollazione_scrutini') }}" class="btn btn-sm"
+       style="background:#e5eaf0; color:var(--blu);">Solo non protocollate</a>
+    {% endif %}
+</form>
+
+{% if not righe %}
+<div class="card" style="padding:24px; text-align:center; color:var(--grigio); font-size:.9rem;">
+    {% if data_da or data_a %}
+    Nessuna sostituzione assegnata in questo periodo.
+    {% else %}
+    Nessuna sostituzione in attesa di protocollo. 🎉
+    {% endif %}
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+        <thead>
+            <tr style="background:var(--blu); color:white;">
+                <th style="padding:8px 10px; text-align:left;">Data</th>
+                <th style="padding:8px 10px; text-align:left;">Docente assente</th>
+                <th style="padding:8px 10px; text-align:left;">Classe</th>
+                <th style="padding:8px 10px; text-align:left;">Sostituto</th>
+                <th style="padding:8px 10px; text-align:left;">N. protocollo</th>
+                <th style="padding:8px 10px; text-align:left;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in righe %}
+            <tr style="border-bottom:1px solid #f0f2f5;{% if not s.n_protocollo %} background:var(--giallo-bg);{% endif %}">
+                <td style="padding:6px 10px; white-space:nowrap;">{{ s.attivita.data.strftime('%d/%m/%Y') }}</td>
+                <td style="padding:6px 10px;">{{ s.assente.cognome }}{% if s.assente.nome %} {{ s.assente.nome[0] }}.{% endif %}</td>
+                <td style="padding:6px 10px;">
+                    {% if s.attivita.classe %}<span class="badge badge-blu" style="font-size:.72rem;">{{ s.attivita.classe }}</span>{% endif %}
+                </td>
+                <td style="padding:6px 10px;">{{ s.sostituto.cognome }}{% if s.sostituto.nome %} {{ s.sostituto.nome[0] }}.{% endif %}</td>
+                <td style="padding:4px 10px;">
+                    <form method="post" style="display:flex; gap:4px;">
+                        <input type="hidden" name="id_sostituzione" value="{{ s.id }}">
+                        <input type="hidden" name="data_da" value="{{ data_da or '' }}">
+                        <input type="hidden" name="data_a" value="{{ data_a or '' }}">
+                        <input type="text" name="n_protocollo" value="{{ s.n_protocollo or '' }}"
+                               placeholder="Es. 1234/2026"
+                               style="width:130px; padding:4px 8px; border:1px solid #d1d5db;
+                                      border-radius:6px; font-size:.82rem;">
+                        <button type="submit" class="btn btn-sm"
+                                style="background:var(--blu-light); color:var(--blu); padding:4px 10px;">Salva</button>
+                    </form>
+                </td>
+                <td style="padding:6px 10px; text-align:right;">
+                    <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=s.id_attivita) }}"
+                       style="font-size:.78rem; color:var(--grigio); text-decoration:none;" title="Apri lo scrutinio">
+                        {{ icon('external') }}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

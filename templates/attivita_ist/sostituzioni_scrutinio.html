@@ -53,6 +53,8 @@
     <div style="display:flex; gap:6px;">
         <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}"
            class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Presenze</a>
+        <a href="{{ url_for('attivita_ist.protocollazione_scrutini') }}"
+           class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">{{ icon('list') }} Protocollazione</a>
         <a href="{{ url_for('attivita_ist.lista') }}"
            class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">Lista</a>
     </div>

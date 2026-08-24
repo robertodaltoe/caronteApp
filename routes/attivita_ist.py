@@ -1546,3 +1546,95 @@ def sostituzione_scrutinio(id):
         righe=righe,
         oggi=date.today(),
     )
+
+
+def _righe_protocollazione(data_da, data_a):
+    """Righe (SostituzioneScrutinio con sostituto assegnato) per la
+    pagina di protocollazione, filtrate per intervallo di date sugli
+    scrutini. Senza filtro data, mostra solo quelle NON ancora
+    protocollate (il caso d'uso principale: compilare i protocolli
+    mancanti) — con un filtro data esplicito mostra tutte, anche quelle
+    già fatte, per poter rivedere un blocco specifico."""
+    from models.sostituzione_scrutinio import SostituzioneScrutinio
+    q = (SostituzioneScrutinio.query
+         .join(AttivitaIst, SostituzioneScrutinio.id_attivita == AttivitaIst.id)
+         .filter(AttivitaIst.tipo == 'scrutinio',
+                 SostituzioneScrutinio.id_sostituto.isnot(None)))
+    if data_da:
+        q = q.filter(AttivitaIst.data >= data_da)
+    if data_a:
+        q = q.filter(AttivitaIst.data <= data_a)
+    if not data_da and not data_a:
+        q = q.filter(db.or_(SostituzioneScrutinio.n_protocollo.is_(None),
+                             SostituzioneScrutinio.n_protocollo == ''))
+    righe = q.all()
+    righe.sort(key=lambda s: (s.attivita.data, s.attivita.classe or '', s.assente.cognome))
+    return righe
+
+
+@attivita_ist_bp.route('/attivita-ist/protocollazione', methods=['GET', 'POST'])
+def protocollazione_scrutini():
+    """Riepilogo di tutte le sostituzioni assegnate su un blocco di
+    scrutini (o su tutte quelle non ancora protocollate se nessun
+    intervallo è specificato), per compilare in un colpo solo i numeri
+    di protocollo invece di aprire ogni scrutinio singolarmente —
+    richiesto da Roberto per la protocollazione a fine sessione. Il
+    campo N. protocollo è lo stesso di SostituzioneScrutinio.n_protocollo
+    usato in sostituzione_scrutinio(): non serve nessuna sincronizzazione,
+    è la stessa riga vista da due pagine."""
+    if request.method == 'POST':
+        id_sost = int(request.form['id_sostituzione'])
+        from models.sostituzione_scrutinio import SostituzioneScrutinio
+        sost = SostituzioneScrutinio.query.get_or_404(id_sost)
+        sost.n_protocollo = request.form.get('n_protocollo', '').strip() or None
+        db.session.commit()
+        flash('Protocollo aggiornato.', 'success')
+        return redirect(url_for('attivita_ist.protocollazione_scrutini',
+                                 data_da=request.form.get('data_da') or None,
+                                 data_a=request.form.get('data_a') or None))
+
+    data_da = request.args.get('data_da') or None
+    data_a  = request.args.get('data_a') or None
+    righe = _righe_protocollazione(data_da, data_a)
+
+    return render_template('attivita_ist/protocollazione_scrutini.html',
+        righe=righe, data_da=data_da, data_a=data_a,
+    )
+
+
+@attivita_ist_bp.route('/attivita-ist/protocollazione/export')
+def protocollazione_scrutini_export():
+    from openpyxl.utils import get_column_letter
+    from routes.export_xlsx import _wb, _hdr, _row, _border_all, _send
+
+    data_da = request.args.get('data_da') or None
+    data_a  = request.args.get('data_a') or None
+    righe = _righe_protocollazione(data_da, data_a)
+
+    wb = _wb()
+    ws = wb.create_sheet('Protocollazione scrutini')
+    larghezze = [12, 28, 12, 28, 18]
+    for i, larg in enumerate(larghezze, 1):
+        ws.column_dimensions[get_column_letter(i)].width = larg
+
+    r = 1
+    ws.cell(r, 1, 'Protocollazione sostituzioni scrutini')
+    r += 1
+    if data_da or data_a:
+        ws.cell(r, 1, f"Periodo: {data_da or '…'} — {data_a or '…'}")
+    else:
+        ws.cell(r, 1, 'Solo sostituzioni non ancora protocollate')
+    r += 2
+
+    r = _hdr(ws, r, ['Data', 'Docente assente', 'Classe', 'Sostituto', 'N. protocollo'])
+    for s in righe:
+        r = _row(ws, r, [
+            s.attivita.data.strftime('%d/%m/%Y'),
+            s.assente.nome_completo,
+            s.attivita.classe or '',
+            s.sostituto.nome_completo if s.sostituto else '',
+            s.n_protocollo or '',
+        ])
+    _border_all(ws, 4, max(r - 1, 4), 1, 5)
+
+    return _send(wb, 'protocollazione_scrutini.xlsx')

@@ -4,6 +4,46 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 42 — pagina riepilogo "Protocollazione scrutini" (Cowork)
+
+Richiesta di Roberto: per protocollare le sostituzioni di un blocco di
+scrutini (più classi), oggi bisogna aprire ogni evento uno alla volta
+e cercare il campo protocollo — voleva un riepilogo unico. Confermato
+che NON è ridondante: non esisteva nessuna vista aggregata multi-
+evento, solo quella per singolo scrutinio.
+
+Nuova pagina `/attivita-ist/protocollazione`
+(`routes/attivita_ist.py::protocollazione_scrutini()` +
+`templates/attivita_ist/protocollazione_scrutini.html`): una riga per
+ogni sostituzione assegnata (non colonne dinamiche per classe — un
+docente assente in più classi genera più righe), colonne Data /
+Docente assente / Classe / Sostituto / N. protocollo, con un piccolo
+form inline per modificare il protocollo riga per riga. Il campo è lo
+stesso `SostituzioneScrutinio.n_protocollo` già usato in
+`sostituzione_scrutinio()` (pagina per-evento) — stessa riga di
+database vista da due pagine, nessuna sincronizzazione da gestire.
+
+Selezione del blocco (deciso con Roberto tramite scelta guidata):
+senza filtro data mostra SOLO le sostituzioni non ancora protocollate
+(qualunque evento, il caso d'uso principale per il lavoro di
+protocollazione); con un intervallo di date esplicito mostra tutte
+quelle nel periodo, comprese quelle già fatte, per poter rivedere un
+blocco specifico. Aggiunto anche `/attivita-ist/protocollazione/export`
+che genera lo stesso riepilogo in xlsx (riusa gli helper
+`_wb`/`_hdr`/`_row`/`_border_all`/`_send` di `routes/export_xlsx.py`).
+Link alla nuova pagina aggiunti in "Lista attività" e nella pagina
+Sostituzioni per-evento.
+
+Verificato con 4 nuovi test in `tests/test_protocollazione_scrutini.py`
+(filtro data default vs esplicito, salvataggio protocollo, export
+produce un xlsx valido). 204/204 test passano (200 + 4 nuovi).
+Verificato anche live su copia isolata di `database.db` (85
+sostituzioni reali esistenti): GET con e senza filtro data, export
+xlsx riletto con openpyxl per controllare il contenuto riga per riga,
+e un POST completo con token CSRF vero (recuperato dalla pagina,
+altrimenti CSRFProtect lo respinge correttamente) per confermare che
+il salvataggio scrive davvero sulla riga giusta.
+
 ## Sessione 66 addendum 41 — la vicinanza oraria non era più il criterio dominante (Cowork)
 
 Seguito immediato all'addendum precedente: col fallback sul campo
