@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 40 — segnali ①②  quasi mai visibili in Sostituzioni scrutini (Cowork)
+
+Roberto continuava a vedere quasi solo "③ riunione" nei candidati di
+`/attivita-ist/<id>/sostituzioni`, anche dopo il fix dell'addendum
+precedente che calcola tutti i segnali insieme (non solo il migliore).
+Causa diversa e più profonda, trovata leggendo i dati reali
+dell'evento 88: `_segnali_candidato` confronta le materie SOLO tramite
+`DocenteMateria` (tabella strutturata per-anno, popolata solo da
+Assegnazioni o dal checkbox "Materie insegnate" nella scheda docente)
+— ma quella tabella copre appena 54 docenti attivi su 97. Gli altri
+(in particolare ITP e TD_GS, es. DE GENNARO, FONTANA, MAY, ORDINANA
+TORTOSA nell'evento 88) non hanno mai una riga lì, quindi
+`assente_mat_ids`/`cand_mat_ids` risultavano quasi sempre vuoti e i
+segnali ①/② non potevano mai scattare — nonostante il campo libero
+`Docente.materia` in anagrafica (es. "Spagnolo", "Inglese") fosse
+compilato per la quasi totalità dei docenti.
+
+Corretto aggiungendo un fallback: quando la parte strutturata è vuota
+per uno dei due lati, `_segnali_candidato` confronta
+`Docente.materia` (testo libero, split su virgola, case-insensitive)
+per il segnale ①, e prova a risolvere quel testo su `Materia.nome`
+per recuperare il dipartimento e valutare il segnale ②. Serve un
+lookup id→Docente (`_docenti_by_id`) costruito una volta sola in
+`sostituzione_scrutinio()` da `tutti` + gli assenti della riunione.
+
+Verificato con nuovo test `test_segnale_materia_usa_il_campo_libero_
+se_manca_docentemateria` in `tests/test_sostituzione_scrutinio_
+segnali.py` (due docenti senza DocenteMateria/DocenteClasseConcorso ma
+con lo stesso campo `materia` libero ottengono il segnale ①, uno con
+materia diversa no). 199/199 test passano (198 + 1 nuovo). Verificato
+anche live in sola lettura sull'evento 88 reale (copia isolata di
+`database.db`): tutti e 6 gli assenti ora hanno candidati con segnali
+①/② quando pertinenti, non solo ③.
+
 ## Sessione 66 addendum 39 — selettore anno nel box "Materie insegnate" (Cowork)
 
 Seguito alla domanda dell'addendum precedente: Roberto ha confermato

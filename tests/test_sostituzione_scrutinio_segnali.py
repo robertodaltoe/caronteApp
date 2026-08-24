@@ -124,3 +124,47 @@ def test_candidato_senza_segnali_mostra_solo_generico(app, db_session, monkeypat
     candidati = catturato['kwargs']['righe'][0]['candidati']
     segnali_per_id = {d.id: segnali for d, score, segnali, riun_prec, riun_succ in candidati}
     assert segnali_per_id[cand.id] == {4}
+
+
+def test_segnale_materia_usa_il_campo_libero_se_manca_docentemateria(app, db_session, monkeypatch):
+    """Caso reale segnalato da Roberto: la maggior parte dei docenti (in
+    particolare ITP/TD_GS) non ha righe strutturate in DocenteMateria
+    (popolate solo da Assegnazioni o dal box "Materie insegnate"), ma HA
+    il campo libero Docente.materia compilato in anagrafica. Prima del
+    fix, questi docenti non ottenevano mai il segnale ① o ② anche quando
+    insegnavano davvero la stessa materia dell'assente, perché
+    _segnali_candidato guardava solo DocenteMateria."""
+    import routes.attivita_ist as mod
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod.attivita_ist_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    dip = Dipartimento(nome='Lingue', sigla='LIN')
+    db.session.add(dip)
+    db.session.flush()
+    _materia('Spagnolo', 'SPA', dip)  # esiste in anagrafica materie, ma nessuna DocenteMateria la collega
+
+    # Nessuno dei due ha righe DocenteMateria/DocenteClasseConcorso —
+    # solo il campo libero "materia" in anagrafica, come i docenti ITP/
+    # TD_GS reali che hanno innescato la segnalazione.
+    assente = crea_docente('OrdinanaTortosa', materia='Spagnolo')
+    cand_stessa_materia = crea_docente('DeGennaro', materia='Spagnolo')
+    cand_altra_materia = crea_docente('Fontana', materia='Inglese')
+    db.session.commit()
+
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio finale', classe='5A LSC',
+                      data=date(2026, 8, 31), ora_inizio='10:00', ora_fine='11:00',
+                      origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPresenza(id_attivita=ev.id, id_docente=assente.id, stato='assente'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/{ev.id}/sostituzioni')
+        assert r.status_code == 200
+
+    candidati = catturato['kwargs']['righe'][0]['candidati']
+    segnali_per_id = {d.id: segnali for d, score, segnali, riun_prec, riun_succ in candidati}
+    assert 1 in segnali_per_id[cand_stessa_materia.id]  # stessa materia via campo libero
+    assert 1 not in segnali_per_id[cand_altra_materia.id]

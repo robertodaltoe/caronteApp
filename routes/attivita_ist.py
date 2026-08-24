@@ -1320,6 +1320,12 @@ def sostituzione_scrutinio(id):
     candidati_base = [d for d in tutti
                       if d.id not in docenti_classe_ids and d.id not in esclusi_servizio]
 
+    # Lookup id -> Docente, usato nel fallback su Docente.materia (testo
+    # libero) quando DocenteMateria è vuota — include anche gli assenti,
+    # che potrebbero non essere in "tutti" se non più attivi.
+    _docenti_by_id = {dd.id: dd for dd in tutti}
+    _docenti_by_id.update({p.docente.id: p.docente for p in presenze_assenti})
+
     # Assenti quel giorno (non disponibili)
     assenti_giorno = {a.id_docente for a in AssenzaM.query.filter_by(data=evento.data).all()}
 
@@ -1422,16 +1428,38 @@ def sostituzione_scrutinio(id):
         cand_mat_ids = {dm.id_materia for dm in DocenteMateria.query.filter_by(
             id_docente=d.id, anno_scol=anno_evento).all()}
 
-        if assente_mat_ids & cand_mat_ids:
+        # DocenteMateria (struttura per-anno, popolata da Assegnazioni/
+        # checkbox scheda docente) copre solo una minoranza dei docenti
+        # (~54 su 97): per gli altri i segnali 1/2 non scattavano mai,
+        # anche quando la materia era nota — segnalato da Roberto (vedeva
+        # quasi solo "③ riunione" in sostituzioni scrutinio). Fallback sul
+        # campo libero Docente.materia (compilato per la quasi totalità
+        # dei docenti, es. anagrafica di importazione) quando la parte
+        # strutturata è vuota per uno dei due lati.
+        assente_doc = _docenti_by_id.get(assente_id)
+        assente_mat_txt = {m.strip().upper() for m in (assente_doc.materia or '').split(',') if m.strip()} \
+            if assente_doc else set()
+        cand_mat_txt = {m.strip().upper() for m in (d.materia or '').split(',') if m.strip()}
+
+        stessa_materia = bool(assente_mat_ids & cand_mat_ids)
+        if not stessa_materia and not assente_mat_ids and not cand_mat_ids:
+            stessa_materia = bool(assente_mat_txt & cand_mat_txt)
+        if stessa_materia:
             segnali.add(1)  # stessa materia
 
+        assente_dips = cand_dips = set()
         if assente_mat_ids and cand_mat_ids:
             assente_dips = {m.id_dipartimento for m in Materia.query.filter(
                 Materia.id.in_(assente_mat_ids)).all()}
             cand_dips = {m.id_dipartimento for m in Materia.query.filter(
                 Materia.id.in_(cand_mat_ids)).all()}
-            if assente_dips & cand_dips:
-                segnali.add(2)  # stesso dipartimento
+        elif assente_mat_txt and cand_mat_txt:
+            assente_dips = {m.id_dipartimento for m in Materia.query.filter(
+                db.func.upper(Materia.nome).in_(assente_mat_txt)).all()}
+            cand_dips = {m.id_dipartimento for m in Materia.query.filter(
+                db.func.upper(Materia.nome).in_(cand_mat_txt)).all()}
+        if assente_dips & cand_dips:
+            segnali.add(2)  # stesso dipartimento
 
         if riun_prec or riun_succ:
             segnali.add(3)  # altra riunione lo stesso giorno
