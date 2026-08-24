@@ -318,15 +318,31 @@ SEZIONI = [
         'passi': [
             ('Apri "Attività → Attività istituzionali"',
              'La lista mostra gli eventi programmati; da "Nuova" crei un evento indicando data, '
-             'orario, tipo (scrutinio, collegio...) e i docenti partecipanti.'),
+             'orario, tipo (scrutinio, collegio...) e i docenti partecipanti. Il Piano Annuale delle '
+             'Attività (vedi la guida "Piano Annuale attività") può generare automaticamente in blocco '
+             'consigli di classe, scrutini, GLO e riunioni di dipartimento, invece di inserirli uno a '
+             'uno da qui.'),
             ('Registra le presenze',
              'Il giorno stesso (o dopo), dalla pagina "Presenze" dell\'evento segni chi era presente '
              'e chi assente — se un docente ha un\'assenza registrata per quell\'ora, compare già '
-             'segnalato.'),
+             'segnalato. Per gli scrutini, una card in alto mostra a colpo d\'occhio quanti assenti '
+             'hanno già un sostituto individuato (es. "3/5") e due link per scorrere rapidamente al '
+             'prossimo/precedente evento dell\'agenda, anche su un giorno diverso.'),
             ('Nomina un sostituto per un assente',
              'Dalla pagina "Sostituzioni" dell\'evento, per ogni docente assente il sistema propone '
-             'candidati (per materia, dipartimento o perché già presente a scuola per un\'altra '
-             'riunione vicina) — scegli e conferma, indicando eventualmente il numero di protocollo.'),
+             'candidati ordinati per comodità: prima chi ha un\'altra riunione lo stesso giorno subito '
+             'prima o dopo (è già a scuola), poi a parità di comodità chi condivide la materia o il '
+             'dipartimento con l\'assente. Ogni candidato mostra dei pallini colorati numerati (①②③④) '
+             'per i motivi che lo rendono adatto — la legenda sotto la lista spiega cosa significa '
+             'ciascuno. Scegli, conferma ed eventualmente indica il numero di protocollo.'),
+            ('Protocolla in blocco le sostituzioni di un periodo',
+             'Dalla pagina "Sostituzioni" (o da "Attività → Attività istituzionali", pulsante '
+             '"Protocollazione scrutini") apri il riepilogo di tutte le sostituzioni assegnate: senza '
+             'filtri mostra solo quelle ancora senza protocollo, oppure scegli un intervallo di date '
+             'per rivederle tutte, incluse quelle già fatte. Il numero di protocollo si può inserire '
+             'riga per riga direttamente lì (è lo stesso campo della pagina Sostituzioni del singolo '
+             'evento — aggiornarlo da una parte lo aggiorna anche nell\'altra) e l\'intero elenco è '
+             'esportabile in Excel.'),
             ('Importa il Piano delle Attività',
              'Se il Piano annuale è già pronto in un file Excel, puoi importarlo da Impostazioni → '
              'Orario invece di inserire ogni riunione a mano.'),
@@ -335,11 +351,88 @@ SEZIONI = [
             ('Lo stesso docente può essere nominato sostituto per due assenti diversi nella stessa riunione?',
              'No: appena nominato per un assente, il suo nome sparisce dalla lista dei candidati per '
              'gli altri assenti della stessa riunione — non può essere in due posti contemporaneamente.'),
-            ('Cosa significa la freccia con l\'orario accanto a un candidato sostituto?',
-             'Indica che quel docente ha un\'altra riunione istituzionale lo stesso giorno, subito '
-             'prima o dopo — utile per scegliere chi è comunque già a scuola in quella fascia.'),
+            ('Cosa significano i pallini numerati colorati accanto a un candidato sostituto?',
+             'Ogni pallino è un motivo per cui quel candidato è adatto, e possono comparire insieme se '
+             'valgono più motivi contemporaneamente: ① stessa materia dell\'assente, ② stesso '
+             'dipartimento, ③ ha un\'altra riunione lo stesso giorno (subito prima o dopo, quindi è '
+             'comodo perché già a scuola), ④ disponibile ma senza nessuno di questi motivi specifici. '
+             'L\'ordine della lista segue soprattutto la comodità oraria (③): la materia/il dipartimento '
+             'contano come criterio in più a parità di comodità, non scavalcano un candidato molto più '
+             'comodo in orario.'),
+            ('Dove trovo tutte le sostituzioni di un intero blocco di scrutini, per protocollarle insieme?',
+             'Nella pagina "Protocollazione scrutini" (raggiungibile dalla Lista attività o da '
+             'qualunque pagina Sostituzioni di uno scrutinio): un elenco con una riga per ogni '
+             'sostituzione — docente assente, classe, sostituto e numero di protocollo modificabile '
+             'sul posto — esportabile in Excel.'),
         ],
         'attenzione': None,
+    },
+    {
+        'slug': 'piano-annuale-attivita',
+        'titolo': 'Piano Annuale attività',
+        'icona': '📅',
+        'riassunto': 'Formazione obbligatoria, vista mensile, riepilogo ore, generatore Consigli di classe.',
+        'a_cosa_serve': (
+            'Il "Piano Annuale delle Attività" sostituisce il foglio Excel che prima riassumeva, '
+            'mese per mese, tutti gli impegni fuori dall\'orario di lezione (collegi, consigli di '
+            'classe, scrutini, formazione) e le ore che ciascun docente vi dedica. In CaronteApp è '
+            'calcolato automaticamente dagli eventi di "Attività istituzionali" e dal Piano della '
+            'Formazione, invece di essere compilato a mano — e include un generatore che propone da '
+            'solo un calendario di Consigli di classe, da correggere invece di costruire da zero.'
+        ),
+        'passi': [
+            ('Consulta la vista mensile',
+             'Da "Attività → Piano delle attività" vedi tutti gli eventi istituzionali dell\'anno '
+             'raggruppati mese per mese, nell\'ordine in cui si svolgono — lo stesso colpo d\'occhio '
+             'del foglio Excel originale, sempre aggiornato con quanto inserito nell\'app.'),
+            ('Controlla il riepilogo ore',
+             'Dal pulsante "Riepilogo ore" in quella stessa pagina trovi due tabelle: le ore totali '
+             'per classe (consigli + scrutini) e, per ogni docente, il confronto tra le ore già '
+             'impegnate in collegio/consigli/formazione e la quota che gli spetta secondo il CCNL — '
+             'un\'eventuale eccedenza è solo segnalata con un badge rosso, non blocca nulla.'),
+            ('Gestisci il Piano della Formazione',
+             'Da "Impostazioni → Piano della formazione" crei i corsi dell\'anno: un corso '
+             '"obbligatorio per tutti" iscrive in automatico tutti i docenti in servizio; un corso '
+             '"volontario" parte senza iscritti e ciascuno si iscrive/disiscrive dalla sua scheda. '
+             'Le ore di formazione confluiscono da sole nel Riepilogo ore e nel Piano Attività '
+             'Personale di ciascun docente, senza bisogno di inserirle altrove.'),
+            ('Genera una bozza di Consigli di classe',
+             'Da "Impostazioni → Genera piano delle attività" scegli le classi (prese dalle '
+             'Assegnazioni dell\'anno, non dall\'orario — è pronto anche prima che l\'orario '
+             'definitivo sia stabilizzato), il periodo, la fascia oraria giornaliera e quali classi '
+             'richiedono la presenza del Dirigente. Il sistema propone una bozza che raggruppa più '
+             'classi compatibili nello stesso slot (nessun docente in comune, DS non doppiamente '
+             'impegnato) rispettando i vincoli orario fissi dell\'istituto (es. rientro pomeridiano '
+             'di certi indirizzi) e le scadenze/slot fissi impostati a mano prima di generare.'),
+            ('Correggi e conferma la bozza',
+             'Ogni riga della bozza (data, ora, presenza DS) resta modificabile a mano, comprese le '
+             'classi che il generatore non è riuscito a piazzare (restano segnalate "in conflitto", '
+             'mai un errore bloccante) — solo alla conferma vengono creati gli eventi veri in '
+             'Attività istituzionali, con i partecipanti già precompilati dalle Assegnazioni.'),
+        ],
+        'faq': [
+            ('Il generatore di Consigli di classe scrive subito gli eventi definitivi?',
+             'No: propone solo una bozza modificabile. Gli eventi reali (visibili in "Attività '
+             'istituzionali", con presenze e sostituzioni gestibili come per qualunque altra '
+             'riunione) vengono creati solo quando confermi la bozza.'),
+            ('Perché una classe risulta "in conflitto" nella bozza del generatore?',
+             'Significa che, con i vincoli indicati (orario, docenti condivisi, DS), non è stato '
+             'trovato nessuno slot libero compatibile nel periodo scelto — va assegnata a mano '
+             'direttamente nella bozza, prima di confermare.'),
+            ('Da dove prende il generatore l\'elenco dei docenti di una classe?',
+             'Dalle Assegnazioni (classi ↔ docenti) dell\'anno scolastico scelto, non dall\'orario '
+             'delle lezioni — l\'orario definitivo si stabilizza troppo tardi rispetto a quando serve '
+             'preparare il piano annuale.'),
+            ('Un\'eccedenza di ore nel Riepilogo ore blocca qualcosa?',
+             'No, è solo un avviso visivo (badge rosso "eccede") per farla notare — non impedisce di '
+             'programmare altri eventi né di confermare piani/bozze.'),
+        ],
+        'attenzione': (
+            'Il generatore Consigli di classe non tiene conto dell\'orario delle lezioni (per scelta: '
+            'si basa sulle Assegnazioni, disponibili prima che l\'orario sia pronto) — verifica comunque '
+            'a mano, prima di confermare la bozza, che gli slot proposti non creino conflitti reali con '
+            'lezioni già fissate quando l\'orario sarà pubblicato.'
+        ),
     },
     {
         'slug': 'attivita-differite',
@@ -613,18 +706,43 @@ SEZIONI = [
         'passi': [
             ('Apri "Impostazioni → Docenti → Anagrafica docenti"',
              'L\'elenco si può filtrare per anno scolastico, per seguire anche i docenti in arrivo '
-             '(o in uscita) in un anno diverso da quello corrente.'),
+             '(o in uscita) in un anno diverso da quello corrente. Ore settimanali, tipo di contratto '
+             'e colloqui mostrati in tabella si riferiscono all\'anno selezionato, non sempre a quello '
+             'corrente — un valore mostrato più chiaro/attenuato, con una nota al passaggio del mouse, '
+             'segnala che è ereditato da un anno precedente e non impostato apposta per quello '
+             'selezionato.'),
             ('Aggiungi un nuovo docente',
              'Indica almeno cognome, nome e tipo di contratto; puoi aggiungere subito anche la '
              'classe di concorso e le altre informazioni.'),
             ('Modifica un docente esistente',
              'Apri la sua scheda dall\'elenco — se un altro utente sta modificando la stessa scheda '
-             'nello stesso momento, il sistema avvisa invece di sovrascrivere in silenzio.'),
+             'nello stesso momento, il sistema avvisa invece di sovrascrivere in silenzio. Il box '
+             '"Materie insegnate" e quello dei colloqui hanno ciascuno un selettore anno: puoi '
+             'consultare o correggere anche le materie/i colloqui di un anno diverso da quello '
+             'corrente, non solo quello in corso (per gli altri anni le materie restano in sola '
+             'lettura, i colloqui restano modificabili).'),
+            ('Ore diverse tra un anno e l\'altro (es. cambio da cattedra spezzata a intera)',
+             'Se un docente passa da un numero di ore a un altro da un certo anno in poi (es. entra in '
+             'ruolo e prende una cattedra intera al posto di una spezzata su due scuole), il campo '
+             '"Ore max (override)" con l\'anno di riferimento accanto permette di far vedere il valore '
+             'giusto per l\'anno passato/in corso, aggiornando comunque il contratto base per gli anni '
+             'successivi.'),
+            ('Un docente con più di un incarico nello stesso anno (es. ITP + Sostegno)',
+             'Sotto ai tre ruoli principali (Titolare/ITP/Sostegno) c\'è un checkbox "Ha ANCHE un '
+             'incarico di sostegno" con le relative ore, per i casi in cui un docente svolge entrambi '
+             'i ruoli nello stesso anno scolastico — il ruolo principale resta quello scelto sopra, '
+             'l\'orario del sostegno si assegna comunque a parte dalla pagina "Orario sostegno".'),
         ],
         'faq': [
             ('Un docente che risulta trasferito o pensionato va eliminato?',
              'No, va segnato come "non in servizio" con il motivo (trasferimento/pensionamento/fine '
              'incarico) e l\'anno — resta nello storico ma non compare più tra i docenti attivi.'),
+            ('Perché in tabella vedo un numero di ore o un giorno di colloqui diverso da quello che mi aspettavo?',
+             'Controlla l\'anno scolastico selezionato in cima alla pagina: ore, contratto e colloqui '
+             'possono legittimamente differire da un anno all\'altro (part-time, cambio cattedra, '
+             'cambio giorno colloqui). Se il valore mostrato è più chiaro del solito, con una nota al '
+             'passaggio del mouse, significa che nessuno ha impostato un valore apposta per quell\'anno '
+             'e il sistema sta mostrando l\'ultimo valore noto.'),
         ],
         'attenzione': (
             'L\'eliminazione definitiva di un docente rimuove anche tutta la sua storia (assenze, '
@@ -835,3 +953,79 @@ def get_sezione(slug):
         if s['slug'] == slug:
             return s
     return None
+
+
+def _campi_pesati(sez):
+    """Tutti i campi testuali di una sezione, ciascuno col peso da dare
+    a un suo eventuale match nella ricerca — un titolo o una domanda
+    FAQ che contiene la parola cercata è un indizio molto più forte di
+    una frase persa nel corpo di un passo, quindi pesa di più."""
+    campi = [
+        (sez['titolo'], 10),
+        (sez['riassunto'], 5),
+        (sez['a_cosa_serve'], 3),
+    ]
+    for titolo_passo, testo_passo in sez.get('passi', []):
+        campi.append((titolo_passo, 4))
+        campi.append((testo_passo, 2))
+    for domanda, risposta in sez.get('faq', []):
+        campi.append((domanda, 6))
+        campi.append((risposta, 2))
+    if sez.get('attenzione'):
+        campi.append((sez['attenzione'], 2))
+    return campi
+
+
+def _estrai_snippet(testo, parola, larghezza=110):
+    """Un frammento di `testo` centrato sulla prima occorrenza di
+    `parola` (case-insensitive), con puntini di sospensione se tagliato."""
+    testo_lower = testo.lower()
+    i = testo_lower.find(parola)
+    if i == -1:
+        return testo[:larghezza] + ('…' if len(testo) > larghezza else '')
+    inizio = max(0, i - larghezza // 2)
+    fine = min(len(testo), i + len(parola) + larghezza // 2)
+    frammento = testo[inizio:fine]
+    if inizio > 0:
+        frammento = '…' + frammento
+    if fine < len(testo):
+        frammento = frammento + '…'
+    return frammento
+
+
+def cerca(query):
+    """
+    Ricerca per parole chiave nel contenuto della guida (tutte le
+    sezioni, tutti i campi — non solo titolo/riassunto), con un
+    punteggio di rilevanza per ordinare i risultati: più parole
+    trovate, e in campi più "importanti" (titolo/FAQ prima del corpo
+    di un passo), più il risultato sale in classifica.
+
+    Ritorna una lista di dict {'sezione', 'punteggio', 'snippet'},
+    ordinata dal più rilevante, oppure lista vuota se la query è vuota
+    o non trova nulla.
+    """
+    parole = [p.strip().lower() for p in (query or '').split() if p.strip()]
+    if not parole:
+        return []
+
+    risultati = []
+    for sez in SEZIONI:
+        punteggio = 0
+        snippet = None
+        migliore_peso_snippet = -1
+        for testo, peso in _campi_pesati(sez):
+            testo_lower = testo.lower()
+            for parola in parole:
+                occorrenze = testo_lower.count(parola)
+                if not occorrenze:
+                    continue
+                punteggio += occorrenze * peso
+                if peso > migliore_peso_snippet:
+                    migliore_peso_snippet = peso
+                    snippet = _estrai_snippet(testo, parola)
+        if punteggio > 0:
+            risultati.append({'sezione': sez, 'punteggio': punteggio, 'snippet': snippet})
+
+    risultati.sort(key=lambda r: -r['punteggio'])
+    return risultati

@@ -4,6 +4,68 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 44 — pulizia sostituzioni 31/08 + guida aggiornata + ricerca (Cowork)
+
+**Pulizia sostituzioni 31/08.** Richiesta di Roberto: cancellare tutte
+le sostituzioni scrutinio già assegnate per il 31/08/2026, da rifare
+da capo. Backup cifrato
+(`database_20260824_2228pre_pulizia_sostituzioni_31ago.db.enc`),
+cancellate 77 righe `SostituzioneScrutinio` collegate ai 27 eventi
+scrutinio di quel giorno, `PRAGMA integrity_check` ok, verificato
+zero righe residue e le pagine (Sostituzioni, Protocollazione) ancora
+funzionanti dopo.
+
+Nel controllare i dati prima di cancellare, trovato un bug reale
+indipendente dalla richiesta: 6 di quelle righe avevano
+`n_protocollo` (e altre `note`) impostati alla **stringa letterale**
+`"None"` (4 caratteri), non `NULL`. Causa:
+`templates/attivita_ist/sostituzioni_scrutinio.html` scriveva il
+valore dell'input come `{{ riga.sostituzione.n_protocollo if
+riga.sostituzione else '' }}` — quando la sostituzione esisteva ma il
+campo era ancora vuoto (`None` Python, non stringa vuota), Jinja
+renderizza `None` come testo letterale nell'attributo `value`; se il
+form veniva poi risalvato senza accorgersi del testo "None" già
+scritto nel campo, finiva davvero nel database. Corretto con un `or
+''` in più sui campi `n_protocollo` e `note`. Pulite anche 4 righe con
+lo stesso difetto su eventi di giugno, fuori dal 31/08 (non richiesto,
+ma stessa corruzione appena diagnosticata). Verificato con 2 nuovi
+test in `tests/test_sostituzione_scrutinio_no_none_letterale.py`
+(riproduce il bug col pattern vecchio, conferma che il nuovo non lo
+riproduce). 216/216 test passano (214 + 2 nuovi).
+
+**Guida aggiornata + ricerca per parole chiave.** L'ultimo
+aggiornamento di `modules/guida_content.py` risaliva al 17/08 — una
+settimana di lavoro (Piano Annuale delle Attività nelle sue 5 fasi,
+segnali multipli e ordinamento in Sostituzioni scrutinio, card
+"Sostituti individuati", Protocollazione scrutini, docenti per anno,
+doppio ruolo) non era mai stata riportata lì. Aggiornate le sezioni
+"Attività istituzionali" (pallini segnale ①②③④ al posto della vecchia
+"freccia con l'orario", card sostituti individuati, link precedente/
+successivo, nuova pagina Protocollazione scrutini) e "Docenti" (ore/
+contratto/colloqui per anno con nota sul valore ereditato, selettore
+anno su Materie insegnate e colloqui, doppio ruolo sostegno
+aggiuntivo). Aggiunta una sezione interamente nuova "Piano Annuale
+attività" (mai documentata finora): vista mensile, riepilogo ore,
+Piano della Formazione, generatore Consigli di classe.
+
+Aggiunto anche il campo di ricerca richiesto da Roberto:
+`modules/guida_content.py::cerca(query)` cerca su tutti i campi di
+ogni sezione (titolo, riassunto, "a cosa serve", titolo e testo di
+ogni passo, domanda e risposta di ogni FAQ, avviso) con un punteggio
+pesato per campo — un match nel titolo o in una domanda FAQ conta
+più di uno perso nel corpo di un passo — così i risultati più
+pertinenti vengono per primi. Nuova route `/guida/cerca?q=...`
+(`routes/guida.py`) e campo di ricerca in cima a `templates/guida/
+index.html`, con un frammento di testo (snippet) intorno al punto in
+cui la parola è stata trovata per ogni risultato.
+
+Verificato con 8 nuovi test in `tests/test_guida_ricerca.py` (query
+vuota, match su titolo, priorità del match nel titolo, ordinamento
+per punteggio, nessun risultato, snippet presente, route con e senza
+query). 224/224 test passano (216 + 8 nuovi). Verificato anche live su
+copia isolata di `database.db`: tutte le pagine (indice, sezioni,
+ricerca, PDF) rispondono 200.
+
 ## Sessione 66 addendum 43 — colloqui per anno + doppio ruolo (sostegno aggiuntivo) (Cowork)
 
 Due richieste distinte su Anagrafica docenti, entrambe confermate con

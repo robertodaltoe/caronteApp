@@ -8,15 +8,23 @@ in BLUEPRINT_PERMESSI in app.py) — è pensata per aiutare TUTTI gli
 utenti dell'app, non solo un ruolo.
 """
 import io
-from flask import Blueprint, render_template, abort, send_file
-from modules.guida_content import SEZIONI, get_sezione
+from flask import Blueprint, render_template, abort, send_file, request
+from modules.guida_content import SEZIONI, get_sezione, cerca
 
 guida_bp = Blueprint('guida', __name__)
 
 
 @guida_bp.route('/guida')
 def index():
-    return render_template('guida/index.html', sezioni=SEZIONI)
+    return render_template('guida/index.html', sezioni=SEZIONI, query=None, risultati=None)
+
+
+@guida_bp.route('/guida/cerca')
+def cerca_guida():
+    query = request.args.get('q', '').strip()
+    risultati = cerca(query) if query else None
+    return render_template('guida/index.html', sezioni=SEZIONI,
+                            query=query, risultati=risultati)
 
 
 @guida_bp.route('/guida/<slug>')

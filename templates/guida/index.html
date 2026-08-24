@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_icons.html' import icon %}
 {% block title %}Guida{% endblock %}
 {% block extra_style %}
 <style>
@@ -12,6 +13,12 @@
 .guida-ic { font-size:1.6rem; margin-bottom:8px; display:block; }
 .guida-titolo { font-size:1rem; font-weight:800; color:var(--blu); margin-bottom:4px; }
 .guida-riassunto { font-size:.8rem; color:var(--grigio); line-height:1.4; }
+.guida-cerca { display:flex; gap:8px; max-width:480px; margin:16px 0 20px; }
+.guida-cerca input[type="text"] { flex:1; padding:9px 12px; border:1px solid #d1d5db;
+    border-radius:8px; font-size:.88rem; }
+.guida-cerca input[type="text"]:focus { outline:none; border-color:var(--blu); }
+.guida-risultato-snippet { font-size:.78rem; color:var(--grigio); line-height:1.4; margin-top:4px; }
+.guida-risultato-snippet mark { background:var(--giallo-bg); color:inherit; padding:0 1px; border-radius:2px; }
 </style>
 {% endblock %}
 
@@ -25,6 +32,38 @@
     </p>
 </div>
 
+<form method="get" action="{{ url_for('guida.cerca_guida') }}" class="guida-cerca">
+    <input type="text" name="q" value="{{ query or '' }}"
+           placeholder="Cerca nella guida — es. protocollo, colloqui, sostituto...">
+    <button type="submit" class="btn btn-primary btn-sm">{{ icon('search') }} Cerca</button>
+</form>
+
+{% if risultati is not none %}
+    {% if risultati %}
+    <p style="font-size:.82rem; color:var(--grigio); margin-bottom:12px;">
+        {{ risultati|length }} risultat{{ 'o' if risultati|length == 1 else 'i' }} per «{{ query }}»
+    </p>
+    <div style="display:flex; flex-direction:column; gap:10px; max-width:720px;">
+        {% for r in risultati %}
+        <a href="{{ url_for('guida.sezione', slug=r.sezione.slug) }}" class="guida-card">
+            <span class="guida-ic">{{ r.sezione.icona }}</span>
+            <div class="guida-titolo">{{ r.sezione.titolo }}</div>
+            {% if r.snippet %}
+            <div class="guida-risultato-snippet">{{ r.snippet }}</div>
+            {% else %}
+            <div class="guida-riassunto">{{ r.sezione.riassunto }}</div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="font-size:.85rem; color:var(--grigio);">
+        Nessun risultato per «{{ query }}». Prova con una parola diversa, o sfoglia tutte le sezioni qui sotto.
+    </p>
+    {% endif %}
+{% endif %}
+
+{% if risultati is none %}
 <div class="guida-grid">
     {% for sez in sezioni %}
     <a href="{{ url_for('guida.sezione', slug=sez.slug) }}" class="guida-card">
@@ -34,4 +73,5 @@
     </a>
     {% endfor %}
 </div>
+{% endif %}
 {% endblock %}
