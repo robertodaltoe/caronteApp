@@ -505,11 +505,12 @@ def salva():
             sum(c.ore for c in a.classi)
             for a in AssegnazioneDocente.query.filter_by(
                 anno_scol=anno, id_docente=id_doc).all())
-        if ore_gia + tot_nuove > doc.ore_max_effettive:
+        max_ore_anno = doc.ore_max_effettive_per_anno(anno)
+        if ore_gia + tot_nuove > max_ore_anno:
             flash(
                 f'{doc.cognome} {doc.nome}: '
                 f'ore totali ({ore_gia + tot_nuove}h) superano '
-                f'il massimo ({doc.ore_max_effettive}h).', 'danger')
+                f'il massimo ({max_ore_anno}h).', 'danger')
             return redirect(url_for('assegnazioni.index', anno=anno))
 
     asgn = AssegnazioneDocente(
@@ -776,9 +777,10 @@ def nomina(asgn_id):
             AssegnazioneDocente.anno_scol == asgn.anno_scol,
             AssegnazioneDocente.id_docente == id_doc,
             AssegnazioneDocente.id != asgn_id).all())
-    if ore_gia + tot > doc.ore_max_effettive:
+    max_ore_anno = doc.ore_max_effettive_per_anno(asgn.anno_scol)
+    if ore_gia + tot > max_ore_anno:
         flash(f'{doc.cognome} {doc.nome}: ore eccessive '
-              f'({ore_gia + tot}h > {doc.ore_max_effettive}h).', 'danger')
+              f'({ore_gia + tot}h > {max_ore_anno}h).', 'danger')
     else:
         asgn.id_docente = id_doc
         asgn.nome_placeholder = None
@@ -811,7 +813,7 @@ def api_verifica():
                 for a in AssegnazioneDocente.query.filter_by(
                     anno_scol=anno, id_docente=int(id_doc)).all())
             tot = ore_gia + tot_nuove
-            max_ore = doc.ore_max_effettive
+            max_ore = doc.ore_max_effettive_per_anno(anno)
             if tot > max_ore:
                 avvisi.append({'livello': 'error',
                                'msg': f'⚠︎ {tot}h / {max_ore}h — supera il massimo'})

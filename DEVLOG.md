@@ -4,6 +4,58 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 36 — Cattedra spezzata → cattedra intera: ore per anno ovunque (Cowork)
+
+Caso reale di Roberto: Palermo, cattedra spezzata su due scuole (9 ore
+qui) fino al 2025-2026, entra in ruolo e passa a cattedra intera (18
+ore solo qui) dal 2026-2027. Scoperto che il meccanismo per gestirlo
+esisteva già, mai usato prima: `Docente.ore_max_anno`/
+`anno_scol_ore_max` — un override di ore valido per un SOLO anno
+specifico, con priorità sul campo base `ore_contratto` per quell'anno,
+già esposto nella scheda di modifica docente. Roberto l'ha applicato
+da solo (ore_max_anno=9 per il 2025-2026, poi ore_contratto=18 come
+nuovo valore base).
+
+Segnalazione immediata sua: nell'Anagrafica Docenti, selezionando
+2025-2026, la colonna ore mostrava comunque 18 invece di 9. Causa:
+`templates/docenti.html` leggeva `d.ore_contratto` (il campo base
+grezzo), mai il metodo anno-aware `ore_max_effettive_per_anno(anno)`
+già esistente sul modello. Cercato lo stesso schema ovunque nell'app
+— trovati altri 10 punti, la maggior parte molto più delicati di una
+semplice etichetta:
+
+- **`routes/assegnazioni.py`** (3 punti, i più importanti):
+  `nomina()` e `salva()` (i controlli "ore eccessive" che bloccano
+  un'assegnazione) e `api_verifica()` (l'avviso live nel form) usavano
+  tutti `doc.ore_max_effettive` invece di
+  `doc.ore_max_effettive_per_anno(anno)` — per un docente come Palermo
+  quest'anno, l'app avrebbe potuto lasciarlo assegnare fino a 18 ore
+  nel 2025-2026 invece delle sue vere 9, un errore di validazione
+  reale, non solo di visualizzazione.
+- **`templates/assegnazioni/index.html`** (6 punti): stessa causa nel
+  render — badge "max Xh", evidenziazione riga "sovra-assegnato",
+  soglia JS lato client (`data-max-ore`), tendine "Aggiungi
+  docente"/"Nomina docente".
+- **`routes/export_xlsx.py`** (3 punti): export "Docenti per anno",
+  e i due blocchi CC del passo 9 (materie/assegnazioni).
+- **`templates/banca_ore/singolo.html`**: già toccato per il
+  contratto (addendum 31), stessa causa anche per le ore.
+
+Lasciati invariati i punti non anno-scoped (form di modifica —
+corretto che mostri il valore che sta modificando; `report/singolo*`
+e `templates/banca_ore.html` dell'import — snapshot "adesso", nessun
+parametro anno).
+
+Verificato: nuovo test `test_nomina_rispetta_ore_max_dellanno_non_il_
+contratto_base` in `tests/test_assegnazioni_ore_max_anno.py` — replica
+esattamente lo scenario Palermo: un'assegnazione 2025-2026 con 10 ore
+viene rifiutata (supera le sue vere 9h di quell'anno), la stessa da
+10 ore nel 2026-2027 viene accettata (rientra nelle nuove 18h). Non è
+stato possibile verificare sui dati reali di Palermo: il
+`database.db` locale non riflette ancora la modifica di Roberto
+(probabile modifica fatta su un'altra macchina, non ancora
+sincronizzata — i dati docenti non passano dal sync automatico).
+194/194 test passano (193 + 1 nuovo).
 ## Sessione 66 addendum 35 — Presenze: navigazione precedente/successivo tra tutti gli eventi (Cowork)
 
 Roberto: gestendo le presenze di molte classi in sequenza (es. i 27

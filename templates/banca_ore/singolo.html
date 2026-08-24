@@ -50,7 +50,7 @@
         </h1>
         <p style="color:var(--grigio); font-size:.85rem;">
             {% if docente.materia_effettiva %}{{ docente.materia_effettiva }} · {% endif %}
-            {{ docente.ore_contratto }}h/sett
+            {{ docente.ore_max_effettive_per_anno(anno) }}h/sett
             {% if contratto_label_anno %} · {{ contratto_label_anno }}{% endif %}
         </p>
     </div>

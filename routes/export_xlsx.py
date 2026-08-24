@@ -268,7 +268,7 @@ def _export_p7(anno):
         bg = GIAL if d.status_presenza in ('ap_uscente', 'aspettativa') else None
         r = _row(ws, r, [d.cognome, d.nome, tipo_contratto_label_per_anno(d, anno),
                           status_map.get(d.status_presenza or 'presente', ''),
-                          d.ore_max_effettive, cc.codice if cc else '', d.scuola_ap or ''],
+                          d.ore_max_effettive_per_anno(anno), cc.codice if cc else '', d.scuola_ap or ''],
                  bg=bg)
     _border_all(ws, 4, r-1, 1, 7)
     return wb
@@ -523,7 +523,7 @@ def _p9_scrivi_blocco_cc(ws, r, anno, cc, label_col, label_color, ultima_classe_
             if rr > riga_max:
                 break  # blocco pieno: evita di scrivere sopra il blocco successivo
             nome = a.display_name
-            ore_doc = a.docente.ore_max_effettive if a.docente else ''
+            ore_doc = a.docente.ore_max_effettive_per_anno(anno) if a.docente else ''
             tc = ws.cell(rr, col_titolari, f'{nome} {ore_doc}'.strip())
             tc.font = Font(size=8, name='Calibri')
 
@@ -570,7 +570,7 @@ def _p9_scrivi_blocco_cc_assegnazioni(ws, r, anno, cc, label_col, label_color,
             lbl = ac.label_classe
             ore_cl[lbl] = ore_cl.get(lbl, 0) + ac.ore
 
-        max_ore = a.docente.ore_max_effettive if a.docente else None
+        max_ore = a.docente.ore_max_effettive_per_anno(anno) if a.docente else None
         nome = a.display_name
         etichetta = f'{nome} {int(max_ore)} ore' if max_ore else nome
         ws.cell(r, 1, etichetta).font = Font(size=8, name='Calibri')

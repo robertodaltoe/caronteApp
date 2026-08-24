@@ -304,8 +304,8 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
             <tbody id="tbody-cc-{{ cc.id }}">
             {% for a in blk.assegnazioni %}
             {% set tot = blk.tot_doc[a.id] %}
-            {% set max_ore = a.docente.ore_max_effettive if a.docente else '—' %}
-            {% set is_over = a.docente and tot > a.docente.ore_max_effettive %}
+            {% set max_ore = a.docente.ore_max_effettive_per_anno(anno) if a.docente else '—' %}
+            {% set is_over = a.docente and tot > a.docente.ore_max_effettive_per_anno(anno) %}
             {% set ore_classe_over = [] %}
             {% set ore_mat_over = [] %}
             {% for cl in classi %}
@@ -317,7 +317,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
             {% endfor %}
             {% endfor %}
             <tr data-asgn-id="{{ a.id }}"
-                data-max-ore="{{ a.docente.ore_max_effettive if a.docente else 9999 }}"
+                data-max-ore="{{ a.docente.ore_max_effettive_per_anno(anno) if a.docente else 9999 }}"
                 style="{{ 'background:var(--rosso-bg);' if is_over else ('background:var(--giallo-bg);' if ore_mat_over else ('background:var(--giallo-bg);' if ore_classe_over else '')) }}">
                 <td class="td-doc">
                     {% if a.docente %}
@@ -466,7 +466,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                     {% if d.ore_contratto_pt %}
                     <span class="badge-tipo" style="background:var(--giallo-bg); color:var(--giallo);">PT</span>
                     {% endif %}
-                    <span class="nome-da-assegnare">max {{ d.ore_max_effettive }}h — da assegnare</span>
+                    <span class="nome-da-assegnare">max {{ d.ore_max_effettive_per_anno(anno) }}h — da assegnare</span>
                 </td>
                 <td class="td-tipo" style="text-align:center; border:1px solid #e2e8f0; color:#9ca3af; font-size:.7rem;">
                     TI
@@ -501,7 +501,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                 </td>
                 {% endfor %}
                 <td class="td-sticky-r col-tot">—</td>
-                <td class="td-sticky-r col-max">{{ d.ore_max_effettive }}h</td>
+                <td class="td-sticky-r col-max">{{ d.ore_max_effettive_per_anno(anno) }}h</td>
                 <td class="td-sticky-r col-azioni">
                     <button type="button"
                             onclick="quickAssign('{{ cc.id }}', '{{ d.id }}')"
@@ -586,7 +586,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                             {% for d in docenti_anno %}
                             <option value="{{ d.id }}">
                                 {{ d.cognome }} {{ d.nome }}
-                                (max {{ d.ore_max_effettive }}h)
+                                (max {{ d.ore_max_effettive_per_anno(anno) }}h)
                                 {% if d.ore_contratto_pt %}[PT]{% endif %}
                             </option>
                             {% endfor %}
@@ -702,7 +702,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
             <option value="">— scegli docente —</option>
             {% for d in docenti_anno %}
             <option value="{{ d.id }}">
-                {{ d.cognome }} {{ d.nome }} (max {{ d.ore_max_effettive }}h)
+                {{ d.cognome }} {{ d.nome }} (max {{ d.ore_max_effettive_per_anno(anno) }}h)
             </option>
             {% endfor %}
         </select>

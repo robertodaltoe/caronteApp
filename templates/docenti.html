@@ -103,7 +103,9 @@
             {% endif %}
         </td>
         <td class="wrap" style="color:var(--grigio); font-size:.88rem;">{{ d.materia_effettiva or '—' }}</td>
-        <td style="text-align:center;">{{ d.ore_contratto }}h</td>
+        <td style="text-align:center;" title="Ore per l'a.s. {{ anno_sel }}{% if d.anno_scol_ore_max == anno_sel %} (override specifico per quest'anno){% endif %}">
+            {{ d.ore_max_effettive_per_anno(anno_sel) }}h
+        </td>
         <td>
             {% set tipo_eff = contratti_anno_map.get(d.id, d.tipo_contratto) %}
             {% if tipo_eff %}
