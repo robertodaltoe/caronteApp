@@ -210,6 +210,27 @@ def test_docenti_reali_per_classe_dalle_assegnazioni(db_session):
     assert mappa['3A LLI'] == {d1.id}
 
 
+def test_docenti_reali_per_classe_esclude_il_potenziamento(db_session):
+    """Roberto: nel Generatore Consigli di classe compariva una
+    'classe' 0A POT — il contenitore fittizio usato in Assegnazioni per
+    le ore di potenziamento (indirizzo='POT', anno_corso=0, sezione='A'),
+    non una classe reale con studenti. Non deve comparire tra le classi
+    selezionabili per generare un Consiglio di classe."""
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+    d1 = crea_docente('Verdi')
+
+    asgn = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id, id_docente=d1.id, tipo='titolare')
+    db.session.add(asgn)
+    db.session.flush()
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo='POT', anno_corso=0, sezione='A', ore=6))
+    db.session.commit()
+
+    mappa = gcdc.docenti_reali_per_classe(ANNO)
+    assert '0A POT' not in mappa
+
+
 # ── Anno di default: attività preparatoria per il nuovo anno ────────────────
 
 def test_pagina_generatore_apre_di_default_sullanno_in_preparazione(app, db_session, monkeypatch):

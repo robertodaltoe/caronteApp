@@ -44,14 +44,23 @@ def _parse_classe(label):
 def docenti_reali_per_classe(anno_scol):
     """{classe_label: set(id_docente)} dalle Assegnazioni — solo
     docenti reali (id_docente valorizzato), i placeholder non hanno un
-    insieme di ore-condivise noto finché non vengono nominati."""
+    insieme di ore-condivise noto finché non vengono nominati.
+
+    Esclude il potenziamento (indirizzo fittizio 'POT', anno_corso=0,
+    sezione='A' — vedi routes/assegnazioni.py): è un contenitore di
+    bookkeeping per le ore di potenziamento, non una classe reale con
+    studenti — comparire come "0A POT" nell'elenco selezionabile del
+    Generatore Consigli di classe non ha senso, non esiste nessun
+    Consiglio di classe da tenere per una classe che non esiste
+    (segnalato da Roberto)."""
     from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
 
     righe = (AssegnazioneClasse.query
              .join(AssegnazioneDocente,
                    AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
              .filter(AssegnazioneDocente.anno_scol == anno_scol,
-                     AssegnazioneDocente.id_docente.isnot(None))
+                     AssegnazioneDocente.id_docente.isnot(None),
+                     AssegnazioneClasse.indirizzo != 'POT')
              .all())
     out = {}
     for ac in righe:

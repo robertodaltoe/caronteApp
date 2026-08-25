@@ -4,6 +4,30 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 57 — "0A POT" tra le classi del Generatore Consigli di classe (Cowork)
+
+Roberto: in "Genera piano delle attività" compariva una classe "0P" —
+in realtà "0A POT", il contenitore fittizio usato in Assegnazioni per
+tenere il conto delle ore di potenziamento (`indirizzo='POT',
+anno_corso=0, sezione='A'` — vedi `routes/assegnazioni.py`, già
+escluso a mano in un paio di punti come `export_xlsx.py` e nel
+controllo ore previste). Non è mai stato pensato per essere una classe
+reale: non ha studenti né un piano di studi, comparire come voce
+selezionabile per generare un Consiglio di classe non ha senso — non
+esiste nessuna riunione da tenere per un contenitore di bookkeeping.
+
+Corretto `docenti_reali_per_classe()` (`modules/generatore_cdc.py`,
+unica fonte per l'elenco classi sia nella pagina di selezione sia nel
+motore di generazione bozza): esclude ora le righe con
+`indirizzo == 'POT'`, stesso filtro già usato altrove per lo stesso
+motivo.
+
+Verificato con 1 nuovo test in `tests/test_generatore_cdc.py`
+(`test_docenti_reali_per_classe_esclude_il_potenziamento`). 248/248
+test passano (247 + 1 nuovo). Verificato anche live su copia isolata
+di `database.db` reale: "0A POT" non compare più nella pagina del
+Generatore.
+
 ## Sessione 66 addendum 56 — TI neoimmessi invisibili in "Docenti per anno" (Cowork)
 
 Roberto: Di Liberto (e altri neoimmessi in ruolo 2026-2027) non
