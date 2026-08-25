@@ -1546,12 +1546,26 @@ def sostituzione_scrutinio(id):
                              if d.id not in assenti_giorno
                              and d.id not in impegnati_altri
                              and d.id not in gia_impegnati_riunione]
+        # Stesso assente, già sostituito lo stesso giorno in un'altra
+        # riunione — richiesto da Roberto: aprendo la pagina di una
+        # classe dove questo docente è ancora da sostituire, vedere se
+        # è già stato coperto altrove aiuta a orientarsi rapidamente
+        # (es. per scegliere lo stesso sostituto se disponibile, o solo
+        # per contesto) senza dover controllare evento per evento.
+        altre_sostituzioni = (SostituzioneScrutinio.query
+            .join(AttivitaIst, SostituzioneScrutinio.id_attivita == AttivitaIst.id)
+            .filter(SostituzioneScrutinio.id_assente == assente.id,
+                    SostituzioneScrutinio.id_attivita != evento.id,
+                    SostituzioneScrutinio.id_sostituto.isnot(None),
+                    AttivitaIst.data == evento.data)
+            .all())
         righe.append({
             'presenza': p,
             'assente': assente,
             'candidati': cands_scored[:8],
             'docenti_disponibili': docenti_disp_riga,
             'sostituzione': sost_att,
+            'altre_sostituzioni': altre_sostituzioni,
         })
 
     return render_template('attivita_ist/sostituzioni_scrutinio.html',

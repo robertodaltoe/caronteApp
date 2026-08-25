@@ -103,6 +103,17 @@
         {% endif %}
     </div>
 
+    {% if riga.altre_sostituzioni %}
+    <div style="font-size:.78rem; color:#0369a1; background:#e0f2fe; border-radius:6px;
+                padding:5px 10px; margin-bottom:10px;">
+        {{ icon('clock') }} Già coperta oggi:
+        {% for altra in riga.altre_sostituzioni %}
+        <strong>{{ altra.sostituto.cognome }}</strong>{% if altra.sostituto.nome %} {{ altra.sostituto.nome[0] }}.{% endif %}
+        in {{ altra.attivita.classe }}{% if altra.attivita.ora_inizio %} (h. {{ altra.attivita.ora_inizio }}){% endif %}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Suggerimenti candidati -->
     <div style="margin-bottom:12px;">
         <div style="font-size:.78rem; font-weight:700; color:var(--grigio);

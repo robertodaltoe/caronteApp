@@ -4,6 +4,34 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 51 — segnala se l'assente è già stato sostituito lo stesso giorno (Cowork)
+
+Roberto, sempre in ottica protocollazione: aprendo la pagina
+Sostituzioni di una classe dove un docente è ancora da sostituire,
+voleva vedere se quello stesso docente è già stato coperto lo stesso
+giorno in un'altra riunione (es. Federico N. già sostituita da
+Zampetti C. in 1A CAT alle 10:00) — contesto utile senza dover
+controllare evento per evento.
+
+`sostituzione_scrutinio()` (`routes/attivita_ist.py`) calcola ora, per
+ogni assente della riga, `altre_sostituzioni`: le righe
+`SostituzioneScrutinio` con sostituto già assegnato per LO STESSO
+assente, su ALTRI eventi della stessa data (esclude l'evento corrente
+e le righe non ancora nominate). Mostrato in
+`sostituzioni_scrutinio.html` come banner informativo azzurro sopra i
+candidati suggeriti, solo quando presente: "Già coperta oggi: **Nome
+Sostituto** in Classe (h. orario)", con più coperture elencate se ce
+ne sono più di una.
+
+Verificato con 3 nuovi test in
+`tests/test_sostituzione_scrutinio_gia_coperta.py` (segnala una
+sostituzione già fatta lo stesso giorno su un'altra classe, non
+segnala sostituzioni di giorni diversi, non segnala se l'altro evento
+non ha ancora un sostituto nominato). 239/239 test passano (236 + 3
+nuovi). Verificato anche live su copia isolata di `database.db` reale:
+aprendo lo scrutinio di 2A CAT, CALISE (già sostituita da PALERMO in
+1A CAT alle 10:00) mostra correttamente il banner.
+
 ## Sessione 66 addendum 50 — Protocollazione scrutini raggruppata per sostituto (Cowork)
 
 Roberto: la tabella non rispecchiava come funziona davvero in
