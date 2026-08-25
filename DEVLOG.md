@@ -4,6 +4,48 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 47 — docenti 2026-2027 comparivano negli scrutini del 31/08/2026 (Cowork)
+
+Roberto: nella pagina Presenze degli scrutini del 31/08 comparivano
+docenti non in servizio su quella classe nel 2025-2026 ma assegnati
+per il 2026-2027 in Assegnazioni (anno in preparazione).
+
+Causa trovata: `iscrivi_docente_a_eventi_classe()`
+(`routes/attivita_ist.py`, chiamata da `routes/assegnazioni.py` ogni
+volta che si assegna un docente a una classe) cerca eventi FUTURI
+(`data >= oggi`) con l'etichetta classe corrispondente (es. "1A CAT")
+per iscrivervi automaticamente il docente come partecipante previsto
+— ma l'etichetta è identica sia per la classe uscente (2025-2026) sia
+per quella entrante (2026-2027), e "futuro" da solo non basta a
+distinguerle: uno scrutinio del 31/08/2026 è ancora "futuro" rispetto
+a metà agosto pur appartenendo al 2025-2026. Assegnando un docente per
+il 2026-2027, veniva quindi iscritto per errore anche agli scrutini di
+fine agosto dell'anno vecchio.
+
+Corretto aggiungendo un parametro opzionale `anno_scol` alla funzione:
+se valorizzato, filtra gli eventi a quelli il cui anno scolastico
+(dalla data dell'evento, via `_anno_scolastico`) coincide con quello
+dell'assegnazione. Aggiornate le 3 chiamate in
+`routes/assegnazioni.py` (salva, aggiorna-ore, nomina) per passare
+l'anno dell'assegnazione.
+
+Verificato con 3 nuovi test in
+`tests/test_iscrizione_eventi_classe_anno.py` (non iscrive a un
+evento di un anno diverso, iscrive correttamente a un evento dello
+stesso anno, comportamento invariato se il chiamante non passa
+anno_scol). 231/231 test passano (228 + 3 nuovi).
+
+**Dati reali già corrotti dal bug**: analisi su tutti i 73 eventi
+Consiglio di classe/scrutinio esistenti — 21 righe `AttivitaIstPartecipante`
+(tutte `preset=True`, tutte su scrutini del 31/08/2026, su 12 eventi
+diversi) risultano causate esattamente da questo meccanismo (il
+docente ha un'assegnazione per quella classe SOLO nel 2026-2027, nessun
+orario reale su quella classe nel 2025-2026). 26 di queste hanno già
+anche una riga `AttivitaIstPresenza` di default (stato "presente", mai
+toccata a mano). Non ancora ripulite sul database reale: segnalate a
+Roberto per conferma prima di cancellare, invece di decidere da solo su
+dati che riguardano la sua pianificazione delle sostituzioni scrutini.
+
 ## Sessione 66 addendum 46 — sostituzioni scrutinio nel sync automatico (Cowork)
 
 Richiesta di Roberto: includere anche le sostituzioni scrutinio nel

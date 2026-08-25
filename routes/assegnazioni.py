@@ -546,7 +546,7 @@ def salva():
         _sync_docente_materie(id_doc, asgn, anno)
         from routes.attivita_ist import iscrivi_docente_a_eventi_classe
         iscrivi_docente_a_eventi_classe(
-            id_doc, [ac.label_classe for ac in asgn.classi])
+            id_doc, [ac.label_classe for ac in asgn.classi], anno_scol=anno)
 
     flash(f'Assegnazione {asgn.display_name} salvata.', 'success')
     ancora = request.form.get('ancora', '')
@@ -674,7 +674,8 @@ def aggiorna_ore(asgn_id):
         if id_mat:
             _sync_docente_materie(asgn.id_docente, asgn, asgn.anno_scol)
         from routes.attivita_ist import iscrivi_docente_a_eventi_classe
-        iscrivi_docente_a_eventi_classe(asgn.id_docente, [ac.label_classe])
+        iscrivi_docente_a_eventi_classe(asgn.id_docente, [ac.label_classe],
+                                         anno_scol=asgn.anno_scol)
 
     tot = _tot_ore(asgn_id)
 
@@ -792,7 +793,7 @@ def nomina(asgn_id):
         _sync_docente_materie(id_doc, asgn, asgn.anno_scol)
         from routes.attivita_ist import iscrivi_docente_a_eventi_classe
         iscrivi_docente_a_eventi_classe(
-            id_doc, [ac.label_classe for ac in asgn.classi])
+            id_doc, [ac.label_classe for ac in asgn.classi], anno_scol=asgn.anno_scol)
         flash(f'Nominato: {doc.cognome} {doc.nome} — materie sincronizzate.', 'success')
     return redirect(url_for('assegnazioni.index', anno=asgn.anno_scol))
 

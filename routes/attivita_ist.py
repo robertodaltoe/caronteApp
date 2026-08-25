@@ -174,7 +174,7 @@ def _iscrivi_docente_a_eventi(id_docente, eventi):
     return aggiunti
 
 
-def iscrivi_docente_a_eventi_classe(id_docente, classi_label):
+def iscrivi_docente_a_eventi_classe(id_docente, classi_label, anno_scol=None):
     """
     Iscrive un docente agli eventi futuri di Consiglio di classe/
     scrutinio già creati per le classi indicate — chiamata da
@@ -189,6 +189,17 @@ def iscrivi_docente_a_eventi_classe(id_docente, classi_label):
     classi_label: iterabile di stringhe nel formato di
     AttivitaIst.classe / OrarioDocente.classe (es. "3A LLI" —
     AssegnazioneClasse.label_classe è già in questo formato).
+
+    anno_scol: l'anno scolastico dell'assegnazione che ha scatenato la
+    chiamata (es. "2026-2027" per un'assegnazione in preparazione del
+    nuovo anno). Un'etichetta classe come "3A LLI" è la STESSA sia per
+    la classe uscente sia per quella entrante, e "eventi futuri"
+    (data >= oggi) da sola non basta a distinguerle — segnalato da
+    Roberto: assegnando un docente per il 2026-2027 durante la
+    preparazione, comparirebbe come partecipante previsto anche negli
+    scrutini del 31/08/2026, che appartengono ancora al 2025-2026.
+    Se valorizzato, iscrive solo gli eventi il cui anno scolastico
+    (dalla data dell'evento) coincide con quello dell'assegnazione.
     """
     if not classi_label:
         return 0
@@ -201,6 +212,8 @@ def iscrivi_docente_a_eventi_classe(id_docente, classi_label):
         AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio')),
         AttivitaIst.classe.in_(list(classi_label)),
     ).all()
+    if anno_scol:
+        eventi = [ev for ev in eventi if _anno_scolastico(ev.data) == anno_scol]
     return _iscrivi_docente_a_eventi(id_docente, eventi)
 
 
