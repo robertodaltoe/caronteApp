@@ -51,7 +51,19 @@ def _resolve_id_materia(anno_scol, cc_id, label):
     il tipo di contratto al posto del nome materia. Se le materie sono
     più di una (caso multi-materia, già gestito esplicitamente dal form)
     o zero, ritorna None senza indovinare.
+
+    ECCEZIONE — sostegno: non ha piano studi (vedi _classi_per_cc), quindi
+    _righe_piano non troverebbe mai nulla. La materia è invece risolta
+    direttamente dalla CC (una sola materia "Sostegno" per CC ADSS,
+    Materia.id_classe_concorso — già impostata in anagrafica materie).
     """
+    from models.classe_concorso import ClasseConcorso as _CC
+    cc = db.session.get(_CC, cc_id)
+    if cc and cc.tipo_posto == 'sostegno':
+        from models.materia import Materia
+        mat = Materia.query.filter_by(id_classe_concorso=cc_id).first()
+        return mat.id if mat else None
+
     import re as _re5
     m = _re5.match(r'(\d+)([AB]?)\s+(.+)', label)
     if not m:
@@ -157,6 +169,8 @@ AREE = [
      'cc':   ['AS48']},
     {'nome': 'Religione',
      'cc':   ['IRC']},
+    {'nome': 'Sostegno',
+     'cc':   ['ADSS']},
 ]
 
 TIPO_DISPLAY = {
@@ -189,10 +203,38 @@ def _anno_default():
     return anni[0] if anni else get_anno_corrente()
 
 
+def _monte_ore_classe(anno_scol, anno_corso, indirizzo):
+    """
+    Monte ore settimanale curricolare di una classe (somma di TUTTE le
+    materie/CC, non solo una) — es. 1A LSC 27h, 3A LSC 30h. Esclude le
+    ore di compresenza (non fanno parte del monte ore curricolare, vedi
+    PianoStudi.compresenza).
+
+    Usato come tetto per le ore di sostegno assegnabili su una classe
+    (blocco 'ADSS' in _build_area): a differenza delle altre classi di
+    concorso, il sostegno non ha un piano studi proprio — non ha senso
+    quindi confrontarlo con "ore previste per quella materia", ma con
+    l'orario complessivo della classe (un docente di sostegno non può
+    coprire più ore di quante la classe ne abbia in tutto), su richiesta
+    esplicita di Roberto.
+    """
+    righe = PianoStudi.query.filter_by(
+        anno_scol=anno_scol, anno_corso=anno_corso, indirizzo=indirizzo,
+        compresenza=False).all()
+    return sum(r.ore_settimanali for r in righe)
+
+
 def _classi_per_cc(anno_scol, cc_id):
     """
     Restituisce lista ordinata di label classe (es. '1A AFM')
     per cui il piano studi prevede ore in quella CC.
+
+    ECCEZIONE — classi di concorso di sostegno (tipo_posto='sostegno',
+    es. ADSS): non hanno un piano studi proprio (il sostegno non è una
+    materia curricolare), quindi non si può derivare l'elenco classi
+    dal piano. Si mostrano invece TUTTE le classi attive dell'anno: sta
+    a chi assegna (sa quali classi hanno alunni certificati, dato non
+    tracciato in questa app) scegliere su quali inserire ore.
 
     Prende TUTTE le righe di piano studi (sia con ore proprie che di
     sola compresenza), non solo quelle scelte da _righe_piano(): quella
@@ -210,17 +252,22 @@ def _classi_per_cc(anno_scol, cc_id):
     e già corretto: sceglie giustamente compresenza solo se quella
     specifica classe non ha una riga propria.
     """
-    righe = PianoStudi.query.filter_by(
-        anno_scol=anno_scol, id_classe_concorso=cc_id).all()
-    classi = []
-    for p in righe:
-        sezioni = ClasseSezione.query.filter_by(
-            anno_scol=anno_scol, indirizzo=p.indirizzo,
-            anno_corso=p.anno_corso, attiva=True).all()
-        for s in sezioni:
-            lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
-            if lbl not in classi:
-                classi.append(lbl)
+    cc = db.session.get(ClasseConcorso, cc_id)
+    if cc and cc.tipo_posto == 'sostegno':
+        classi = [f'{s.anno_corso}{s.sezione} {s.indirizzo}' for s in
+                  ClasseSezione.query.filter_by(anno_scol=anno_scol, attiva=True).all()]
+    else:
+        righe = PianoStudi.query.filter_by(
+            anno_scol=anno_scol, id_classe_concorso=cc_id).all()
+        classi = []
+        for p in righe:
+            sezioni = ClasseSezione.query.filter_by(
+                anno_scol=anno_scol, indirizzo=p.indirizzo,
+                anno_corso=p.anno_corso, attiva=True).all()
+            for s in sezioni:
+                lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
+                if lbl not in classi:
+                    classi.append(lbl)
     import re as _re_sort
     IND_ORDER = {'AFM':0,'RIM':1,'CAT':2,'LLI':3,'LSC':4,'LSP':5,'LSU':6,'SOS':7}
     def _sort_key(lbl):
@@ -289,6 +336,14 @@ def _build_area(anno_scol, area):
                 continue
             ac = int(m.group(1))
             ind = m.group(3).strip()
+            if cc.tipo_posto == 'sostegno':
+                # Niente piano studi proprio per il sostegno: il tetto è
+                # il monte ore complessivo della classe (tutte le
+                # materie), non le ore di "questa CC" — vedi
+                # _monte_ore_classe().
+                piano[c] = _monte_ore_classe(anno_scol, ac, ind)
+                piano_materie[c] = []
+                continue
             righe_p = _righe_piano(anno_scol, cc.id, ac, ind)
             piano[c] = sum(r.ore_settimanali for r in righe_p)
             # 'id' qui DEVE essere r.id_materia (la FK verso la tabella

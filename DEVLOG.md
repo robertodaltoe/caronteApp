@@ -4,6 +4,58 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 63 — Area "Sostegno" in Assegnazioni (Cowork)
+
+Roberto: in Assegnazioni non c'è modo di gestire un'assegnazione per un
+docente di sostegno — chiesto se fosse un errore di navigazione o un
+buco reale.
+
+Confermato un buco reale: `AREE` (routes/assegnazioni.py) è un elenco
+di classi di concorso scritto a mano, raggruppato per area disciplinare
+— il sostegno (CC `ADSS`, già presente in anagrafica con
+`tipo_posto='sostegno'`, ma zero righe di cattedra) non c'era in
+nessuna area. Anche aggiungendola non sarebbe bastato: `_classi_per_cc()`
+deriva l'elenco classi dal piano studi, e il sostegno non ne ha uno
+(non è una materia curricolare) — il blocco sarebbe rimasto vuoto.
+
+Discusso con Roberto come strutturarla: il budget ore annuale non
+serviva un meccanismo nuovo — `CattedraOrganico` (già usato per ogni
+CC, prospetto DOC/COI/COE) funziona identico anche per ADSS, si
+inserisce da Impostazione Anno → Organico come le altre. Serviva invece
+codice nuovo solo per due punti dove il sostegno rompe le assunzioni
+del piano studi:
+
+1. **Elenco classi**: per `tipo_posto='sostegno'`, `_classi_per_cc()`
+   ora ritorna TUTTE le classi attive dell'anno (non filtrate dal piano
+   studi) — sta a chi assegna scegliere su quali classi mettere ore,
+   sapendo quali hanno alunni certificati (dato non tracciato in questa
+   app).
+2. **Tetto ore per classe**: non ha senso confrontare con "ore previste
+   per questa CC" (che per il sostegno sarebbe sempre 0) — su richiesta
+   esplicita di Roberto, il tetto è ora il **monte ore settimanale
+   complessivo della classe** (somma di tutte le materie, esclusa la
+   compresenza — vedi nuova `_monte_ore_classe()`): un docente di
+   sostegno non può coprire più ore di quante la classe ne abbia in
+   orario. Verificato sui numeri reali di Roberto: 1A LSC 27h, 3A LSC
+   30h, esatti.
+3. **Materia "Sostegno"**: già esisteva in anagrafica (Materia id 39,
+   dipartimento SOS, già collegata a ADSS) — `_resolve_id_materia()`
+   ora la risolve direttamente dalla CC invece che dal piano studi
+   (che per il sostegno non troverebbe mai nulla).
+
+Il resto (budget da `CattedraOrganico`, `AssegnazioneDocente`/
+`AssegnazioneClasse`, Nomina/Elimina/Aggiorna ore, docenti con ADSS già
+collegata che compaiono come "disponibili") è riusato senza modifiche:
+sono già generici per classe di concorso, non specifici per materia.
+
+Verificato con 5 nuovi test in `tests/test_assegnazioni_sostegno.py`
+(elenco classi non dal piano studi, tetto ore = monte ore classe,
+compresenza esclusa dal monte ore, materia risolta dalla CC, ADSS
+presente in AREE) — 264/264 nella suite completa. Verifica live su
+copia isolata del DB reale: l'area "Sostegno" compare con tutte le 39
+classi attive come colonne, il tetto per 1A LSC e 3A LSC corrisponde
+esattamente ai numeri di riferimento di Roberto.
+
 ## Sessione 66 addendum 62 — Risincronizza partecipanti su eventi pianificati con anticipo (Cowork)
 
 Roberto: nelle presenze del Collegio del 1° settembre 2026 comparivano
