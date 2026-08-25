@@ -46,7 +46,7 @@
     {% endif %}
 </form>
 
-{% if not righe %}
+{% if not gruppi %}
 <div class="card" style="padding:24px; text-align:center; color:var(--grigio); font-size:.9rem;">
     {% if data_da or data_a %}
     Nessuna sostituzione assegnata in questo periodo.
@@ -55,50 +55,67 @@
     {% endif %}
 </div>
 {% else %}
-<div class="card" style="padding:0; overflow-x:auto;">
-    <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
-        <thead>
-            <tr style="background:var(--blu); color:white;">
-                <th style="padding:8px 10px; text-align:left;">Data</th>
-                <th style="padding:8px 10px; text-align:left;">Docente assente</th>
-                <th style="padding:8px 10px; text-align:left;">Classe</th>
-                <th style="padding:8px 10px; text-align:left;">Sostituto</th>
-                <th style="padding:8px 10px; text-align:left;">N. protocollo</th>
-                <th style="padding:8px 10px; text-align:left;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in righe %}
-            <tr style="border-bottom:1px solid #f0f2f5;{% if not s.n_protocollo %} background:var(--giallo-bg);{% endif %}">
-                <td style="padding:6px 10px; white-space:nowrap;">{{ s.attivita.data.strftime('%d/%m/%Y') }}</td>
-                <td style="padding:6px 10px;">{{ s.assente.cognome }}{% if s.assente.nome %} {{ s.assente.nome[0] }}.{% endif %}</td>
-                <td style="padding:6px 10px;">
-                    {% if s.attivita.classe %}<span class="badge badge-blu" style="font-size:.72rem;">{{ s.attivita.classe }}</span>{% endif %}
-                </td>
-                <td style="padding:6px 10px;">{{ s.sostituto.cognome }}{% if s.sostituto.nome %} {{ s.sostituto.nome[0] }}.{% endif %}</td>
-                <td style="padding:4px 10px;">
-                    <form method="post" style="display:flex; gap:4px;">
-                        <input type="hidden" name="id_sostituzione" value="{{ s.id }}">
-                        <input type="hidden" name="data_da" value="{{ data_da or '' }}">
-                        <input type="hidden" name="data_a" value="{{ data_a or '' }}">
-                        <input type="text" name="n_protocollo" value="{{ s.n_protocollo or '' }}"
-                               placeholder="Es. 1234/2026"
-                               style="width:130px; padding:4px 8px; border:1px solid #d1d5db;
-                                      border-radius:6px; font-size:.82rem;">
-                        <button type="submit" class="btn btn-sm"
-                                style="background:var(--blu-light); color:var(--blu); padding:4px 10px;">Salva</button>
-                    </form>
-                </td>
-                <td style="padding:6px 10px; text-align:right;">
-                    <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=s.id_attivita) }}"
-                       style="font-size:.78rem; color:var(--grigio); text-decoration:none;" title="Apri lo scrutinio">
-                        {{ icon('external') }}
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<p style="font-size:.78rem; color:var(--grigio); margin:-6px 0 14px;">
+    Una scheda per sostituto — un decreto per persona con tutte le sue coperture, come in segreteria: un unico numero di protocollo per tutte le righe del gruppo.
+</p>
+<div style="display:flex; flex-direction:column; gap:14px;">
+    {% for g in gruppi %}
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+                    padding:10px 14px; background:var(--blu-light);">
+            <div style="font-weight:700; color:var(--blu); font-size:.92rem;">
+                {{ icon('person') }} {{ g.sostituto.cognome }}{% if g.sostituto.nome %} {{ g.sostituto.nome }}{% endif %}
+                <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">
+                    — {{ g.righe|length }} copertur{{ 'a' if g.righe|length == 1 else 'e' }}
+                </span>
+            </div>
+            <form method="post" style="display:flex; gap:4px; align-items:center;">
+                <input type="hidden" name="ids_sostituzione" value="{{ g.ids|join(',') }}">
+                <input type="hidden" name="data_da" value="{{ data_da or '' }}">
+                <input type="hidden" name="data_a" value="{{ data_a or '' }}">
+                <label style="font-size:.75rem; color:var(--grigio);">N. protocollo</label>
+                <input type="text" name="n_protocollo" value="{{ g.protocollo }}"
+                       placeholder="Es. 1234/2026"
+                       style="width:140px; padding:5px 8px; border:1px solid #d1d5db;
+                              border-radius:6px; font-size:.84rem;
+                              {% if not g.protocollo %}background:var(--giallo-bg);{% endif %}">
+                <button type="submit" class="btn btn-sm"
+                        style="background:var(--blu); color:white; padding:5px 12px;">Salva</button>
+            </form>
+        </div>
+        {% if g.protocolli_diversi %}
+        <div style="padding:6px 14px; font-size:.74rem; color:var(--rosso); background:var(--rosso-bg);">
+            {{ icon('warning') }} Le coperture di questo gruppo hanno numeri di protocollo diversi tra loro (inseriti prima di questa vista) — salvando qui li uniformi tutti al valore scritto sopra.
+        </div>
+        {% endif %}
+        <table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+            <tbody>
+                {% for s in g.righe %}
+                <tr style="border-top:1px solid #f0f2f5;">
+                    <td style="padding:6px 14px; white-space:nowrap; color:var(--grigio); width:100px;">
+                        {{ s.attivita.data.strftime('%d/%m/%Y') }}
+                    </td>
+                    <td style="padding:6px 10px; white-space:nowrap; color:var(--grigio); width:70px;">
+                        {{ s.attivita.ora_inizio or '—' }}
+                    </td>
+                    <td style="padding:6px 10px;">
+                        sostituisce <strong>{{ s.assente.cognome }}</strong>{% if s.assente.nome %} {{ s.assente.nome[0] }}.{% endif %}
+                    </td>
+                    <td style="padding:6px 10px;">
+                        {% if s.attivita.classe %}<span class="badge badge-blu" style="font-size:.72rem;">{{ s.attivita.classe }}</span>{% endif %}
+                    </td>
+                    <td style="padding:6px 14px; text-align:right;">
+                        <a href="{{ url_for('attivita_ist.sostituzione_scrutinio', id=s.id_attivita) }}"
+                           style="font-size:.78rem; color:var(--grigio); text-decoration:none;" title="Apri lo scrutinio">
+                            {{ icon('external') }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
 </div>
 {% endif %}
 {% endblock %}

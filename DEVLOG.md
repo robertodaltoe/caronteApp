@@ -4,6 +4,52 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 50 — Protocollazione scrutini raggruppata per sostituto (Cowork)
+
+Roberto: la tabella non rispecchiava come funziona davvero in
+segreteria — il decreto si prepara per ogni DOCENTE CHE SOSTITUISCE
+(es. Dal Toè copre Tizio alle 10 in 1CAT e Caio alle 16 in 5RIM), con
+lo stesso numero di protocollo per tutte le sue coperture in un unico
+documento. La vista precedente era organizzata per assente (una riga
+per assenza), costringendo a scrivere lo stesso protocollo più volte
+per la stessa persona.
+
+Riscritta la pagina (`routes/attivita_ist.py`,
+`templates/attivita_ist/protocollazione_scrutini.html`): nuova
+`_gruppi_protocollazione()` raggruppa le sostituzioni per
+`id_sostituto`, ordina le coperture di ciascun gruppo per data/ora/
+classe, e calcola un "protocollo comune" al gruppo solo se tutte le
+righe hanno davvero lo stesso valore — altrimenti lo segnala
+esplicitamente ("protocolli diversi", da non scegliere in automatico)
+invece di indovinare. La pagina mostra ora una scheda per sostituto
+("Dal Toè — 2 coperture") con un solo campo protocollo e un solo
+pulsante Salva che aggiorna TUTTE le righe del gruppo in una volta
+(`ids_sostituzione` come lista nel form, non più un id singolo).
+Aggiunta anche la colonna Ora (mancava), utile per distinguere
+coperture diverse dello stesso giorno. Export Excel aggiornato con lo
+stesso raggruppamento e la colonna Sostituto in testa.
+
+Verificato con 6 test in `tests/test_protocollazione_scrutini.py`
+(riscritti/estesi): stesso sostituto su più classi forma un solo
+gruppo ordinato per orario, salvataggio aggiorna tutte le righe del
+gruppo insieme, protocolli diversi pre-esistenti nello stesso gruppo
+vengono segnalati e non scelti a caso, export produce un xlsx valido.
+236/236 test passano (234 + 2 netti, alcuni riscritti). Verificato
+anche live su copia isolata di `database.db` reale: i gruppi si
+formano correttamente sui dati veri (es. ZAMPETTI/PALERMO/PRINCIOTTO/
+ATTARDO con 2 coperture ciascuno sulle classi CAT del 31/08).
+
+**Nota per Roberto**: la verifica sui dati reali ha fatto emergere che
+una delle righe del gruppo "LANDI" (4A CAT, assente DEL CURTO) ha
+ancora `n_protocollo` impostato alla stringa letterale "None" — un
+residuo della corruzione dell'addendum 44 (risalente a PRIMA della
+cancellazione/resurrezione di questi giorni), non toccato perché non
+so se quella specifica riga rispecchi ancora la tua intenzione reale o
+sia un avanzo della resurrezione — te la segnalo invece di correggerla
+da solo: la pagina "Protocollazione" te la mostrerà come "protocolli
+diversi" nel gruppo LANDI finché non la sistemi (basta risalvare il
+protocollo giusto da lì, sovrascrive tutto il gruppo in un colpo).
+
 ## Sessione 66 addendum 49 — le sostituzioni scrutinio cancellate erano risuscitate dal sync (Cowork)
 
 Roberto: le 77 sostituzioni del 31/08 cancellate ieri sera (addendum

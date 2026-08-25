@@ -1585,33 +1585,77 @@ def _righe_protocollazione(data_da, data_a):
     return righe
 
 
+def _gruppi_protocollazione(data_da, data_a):
+    """Raggruppa le righe per SOSTITUTO, non per assente — Roberto: in
+    segreteria il decreto si fa per ogni docente che sostituisce
+    qualcuno, elencando TUTTE le sue coperture (classi/orari diversi,
+    anche di assenti diversi) sotto lo stesso numero di protocollo — un
+    solo documento per persona, non uno per ogni singola sostituzione.
+    La vista "una riga per assente" precedente costringeva a scrivere
+    lo stesso protocollo più volte per lo stesso sostituto.
+
+    Ogni gruppo espone 'protocollo' (il valore comune se tutte le righe
+    del gruppo ce l'hanno uguale, altrimenti stringa vuota) e
+    'protocolli_diversi' (True se il gruppo ha valori diversi/parziali
+    — caso residuo di dati inseriti prima di questo cambio, segnalato
+    invece di deciso in automatico)."""
+    righe = _righe_protocollazione(data_da, data_a)
+    gruppi = {}
+    ordine = []
+    for s in righe:
+        if s.id_sostituto not in gruppi:
+            gruppi[s.id_sostituto] = {'sostituto': s.sostituto, 'righe': []}
+            ordine.append(s.id_sostituto)
+        gruppi[s.id_sostituto]['righe'].append(s)
+
+    risultato = []
+    for sid in ordine:
+        g = gruppi[sid]
+        g['righe'].sort(key=lambda r: (r.attivita.data, r.attivita.ora_inizio or '', r.attivita.classe or ''))
+        protocolli = {r.n_protocollo for r in g['righe']}
+        risultato.append({
+            'sostituto': g['sostituto'],
+            'righe': g['righe'],
+            'protocollo': next(iter(protocolli)) if len(protocolli) == 1 else '',
+            'protocolli_diversi': len(protocolli) > 1,
+            'ids': [r.id for r in g['righe']],
+        })
+    risultato.sort(key=lambda g: (g['sostituto'].cognome if g['sostituto'] else '',
+                                   g['sostituto'].nome if g['sostituto'] else ''))
+    return risultato
+
+
 @attivita_ist_bp.route('/attivita-ist/protocollazione', methods=['GET', 'POST'])
 def protocollazione_scrutini():
     """Riepilogo di tutte le sostituzioni assegnate su un blocco di
     scrutini (o su tutte quelle non ancora protocollate se nessun
-    intervallo è specificato), per compilare in un colpo solo i numeri
-    di protocollo invece di aprire ogni scrutinio singolarmente —
-    richiesto da Roberto per la protocollazione a fine sessione. Il
-    campo N. protocollo è lo stesso di SostituzioneScrutinio.n_protocollo
-    usato in sostituzione_scrutinio(): non serve nessuna sincronizzazione,
-    è la stessa riga vista da due pagine."""
+    intervallo è specificato), raggruppate per sostituto (vedi
+    _gruppi_protocollazione) — un numero di protocollo per persona,
+    applicato a tutte le sue coperture nel gruppo in un solo salvataggio,
+    invece di aprire ogni scrutinio singolarmente. Il campo N. protocollo
+    è lo stesso SostituzioneScrutinio.n_protocollo usato in
+    sostituzione_scrutinio(): non serve nessuna sincronizzazione, sono
+    le stesse righe viste da due pagine."""
     if request.method == 'POST':
-        id_sost = int(request.form['id_sostituzione'])
+        ids = [int(x) for x in request.form.get('ids_sostituzione', '').split(',') if x.strip()]
+        protocollo = request.form.get('n_protocollo', '').strip() or None
         from models.sostituzione_scrutinio import SostituzioneScrutinio
-        sost = SostituzioneScrutinio.query.get_or_404(id_sost)
-        sost.n_protocollo = request.form.get('n_protocollo', '').strip() or None
+        righe_gruppo = SostituzioneScrutinio.query.filter(SostituzioneScrutinio.id.in_(ids)).all()
+        for r in righe_gruppo:
+            r.n_protocollo = protocollo
         db.session.commit()
-        flash('Protocollo aggiornato.', 'success')
+        n = len(righe_gruppo)
+        flash(f'Protocollo aggiornato per {n} sostituzion{"e" if n == 1 else "i"}.', 'success')
         return redirect(url_for('attivita_ist.protocollazione_scrutini',
                                  data_da=request.form.get('data_da') or None,
                                  data_a=request.form.get('data_a') or None))
 
     data_da = request.args.get('data_da') or None
     data_a  = request.args.get('data_a') or None
-    righe = _righe_protocollazione(data_da, data_a)
+    gruppi = _gruppi_protocollazione(data_da, data_a)
 
     return render_template('attivita_ist/protocollazione_scrutini.html',
-        righe=righe, data_da=data_da, data_a=data_a,
+        gruppi=gruppi, data_da=data_da, data_a=data_a,
     )
 
 
@@ -1622,11 +1666,11 @@ def protocollazione_scrutini_export():
 
     data_da = request.args.get('data_da') or None
     data_a  = request.args.get('data_a') or None
-    righe = _righe_protocollazione(data_da, data_a)
+    gruppi = _gruppi_protocollazione(data_da, data_a)
 
     wb = _wb()
     ws = wb.create_sheet('Protocollazione scrutini')
-    larghezze = [12, 28, 12, 28, 18]
+    larghezze = [28, 12, 8, 28, 12, 18]
     for i, larg in enumerate(larghezze, 1):
         ws.column_dimensions[get_column_letter(i)].width = larg
 
@@ -1639,15 +1683,21 @@ def protocollazione_scrutini_export():
         ws.cell(r, 1, 'Solo sostituzioni non ancora protocollate')
     r += 2
 
-    r = _hdr(ws, r, ['Data', 'Docente assente', 'Classe', 'Sostituto', 'N. protocollo'])
-    for s in righe:
-        r = _row(ws, r, [
-            s.attivita.data.strftime('%d/%m/%Y'),
-            s.assente.nome_completo,
-            s.attivita.classe or '',
-            s.sostituto.nome_completo if s.sostituto else '',
-            s.n_protocollo or '',
-        ])
-    _border_all(ws, 4, max(r - 1, 4), 1, 5)
+    # Una riga per copertura, ma raggruppate per sostituto (come il
+    # decreto che la segreteria emette per ciascuno di loro, con lo
+    # stesso protocollo per tutte le sue coperture — Roberto) invece
+    # che una lista piatta ordinata per assente.
+    r = _hdr(ws, r, ['Sostituto', 'Data', 'Ora', 'Docente assente', 'Classe', 'N. protocollo'])
+    for g in gruppi:
+        for s in g['righe']:
+            r = _row(ws, r, [
+                g['sostituto'].nome_completo if g['sostituto'] else '',
+                s.attivita.data.strftime('%d/%m/%Y'),
+                s.attivita.ora_inizio or '',
+                s.assente.nome_completo,
+                s.attivita.classe or '',
+                s.n_protocollo or '',
+            ])
+    _border_all(ws, 4, max(r - 1, 4), 1, 6)
 
     return _send(wb, 'protocollazione_scrutini.xlsx')
