@@ -4,6 +4,42 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 58 — pulsante Modifica invisibile per Consigli di classe in Piano Annuale (Cowork)
+
+Roberto: nel Piano delle attività, i consigli di classe programmati il
+18/09 "sbordano il bordo destro della tabella".
+
+Diagnosi fatta dal vivo nel browser (misure JS su `getBoundingClientRect`,
+non solo lettura del codice): la colonna "Categoria" (160px,
+`table-layout:fixed`) conteneva sia il testo dell'etichetta sia il
+pulsante "Modifica" nella stessa cella. Per etichette brevi
+("Formazione", 10 caratteri) ci stava tutto; per "Consiglio di classe"
+(20 caratteri) il contenuto necessario (184px) superava la larghezza
+disponibile (160px) — con `overflow:hidden` sulla cella (regola
+globale in `base.html`), il pulsante finiva completamente tagliato via,
+invisibile, non solo troncato. Non un problema di Consigli di classe
+in particolare: quasi tutte le etichette (`models/attivita_ist.py::
+TIPI_ATTIVITA`) sono più lunghe di "Formazione" — "Riunione
+dipartimento" (21), "Riunione referenti dip." (23), "Incontro
+scuola-famiglia" (24) — Roberto se n'è accorto sui Consigli di classe
+solo perché quello capitava di essere il 18/09.
+
+Corretto separando il pulsante "Modifica" in una colonna propria
+("Azioni", 44px, fissa) invece di condividerla col testo della
+categoria (`templates/attivita_ist/piano_annuale.html`) — stesso
+principio già usato in `templates/attivita_ist/lista.html` (addendum
+7): un'azione a larghezza fissa non deve mai competere per spazio con
+un testo a lunghezza variabile. Il template PDF/print non ha il
+pulsante, non toccato.
+
+Nessuna modifica di logica, solo al template — 248/248 test invariati.
+Verificato dal vivo su copia isolata di `database.db` reale (server
+temporaneo su porta 5099, non quello di produzione): prima del fix il
+pulsante sui Consigli di classe del 18/09 aveva il bordo destro
+(`getBoundingClientRect().right`) 9,8px oltre il bordo della card
+(clippato e invisibile dalla cella con `overflow:hidden`); dopo il
+fix combacia esattamente col bordo della card, come le altre righe.
+
 ## Sessione 66 addendum 57 — "0A POT" tra le classi del Generatore Consigli di classe (Cowork)
 
 Roberto: in "Genera piano delle attività" compariva una classe "0P" —

@@ -64,24 +64,25 @@
 <div class="mese-header">{{ etichetta_mese }}</div>
 <div class="card" style="padding:0; overflow:hidden;">
     <div style="overflow-x:auto;">
-    <table style="table-layout:fixed; min-width:900px;">
+    <table style="table-layout:fixed; min-width:940px;">
         <thead>
             <tr>
-                <th style="width:140px;">Giorno</th>
+                <th style="width:130px;">Giorno</th>
                 <th>Attività</th>
                 <th style="width:80px;">Indirizzo</th>
                 <th style="width:60px;">Classe</th>
                 <th style="width:80px;">Inizio</th>
                 <th style="width:80px;">Fine</th>
-                <th style="width:65px; text-align:center;">Ore</th>
-                <th style="width:160px;">Categoria</th>
+                <th style="width:60px; text-align:center;">Ore</th>
+                <th style="width:150px;">Categoria</th>
+                <th style="width:44px;"></th>
             </tr>
         </thead>
         <tbody>
             {% for data_r, tipo_r, contenuto in righe %}
                 {% if tipo_r == 'sospensione' %}
                 <tr style="background:#dbeafe;">
-                    <td colspan="8" style="font-weight:700; color:#1e40af;">
+                    <td colspan="9" style="font-weight:700; color:#1e40af;">
                         {{ icon('calendar') }}
                         {{ data_r.strftime('%d/%m') }}{% if contenuto.data_fine != contenuto.data_inizio %}–{{ contenuto.data_fine.strftime('%d/%m/%Y') }}{% endif %}
                         — {{ contenuto.descrizione }} <span style="font-weight:400; font-size:.78rem;">({{ contenuto.tipo_label }})</span>
@@ -89,7 +90,7 @@
                 </tr>
                 {% elif tipo_r == 'termine_lezioni' %}
                 <tr style="background:#dcfce7;">
-                    <td colspan="8" style="font-weight:700; color:#166534;">
+                    <td colspan="9" style="font-weight:700; color:#166534;">
                         {{ icon('check') }} {{ data_r.strftime('%d/%m/%Y') }} — Termine lezioni
                     </td>
                 </tr>
@@ -110,9 +111,9 @@
                         <td>{{ e.ora_inizio or '—' }}</td>
                         <td>{{ e.ora_fine or '—' }}</td>
                         <td style="text-align:center;">{{ '%.1f'|format(e.durata_ore) }}</td>
+                        <td>{{ e.col_categoria }}</td>
                         <td>
-                            {{ e.col_categoria }}
-                            <a href="{{ url_for('attivita_ist.form', id=e.id) }}" class="btn btn-primary btn-sm" style="padding:2px 7px; margin-left:4px;" title="Modifica">{{ icon('edit') }}</a>
+                            <a href="{{ url_for('attivita_ist.form', id=e.id) }}" class="btn btn-primary btn-sm" style="padding:2px 7px;" title="Modifica">{{ icon('edit') }}</a>
                         </td>
                     </tr>
                     {% endfor %}
