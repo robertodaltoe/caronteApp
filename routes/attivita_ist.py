@@ -146,6 +146,56 @@ def _preset_partecipanti(attivita):
     return risultato
 
 
+def _diff_risincronizzazione(evento):
+    """
+    Confronta l'elenco partecipanti congelato alla creazione dell'evento
+    con quello che _preset_partecipanti() calcolerebbe ORA, con i dati
+    attuali di organico — utile per eventi pianificati con largo anticipo
+    (es. import del piano da xlsx a giugno per un collegio di settembre),
+    dove nel frattempo possono essere arrivate sia nuove assunzioni sia
+    uscite non ancora note al momento della generazione (segnalato da
+    Roberto: il problema non è solo chi è uscito, ma anche chi è stato
+    assunto dopo).
+
+    Ritorna (da_aggiungere, da_rimuovibili, non_rimovibili):
+    - da_aggiungere: Docente non ancora in elenco ma ora previsti dal
+      preset attuale.
+    - da_rimuovibili: Docente in elenco (preset=True, mai toccati a mano)
+      non più previsti dal preset attuale, con presenza ancora "vergine"
+      (nessuno stato/nota/orario parziale salvato) — sicuri da rimuovere.
+    - non_rimovibili: stesso caso ma con presenza già modificata a mano —
+      segnalati soltanto, mai rimossi in automatico.
+    I partecipanti aggiunti o modificati a mano (preset=False, vedi
+    aggiungi_partecipante()) non vengono mai proposti in rimozione,
+    qualunque cosa dica il preset attuale — restano comunque segnalati
+    dal badge "non più in servizio" se è il caso.
+    """
+    preset_attuale = set(_preset_partecipanti(evento))
+    partecipanti = {p.id_docente: p for p in evento.partecipanti}
+    presenze = {p.id_docente: p for p in evento.presenze}
+
+    da_aggiungere_ids = preset_attuale - set(partecipanti.keys())
+    da_aggiungere = (Docente.query.filter(Docente.id.in_(da_aggiungere_ids))
+                     .order_by(Docente.cognome).all()) if da_aggiungere_ids else []
+
+    da_rimuovibili, non_rimovibili = [], []
+    for did, part in partecipanti.items():
+        if did in preset_attuale or not part.preset:
+            continue
+        pres = presenze.get(did)
+        vergine = pres is None or (
+            pres.stato == 'presente' and not pres.note and
+            not pres.ora_inizio_eff and not pres.ora_fine_eff and
+            not pres.id_assenza_collegata
+        )
+        d = Docente.query.get(did)
+        (da_rimuovibili if vergine else non_rimovibili).append(d)
+
+    da_rimuovibili.sort(key=lambda d: d.cognome)
+    non_rimovibili.sort(key=lambda d: d.cognome)
+    return da_aggiungere, da_rimuovibili, non_rimovibili
+
+
 def _iscrivi_docente_a_eventi(id_docente, eventi):
     """
     Nucleo comune a iscrivi_docente_a_obbligatori/_classe/_dipartimento:
@@ -889,6 +939,7 @@ def presenze(id):
         evento_prec=evento_prec, evento_succ=evento_succ,
         n_da_sostituire=n_da_sostituire,
         n_sostituti_individuati=n_sostituti_individuati,
+        oggi=date.today(),
     )
 
 
@@ -916,6 +967,38 @@ def aggiungi_partecipante(id):
     db.session.commit()
     flash('Docente aggiunto.', 'success')
     return redirect(url_for('attivita_ist.presenze', id=id))
+
+
+@attivita_ist_bp.route('/attivita-ist/<int:id>/risincronizza', methods=['GET', 'POST'])
+def risincronizza_partecipanti(id):
+    evento = AttivitaIst.query.get_or_404(id)
+
+    # Solo per eventi non ancora svolti: per uno già passato la presenza
+    # effettiva è ormai un dato storico, non ha senso riallinearla al
+    # personale in servizio "adesso".
+    if evento.data < date.today():
+        flash('Evento già svolto: la risincronizzazione non è disponibile.', 'warning')
+        return redirect(url_for('attivita_ist.presenze', id=id))
+
+    if request.method == 'POST':
+        da_aggiungere, da_rimuovibili, _ = _diff_risincronizzazione(evento)
+        for d in da_aggiungere:
+            db.session.add(AttivitaIstPartecipante(
+                id_attivita=evento.id, id_docente=d.id, preset=True))
+        for d in da_rimuovibili:
+            AttivitaIstPartecipante.query.filter_by(
+                id_attivita=evento.id, id_docente=d.id).delete()
+            AttivitaIstPresenza.query.filter_by(
+                id_attivita=evento.id, id_docente=d.id).delete()
+        db.session.commit()
+        flash(f'Risincronizzato: {len(da_aggiungere)} aggiunti, '
+              f'{len(da_rimuovibili)} rimossi.', 'success')
+        return redirect(url_for('attivita_ist.presenze', id=id))
+
+    da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(evento)
+    return render_template('attivita_ist/risincronizza.html',
+        evento=evento, da_aggiungere=da_aggiungere,
+        da_rimuovibili=da_rimuovibili, non_rimovibili=non_rimovibili)
 
 
 # ── IMPORT PIANO ANNUALE ─────────────────────────────────────────────────────

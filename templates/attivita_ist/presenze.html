@@ -49,6 +49,12 @@
         <span class="btn btn-sm" style="background:#f3f4f6; color:#c1c8d1; cursor:default;">{{ icon('arrow-left') }}</span>
         {% endif %}
         <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Lista</a>
+        {% if evento.data >= oggi %}
+        <a href="{{ url_for('attivita_ist.risincronizza_partecipanti', id=evento.id) }}" class="btn btn-sm"
+           style="background:#0369a1; color:white;" title="Riallinea l'elenco partecipanti al personale in servizio ora">
+            {{ icon('refresh') }} Risincronizza
+        </a>
+        {% endif %}
         {% if evento_succ %}
         <a href="{{ url_for('attivita_ist.presenze', id=evento_succ.id) }}" class="btn btn-sm"
            style="background:#e5eaf0; color:var(--blu);" title="{{ evento_succ.titolo }}">

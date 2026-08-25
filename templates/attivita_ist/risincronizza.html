@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Risincronizza partecipanti — {{ evento.titolo }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('refresh') }} Risincronizza partecipanti</h1>
+    <p style="font-size:.84rem; color:var(--grigio);">
+        {{ evento.tipo_emoji }} {{ evento.titolo }} — {{ evento.data.strftime('%A %d/%m/%Y') | capitalize }}
+    </p>
+</div>
+
+<p style="font-size:.85rem; color:var(--grigio); max-width:640px; margin-bottom:20px;">
+    Confronto tra l'elenco partecipanti calcolato adesso, con i dati
+    attuali di organico, e quello congelato quando l'evento è stato
+    creato. Solo le righe generate automaticamente vengono proposte in
+    rimozione: quelle aggiunte o modificate a mano non vengono mai
+    toccate. Nulla viene applicato finché non confermi.
+</p>
+
+{% if not da_aggiungere and not da_rimuovibili and not non_rimovibili %}
+<div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
+    {{ icon('check') }} Elenco già allineato: nessuna differenza trovata.
+</div>
+<div style="margin-top:16px;">
+    <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">{{ icon('arrow-left') }} Torna alle presenze</a>
+</div>
+{% else %}
+
+<form method="post">
+{% if da_aggiungere %}
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--verde); margin-bottom:10px;">
+        {{ icon('plus') }} Da aggiungere ({{ da_aggiungere|length }})
+    </h3>
+    <p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
+        Ora previsti dal preset ma non ancora in elenco — probabilmente assunti dopo la creazione dell'evento.
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        {% for d in da_aggiungere %}
+        <span class="badge" style="background:var(--verde-bg); color:var(--verde); font-size:.8rem; padding:3px 10px;">
+            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if da_rimuovibili %}
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+    <h3 style="font-size:.9rem; color:var(--rosso); margin-bottom:10px;">
+        {{ icon('trash') }} Da rimuovere ({{ da_rimuovibili|length }})
+    </h3>
+    <p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
+        Non più previsti dal preset attuale (usciti/contratto scaduto) e con presenza ancora invariata — sicuri da togliere.
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        {% for d in da_rimuovibili %}
+        <span class="badge" style="background:var(--rosso-bg); color:var(--rosso); font-size:.8rem; padding:3px 10px;">
+            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if non_rimovibili %}
+<div class="card" style="padding:16px 20px; margin-bottom:16px; background:#fef3c7;">
+    <h3 style="font-size:.9rem; color:#92400e; margin-bottom:10px;">
+        {{ icon('warning') }} Da rivedere a mano ({{ non_rimovibili|length }})
+    </h3>
+    <p style="font-size:.78rem; color:#92400e; margin-bottom:10px;">
+        Non più previsti dal preset attuale, ma hanno già una presenza registrata (stato, nota o orario parziale) —
+        non vengono rimossi in automatico per non perdere dati già inseriti. Rivedili a mano nella pagina Presenze.
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        {% for d in non_rimovibili %}
+        <span class="badge" style="background:#fde68a; color:#92400e; font-size:.8rem; padding:3px 10px;">
+            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div style="display:flex; gap:10px;">
+    {% if da_aggiungere or da_rimuovibili %}
+    <button type="submit" class="btn btn-success">
+        {{ icon('check') }} Conferma ({{ da_aggiungere|length }} aggiunti, {{ da_rimuovibili|length }} rimossi)
+    </button>
+    {% endif %}
+    <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">Annulla</a>
+</div>
+</form>
+{% endif %}
+{% endblock %}

@@ -4,6 +4,70 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 62 — Risincronizza partecipanti su eventi pianificati con anticipo (Cowork)
+
+Roberto: nelle presenze del Collegio del 1° settembre 2026 comparivano
+tutti i docenti, anche quelli non più in servizio (col badge corretto,
+ma comunque presenti). Chiesto se fosse un bug o si sarebbe risolto con
+l'avvio del nuovo anno da Impostazioni.
+
+Verificato sul DB reale (solo lettura): l'evento (id 41) è stato creato
+il 1° giugno 2026 da import del piano xlsx, con 95 partecipanti — di
+cui 34 oggi "non in servizio" (Alaimo, Badasa, Buiarelli...). Causa: 
+`_preset_partecipanti()` (routes/attivita_ist.py) viene chiamato UNA
+SOLA VOLTA, alla creazione dell'evento — il risultato viene congelato
+in `AttivitaIstPartecipante`. Il badge "non più in servizio" nella
+pagina Presenze è invece calcolato dal vivo ogni volta (sempre
+aggiornato), ma segnala soltanto, non rimuove nessuno. Confermato anche
+che nessun passo del wizard "Impostazione Anno" rigenera le liste
+partecipanti di eventi già creati — l'avvio del nuovo anno da solo non
+avrebbe risolto nulla.
+
+Roberto ha fatto notare che il problema è simmetrico: tra la
+generazione del piano (spesso mesi prima) e lo svolgimento della
+riunione possono arrivare anche NUOVE assunzioni, non solo uscite — un
+fix che rimuove soltanto i non più in servizio avrebbe risolto solo
+metà del problema.
+
+Aggiunta una risincronizzazione esplicita, mai automatica: nuova route
+`/attivita-ist/<id>/risincronizza` (GET mostra un'anteprima, POST
+applica solo dopo conferma esplicita — mai un'operazione a sorpresa su
+dati reali). Confronta l'elenco congelato con quello che
+`_preset_partecipanti()` calcolerebbe ORA, con l'organico attuale:
+
+- **Da aggiungere**: chi il preset attuale prevede ma non è ancora in
+  elenco (es. assunto dopo la generazione del piano).
+- **Da rimuovere** (automaticamente, dopo conferma): chi non è più
+  previsto dal preset attuale, generato automaticamente (`preset=True`
+  sul modello `AttivitaIstPartecipante` — già esisteva per distinguere
+  righe auto/manuali, riusato qui) E con presenza ancora "vergine"
+  (nessuno stato/nota/orario parziale salvato) — sicuro da togliere
+  senza perdere dati.
+- **Da rivedere a mano**: stesso caso ma con presenza già modificata —
+  segnalati soltanto, mai rimossi in automatico, per non perdere un
+  dato già inserito da Roberto.
+- I partecipanti aggiunti/modificati a mano (`preset=False`, es. da
+  "+ Aggiungi docente") non vengono MAI proposti in rimozione,
+  qualunque cosa dica il preset attuale — restano comunque col badge di
+  avviso se non più in servizio, decisione lasciata sempre a Roberto
+  (stesso principio delle anagrafiche ambigue: segnalare, mai decidere
+  al posto suo).
+
+Disponibile solo per eventi non ancora svolti (data futura) — per uno
+già passato la presenza è un dato storico, non ha senso riallinearlo al
+personale "di adesso". Pulsante "Risincronizza" aggiunto nella barra di
+navigazione della pagina Presenze, visibile solo per eventi futuri.
+
+Verificato con 5 nuovi test in
+`tests/test_risincronizza_partecipanti.py` (proposta di aggiunta,
+rimozione sicura, mancata rimozione con presenza già modificata,
+mancata proposta per partecipanti aggiunti a mano, non disponibile su
+eventi passati) — 259/259 nella suite completa. Verifica live su copia
+isolata del DB reale (porta 5098): sul Collegio 1/9/2026 la pagina
+propone correttamente i 34 non più in servizio in rimozione e 0 in
+aggiunta, coerente col controllo a mano fatto prima di scrivere il
+codice.
+
 ## Sessione 66 addendum 61 — Elimina anche nel Piano Annuale, spaziatura pulsanti, redirect al punto di provenienza (Cowork)
 
 Roberto, dopo l'addendum 60 (pulsante Elimina nella scheda di
