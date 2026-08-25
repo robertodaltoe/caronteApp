@@ -752,6 +752,24 @@ def form(id=None):
 @attivita_ist_bp.route('/attivita-ist/<int:id>/elimina', methods=['POST'])
 def elimina(id):
     e = AttivitaIst.query.get_or_404(id)
+
+    # AttivitaIstPartecipante/AttivitaIstPresenza sono in cascade
+    # 'delete-orphan' sul modello, spariscono da sole con l'evento. Le
+    # sostituzioni scrutinio no (SostituzioneScrutinio non ha una
+    # relazione con cascade dal lato AttivitaIst) — senza ripulirle qui
+    # a mano restano righe orfane che puntano a un id_attivita ormai
+    # inesistente. Registra la lapide per ognuna (come le altre
+    # cancellazioni di questa tabella nel sync automatico, vedi
+    # modules/auto_sync.py) prima di cancellarle, altrimenti una
+    # postazione non ancora allineata potrebbe farle risuscitare.
+    from models.sostituzione_scrutinio import SostituzioneScrutinio
+    from modules.auto_sync import registra_eliminazione
+    sostituzioni = SostituzioneScrutinio.query.filter_by(id_attivita=id).all()
+    for s in sostituzioni:
+        registra_eliminazione('sostituzioni_scrutinio',
+                               {'id_attivita': s.id_attivita, 'id_assente': s.id_assente})
+        db.session.delete(s)
+
     db.session.delete(e)
     db.session.commit()
     flash('Evento eliminato.', 'warning')

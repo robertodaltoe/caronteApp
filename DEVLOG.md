@@ -4,6 +4,43 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 59 — Elimina evento raggiungibile dalla scheda di modifica (Cowork)
+
+Roberto: nella scheda di modifica di un evento istituzionale c'era
+"Modifica" ma nessun modo per eliminare la riunione. Il backend
+(`routes/attivita_ist.py::elimina()`) esisteva già — usato solo dalla
+pagina "Elenco/gestione eventi" (`lista.html`), mai collegato dalla
+scheda stessa (`form.html`) — stesso pattern "backend pronto ma non
+raggiungibile dall'interfaccia" già visto altre volte in questo
+progetto. Aggiunto un pulsante "Elimina evento" nel form, stesso
+stile/conferma già usato in `lista.html`.
+
+Estendendo la cancellazione, sistemato anche un buco di dati trovato
+nel farlo: `SostituzioneScrutinio` non ha una relazione con cascade
+dal lato `AttivitaIst` (a differenza di `AttivitaIstPartecipante`/
+`AttivitaIstPresenza`, già in `cascade='all, delete-orphan'`) —
+eliminare uno scrutinio con sostituti già nominati lasciava righe
+orfane con un `id_attivita` ormai inesistente. `elimina()` ora
+ripulisce anche quelle, registrando la lapide per ciascuna (stessa
+disciplina imparata oggi con la resurrezione delle sostituzioni
+scrutinio — addendum 49/53/54) prima di cancellarle.
+
+Anche piccola sistemazione sul Piano Annuale (addendum 58): riportato
+`min-width` della tabella da 940px a 900px — lo spazio per la nuova
+colonna "Azioni" (44px) viene ora preso dalla colonna "Attività"
+(flessibile), non aggiunto in più alla larghezza totale della tabella,
+su richiesta esplicita di Roberto.
+
+Verificato con 3 nuovi test in
+`tests/test_elimina_evento_istituzionale.py` (il form mostra il
+pulsante, eliminare un evento rimuove anche partecipanti/presenze,
+eliminare uno scrutinio ripulisce le sostituzioni orfane registrando
+la lapide). 251/251 test passano (248 + 3 nuovi). Verificato anche
+live su copia isolata di `database.db` reale: creato ed eliminato un
+evento scrutinio di prova con una sostituzione nominata — evento e
+sostituzione spariscono entrambi, lapide registrata correttamente
+(52 lapidi totali, +1 rispetto a prima).
+
 ## Sessione 66 addendum 58 — pulsante Modifica invisibile per Consigli di classe in Piano Annuale (Cowork)
 
 Roberto: nel Piano delle attività, i consigli di classe programmati il
