@@ -75,7 +75,7 @@
                 <th style="width:80px;">Fine</th>
                 <th style="width:60px; text-align:center;">Ore</th>
                 <th style="width:150px;">Categoria</th>
-                <th style="width:44px;"></th>
+                <th style="width:96px;"></th>
             </tr>
         </thead>
         <tbody>
@@ -112,8 +112,17 @@
                         <td>{{ e.ora_fine or '—' }}</td>
                         <td style="text-align:center;">{{ '%.1f'|format(e.durata_ore) }}</td>
                         <td>{{ e.col_categoria }}</td>
-                        <td>
-                            <a href="{{ url_for('attivita_ist.form', id=e.id) }}" class="btn btn-primary btn-sm" style="padding:2px 7px;" title="Modifica">{{ icon('edit') }}</a>
+                        <td style="padding:6px 14px 6px 6px; overflow:visible;">
+                            <div style="display:flex; gap:5px;">
+                                <a href="{{ url_for('attivita_ist.form', id=e.id, next=request.full_path) }}"
+                                   class="btn btn-primary btn-sm" style="padding:2px 7px;" title="Modifica">{{ icon('edit') }}</a>
+                                <form method="post" action="{{ url_for('attivita_ist.elimina', id=e.id) }}"
+                                      onsubmit="return confirm('Eliminare questo evento? L\'operazione non si può annullare.')"
+                                      style="margin:0;">
+                                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                                    <button class="btn btn-danger btn-sm" type="submit" style="padding:2px 7px;" title="Elimina">{{ icon('trash') }}</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

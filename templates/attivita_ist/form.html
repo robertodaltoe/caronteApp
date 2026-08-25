@@ -112,7 +112,7 @@
 
 <div style="margin-top:16px; display:flex; gap:10px;">
     <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
-    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
+    <a href="{{ next_url or url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
 </div>
 </form>
 
@@ -127,6 +127,10 @@
 <form method="post" action="{{ url_for('attivita_ist.elimina', id=evento.id) }}"
       onsubmit="return confirm('Eliminare questo evento? L\'operazione non si può annullare.')"
       style="margin-top:10px;">
+    {# "next" arriva dalla pagina di provenienza (es. Piano delle attività,
+       passato come querystring nel link "Modifica") così l'eliminazione
+       riporta lì invece che sempre a "Attività istituzionali". #}
+    <input type="hidden" name="next" value="{{ next_url }}">
     <button class="btn btn-danger" type="submit">{{ icon('trash') }} Elimina evento</button>
 </form>
 {% endif %}

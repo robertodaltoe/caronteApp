@@ -744,6 +744,7 @@ def form(id=None):
         docenti_selezionati=docenti_selezionati,
         data_sel=(evento.data.isoformat() if evento
                   else request.args.get('data', date.today().isoformat())),
+        next_url=request.args.get('next', '').strip(),
     )
 
 
@@ -773,6 +774,16 @@ def elimina(id):
     db.session.delete(e)
     db.session.commit()
     flash('Evento eliminato.', 'warning')
+
+    # Torna alla pagina da cui si è arrivati (es. Piano delle attività),
+    # non sempre a "Attività istituzionali" — Roberto: eliminando da lì
+    # perdeva il contesto (mese/filtri) su cui stava lavorando. Il
+    # chiamante passa la propria URL come campo nascosto "next"; per
+    # sicurezza si accetta solo un percorso relativo di questa stessa
+    # app (mai un URL assoluto/esterno).
+    next_url = request.form.get('next', '').strip()
+    if next_url.startswith('/') and not next_url.startswith('//'):
+        return redirect(next_url)
     return redirect(url_for('attivita_ist.lista'))
 
 

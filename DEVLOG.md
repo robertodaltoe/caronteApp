@@ -4,6 +4,49 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 61 — Elimina anche nel Piano Annuale, spaziatura pulsanti, redirect al punto di provenienza (Cowork)
+
+Roberto, dopo l'addendum 60 (pulsante Elimina nella scheda di
+modifica): "lo vorrei anche nella tabella principale di fianco ad
+edit, rivedendo la distanza dal bordo al tasto che inserirai (ora il
+tasto edit appoggia sul bordo destro della tabella. Inoltre, quando
+elimino la pagina si ricarica su attività istituzionali, non sulla
+pagina da cui provengo (Piano delle attività)". Tre richieste distinte:
+
+1. **Pulsante Elimina anche in `piano_annuale.html`.** Aggiunto nella
+   colonna "Azioni" accanto a "Modifica", stesso stile/conferma già
+   usato in `lista.html` e nella scheda di modifica.
+2. **Distanza dal bordo.** Misurato dal vivo (`getBoundingClientRect()`
+   su un evento reale a viewport 1440px) che il nuovo pulsante Elimina
+   sfiorava il bordo destro della card (5px di margine) mentre Modifica
+   ne aveva 40 — riproduceva lo stesso problema segnalato in origine,
+   solo spostato sul pulsante nuovo. Corretto allargando la colonna
+   Azioni da 76 a 96px e il padding destro della cella da 10 a 14px
+   (spazio preso dalla colonna "Attività", flessibile — non dalla
+   larghezza totale della tabella, come richiesto in addendum 59).
+   Rimisurato dopo la modifica: Modifica 60px, Elimina 25px di margine
+   dal bordo — entrambi comodi.
+3. **Redirect dopo l'eliminazione.** `routes/attivita_ist.py::elimina()`
+   tornava sempre a "Attività istituzionali", facendo perdere il
+   contesto (mese/filtri) quando si eliminava da Piano delle attività.
+   Aggiunto un parametro `next` (campo nascosto nel form di
+   eliminazione, passato come querystring nel link "Modifica"),
+   propagato da `piano_annuale.html`, `lista.html` e `form.html`
+   (quest'ultimo tramite `next_url` passato dalla route `form()`). La
+   route `elimina()` accetta solo un percorso relativo di questa stessa
+   app (`next_url.startswith('/') and not next_url.startswith('//')`)
+   prima di redirigere lì, altrimenti ricade sul comportamento di
+   sempre (`attivita_ist.lista`) — protezione contro open-redirect,
+   testata esplicitamente con URL assoluti, `//host` e `javascript:`.
+
+Verificato con 3 nuovi test in
+`tests/test_elimina_evento_istituzionale.py` (redirect di default
+senza `next`, redirect al `next` fornito, `next` esterno ignorato) —
+6/6 in quel file, 254/254 nella suite completa. Verifica live con una
+copia isolata del DB reale su porta 5099: pulsante visibile e ben
+distanziato in entrambe le tabelle, nessuna modifica di logica di
+scrittura oltre al redirect.
+
 ## Sessione 66 addendum 60 — pulsante Elimina non funzionante, form annidato nel form (Cowork)
 
 Roberto: continuava a non vedere il tasto Elimina, "rimane nascosto
