@@ -55,6 +55,22 @@ from pathlib import Path
 
 from sqlalchemy import text
 
+def _parse_dt(v):
+    """Converte in datetime un valore letto da SQLite grezzo (stringa
+    ISO, possibile spazio invece di 'T') o già un datetime — None se
+    mancante o non interpretabile. Usato per confrontare l'orario di
+    una lapide con quello dell'ultima modifica di una riga (vedi sotto,
+    'colonna_timestamp')."""
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v
+    try:
+        return datetime.fromisoformat(str(v).replace(' ', 'T', 1))
+    except ValueError:
+        return None
+
+
 INTERVALLO_SECONDI = 30
 AUTOSYNC_LOCK_NAME = 'caronte_autosync.lock'
 AUTOSYNC_LOCK_MAX_ETA_SEC = 180  # oltre questa età il lock si considera abbandonato (crash) e si ignora
@@ -104,6 +120,7 @@ TABELLE = {
                             'creato_il', 'ora_ist_inizio', 'ora_ist_fine',
                             'creato_da'],
         'fk': [('id_docente', 'docenti')],
+        'colonna_timestamp': 'creato_il',
         'label': lambda r: f"Assenza — docente #{r['id_docente']} il {r['data']} "
                             f"(ore {r['ora_inizio']}-{r['ora_fine']}, {r['motivo']})",
     },
@@ -115,6 +132,7 @@ TABELLE = {
                             'tipo', 'stato', 'origine', 'note_display', 'note',
                             'creato_il', 'modificato_il', 'creato_da'],
         'fk': [('id_assente', 'docenti'), ('id_sostituto', 'docenti')],
+        'colonna_timestamp': 'modificato_il',
         'label': lambda r: f"Supplenza — {r['data']} ora {r['ora']} classe {r['classe']}",
     },
     'indisponibilita': {
@@ -123,6 +141,7 @@ TABELLE = {
         'colonne_insert': ['id_docente', 'data', 'ora', 'motivo', 'note',
                             'creato_il', 'creato_da'],
         'fk': [('id_docente', 'docenti')],
+        'colonna_timestamp': 'creato_il',
         'label': lambda r: f"Indisponibilità — docente #{r['id_docente']} il {r['data']} "
                             f"(ora {r['ora'] if r['ora'] is not None else 'tutta la giornata'})",
     },
@@ -133,7 +152,9 @@ TABELLE = {
         # "differire" tra le due macchine per la stessa riga.
         'campi_confronto': ['id_sostituto', 'n_protocollo', 'data_nomina', 'note'],
         'colonne_insert': ['id_attivita', 'id_assente', 'id_sostituto',
-                            'n_protocollo', 'data_nomina', 'note', 'creato_il'],
+                            'n_protocollo', 'data_nomina', 'note',
+                            'creato_il', 'modificato_il'],
+        'colonna_timestamp': 'modificato_il',
         # id_attivita punta a AttivitaIst, che non è (ancora) in questo
         # meccanismo di sync — stessa assunzione già in uso per id_docente
         # verso 'docenti': se l'id non esiste in locale (evento creato
@@ -245,19 +266,34 @@ def _merge_additivo(db, tmp_remoto_path):
         tomb_locali_rows = SyncTombstone.query.all()
         tomb_locali = {(t.tabella, t.chiave_logica) for t in tomb_locali_rows}
         tomb_remote_set = {(t['tabella'], t['chiave_logica']) for t in tomb_remote}
+        # Orario della lapide per ogni chiave, usato sotto per non
+        # ricancellare una riga più recente della lapide stessa (vedi
+        # 'colonna_timestamp'). Preservare l'eliminato_il ORIGINALE del
+        # remoto quando si importa una lapide non vista prima è
+        # essenziale: prima veniva ri-timbrata "adesso" al momento
+        # dell'importazione, rendendo impossibile qualunque confronto
+        # sensato con l'orario di modifica di una riga (bug trovato
+        # insieme a quello sotto, Sessione 66 addendum 54).
+        tomb_ts = {(t.tabella, t.chiave_logica): t.eliminato_il for t in tomb_locali_rows}
 
         for t in tomb_remote:
             chiave_t = (t['tabella'], t['chiave_logica'])
+            ts_remoto = _parse_dt(t.get('eliminato_il'))
             if chiave_t not in tomb_locali:
                 db.session.add(SyncTombstone(
                     tabella=t['tabella'], chiave_logica=t['chiave_logica'],
+                    eliminato_il=ts_remoto or datetime.utcnow(),
                     eliminato_da=t.get('eliminato_da')))
                 tomb_locali.add(chiave_t)
+                tomb_ts[chiave_t] = ts_remoto
+            elif ts_remoto and (tomb_ts.get(chiave_t) is None or ts_remoto > tomb_ts[chiave_t]):
+                tomb_ts[chiave_t] = ts_remoto
 
         solo_locali += sum(1 for k in tomb_locali if k not in tomb_remote_set)
 
         for tabella, cfg in TABELLE.items():
             tomb_per_tabella = {chiave for (tab, chiave) in tomb_locali if tab == tabella}
+            colonna_ts = cfg.get('colonna_timestamp')
 
             righe_remote = _righe(conn_remoto, tabella)
             righe_locali = [dict(r._mapping) for r in
@@ -271,6 +307,18 @@ def _merge_additivo(db, tmp_remoto_path):
             # sull'altra macchina non ci sono più.
             for chiave_json, riga_locale in list(mappa_locale.items()):
                 if chiave_json in tomb_per_tabella:
+                    # Una riga più recente della lapide stessa non va
+                    # cancellata: significa che qualcuno ha inserito
+                    # apposta dati nuovi per questa chiave DOPO che era
+                    # stata cancellata altrove — la lapide è superata
+                    # (bug reale: una nomina appena salvata su una
+                    # postazione spariva di nuovo perché una lapide
+                    # "vecchia" della stessa chiave era ancora presente
+                    # su Drive, vedi DEVLOG Sessione 66 addendum 54).
+                    ts_lapide = tomb_ts.get((tabella, chiave_json))
+                    ts_riga = _parse_dt(riga_locale.get(colonna_ts)) if colonna_ts else None
+                    if ts_riga and ts_lapide and ts_riga > ts_lapide:
+                        continue
                     db.session.execute(
                         text(f"DELETE FROM {tabella} WHERE id=:id"),
                         {'id': riga_locale['id']})
@@ -286,7 +334,10 @@ def _merge_additivo(db, tmp_remoto_path):
                 chiave = cfg['chiave'](r_remota)
                 chiave_json = json.dumps(chiave, sort_keys=True)
                 if chiave_json in tomb_per_tabella:
-                    continue  # eliminata (qui o là): non reintrodurla mai
+                    ts_lapide = tomb_ts.get((tabella, chiave_json))
+                    ts_remota = _parse_dt(r_remota.get(colonna_ts)) if colonna_ts else None
+                    if not (ts_remota and ts_lapide and ts_remota > ts_lapide):
+                        continue  # eliminata (qui o là), non superata da dati più recenti: non reintrodurla
                 locale = mappa_locale.get(chiave_json)
 
                 if locale is None:

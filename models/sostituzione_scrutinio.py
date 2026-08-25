@@ -17,6 +17,14 @@ class SostituzioneScrutinio(db.Model):
     data_nomina     = db.Column(db.Date, nullable=True)
     note            = db.Column(db.String(200), nullable=True)
     creato_il       = db.Column(db.DateTime, default=datetime.utcnow)
+    # Serve al sync automatico (modules/auto_sync.py) per capire se una
+    # riga è più recente di un'eventuale lapide arrivata da un'altra
+    # postazione — senza, una nomina appena salvata da un utente può
+    # essere ricancellata da una lapide "vecchia" ancora presente su
+    # Drive quando la publicazione del salvataggio non ha ancora fatto
+    # in tempo a sovrascriverla (bug reale, vedi DEVLOG Sessione 66
+    # addendum 54).
+    modificato_il   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     attivita  = db.relationship('AttivitaIst')
     assente   = db.relationship('Docente', foreign_keys=[id_assente])

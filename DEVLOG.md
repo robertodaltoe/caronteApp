@@ -4,6 +4,60 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 54 — la stessa lapide tornava da Drive (fix dell'addendum 53 insufficiente) (Cowork)
+
+Il fix dell'addendum 53 (rimuovere la lapide LOCALE al salvataggio)
+non bastava — Roberto in tempo reale: "nonostante il pull... continua
+lo stesso problema". Causa: `avvia_caronte.sh` sincronizza in automatico
+solo il **database**, mai il **codice** — un primo scambio ha chiarito
+che serve un `git pull` esplicito su ogni macchina, ma anche dopo il
+pull e il riavvio il problema persisteva.
+
+Causa vera, più profonda: rimuovere la lapide solo in locale non
+impedisce che torni. Se il file su Drive non è ancora stato
+ripubblicato con la lapide rimossa (finestra di 30s del giro
+successivo), contiene ancora la vecchia lapide — il merge la re-importa
+perché non la trova più in locale, e la applica SUBITO nello stesso
+giro, cancellando la riga appena salvata. Nessuna race rara: capita
+quasi sempre, perché la pubblicazione richiede un giro di sync intero.
+
+Trovato anche un secondo difetto che rendeva impossibile qualunque
+soluzione basata sull'orario: importando una lapide dal remoto, il
+codice la ri-timbrava con `datetime.utcnow()` (l'orario di
+importazione), perdendo l'orario ORIGINALE della cancellazione —
+senza quello, non c'è modo di sapere se una riga locale è più recente
+o più vecchia della lapide.
+
+**Corretto su due fronti** (`modules/auto_sync.py`):
+1. Importando una lapide dal remoto, ora si preserva il suo
+   `eliminato_il` originale invece di ri-timbrarla "adesso".
+2. Aggiunta una colonna `colonna_timestamp` per tabella in `TABELLE`
+   (`modificato_il` per supplenze/sostituzioni_scrutinio, `creato_il`
+   per assenze/indisponibilità che non hanno un campo di modifica) —
+   sia la cancellazione di una riga locale lapidata sia la reintroduzione
+   di una riga dal remoto ora confrontano l'orario della lapide con
+   quello dell'ultima modifica della riga: una riga più recente della
+   lapide la supera (non viene cancellata / viene comunque considerata),
+   una lapide più recente della riga continua a cancellarla come prima.
+
+Aggiunta `SostituzioneScrutinio.modificato_il` (nuova colonna,
+migrazione additiva in `app.py::_auto_migrate`, applicata anche al
+database reale con backup cifrato prima —
+`database_...pre_migrazione_modificato_il_sostituzioni.db.enc` —
+`PRAGMA integrity_check` ok). Le righe esistenti restano `NULL` finché
+non vengono modificate di nuovo (nessuna protezione retroattiva per
+dati mai più toccati, comportamento identico a prima per loro — non un
+problema, la protezione serve solo alle righe toccate DOPO questo
+fix).
+
+Verificato con 2 nuovi test in
+`tests/test_auto_sync_lapide_superata.py`: riproduce esattamente lo
+scenario di Roberto (lapide vecchia ancora su Drive non cancella la
+riga appena salvata in locale) e verifica che il comportamento
+opposto continui a funzionare (una lapide genuinamente più recente di
+una riga vecchia la cancella ancora). 243/243 test passano (241 + 2
+nuovi).
+
 ## Sessione 66 addendum 53 — le nomine appena salvate sparivano di nuovo (Cowork)
 
 Roberto, in tempo reale: mentre nominava sostituti sul Mac mini (con la

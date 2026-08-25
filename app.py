@@ -501,6 +501,7 @@ def _auto_migrate():
         ('attivita_ist', 'richiede_ds', 'BOOLEAN', 0),
         ('docenti', 'sostegno_aggiuntivo',     'BOOLEAN', 0),
         ('docenti', 'ore_sostegno_aggiuntivo', 'INTEGER', None),
+        ('sostituzioni_scrutinio', 'modificato_il', 'DATETIME', None),
     ]
 
     with db.engine.connect() as conn:
