@@ -4,6 +4,30 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 60 — pulsante Elimina non funzionante, form annidato nel form (Cowork)
+
+Roberto: continuava a non vedere il tasto Elimina, "rimane nascosto
+fuori dalla tabella" — nonostante l'addendum precedente. Causa reale,
+trovata solo confrontando le coordinate DOM misurate dal vivo col
+codice: avevo messo il `<form>` del pulsante Elimina **dentro** il
+`<form id="form-ist">` principale — HTML non valido (un form non può
+contenerne un altro), il browser scarta silenziamente il tag di
+apertura annidato. Il pulsante appariva comunque (il suo markup
+interno restava), ma senza un vero form proprio finiva sottomesso
+insieme al form principale (verso la route di salvataggio, non quella
+di eliminazione) — e il `justify-content:space-between` sull'intera
+larghezza delle due colonne lo spingeva visivamente lontano da
+Salva/Annulla, dando l'impressione di un elemento fuori posto.
+
+Corretto spostando il form di eliminazione FUORI e DOPO la chiusura
+del form principale (due form separati, non annidati), posizionato
+subito sotto Salva/Annulla invece che al lato opposto della riga.
+Verificato dal vivo che il pulsante sottomette davvero alla route
+`/attivita-ist/<id>/elimina` (controllato `form.action`/`form.method`
+sul DOM reale, non solo la presenza del testo nel HTML — lezione
+proprio da questo bug: un elemento "presente" nel markup non significa
+che funzioni). 251/251 test invariati (nessuna modifica di logica).
+
 ## Sessione 66 addendum 59 — Elimina evento raggiungibile dalla scheda di modifica (Cowork)
 
 Roberto: nella scheda di modifica di un evento istituzionale c'era

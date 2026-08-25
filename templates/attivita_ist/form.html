@@ -110,19 +110,26 @@
 
 </div>
 
-<div style="margin-top:16px; display:flex; gap:10px; justify-content:space-between;">
-    <div style="display:flex; gap:10px;">
-        <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
-        <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
-    </div>
-    {% if evento %}
-    <form method="post" action="{{ url_for('attivita_ist.elimina', id=evento.id) }}"
-          onsubmit="return confirm('Eliminare questo evento? L\'operazione non si può annullare.')" style="margin:0;">
-        <button class="btn btn-danger" type="submit">{{ icon('trash') }} Elimina evento</button>
-    </form>
-    {% endif %}
+<div style="margin-top:16px; display:flex; gap:10px;">
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
 </div>
 </form>
+
+{% if evento %}
+{# Form separato, FUORI da quello sopra: un <form> non può contenerne un
+   altro (HTML non valido — il browser scarta silenziosamente quello
+   annidato), causava un pulsante che sembrava esserci ma non
+   sottometteva alla route giusta, oltre a un posizionamento sballato
+   per via del justify-content:space-between su tutta la larghezza
+   delle due colonne — segnalato da Roberto, il pulsante appariva
+   "fuori dalla tabella". #}
+<form method="post" action="{{ url_for('attivita_ist.elimina', id=evento.id) }}"
+      onsubmit="return confirm('Eliminare questo evento? L\'operazione non si può annullare.')"
+      style="margin-top:10px;">
+    <button class="btn btn-danger" type="submit">{{ icon('trash') }} Elimina evento</button>
+</form>
+{% endif %}
 
 <script>
 const TIPI_INFO = {
