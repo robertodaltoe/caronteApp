@@ -1667,8 +1667,11 @@ def docenti_anno():
     # se è attivo, non è già stato segnalato come uscito per questo
     # anno (altrimenti è nella sezione "Uscite" sotto) e non è stato
     # nominato proprio in questo anno (altrimenti è già nella sezione
-    # "TD/Supplenti inseriti per {{anno}}" sotto, che è puramente
-    # informativa — evita di mostrare lo stesso docente in due sezioni).
+    # "Docenti inseriti per {{anno}}" sotto, che è puramente informativa
+    # — evita di mostrare lo stesso docente in due sezioni; quella
+    # sezione include ORA anche i TI, non solo TD/supplenti, altrimenti
+    # un TI neoimmesso con anno_scol_inizio == anno finiva escluso da
+    # entrambe — vedi commento più sotto).
     # Prima versione (fino a questo Task): la pagina considerava solo i
     # TI, i TD/supplenti restavano esclusi "di proposito" — ma questo
     # rendeva impossibile segnalarne l'uscita quando non più in
@@ -1700,13 +1703,20 @@ def docenti_anno():
                    .filter_by(attivo=True, status_presenza='ap_entrante')
                    .order_by(Docente.cognome).all())
 
-    # TD/supplenti/IRC inseriti per questo anno specifico (informativo:
-    # non hanno bisogno del pulsante "Esce" nello stesso anno in cui
-    # sono appena arrivati)
+    # Docenti inseriti per questo anno specifico, di qualunque tipo di
+    # contratto (informativo: non hanno bisogno del pulsante "Esce"
+    # nello stesso anno in cui sono appena arrivati — sono già esclusi
+    # da docenti_gestione sopra). Prima escludeva i TI assumendo che un
+    # TI con anno_scol_inizio == anno fosse sempre uno "storico" già
+    # tracciato altrove — falso per un neoimmesso in ruolo che entra
+    # esattamente in questo anno (es. Di Liberto, 2026-2027): un TI
+    # così finiva escluso sia da qui (tipo_contratto == 'TI') sia da
+    # docenti_gestione (anno_scol_inizio == anno), invisibile ovunque
+    # sulla pagina pur comparendo in Anagrafica docenti — segnalato da
+    # Roberto.
     td_anno = (Docente.query
                .filter(Docente.attivo == True,
-                       Docente.anno_scol_inizio == anno,
-                       Docente.tipo_contratto != 'TI')
+                       Docente.anno_scol_inizio == anno)
                .order_by(Docente.cognome).all())
 
     anni_disponibili = sorted(

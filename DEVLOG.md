@@ -4,6 +4,44 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 56 — TI neoimmessi invisibili in "Docenti per anno" (Cowork)
+
+Roberto: Di Liberto (e altri neoimmessi in ruolo 2026-2027) non
+comparivano in "Docenti per anno" (2026-2027), pur comparendo in
+Anagrafica docenti.
+
+Causa: la pagina (`routes/impostazione_anno.py::docenti_anno()`)
+divide i docenti in due sezioni pensate per coprirsi a vicenda —
+`docenti_gestione` esclude chi ha `anno_scol_inizio == anno`
+(assumendo compaia nell'altra sezione), e la sezione "TD/Supplenti
+inseriti per {{anno}}" (`td_anno`) escludeva esplicitamente i TI
+(`tipo_contratto != 'TI'`), assumendo che un TI con
+`anno_scol_inizio == anno` fosse sempre uno storico già tracciato
+altrove. Un TI **neoimmesso** che entra in ruolo esattamente in
+quell'anno cadeva nel buco tra le due esclusioni — invisibile su
+tutta la pagina, esattamente il pattern "due filtri corretti
+singolarmente che si escludono a vicenda su un caso limite" già visto
+altre volte in questo progetto (vedi CLAUDE.md).
+
+Rimossa l'esclusione dei TI da `td_anno` (ora mostra chiunque abbia
+`anno_scol_inizio == anno`, di qualunque tipo di contratto) e
+rinominata la sezione da "TD / Supplenti inseriti per {{anno}}" a
+"Docenti inseriti per {{anno}}" nel template, per riflettere che ora
+copre anche i TI.
+
+Verificato con 3 nuovi test in
+`tests/test_docenti_anno_neoimmesso_ti.py` (un TI neoimmesso compare
+nella sezione informativa, non compare anche in `docenti_gestione` —
+niente doppia visualizzazione, un TD/supplente neoimmesso continua a
+comparire come prima — non regressione). 247/247 test passano (244 +
+3 nuovi). Verificato anche live su copia isolata di `database.db`
+reale: Di Liberto compare ora correttamente etichettata "(TI —
+Indeterminato)"; individuati altri 13 docenti reali colpiti dallo
+stesso bug (Toracca, De Agostini, Tarabini, Bollasina, Loffi,
+Remondina, Fazio, Veda, Misticoni, Micheletti, Facchi, Franco, Morena)
+— tutti ora visibili con lo stesso fix, nessun intervento sui dati
+necessario (il bug era solo nella query di visualizzazione).
+
 ## Sessione 66 addendum 55 — segnale materia mancava per stessa CC con testo libero diverso (Cowork)
 
 Roberto: in 2B LSC, sull'assenza di Del Curto, il segnale "① stessa

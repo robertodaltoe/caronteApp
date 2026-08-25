@@ -116,14 +116,14 @@
     {% endif %}
 </div>
 
-{# ── SEZIONE 4: TD/Supplenti inseriti per questo anno ─────────── #}
+{# ── SEZIONE 4: Docenti inseriti per questo anno (TI neoimmessi compresi) ─ #}
 <div class="card" style="padding:14px 18px;">
     <div style="font-weight:700; color:#16a34a; margin-bottom:10px; font-size:.9rem;">
-        {{ icon('list') }} TD / Supplenti inseriti per {{ anno }}
+        {{ icon('list') }} Docenti inseriti per {{ anno }}
         <span style="font-size:.74rem; font-weight:400; color:var(--grigio);">({{ td_anno|length }})</span>
     </div>
     {% if not td_anno %}
-    <div style="font-size:.8rem; color:var(--grigio);">Nessuno ancora — si aggiungono quando arriva la nomina (agosto/ottobre).</div>
+    <div style="font-size:.8rem; color:var(--grigio);">Nessuno ancora — si aggiungono quando arriva la nomina (agosto/ottobre) o quando si registra un neoimmesso in ruolo.</div>
     {% else %}
     {% for d in td_anno %}
     <div style="font-size:.8rem; padding:3px 0; color:#374151;">
