@@ -1294,6 +1294,23 @@ def sostituzione_scrutinio(id):
                 data_nomina  = date.fromisoformat(data_nomina) if data_nomina else None,
                 note         = note,
             ))
+
+        # Se questa stessa coppia (evento, assente) era stata cancellata
+        # in passato e aveva una lapide (SyncTombstone) — es. il blocco
+        # di sostituzioni del 31/08 ricancellato su richiesta di Roberto
+        # per ricominciare — va rimossa qui: altrimenti il prossimo giro
+        # del sync automatico, trovando in locale una riga la cui chiave
+        # risulta ancora lapidata, la cancella di nuovo (bug reale
+        # riscontrato: nominare di nuovo su una macchina faceva sparire
+        # la nomina appena inserita al giro successivo del sync,
+        # indipendentemente da quale postazione l'avesse fatta). Una
+        # nuova nomina inserita apposta dall'utente prevale sempre sulla
+        # lapide di una cancellazione precedente per la stessa chiave.
+        from models.sync_tombstone import SyncTombstone
+        chiave_json = json.dumps({'id_attivita': id, 'id_assente': id_assente}, sort_keys=True)
+        SyncTombstone.query.filter_by(
+            tabella='sostituzioni_scrutinio', chiave_logica=chiave_json).delete()
+
         db.session.commit()
         flash('Sostituzione registrata.', 'success')
         return redirect(url_for('attivita_ist.sostituzione_scrutinio', id=id))

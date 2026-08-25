@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 53 — le nomine appena salvate sparivano di nuovo (Cowork)
+
+Roberto, in tempo reale: mentre nominava sostituti sul Mac mini (con la
+pagina Protocollazione aperta sul MacBook Pro), cliccando "Salva
+nomina" la nomina appena inserita spariva poco dopo.
+
+Causa diretta dell'addendum 52: aveva ricancellato le 16 sostituzioni
+CAT per rifarle, registrando stavolta la lapide per ognuna (giusto, per
+evitare la resurrezione dell'addendum 49) — ma stava per l'appunto
+RI-nominando gli stessi assenti sulle stesse classi, cioè le stesse
+chiavi logiche appena lapidate. Una lapide non ha un concetto di
+"scaduta" o "superata da un nuovo inserimento apposta": il merge
+additivo, trovando in locale una riga la cui chiave risulta ancora
+lapidata, la cancella SEMPRE, senza distinguere una vecchia riga
+risorta per errore da una nuova inserita di proposito dall'utente
+tramite l'app.
+
+Corretto in `sostituzione_scrutinio()` (`routes/attivita_ist.py`,
+sia il ramo di inserimento sia quello di aggiornamento): al salvataggio
+di una nomina, rimuove SEMPRE l'eventuale lapide per la stessa coppia
+(evento, assente) — un salvataggio esplicito dall'utente prevale
+sempre su una lapide di cancellazione precedente per la stessa chiave.
+Verificato con 2 nuovi test in `tests/test_nomina_rimuove_lapide.py`
+(rimozione lapide sia sull'inserimento sia sull'aggiornamento).
+241/241 test passano (239 + 2 nuovi).
+
+Nessun intervento manuale necessario sui dati reali: le lapidi delle
+classi non ancora ri-nominate restano correttamente attive (servono
+ancora, evitano la resurrezione delle vecchie righe su quelle classi);
+da ora ogni nuova nomina salvata tramite l'app pulisce da sola la
+propria lapide, sulle due postazioni.
+
 ## Sessione 66 addendum 52 — ricancellate anche le 16 sostituzioni CAT del 31/08 (Cowork)
 
 Roberto: cancellare anche le 16 sostituzioni delle 4 classi CAT che
