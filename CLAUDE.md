@@ -131,10 +131,19 @@ Drive. Due livelli distinti:
   locale superato: intercetta l'eccezione, non tocca il DB locale, e
   richiede di copiare a mano `.backup_key` dalla macchina buona).
 - **`modules/auto_sync.py`** — sopra a questo, un thread in background
-  che ogni 30s fa un merge **additivo** automatico, solo su `assenze`,
-  `supplenze`, `indisponibilita` (non su Assegnazioni/AttivitaFuoriAula:
-  hanno tabelle collegate/id auto-referenziali, valutato e
-  deliberatamente escluso — troppo delicate per merge automatico).
+  che ogni 30s fa un merge **additivo** automatico, su `assenze`,
+  `supplenze`, `indisponibilita` e (da Sessione 66 addendum 46, su
+  richiesta esplicita di Roberto) `sostituzioni_scrutinio` — non su
+  Assegnazioni/AttivitaFuoriAula: hanno tabelle collegate/id
+  auto-referenziali, valutato e deliberatamente escluso — troppo
+  delicate per merge automatico. `sostituzioni_scrutinio` è stata
+  inclusa perché, a differenza di quei due casi, è una tabella piatta
+  senza tabelle figlie proprie (stessa forma di `supplenze`): la sua
+  unica particolarità è una FK verso `attivita_ist`, che NON è
+  sincronizzata — se l'evento non esiste ancora in locale con lo
+  stesso id (creato indipendentemente sulle due macchine), la riga
+  viene semplicemente saltata per quel giro (stessa logica già in uso
+  per `id_docente` verso `docenti`), non forzata.
 
 Concetti chiave se tocchi questo modulo (5 bug distinti corretti in
 sequenza durante il collaudo reale, tutti nel devlog sotto Task 46):

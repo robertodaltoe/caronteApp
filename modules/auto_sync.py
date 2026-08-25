@@ -9,7 +9,9 @@ default) un thread in background:
 2. confronta, tabella per tabella (vedi TABELLE più sotto — 'assenze',
    'supplenze', 'indisponibilita': sono i dati che segreteria e chi
    gestisce le supplenze aggiornano in parallelo — vedi DEVLOG Task
-   46), le righe locali e quelle remote
+   46 — più 'sostituzioni_scrutinio', aggiunta su richiesta esplicita
+   di Roberto per verificare i conflitti tra postazioni anche sulle
+   nomine dei sostituti agli scrutini), le righe locali e quelle remote
    usando una chiave logica stabile (es. docente+data+fascia oraria),
    non l'id autoincrementale, che può coincidere per righe diverse su
    database indipendenti;
@@ -86,6 +88,12 @@ def _chiave_indisponibilita(r):
     }
 
 
+def _chiave_sostituzione_scrutinio(r):
+    # Stessa coppia dell'UniqueConstraint del modello (id_attivita,
+    # id_assente): un solo sostituto nominato per assente per riunione.
+    return {'id_attivita': r['id_attivita'], 'id_assente': r['id_assente']}
+
+
 TABELLE = {
     'assenze': {
         'chiave': _chiave_assenza,
@@ -95,7 +103,7 @@ TABELLE = {
                             'motivo', 'classe_libera', 'note_interne',
                             'creato_il', 'ora_ist_inizio', 'ora_ist_fine',
                             'creato_da'],
-        'fk_docenti': ['id_docente'],
+        'fk': [('id_docente', 'docenti')],
         'label': lambda r: f"Assenza — docente #{r['id_docente']} il {r['data']} "
                             f"(ore {r['ora_inizio']}-{r['ora_fine']}, {r['motivo']})",
     },
@@ -106,7 +114,7 @@ TABELLE = {
         'colonne_insert': ['data', 'ora', 'classe', 'id_assente', 'id_sostituto',
                             'tipo', 'stato', 'origine', 'note_display', 'note',
                             'creato_il', 'modificato_il', 'creato_da'],
-        'fk_docenti': ['id_assente', 'id_sostituto'],
+        'fk': [('id_assente', 'docenti'), ('id_sostituto', 'docenti')],
         'label': lambda r: f"Supplenza — {r['data']} ora {r['ora']} classe {r['classe']}",
     },
     'indisponibilita': {
@@ -114,9 +122,29 @@ TABELLE = {
         'campi_confronto': ['motivo', 'note'],
         'colonne_insert': ['id_docente', 'data', 'ora', 'motivo', 'note',
                             'creato_il', 'creato_da'],
-        'fk_docenti': ['id_docente'],
+        'fk': [('id_docente', 'docenti')],
         'label': lambda r: f"Indisponibilità — docente #{r['id_docente']} il {r['data']} "
                             f"(ora {r['ora'] if r['ora'] is not None else 'tutta la giornata'})",
+    },
+    'sostituzioni_scrutinio': {
+        'chiave': _chiave_sostituzione_scrutinio,
+        # id_attivita non è nei campi di confronto: è parte della chiave
+        # logica stessa (identifica la riunione), non un valore che possa
+        # "differire" tra le due macchine per la stessa riga.
+        'campi_confronto': ['id_sostituto', 'n_protocollo', 'data_nomina', 'note'],
+        'colonne_insert': ['id_attivita', 'id_assente', 'id_sostituto',
+                            'n_protocollo', 'data_nomina', 'note', 'creato_il'],
+        # id_attivita punta a AttivitaIst, che non è (ancora) in questo
+        # meccanismo di sync — stessa assunzione già in uso per id_docente
+        # verso 'docenti': se l'id non esiste in locale (evento creato
+        # indipendentemente sulle due macchine, con id diversi) la riga
+        # viene semplicemente saltata per questo giro, non forzata — non
+        # una FK rotta, solo un sync rimandato finché l'evento non è
+        # anche lui allineato (es. da un checkout/checkin manuale).
+        'fk': [('id_assente', 'docenti'), ('id_sostituto', 'docenti'),
+               ('id_attivita', 'attivita_ist')],
+        'label': lambda r: f"Sostituzione scrutinio — evento #{r['id_attivita']}, "
+                            f"assente #{r['id_assente']}",
     },
 }
 
@@ -263,17 +291,17 @@ def _merge_additivo(db, tmp_remoto_path):
 
                 if locale is None:
                     fk_ok = True
-                    for campo in cfg['fk_docenti']:
+                    for campo, tabella_fk in cfg['fk']:
                         val = r_remota.get(campo)
                         if val is not None:
                             trovato = db.session.execute(
-                                text("SELECT 1 FROM docenti WHERE id=:id"),
+                                text(f"SELECT 1 FROM {tabella_fk} WHERE id=:id"),
                                 {'id': val}).first()
                             if not trovato:
                                 fk_ok = False
                                 break
                     if not fk_ok:
-                        continue  # docente non presente in locale: non rischiare una FK rotta
+                        continue  # riga collegata non presente in locale: non rischiare una FK rotta
 
                     colonne = cfg['colonne_insert']
                     valori = {c: r_remota.get(c) for c in colonne}

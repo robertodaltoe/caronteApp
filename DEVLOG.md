@@ -4,6 +4,51 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 46 — sostituzioni scrutinio nel sync automatico (Cowork)
+
+Richiesta di Roberto: includere anche le sostituzioni scrutinio nel
+merge additivo automatico (`modules/auto_sync.py`), per rilevare i
+conflitti tra postazioni diverse come già avviene per assenze/
+supplenze/indisponibilità. CLAUDE.md documenta esplicitamente che
+estendere il sync a "strutture con tabelle collegate" (Assegnazioni,
+AttivitaFuoriAula) era stato valutato e respinto — verificato prima di
+procedere che `SostituzioneScrutinio` è un caso diverso: tabella piatta
+senza tabelle figlie proprie, stessa forma di `supplenze` (che è già
+sincronizzata). L'unica particolarità è una FK verso `AttivitaIst`, non
+sincronizzata — gestita come già avviene per `id_docente` verso
+`docenti`: se l'id non esiste in locale (evento creato indipendente-
+mente sulle due macchine, id diversi) la riga viene semplicemente
+saltata per quel giro, mai forzata con una FK rotta.
+
+Generalizzato il controllo FK in `_merge_additivo()`: da `fk_docenti`
+(lista di colonne, sempre verificate contro `docenti`) a `fk` (lista di
+coppie colonna/tabella), così `sostituzioni_scrutinio` può verificare
+sia `id_assente`/`id_sostituto` contro `docenti` sia `id_attivita`
+contro `attivita_ist` con lo stesso meccanismo, senza duplicarlo.
+Chiave logica = `(id_attivita, id_assente)`, la stessa dell'
+`UniqueConstraint` del modello — `id_attivita` fa parte della chiave,
+non del confronto contenuto, perché identifica la riunione e non può
+mai "differire" per la stessa riga. Campi di confronto:
+`id_sostituto`, `n_protocollo`, `data_nomina`, `note`. Aggiunte le
+etichette leggibili in `routes/sync_conflitti.py` (`TABELLA_LABEL`,
+`CAMPO_LABEL`) per una visualizzazione pulita in `/sync/conflitti`.
+Aggiornati commenti/docstring in `modules/auto_sync.py` e la voce
+corrispondente in CLAUDE.md.
+
+Verificato con 4 nuovi test in
+`tests/test_auto_sync_sostituzioni_scrutinio.py` (riga nuova dal
+remoto importata, riga con evento inesistente in locale saltata senza
+errore, sostituti diversi per lo stesso assente generano un conflitto
+—non risolto in automatico, la riga locale resta invariata finché
+qualcuno non decide—, stessa nomina su entrambe le macchine non genera
+conflitto). Aggiunto anche l'import mancante di `SyncConflitto`/
+`SyncTombstone` in `tests/conftest.py` (nessun test precedente
+toccava quelle tabelle). 228/228 test passano (224 + 4 nuovi).
+Verificato anche live su copia isolata di `database.db` reale: un
+merge contro una copia identica del database risulta correttamente un
+no-op (0 inserite, 0 conflitti); un merge contro una copia con UNA
+sostituzione aggiunta a mano importa correttamente quella singola riga.
+
 ## Sessione 66 addendum 45 — rinominato dipartimento "Scienze Umane e Sociali" → "Umanistico" (Cowork)
 
 Richiesta di Roberto: rinominare ovunque il dipartimento SC-UM in
