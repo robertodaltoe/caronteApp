@@ -230,3 +230,46 @@ def test_vicinanza_oraria_batte_la_materia_in_comune(app, db_session, monkeypatc
 
     ids_ordinati = [d.id for d, *_ in candidati]
     assert ids_ordinati.index(cand_solo_orario.id) < ids_ordinati.index(cand_solo_materia.id)
+
+
+def test_segnale_materia_usa_anche_la_classe_di_concorso(app, db_session, monkeypatch):
+    """Caso reale segnalato da Roberto (2B LSC, assente Del Curto):
+    Boffi non risultava "① stessa materia" nonostante stessa classe di
+    concorso e stessa materia insegnata, solo perché il campo libero
+    "materia" era scritto in modo diverso ("Scienze motorie" contro
+    "Discipline sportive") — il fallback sul testo libero da solo non
+    bastava. La classe di concorso, quando coincide, è un segnale più
+    affidabile del testo libero."""
+    import routes.attivita_ist as mod
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod.attivita_ist_bp)
+    catturato = _cattura(monkeypatch, mod)
+
+    from models.classe_concorso import ClasseConcorso
+    cc = ClasseConcorso(codice='AS48', nome='Scienze motorie')
+    db.session.add(cc)
+    db.session.flush()
+
+    assente = crea_docente('DelCurto', materia='SCIENZE MOTORIE')
+    cand_stessa_cc = crea_docente('Boffi', materia='Discipline sportive')
+    cand_altra_cc = crea_docente('Landi', materia='Diritto')
+    assente.id_classe_concorso = cc.id
+    cand_stessa_cc.id_classe_concorso = cc.id
+    db.session.commit()
+
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio finale', classe='2B LSC',
+                      data=date(2026, 8, 31), ora_inizio='10:00', ora_fine='11:00',
+                      origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPresenza(id_attivita=ev.id, id_docente=assente.id, stato='assente'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/{ev.id}/sostituzioni')
+        assert r.status_code == 200
+
+    candidati = catturato['kwargs']['righe'][0]['candidati']
+    segnali_per_id = {d.id: segnali for d, score, segnali, riun_prec, riun_succ in candidati}
+    assert 1 in segnali_per_id[cand_stessa_cc.id]
+    assert 1 not in segnali_per_id[cand_altra_cc.id]

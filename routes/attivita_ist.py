@@ -1474,6 +1474,19 @@ def sostituzione_scrutinio(id):
         stessa_materia = bool(assente_mat_ids & cand_mat_ids)
         if not stessa_materia and not assente_mat_ids and not cand_mat_ids:
             stessa_materia = bool(assente_mat_txt & cand_mat_txt)
+        # Ulteriore fallback: stessa classe di concorso — segnalato da
+        # Roberto (2B LSC, Del Curto assente: Boffi non risultava "①
+        # stessa materia" nonostante stessa CC e stessa materia
+        # insegnata, solo perché il campo libero "materia" era scritto
+        # in modo diverso — "Scienze motorie" contro "Discipline
+        # sportive"). La classe di concorso non è legata all'anno
+        # scolastico nel modello (campo unico su Docente), quindi è un
+        # segnale più affidabile del testo libero quando entrambi i
+        # docenti ce l'hanno e coincide — non lo sostituisce, si
+        # aggiunge come ulteriore modo di rilevare la stessa materia.
+        if not stessa_materia and assente_doc and assente_doc.id_classe_concorso \
+                and assente_doc.id_classe_concorso == d.id_classe_concorso:
+            stessa_materia = True
         if stessa_materia:
             segnali.add(1)  # stessa materia
 

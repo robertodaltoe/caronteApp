@@ -4,6 +4,37 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 55 — segnale materia mancava per stessa CC con testo libero diverso (Cowork)
+
+Roberto: in 2B LSC, sull'assenza di Del Curto, il segnale "① stessa
+materia" veniva dato solo ad Amoruso, non a Boffi — pur avendo Boffi
+la stessa classe di concorso (AS48) e insegnando di fatto la stessa
+materia.
+
+Causa: Del Curto e Boffi hanno entrambi `DocenteMateria` solo per il
+2026-2027 (anno in preparazione), non per il 2025-2026 (l'anno vero
+dello scrutinio del 31/08) — il confronto strutturato risultava quindi
+vuoto per entrambi, e scattava il fallback sul campo libero
+`Docente.materia`: Del Curto="SCIENZE MOTORIE", Amoruso="SCIENZE
+MOTORIE" (stringhe identiche, match), Boffi="Discipline sportive"
+(stessa materia ma scritta diversamente, nessun match testuale).
+
+Aggiunto un ulteriore fallback in `_segnali_candidato()`
+(`routes/attivita_ist.py`): quando il confronto per materia/testo
+libero non trova nulla, se assente e candidato hanno la STESSA classe
+di concorso (`Docente.id_classe_concorso`, campo non legato all'anno
+scolastico) scatta comunque il segnale ①. La classe di concorso è un
+segnale più affidabile del testo libero perché non soggetto a
+variazioni di formulazione.
+
+Verificato con 1 nuovo test in
+`tests/test_sostituzione_scrutinio_segnali.py`
+(`test_segnale_materia_usa_anche_la_classe_di_concorso`, riproduce
+esattamente il caso Del Curto/Boffi/Landi). 244/244 test passano (243
++ 1 nuovo). Verificato anche live su copia isolata di `database.db`
+reale: aprendo lo scrutinio 2B LSC, sull'assenza di Del Curto sia
+Amoruso sia Boffi mostrano ora il segnale ①.
+
 ## Sessione 66 addendum 54 — la stessa lapide tornava da Drive (fix dell'addendum 53 insufficiente) (Cowork)
 
 Il fix dell'addendum 53 (rimuovere la lapide LOCALE al salvataggio)
