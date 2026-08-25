@@ -4,6 +4,23 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 52 — ricancellate anche le 16 sostituzioni CAT del 31/08 (Cowork)
+
+Roberto: cancellare anche le 16 sostituzioni delle 4 classi CAT che
+aveva già rifatto, per ricominciare da capo tutto il blocco del 31/08.
+A differenza della cancellazione originaria (addendum 44) che aveva
+causato la resurrezione poi risolta nell'addendum 49, questa volta la
+lapide è stata registrata per ognuna delle 16 righe (stesso
+`registra_eliminazione('sostituzioni_scrutinio', ...)` già usato per
+le altre 35) prima di cancellarle, nella stessa transazione — non
+potranno risuscitare come le precedenti.
+
+Backup cifrato
+(`database_20260825_1844pre_pulizia_sostituzioni_cat_31ago.db.enc`),
+`PRAGMA integrity_check` ok, verificato zero sostituzioni rimaste per
+qualunque classe del 31/08/2026 (51 lapidi totali per la tabella, 35 +
+16), pagine Sostituzioni/Protocollazione ancora funzionanti.
+
 ## Sessione 66 addendum 51 — segnala se l'assente è già stato sostituito lo stesso giorno (Cowork)
 
 Roberto, sempre in ottica protocollazione: aprendo la pagina
