@@ -4,6 +4,64 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 49 — le sostituzioni scrutinio cancellate erano risuscitate dal sync (Cowork)
+
+Roberto: le 77 sostituzioni del 31/08 cancellate ieri sera (addendum
+44) erano tutte ricomparse, annullando anche il lavoro di rifacimento
+già completato per le 4 classi CAT.
+
+**Causa**, ricostruita dai dati (`SyncConflitto`, timestamp dei backup/
+storico Drive, processo dell'app realmente in esecuzione su questa
+macchina da stamattina): la cancellazione di ieri sera (addendum 44)
+era stata fatta con uno script diretto, SENZA registrare una lapide in
+`SyncTombstone` — non sembrava necessario, perché all'epoca
+`sostituzioni_scrutinio` non faceva ancora parte del sync automatico.
+Subito dopo (addendum 46), proprio su richiesta di Roberto, quella
+tabella È STATA aggiunta al sync additivo — ma un sync "additivo puro"
+aggiunge righe mancanti in locale prendendole dal remoto, e senza
+lapide non ha modo di sapere che una riga assente in locale è stata
+cancellata apposta piuttosto che "non ancora arrivata": il Mac mini
+aveva ancora localmente tutte le vecchie righe (mai allineato per il
+bug di `scarica()` risolto nell'addendum precedente), e non appena
+l'app è girata con la nuova tabella nel sync, quelle righe sono state
+viste come "novità solo locali sul Mac mini" e ripubblicate su Drive,
+da dove sono poi arrivate anche qui come inserimenti "nuovi" — nessuna
+cattiveria del merge, solo l'assenza della lapide che gli avrebbe
+detto di ignorarle.
+
+Il meccanismo di conflitto ha comunque protetto UNA classe: per "1A
+CAT" (evento 64) Roberto aveva già ri-registrato i sostituti PRIMA che
+arrivassero le vecchie righe risuscitate, quindi il merge le ha
+correttamente segnalate come conflitto invece di sovrascriverle
+(7 conflitti, tutti risolti "tieni locale" via `/sync/conflitti` —
+verificato nel DB, `SyncConflitto` con `scelta='locale'`). Le altre 3
+classi CAT (2A/3A/4A), essendo state salvate DOPO la resurrezione,
+sono state semplicemente aggiornate in loco dal normale salvataggio
+della pagina Sostituzioni (che fa update-or-insert sulla stessa chiave
+univoca) — nessun problema anche lì.
+
+**Rimediato**: backup cifrato
+(`database_20260825_1818pre_pulizia_sostituzioni_resuscitate_31ago.db.enc`),
+cancellate le 35 righe risuscitate delle classi NON-CAT (tutte le
+altre del 31/08), questa volta **registrando la lapide per ognuna**
+(`registra_eliminazione('sostituzioni_scrutinio', ...)`) prima di
+cancellare, nella stessa transazione — così il sync automatico, la
+prossima volta che gira su qualunque macchina (incluso il Mac mini,
+una volta allineato), non le resusciterà più. `PRAGMA integrity_check`
+ok. Il thread di sync automatico della app in esecuzione su questa
+macchina ha già ripubblicato da solo il risultato su Drive entro pochi
+secondi — verificato decifrando il file appena pubblicato: restano
+solo le 16 righe delle 4 classi CAT, e le 35 lapidi sono presenti.
+
+Nessuna modifica di codice in questo addendum (il comportamento del
+sync additivo — mai cancellare senza lapide — era già corretto e
+documentato; il problema è stato un'operazione manuale mia che non ha
+rispettato quella regola per una tabella che, al momento in cui l'ho
+eseguita, non ne aveva ancora bisogno). Lezione per il futuro: qualunque
+cancellazione diretta via script su una tabella che potrebbe finire
+(anche in seguito) nel sync automatico va sempre accompagnata da una
+lapide, per sicurezza.
+
 ## Sessione 66 addendum 48 — `sync_db.py scarica` non aggiornava il DB locale (Cowork)
 
 Seguito diretto dell'addendum precedente: Roberto ha lanciato `sync_db.py
