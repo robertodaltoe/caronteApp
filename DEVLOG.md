@@ -40,11 +40,15 @@ Consiglio di classe/scrutinio esistenti — 21 righe `AttivitaIstPartecipante`
 (tutte `preset=True`, tutte su scrutini del 31/08/2026, su 12 eventi
 diversi) risultano causate esattamente da questo meccanismo (il
 docente ha un'assegnazione per quella classe SOLO nel 2026-2027, nessun
-orario reale su quella classe nel 2025-2026). 26 di queste hanno già
-anche una riga `AttivitaIstPresenza` di default (stato "presente", mai
-toccata a mano). Non ancora ripulite sul database reale: segnalate a
-Roberto per conferma prima di cancellare, invece di decidere da solo su
-dati che riguardano la sua pianificazione delle sostituzioni scrutini.
+orario reale su quella classe nel 2025-2026). Segnalate a Roberto prima
+di cancellare (invece di decidere da solo su dati che riguardano la sua
+pianificazione delle sostituzioni scrutini) — confermato: backup
+cifrato (`database_20260825_1729pre_pulizia_iscrizioni_anno_sbagliato.db.enc`),
+cancellate le 21 righe `AttivitaIstPartecipante` e le 18 righe
+`AttivitaIstPresenza` collegate (le altre 3 non avevano ancora una
+riga presenza), `PRAGMA integrity_check` ok, verificato zero righe
+residue con lo stesso problema su tutti i 73 eventi e le pagine
+Presenze ancora funzionanti dopo.
 
 ## Sessione 66 addendum 46 — sostituzioni scrutinio nel sync automatico (Cowork)
 
