@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 45 — rinominato dipartimento "Scienze Umane e Sociali" → "Umanistico" (Cowork)
+
+Richiesta di Roberto: rinominare ovunque il dipartimento SC-UM in
+"Umanistico" (sigla UMA). Verificato che nel codice non ci sono
+riferimenti hardcoded al nome/sigla — tutte le route/template leggono
+il dipartimento dalla tabella `dipartimenti` tramite relazione, quindi
+è bastato un aggiornamento della riga.
+
+Due punti toccati: (1) `app.py::_seed_dipartimenti_materie()` — lo
+script di seed idempotente usato solo su un database vuoto/nuovo
+(irrilevante per il DB reale, già popolato, ma va tenuto coerente per
+un'eventuale nuova installazione o per i test) — aggiornato nome/sigla
+del dipartimento e il riferimento `sigla_dip` delle 3 materie
+collegate (Scienze umane, Filosofia, Religione), lasciando INVARIATA
+la sigla propria della materia "Scienze umane" (`SC-UM` è anche il
+codice della materia stessa, non solo del dipartimento — coincidenza
+nei dati originari, due cose concettualmente diverse). (2) Riga reale
+in `database.db` (id 4): backup cifrato
+(`database_20260825_1707pre_rename_dip_umanistico.db.enc`), UPDATE
+sigla/nome, `PRAGMA integrity_check` ok.
+
+Verificato: le 6 materie collegate (Storia, Disegno e storia
+dell'arte, Storia dell'arte, Scienze umane, Filosofia, Religione)
+restano collegate correttamente al dipartimento rinominato (stesso
+`id`, solo sigla/nome cambiati), nessuna sigla "SC-UM" residua come
+dipartimento, pagine che elencano i dipartimenti e la ricerca in
+Guida rispondono correttamente col nuovo nome. 224/224 test passano
+(nessuna modifica di logica, solo dati).
+
 ## Sessione 66 addendum 44 — pulizia sostituzioni 31/08 + guida aggiornata + ricerca (Cowork)
 
 **Pulizia sostituzioni 31/08.** Richiesta di Roberto: cancellare tutte

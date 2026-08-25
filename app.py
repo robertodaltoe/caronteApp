@@ -764,7 +764,7 @@ def _seed_dipartimenti_materie():
         {'sigla': 'LING-LET',  'nome': 'Linguistico-Letterario',       'ordine': 1},
         {'sigla': 'LINGUE',    'nome': 'Lingue Straniere',              'ordine': 2},
         {'sigla': 'MAT-SCI',   'nome': 'Matematico-Scientifico',        'ordine': 3},
-        {'sigla': 'SC-UM',     'nome': 'Scienze Umane e Sociali',       'ordine': 4},
+        {'sigla': 'UMA',       'nome': 'Umanistico',                    'ordine': 4},
         {'sigla': 'TEC-AFM',   'nome': 'Tecnico AFM-RIM',               'ordine': 5},
         {'sigla': 'TEC-CAT',   'nome': 'Tecnico Costruzioni (CAT)',     'ordine': 6},
         {'sigla': 'SC-MOT',    'nome': 'Scienze Motorie e Sportive',    'ordine': 7},
@@ -804,10 +804,10 @@ def _seed_dipartimenti_materie():
         ('Tecnologie informatiche',         'TEC-INFO', 'MAT-SCI',  None,              ['CAT']),
         # Riforma 2026-27: nelle classi prime AFM e CAT Scienze integrate → Scienze sperimentali
         ('Scienze sperimentali',            'SCI-SPER', 'MAT-SCI',  'SCI.SPERIM.',     ['AFM','CAT']),
-        # ── SCIENZE UMANE E SOCIALI ───────────────────────────────────────
-        ('Scienze umane',                   'SC-UM',    'SC-UM',    'SC.UMANE',        ['LSU']),
-        ('Filosofia',                       'FILO',     'SC-UM',    'FILOSOFIA',       ['LLI','LSC','LSP','LSU']),
-        ('Religione cattolica / att. alt.', 'REL',      'SC-UM',    'RELIGIONE',       ['LLI','LSC','LSP','LSU','AFM','RIM','CAT']),
+        # ── UMANISTICO (ex Scienze Umane e Sociali) ───────────────────────
+        ('Scienze umane',                   'SC-UM',    'UMA',      'SC.UMANE',        ['LSU']),
+        ('Filosofia',                       'FILO',     'UMA',      'FILOSOFIA',       ['LLI','LSC','LSP','LSU']),
+        ('Religione cattolica / att. alt.', 'REL',      'UMA',      'RELIGIONE',       ['LLI','LSC','LSP','LSU','AFM','RIM','CAT']),
         # ── TECNICO AFM-RIM ───────────────────────────────────────────────
         ('Diritto ed economia',             'DIR-ECO',  'TEC-AFM',  'DIR-ECO',         ['AFM','CAT','LSP','LSU']),
         ('Diritto',                         'DIR',      'TEC-AFM',  None,              ['RIM']),
