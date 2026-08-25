@@ -4,6 +4,49 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 48 — `sync_db.py scarica` non aggiornava il DB locale (Cowork)
+
+Seguito diretto dell'addendum precedente: Roberto ha lanciato `sync_db.py
+scarica` sul Mac mini per prendere la pulizia pubblicata dal MacBook
+Pro, ma il contenuto locale restava quello vecchio nonostante lo
+script dichiarasse "DB pronto".
+
+Causa trovata leggendo `sync_db.py::scarica()`: la decisione se
+sostituire il file locale con quello di Drive si basava sul confronto
+delle **date di modifica** (`_ts(db_drive) > _ts(db)`), non sul
+contenuto. Il file locale però viene toccato di continuo dal sync
+automatico additivo (`modules/auto_sync.py` fa `commit` ogni 30s anche
+quando non arriva nulla di rilevante per questa macchina), quindi la
+sua data di modifica avanza costantemente durante una giornata di
+utilizzo normale — è bastato che superasse la data di pubblicazione
+del file su Drive perché `scarica()` decidesse silenziosamente di
+NON sostituire nulla, pur stampando comunque "DB pronto - lock
+attivato" come se l'aggiornamento fosse avvenuto. Confermato via
+`stato()`: il file pubblicato dal MacBook Pro alle 17:31:55 conteneva
+già la pulizia (verificato decifrandolo e contando le righe residue:
+zero), ma il Mac mini non lo aveva effettivamente scaricato.
+
+Corretto sostituendo il confronto per data con un confronto per
+**contenuto** (hash SHA-256): `scarica()` ora decifra sempre il file
+di Drive e lo sostituisce a quello locale solo se il contenuto
+differisce davvero (o con `--forza`), altrimenti lo segnala
+esplicitamente come "già allineato" invece di un generico "pronto" che
+non distingueva i due casi. Stessa correzione applicata anche al ramo
+di migrazione dal vecchio formato non cifrato (`scarica()`, caso
+legacy). Aggiunto `_hash_file()` in `sync_db.py` (letto a blocchi da
+1MB, nessun impatto pratico su un file di ~1.5MB).
+
+Verificato con 3 nuovi test in `tests/test_sync_db_scarica.py`, isolati
+dal vero database.db e dalla vera cartella Drive
+(`CARONTE_DRIVE_PATH` puntato a una cartella temporanea): riproduce
+esattamente il bug (contenuto locale vecchio ma mtime più recente di
+quello appena pubblicato → `scarica()` lo aggiorna comunque), conferma
+che un contenuto già identico non viene toccato (nessun `.bak`
+inutile), conferma `--forza`. 234/234 test passano (231 + 3 nuovi).
+Verificato anche `sync_db.py stato` dal vivo sulla cartella Drive
+reale dopo la modifica: nessuna regressione, lock nel frattempo
+tornato libero.
+
 ## Sessione 66 addendum 47 — docenti 2026-2027 comparivano negli scrutini del 31/08/2026 (Cowork)
 
 Roberto: nella pagina Presenze degli scrutini del 31/08 comparivano

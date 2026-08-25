@@ -13,7 +13,7 @@ file caricato/scaricato da Google Drive viene sempre cifrato con lo
 stesso meccanismo del backup locale (modules/backup_cifrato.py, Fernet
 AES-128+HMAC-SHA256) — su Drive non transita più il database in chiaro.
 """
-import os, sys, shutil, json, platform
+import hashlib, os, sys, shutil, json, platform
 from datetime import datetime
 from pathlib import Path
 
@@ -68,6 +68,13 @@ def cartella_storico(c):
     return s
 
 def _ts(p): return Path(p).stat().st_mtime if Path(p).exists() else 0.0
+
+def _hash_file(p):
+    h = hashlib.sha256()
+    with open(p, 'rb') as f:
+        for chunk in iter(lambda: f.read(1 << 20), b''):
+            h.update(chunk)
+    return h.hexdigest()
 def _fmt(ts): return datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M:%S") if ts else "non esiste"
 
 def lock_info(c):
@@ -123,7 +130,7 @@ def scarica(db, forzato=False):
             print(f"  ATTENZIONE: in uso da {lk.get('macchina')} dal {str(lk.get('dal',''))[:19]}")
             if input("  Procedere? (s/N): ").strip().lower() != "s":
                 print("  Annullato."); return False
-        if _ts(db_drive_old) > _ts(db) or forzato:
+        if forzato or not Path(db).exists() or _hash_file(db_drive_old) != _hash_file(db):
             if Path(db).exists(): shutil.copy2(db, str(db)+".bak")
             shutil.copy2(db_drive_old, db)
         set_lock(c, True)
@@ -138,30 +145,48 @@ def scarica(db, forzato=False):
         print(f"  ATTENZIONE: in uso da {lk.get('macchina')} dal {str(lk.get('dal',''))[:19]}")
         if input("  Procedere? (s/N): ").strip().lower() != "s":
             print("  Annullato."); return False
-    if _ts(db_drive) > _ts(db) or forzato:
-        try:
-            decifra_file(str(db_drive), str(db) + ".scaricato_tmp")
-        except InvalidToken:
-            # Non incolonnare mai un file locale non decifrabile sopra il
-            # database esistente: la chiave di cifratura (data/backup/.backup_key)
-            # non corrisponde a quella usata per cifrare il file su Drive —
-            # tipicamente perché questa macchina ha generato la propria chiave
-            # invece di ricevere quella condivisa dalle altre macchine che
-            # usano questo Drive. Si prosegue con il DB locale esistente
-            # (se presente) e si segnala l'errore con exit code diverso da 0,
-            # così lo script di avvio può interrompersi invece di ripartire
-            # con dati vecchi e poi ricaricarli su Drive sovrascrivendo la
-            # cronologia buona.
-            print("  ERRORE: impossibile decifrare il DB da Drive.")
-            print("  La chiave di cifratura locale (data/backup/.backup_key) non è la stessa")
-            print("  usata per cifrare il file su Drive. Copia il file .backup_key (e .backup_salt)")
-            print("  dalla macchina che ha creato il backup dentro data/backup/ su questa macchina,")
-            print("  poi riprova. NON procedere: il DB locale potrebbe essere superato.")
-            return None
+    # Decifra sempre e confronta per CONTENUTO, non per data di
+    # modifica — segnalato da Roberto (Sessione 66): il timestamp del
+    # file locale avanza ad ogni giro del sync automatico additivo
+    # (modules/auto_sync.py fa commit ogni 30s anche quando non arriva
+    # nulla di nuovo per questa macchina), quindi può facilmente
+    # risultare "più recente" del file appena pubblicato su Drive anche
+    # quando il CONTENUTO di Drive è in realtà più aggiornato. Il
+    # vecchio confronto `_ts(db_drive) > _ts(db)` in quel caso saltava
+    # silenziosamente la sostituzione — 'scarica' stampava comunque "DB
+    # pronto", dando l'impressione che l'aggiornamento fosse avvenuto
+    # quando in realtà il contenuto locale restava quello vecchio.
+    tmp_path = str(db) + ".scaricato_tmp"
+    try:
+        decifra_file(str(db_drive), tmp_path)
+    except InvalidToken:
+        # Non incolonnare mai un file locale non decifrabile sopra il
+        # database esistente: la chiave di cifratura (data/backup/.backup_key)
+        # non corrisponde a quella usata per cifrare il file su Drive —
+        # tipicamente perché questa macchina ha generato la propria chiave
+        # invece di ricevere quella condivisa dalle altre macchine che
+        # usano questo Drive. Si prosegue con il DB locale esistente
+        # (se presente) e si segnala l'errore con exit code diverso da 0,
+        # così lo script di avvio può interrompersi invece di ripartire
+        # con dati vecchi e poi ricaricarli su Drive sovrascrivendo la
+        # cronologia buona.
+        print("  ERRORE: impossibile decifrare il DB da Drive.")
+        print("  La chiave di cifratura locale (data/backup/.backup_key) non è la stessa")
+        print("  usata per cifrare il file su Drive. Copia il file .backup_key (e .backup_salt)")
+        print("  dalla macchina che ha creato il backup dentro data/backup/ su questa macchina,")
+        print("  poi riprova. NON procedere: il DB locale potrebbe essere superato.")
+        return None
+
+    if forzato or not Path(db).exists() or _hash_file(tmp_path) != _hash_file(db):
         if Path(db).exists(): shutil.copy2(db, str(db)+".bak")
-        shutil.move(str(db) + ".scaricato_tmp", str(db))
-    set_lock(c, True)
-    print("  DB pronto - lock attivato"); return True
+        shutil.move(tmp_path, str(db))
+        set_lock(c, True)
+        print("  DB aggiornato da Drive - lock attivato")
+    else:
+        os.remove(tmp_path)
+        set_lock(c, True)
+        print("  Locale già allineato al contenuto su Drive (nessuna differenza) - lock attivato")
+    return True
 
 def carica(db):
     c = cartella_drive()
