@@ -4,6 +4,54 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 65 — Placeholder considerati nel Generatore Consigli di classe (Cowork)
+
+Seguito dell'addendum 63: dopo aver spiegato che il generatore ignora
+di proposito i placeholder (supplenti non ancora nominati) nel calcolo
+delle sovrapposizioni, Roberto ha fatto notare che non è del tutto
+corretto: "se il placeholder ha classi assegnate, di fatto è un
+docente che è in quella classe" — un placeholder con ore su una classe
+è comunque un impegno reale che QUALCUNO dovrà onorare, anche se non
+sappiamo ancora chi. D'accordo con l'osservazione.
+
+Aggiunta `docenti_e_placeholder_per_classe()` (modules/generatore_cdc.py),
+accanto alla `docenti_reali_per_classe()` esistente (non sostituita,
+serve ancora per la scrittura effettiva — vedi sotto): ogni riga
+`AssegnazioneDocente` placeholder diventa una chiave sintetica
+`ph-<id_assegnazione>` nell'insieme docenti della classe — stessa riga
+= stesso futuro supplente = stesso vincolo di non-sovrapposizione tra
+le classi che copre; placeholder DIVERSI restano indipendenti tra loro
+(nessun modo di sapere se diventeranno la stessa persona).
+
+Usata in due punti di `genera_bozza_cdc()`/`routes/generatore_cdc.py`:
+1. **Calcolo sovrapposizioni** (`docenti_map` dentro `genera_bozza_cdc`):
+   ora due classi coperte dallo stesso placeholder non vengono più
+   proposte nello stesso slot.
+2. **Elenco classi selezionabili** (`classi_disponibili` in
+   `routes/generatore_cdc.py::index`): una classe coperta SOLO da un
+   placeholder (nessun docente reale ancora nominato) prima non
+   compariva affatto nell'elenco — ora sì, ha comunque ore assegnate
+   quindi una riunione da tenere.
+
+**Non toccato di proposito**: la scrittura effettiva degli eventi
+(azione "conferma") continua a usare solo `docenti_reali_per_classe()`
+per popolare `AttivitaIstPartecipante` — una chiave placeholder non è
+un `id_docente` valido (nessuna riga `Docente` corrispondente),
+scriverla come partecipante creerebbe una FK verso il nulla. Un
+placeholder resta quindi un segnale per evitare sovrapposizioni, mai un
+partecipante reale.
+
+Verificato con 6 nuovi test in `tests/test_generatore_cdc.py` (chiave
+sintetica generata, stesso placeholder su due classi → stessa chiave,
+placeholder diversi → chiavi diverse, sovrapposizione evitata
+end-to-end via `genera_bozza_cdc`, classe solo-placeholder
+selezionabile, conferma non scrive mai un placeholder come
+partecipante) — 273/273 nella suite completa (il monkeypatch condiviso
+`_fissa_docenti` nei test esistenti è stato aggiornato per patchare la
+nuova funzione, usata ora al posto della vecchia dentro
+`genera_bozza_cdc`). Verificato anche sui dati reali (sola lettura):
+nessuna incoerenza tra le due mappe, nessun problema di sottoinsieme.
+
 ## Sessione 66 addendum 64 — sostegno nel preset delle riunioni create dopo l'assegnazione (Cowork)
 
 Seguito dell'addendum 63 (area Sostegno in Assegnazioni). Roberto ha

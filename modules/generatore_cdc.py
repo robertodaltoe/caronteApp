@@ -11,7 +11,11 @@ Regole implementate (decise con Roberto durante l'analisi):
 1. Due classi possono stare nello stesso slot se e solo se non
    condividono docenti reali — nessun vincolo di "stesso anno" o
    "stesso indirizzo" (quello resta solo una preferenza secondaria,
-   punto 4).
+   punto 4). Vale anche per i placeholder (supplenti non ancora
+   nominati, vedi docenti_e_placeholder_per_classe): due classi coperte
+   dallo STESSO placeholder non possono sovrapporsi, perché sarà
+   comunque una sola persona a doverle seguire entrambe — segnalato da
+   Roberto.
 2. Gli insiemi docenti per classe vengono dalle Assegnazioni
    (AssegnazioneClasse/AssegnazioneDocente), non dall'orario — si
    stabilizzano molto prima nell'anno.
@@ -65,6 +69,48 @@ def docenti_reali_per_classe(anno_scol):
     out = {}
     for ac in righe:
         out.setdefault(ac.label_classe, set()).add(ac.assegnazione.id_docente)
+    return out
+
+
+def docenti_e_placeholder_per_classe(anno_scol):
+    """
+    Come docenti_reali_per_classe(), ma include anche i placeholder
+    (supplenti non ancora nominati): un placeholder con ore su una
+    classe rappresenta comunque un impegno reale — qualcuno, chiunque
+    sia, dovrà seguire quella classe — quindi due classi coperte dallo
+    STESSO placeholder non possono avere Consiglio di classe/scrutinio
+    sovrapposti, esattamente come per un docente reale (segnalato da
+    Roberto: "se il placeholder ha classi assegnate, di fatto è un
+    docente che è in quella classe").
+
+    Ogni riga AssegnazioneDocente placeholder (id_docente NULL) diventa
+    una chiave sintetica 'ph-<id_assegnazione>' — stessa riga = stesso
+    futuro supplente = stesso vincolo di non-sovrapposizione tra le
+    classi che copre; placeholder DIVERSI restano invece indipendenti
+    tra loro (non c'è modo di sapere se diventeranno la stessa persona,
+    quindi nessun conflitto presunto).
+
+    Usata SOLO per il calcolo delle sovrapposizioni nel generatore
+    (genera_bozza_cdc) e per l'elenco classi selezionabili — MAI per
+    creare un AttivitaIstPartecipante reale: un placeholder non è un
+    id_docente valido (nessuna riga corrispondente in Docente), quindi
+    non deve mai finire scritto come partecipante. Per quello resta
+    docenti_reali_per_classe(), usata da routes/generatore_cdc.py in
+    fase di conferma.
+    """
+    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+
+    righe = (AssegnazioneClasse.query
+             .join(AssegnazioneDocente,
+                   AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
+             .filter(AssegnazioneDocente.anno_scol == anno_scol,
+                     AssegnazioneClasse.indirizzo != 'POT')
+             .all())
+    out = {}
+    for ac in righe:
+        asgn = ac.assegnazione
+        chiave = asgn.id_docente if asgn.id_docente is not None else f'ph-{asgn.id}'
+        out.setdefault(ac.label_classe, set()).add(chiave)
     return out
 
 
@@ -207,7 +253,7 @@ def genera_bozza_cdc(anno_scol, classi, data_inizio, data_fine,
     vincoli_cdc = {v.classe: v for v in
                    VincoloGeneratoreCdc.query.filter_by(anno_scol=anno_scol)
                    .filter(VincoloGeneratoreCdc.classe.in_(classi)).all()}
-    docenti_map = docenti_reali_per_classe(anno_scol)
+    docenti_map = docenti_e_placeholder_per_classe(anno_scol)
 
     def _slot_valido(classe, slot):
         return _slot_libero_per_classe(classe, slot[0], slot[1], durata_min, vincoli_orario)

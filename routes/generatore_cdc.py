@@ -144,12 +144,17 @@ def vincoli_manuali():
 
 @generatore_cdc_bp.route('/generatore-cdc', methods=['GET', 'POST'])
 def index():
-    from modules.generatore_cdc import docenti_reali_per_classe, genera_bozza_cdc
+    from modules.generatore_cdc import (docenti_reali_per_classe,
+                                        docenti_e_placeholder_per_classe, genera_bozza_cdc)
     from routes.impostazione_anno import _anno_default_piano
 
     anno = request.args.get('anno') or request.form.get('anno_scol') or _anno_default_piano()
     anni_disponibili = _anni_disponibili_assegnazioni(anno)
-    classi_disponibili = sorted(docenti_reali_per_classe(anno).keys())
+    # Anche una classe coperta SOLO da placeholder (nessun docente reale
+    # ancora nominato) deve essere selezionabile: ha comunque ore
+    # assegnate, quindi una riunione da tenere — vedi
+    # docenti_e_placeholder_per_classe().
+    classi_disponibili = sorted(docenti_e_placeholder_per_classe(anno).keys())
 
     if request.method == 'POST' and request.form.get('azione') == 'genera':
         tipo = request.form.get('tipo', 'consiglio_classe')

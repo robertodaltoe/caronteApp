@@ -18,7 +18,10 @@ ANNO = '2026-2027'
 
 
 def _fissa_docenti(monkeypatch, mappa):
-    monkeypatch.setattr(gcdc, 'docenti_reali_per_classe', lambda anno_scol: mappa)
+    # genera_bozza_cdc usa docenti_e_placeholder_per_classe() (include
+    # anche i placeholder) per il calcolo delle sovrapposizioni — vedi
+    # test dedicati più sotto per la differenza coi soli docenti reali.
+    monkeypatch.setattr(gcdc, 'docenti_e_placeholder_per_classe', lambda anno_scol: mappa)
 
 
 def test_due_classi_senza_docenti_comuni_stesso_slot(db_session, monkeypatch):
@@ -229,6 +232,155 @@ def test_docenti_reali_per_classe_esclude_il_potenziamento(db_session):
 
     mappa = gcdc.docenti_reali_per_classe(ANNO)
     assert '0A POT' not in mappa
+
+
+# ── Placeholder nel calcolo delle sovrapposizioni ────────────────────────────
+# Roberto: "se il placeholder ha classi assegnate, di fatto è un
+# docente che è in quella classe" — un supplente non ancora nominato
+# rappresenta comunque un impegno reale, va considerato nel generatore.
+
+def test_docenti_e_placeholder_include_il_placeholder(db_session):
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+
+    asgn = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                nome_placeholder='Da nominare', tipo='supplente')
+    db.session.add(asgn)
+    db.session.flush()
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo='LLI',
+                                       anno_corso=3, sezione='A', ore=2))
+    db.session.commit()
+
+    mappa = gcdc.docenti_e_placeholder_per_classe(ANNO)
+    assert mappa['3A LLI'] == {f'ph-{asgn.id}'}
+
+
+def test_stesso_placeholder_su_due_classi_stessa_chiave(db_session):
+    """Lo stesso placeholder (stessa riga AssegnazioneDocente) su due
+    classi diverse deve produrre la STESSA chiave sintetica in
+    entrambe — è la stessa futura persona, le due classi non possono
+    avere riunioni sovrapposte."""
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+
+    asgn = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                nome_placeholder='Da nominare', tipo='supplente')
+    db.session.add(asgn)
+    db.session.flush()
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo='LLI',
+                                       anno_corso=3, sezione='A', ore=2))
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo='CAT',
+                                       anno_corso=1, sezione='A', ore=2))
+    db.session.commit()
+
+    mappa = gcdc.docenti_e_placeholder_per_classe(ANNO)
+    assert mappa['3A LLI'] == mappa['1A CAT']
+
+
+def test_placeholder_diversi_non_confusi_tra_loro(db_session):
+    """Due placeholder DIVERSI (righe AssegnazioneDocente distinte) non
+    devono produrre la stessa chiave — non c'è modo di sapere se
+    diventeranno la stessa persona, quindi nessun conflitto presunto."""
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+
+    asgn1 = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                 nome_placeholder='Supplente 1', tipo='supplente')
+    asgn2 = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                 nome_placeholder='Supplente 2', tipo='supplente')
+    db.session.add_all([asgn1, asgn2])
+    db.session.flush()
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn1.id, indirizzo='LLI',
+                                       anno_corso=3, sezione='A', ore=2))
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn2.id, indirizzo='CAT',
+                                       anno_corso=1, sezione='A', ore=2))
+    db.session.commit()
+
+    mappa = gcdc.docenti_e_placeholder_per_classe(ANNO)
+    assert mappa['3A LLI'] != mappa['1A CAT']
+
+
+def test_generatore_evita_sovrapposizione_per_classi_dello_stesso_placeholder(db_session, monkeypatch):
+    """Verifica end-to-end (attraverso genera_bozza_cdc, non solo la
+    mappa): due classi coperte dallo stesso placeholder finiscono in
+    slot diversi, esattamente come per un docente reale condiviso."""
+    _fissa_docenti(monkeypatch, {'1A LLI': {'ph-99'}, '1A CAT': {'ph-99'}})
+    ris = gcdc.genera_bozza_cdc(
+        ANNO, ['1A LLI', '1A CAT'], date(2026, 9, 14), date(2026, 9, 18),
+        '14:00', '18:00', durata_min=60)
+    assert all(not r['conflitto'] for r in ris)
+    a = next(r for r in ris if r['classe'] == '1A LLI')
+    b = next(r for r in ris if r['classe'] == '1A CAT')
+    assert (a['data'], a['ora_inizio']) != (b['data'], b['ora_inizio'])
+
+
+def test_classe_solo_placeholder_selezionabile_nel_generatore(db_session):
+    """Una classe coperta SOLO da un placeholder (nessun docente reale
+    ancora nominato) deve comunque comparire tra le classi
+    selezionabili — ha ore assegnate, quindi una riunione da tenere."""
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+
+    asgn = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                nome_placeholder='Da nominare', tipo='supplente')
+    db.session.add(asgn)
+    db.session.flush()
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo='LLI',
+                                       anno_corso=3, sezione='A', ore=2))
+    db.session.commit()
+
+    # Non compare nei "reali" (nessun docente nominato)...
+    assert '3A LLI' not in gcdc.docenti_reali_per_classe(ANNO)
+    # ...ma è comunque selezionabile grazie al placeholder.
+    assert '3A LLI' in gcdc.docenti_e_placeholder_per_classe(ANNO)
+
+
+def test_conferma_non_scrive_mai_un_placeholder_come_partecipante(app, db_session):
+    """La creazione effettiva degli eventi (routes/generatore_cdc.py,
+    azione 'conferma') deve continuare a usare SOLO docenti_reali_per_classe
+    per popolare AttivitaIstPartecipante — un placeholder non è un
+    id_docente valido (nessuna riga Docente corrispondente), scriverlo
+    come partecipante creerebbe una FK verso il nulla."""
+    import routes.generatore_cdc as mod
+    import routes.attivita_ist as mod_ai
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(mod.generatore_cdc_bp)
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod_ai.attivita_ist_bp)
+
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+    d1 = crea_docente('Rossi')
+    asgn_reale = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                      id_docente=d1.id, tipo='titolare')
+    asgn_ph = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                   nome_placeholder='Da nominare', tipo='supplente')
+    db.session.add_all([asgn_reale, asgn_ph])
+    db.session.flush()
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn_reale.id, indirizzo='LLI',
+                                       anno_corso=3, sezione='A', ore=4))
+    db.session.add(AssegnazioneClasse(id_assegnazione=asgn_ph.id, indirizzo='LLI',
+                                       anno_corso=3, sezione='A', ore=2))
+    db.session.commit()
+
+    from models.attivita_ist import AttivitaIstPartecipante
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'consiglio_classe',
+            'n_righe': '1',
+            'classe_0': '3A LLI', 'data_0': '2026-09-14',
+            'ora_inizio_0': '14:00', 'ora_fine_0': '15:00',
+        })
+        assert r.status_code == 302
+
+    parts = AttivitaIstPartecipante.query.all()
+    ids = {p.id_docente for p in parts}
+    assert ids == {d1.id}
 
 
 # ── Anno di default: attività preparatoria per il nuovo anno ────────────────
