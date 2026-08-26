@@ -4,7 +4,57 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
-## Sessione 66 addendum 63 — Area "Sostegno" in Assegnazioni (Cowork)
+## Sessione 66 addendum 64 — sostegno nel preset delle riunioni create dopo l'assegnazione (Cowork)
+
+Seguito dell'addendum 63 (area Sostegno in Assegnazioni). Roberto ha
+chiesto se il docente di sostegno assegnato compare tra i docenti della
+classe e nelle riunioni.
+
+Risposta: nella classe/Scheda classe sì, automatico (stessa tabella
+`AssegnazioneClasse` che dashboard_anno.py::scheda_classe legge
+direttamente). Nelle riunioni (Consiglio di classe/scrutinio) solo a
+metà: `iscrivi_docente_a_eventi_classe()` (già esistente, chiamata da
+routes/assegnazioni.py su salva/aggiorna-ore/nomina) iscrive subito il
+docente alle riunioni GIÀ ESISTENTI al momento dell'assegnazione, ma
+`_preset_partecipanti()` — che decide i "previsti" per una riunione
+creata DOPO — per consiglio_classe/scrutinio guardava solo
+`OrarioDocente`, e il sostegno non ha mai righe lì (il suo orario vive
+in `OrarioSostegno`, tabella separata, vedi addendum 62 della sessione
+precedente).
+
+Corretto: nuova `_docenti_sostegno_per_classe()` (routes/attivita_ist.py)
+integra al set di `OrarioDocente` anche i docenti reali (non
+placeholder) assegnati su quella classe con una CC `tipo_posto=
+'sostegno'`, per l'anno scolastico dell'evento — usata dentro
+`_preset_partecipanti()`. Effetto collaterale utile: anche
+"Risincronizza partecipanti" (addendum 62) ora propone in aggiunta un
+docente di sostegno assegnato dopo la creazione dell'evento, stesso
+meccanismo.
+
+Verificato con 3 nuovi test in `tests/test_preset_sostegno_riunioni.py`
+(incluso su una riunione creata dopo l'assegnazione, non incluso su
+un'altra classe, placeholder non incluso) — 267/267 nella suite
+completa.
+
+## Sessione 66 addendum 63 — placeholder in Assegnazioni e generazione del Piano delle attività (nessuna modifica, solo chiarimento)
+
+Roberto ha chiesto se il Generatore Consigli di Classe (Piano delle
+Attività, Fase 3) conta i placeholder inseriti in Assegnazioni
+(supplenti non ancora nominati) per rilevare sovrapposizioni tra
+riunioni.
+
+Risposta, verificata leggendo `modules/generatore_cdc.py::
+docenti_reali_per_classe()` (già commentato esplicitamente così):
+**no, di proposito**. La query filtra
+`AssegnazioneDocente.id_docente.isnot(None)` — un placeholder non ha
+un insieme di ore-condivise noto finché non viene nominato (potrebbe
+diventare chiunque), quindi non c'è nessun conflitto reale da rilevare
+finché resta anonimo. Appena nominato (routes/assegnazioni.py::nomina,
+`asgn.id_docente = id_doc` sulla stessa riga), il docente reale entra
+automaticamente nel calcolo per qualunque generazione successiva.
+Nessuna modifica al codice: comportamento voluto, non un bug.
+
+## Sessione 66 addendum 62 — Area "Sostegno" in Assegnazioni (Cowork)
 
 Roberto: in Assegnazioni non c'è modo di gestire un'assegnazione per un
 docente di sostegno — chiesto se fosse un errore di navigazione o un

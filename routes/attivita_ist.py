@@ -79,6 +79,42 @@ def _non_in_servizio_per_data(data_evento):
 
 
 
+def _docenti_sostegno_per_classe(anno_scol, classe_label):
+    """
+    Docenti di sostegno (Assegnazioni, CC con tipo_posto='sostegno')
+    reali (non placeholder) assegnati su questa classe per l'anno
+    indicato — usato come integrazione a OrarioDocente in
+    _preset_partecipanti() per Consiglio di classe/scrutinio.
+
+    Il sostegno non ha mai righe in OrarioDocente (il suo orario vive
+    in models.orario_sostegno.OrarioSostegno, tabella separata — vedi
+    routes/orario_sostegno.py): senza questa integrazione, un docente
+    di sostegno assegnato via Assegnazioni non comparirebbe mai nel
+    preset di una riunione creata DOPO l'assegnazione (per una già
+    esistente al momento dell'assegnazione ci pensa già
+    iscrivi_docente_a_eventi_classe, chiamata da routes/assegnazioni.py
+    su salva/aggiorna-ore/nomina) — segnalato da Roberto.
+    """
+    m = re.match(r'(\d+)([AB]?)\s+(.+)', classe_label or '')
+    if not m:
+        return set()
+    from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+    from models.classe_concorso import ClasseConcorso
+    righe = (AssegnazioneClasse.query
+             .join(AssegnazioneDocente,
+                   AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
+             .join(ClasseConcorso,
+                   ClasseConcorso.id == AssegnazioneDocente.id_classe_concorso)
+             .filter(AssegnazioneDocente.anno_scol == anno_scol,
+                     AssegnazioneDocente.id_docente.isnot(None),
+                     ClasseConcorso.tipo_posto == 'sostegno',
+                     AssegnazioneClasse.anno_corso == int(m.group(1)),
+                     AssegnazioneClasse.sezione == (m.group(2) or 'A'),
+                     AssegnazioneClasse.indirizzo == m.group(3).strip())
+             .all())
+    return {r.assegnazione.id_docente for r in righe}
+
+
 def _preset_partecipanti(attivita):
     """
     Genera lista docenti previsti per l'evento in base al tipo, escludendo
@@ -113,6 +149,7 @@ def _preset_partecipanti(attivita):
         from models.orario_docente import OrarioDocente
         ids = {s.id_docente for s in OrarioDocente.query.filter_by(
             classe=attivita.classe).all()}
+        ids |= _docenti_sostegno_per_classe(_anno_scolastico(attivita.data), attivita.classe)
         risultato = [i for i in ids if i not in esclusi_ids]
 
     elif tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \
