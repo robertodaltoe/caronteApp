@@ -78,3 +78,52 @@ def test_login_con_token_csrf_corretto_funziona(app_csrf):
 
         r2 = c.post('/login', data={'username': 'dsga', 'pin': '5678', 'csrf_token': token})
         assert r2.status_code != 400
+
+
+@pytest.fixture
+def app_csrf_con_handler(app_csrf):
+    """
+    Stessa app minimale di app_csrf, con in più l'errorhandler(CSRFError)
+    registrato in app.py::create_app() — replicato qui perché quella
+    funzione punta sempre a database.db reale (vedi la sua docstring),
+    quindi non è utilizzabile direttamente nei test (regola non
+    negoziabile n.1 del progetto). Serve a verificare l'intero percorso
+    di un mismatch CSRF su /login: niente pagina bianca "Bad Request",
+    ma un redirect con un messaggio comprensibile.
+    """
+    from flask_wtf.csrf import CSRFError
+    from flask import flash, redirect, url_for, request
+
+    @app_csrf.errorhandler(CSRFError)
+    def _csrf_error(e):
+        flash('La sessione era scaduta o non più valida: la pagina è stata '
+              'ricaricata, riprova ad inviare il modulo.', 'warning')
+        if request.path.startswith('/login'):
+            return redirect(url_for('auth.login'))
+        return redirect(request.referrer or url_for('dashboard.index'))
+
+    return app_csrf
+
+
+def test_csrf_mismatch_su_login_mostra_un_messaggio_non_pagina_bianca(app_csrf_con_handler):
+    """
+    Roberto: login che sembra non fare nulla da Chrome, nessun errore a
+    schermo, con qualunque utenza — causa più probabile: un mismatch del
+    token CSRF (frequente da Chrome per via del suo prefetch/preload
+    delle pagine, che genera in anticipo un token poi non più coerente
+    con la sessione al momento dell'invio reale) gestito da
+    app.py::_csrf_error con un redirect + flash(), ma templates/login.html
+    non renderizzava MAI get_flashed_messages() (non estende base.html,
+    è un documento a sé) — il messaggio spariva nel nulla e la pagina
+    tornava vuota, indistinguibile da "il login non fa niente".
+    """
+    with app_csrf_con_handler.test_client() as c:
+        c.get('/login')  # genera una sessione/token
+        # Token deliberatamente sbagliato: simula un token ormai
+        # superato (caso prefetch, sessione scaduta, doppia scheda...).
+        r = c.post('/login', data={'username': 'dsga', 'pin': '5678',
+                                    'csrf_token': 'token-scaduto-o-sbagliato'},
+                    follow_redirects=True)
+        assert r.status_code == 200
+        html = r.get_data(as_text=True)
+        assert 'sessione era scaduta o non più valida' in html

@@ -4,6 +4,47 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 66 — login "che non fa niente" da Chrome: messaggi flash invisibili su login.html (Cowork)
+
+Roberto: problemi di login con qualsiasi utenza da Google Chrome,
+nessun messaggio di errore a schermo.
+
+Causa individuata leggendo `app.py::_csrf_error` (l'errorhandler già
+esistente per `CSRFError`): un mismatch del token CSRF su `/login` (più
+frequente da Chrome per via del suo prefetch/preload delle pagine, che
+può generare in anticipo una richiesta GET su `/login` con un token poi
+non più coerente con la sessione al momento dell'invio reale, o
+banalmente un token scaduto/doppia scheda) fa scattare
+`flash('La sessione era scaduta...', 'warning')` seguito da un redirect
+a `/login` — **ma `templates/login.html` non renderizzava mai
+`get_flashed_messages()`**: è un documento a sé (non estende
+`base.html`, unico posto dove quel rendering esiste), quindi il
+messaggio spariva nel nulla e Roberto si ritrovava su un form vuoto,
+indistinguibile da "il login non fa niente" — con qualsiasi utenza,
+perché la causa non ha nulla a che fare con le credenziali.
+
+Corretto aggiungendo il blocco `{% with messages =
+get_flashed_messages(with_categories=true) %}` a `login.html`, con
+stili `.flash`/`.flash.warning`/`.error`/`.success`/`.info` ripetuti in
+chiaro (stesso pattern già usato nel file per le variabili CSS di
+base.html, che qui non sono disponibili) coerenti con le stesse
+categorie/colori di `base.html`.
+
+Verificato con 1 nuovo test in `tests/test_csrf.py`
+(`test_csrf_mismatch_su_login_mostra_un_messaggio_non_pagina_bianca`,
+un'app minimale che replica l'errorhandler di app.py dato che
+`create_app()` punta sempre a `database.db` reale — vedi regola non
+negoziabile n.1) — 274/274 nella suite completa. Verifica live: inviato
+un token CSRF volutamente falso da un browser reale contro una copia
+isolata del DB reale — prima del fix la pagina tornava vuota senza
+alcuna spiegazione, dopo mostra chiaramente il banner giallo "La
+sessione era scaduta o non più valida...".
+
+**Non ancora confermato con Roberto se questa fosse davvero la causa
+del suo problema** — il fix rende comunque visibile qualunque causa
+di questo tipo d'ora in poi; se il problema si ripresenta, il messaggio
+mostrato ora dirà cosa sta succedendo davvero invece di un form vuoto.
+
 ## Sessione 66 addendum 65 — Placeholder considerati nel Generatore Consigli di classe (Cowork)
 
 Seguito dell'addendum 63: dopo aver spiegato che il generatore ignora

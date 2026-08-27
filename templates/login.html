@@ -76,6 +76,20 @@
         .btn:hover { background: #a5241f; }
         .error { background: #fde8e8; color: #b91c1c; border: 1px solid #f3c2be;
                  border-radius: 8px; padding: 10px 14px; font-size: .85rem; margin-bottom: 16px; }
+        /* login.html non estende base.html (documento a sé, vedi nota
+           sopra), quindi non ha accesso al blocco che altrove renderizza
+           get_flashed_messages() (templates/base.html) — un flash()
+           messo in coda su un redirect verso /login (es. l'handler
+           CSRFError in app.py) restava perciò invisibile: l'utente
+           tornava su un form vuoto senza nessuna spiegazione, come se
+           il login non facesse nulla. Stessi colori per categoria di
+           base.html, ripetuti qui in chiaro come per il resto del file. */
+        .flash { border-radius: 8px; padding: 10px 14px; font-size: .85rem;
+                 margin-bottom: 16px; border-left: 4px solid; }
+        .flash.warning { background: #fff8e1; color: #92400e; border-color: #e0a800; }
+        .flash.danger, .flash.error { background: #fde8e8; color: #b91c1c; border-color: #b91c1c; }
+        .flash.success { background: #e6f4ea; color: #1e7e34; border-color: #1e7e34; }
+        .flash.info    { background: #e8f0fe; color: #1a4a7a; border-color: #1a4a7a; }
         .footer-link { text-align: center; margin-top: 20px; font-size: .75rem; color: #9ca3af; }
         .footer-link a { color: #6b7280; }
     </style>
@@ -219,6 +233,12 @@
             <p>{{ nome_istituto }}</p>
         </div>
     </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+    {% endwith %}
 
     {% if error %}
     <div class="error">{{ error }}</div>
