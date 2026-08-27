@@ -4,6 +4,51 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 72 — verifica conflitti tra orario reale e riunioni già programmate (Cowork)
+
+Roberto: le riunioni pomeridiane si programmano dalle Assegnazioni, ben
+prima che l'orario reale sia disponibile — quando l'orario arriva
+potrebbe smentire una riunione già fissata (un docente coinvolto ha in
+realtà lezione in quell'ora). Chiesto se sarebbe stato avvisato.
+Verificato nel codice: no, nessun controllo esisteva, né automatico né
+a richiesta.
+
+Complicazione trovata subito: `OrarioDocente` memorizza solo il numero
+d'ora (1-9), mai un orario reale — nessun'altra parte del codice
+converte "7ª ora" in "13:25-14:25". Chiesta a Roberto la corrispondenza
+per la sua scuola (solo le ore pomeridiane, le uniche che possono
+sovrapporsi a una riunione istituzionale): 6ª 12:25-13:25, 7ª
+13:25-14:25, 8ª 14:25-15:25 — salvata in
+`modules/verifica_orario_riunioni.py::MAPPA_ORE_POMERIDIANE` (da
+aggiornare se cambia il suono della campanella).
+
+`trova_conflitti_orario_riunioni()` confronta ogni `AttivitaIst` con
+orario (Consigli di classe, scrutini...) con l'`OrarioDocente` di ogni
+suo partecipante nello stesso giorno della settimana — un vero
+conflitto solo se la classe non è un buco/potenziamento
+(`tipo_ora` in lezione/compresenza) e gli intervalli si sovrappongono
+davvero, non solo se coincide il giorno.
+
+Roberto ha chiesto entrambe le modalità di avviso:
+1. **Automatico dopo l'import dell'orario**
+   (`routes/sincronizzazione.py::importa()`): un flash di avviso col
+   numero di conflitti trovati da oggi in poi (le riunioni passate sono
+   ormai storia, non segnalate).
+2. **Pagina a richiesta**, sempre consultabile — utile anche per una
+   riunione aggiunta/spostata DOPO che l'orario è già caricato:
+   `/generatore-cdc/verifica-orario` (nuova voce nel menu del
+   generatore), con filtro "solo da oggi in poi" / "tutto l'anno".
+
+Verificato con 6 nuovi test in `tests/test_verifica_orario_riunioni.py`
+(conflitto rilevato su sovrapposizione reale, nessun conflitto se gli
+orari non si toccano, nessun conflitto per ora buco/disposizione,
+nessun conflitto per un docente non convocato alla riunione, filtro
+`data_da` esclude le riunioni passate, la pagina mostra i conflitti
+trovati) — 290/290 nella suite completa. Verificato anche sui dati
+reali (sola lettura): **trovati 2 conflitti reali già esistenti** — DEL
+CURTO ha lezione 2A CAT (13:25-14:25) il 12/01/2027, in sovrapposizione
+con due scrutini (4A LSC e 5A LSC) programmati nello stesso orario.
+
 ## Sessione 66 addendum 71 — rotazione di apertura turno e orario per turno nel Generatore CdC (Cowork)
 
 Seguito dell'addendum 70 (ordine per indirizzo/anno). Roberto ha chiesto

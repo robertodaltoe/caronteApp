@@ -143,6 +143,22 @@ def importa():
     else:
         flash(msg, 'success')
 
+    # Le riunioni pomeridiane (Consigli di classe/scrutini) vengono
+    # programmate dalle Assegnazioni, ben prima che l'orario reale sia
+    # disponibile — appena l'orario arriva potrebbe smentirne qualcuna
+    # (un docente coinvolto ha in realtà lezione in quell'ora). Segnala
+    # subito qui, invece di scoprirlo solo per caso — richiesto da
+    # Roberto. Solo le riunioni da oggi in poi: quelle passate sono
+    # ormai storia, non serve segnalarle.
+    from datetime import date
+    from modules.verifica_orario_riunioni import trova_conflitti_orario_riunioni
+    conflitti = trova_conflitti_orario_riunioni(data_da=date.today())
+    if conflitti:
+        flash(f'⚠︎ {len(conflitti)} conflitt{"o" if len(conflitti) == 1 else "i"} tra '
+              f'l\'orario appena importato e riunioni già programmate — vedi '
+              f'"Genera piano delle attività" → "Verifica conflitti orario".',
+              'warning')
+
     return redirect(url_for('sync.index'))
 
 

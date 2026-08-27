@@ -405,3 +405,25 @@ def eventi_unici():
 
     return render_template('generatore_cdc/eventi_unici.html',
         anno=anno, anni_disponibili=anni_disponibili, tipi_unici=TIPI_UNICI)
+
+
+# ── VERIFICA CONFLITTI CON L'ORARIO REALE ────────────────────────────────────
+# Le riunioni pomeridiane vengono programmate dalle Assegnazioni, che si
+# stabilizzano molto prima dell'orario — quando l'orario reale arriva,
+# potrebbe smentire una riunione già fissata. Roberto: vuole poterlo
+# sapere sia subito dopo l'import dell'orario (vedi routes/
+# sincronizzazione.py::importa) sia a richiesta, in qualsiasi momento
+# (es. dopo aver aggiunto/spostato una riunione con l'orario già
+# caricato).
+
+@generatore_cdc_bp.route('/generatore-cdc/verifica-orario')
+def verifica_orario():
+    from datetime import date as _date
+    from modules.verifica_orario_riunioni import trova_conflitti_orario_riunioni
+
+    solo_future = request.args.get('solo_future', '1') != '0'
+    data_da = _date.today() if solo_future else None
+    conflitti = trova_conflitti_orario_riunioni(data_da=data_da)
+
+    return render_template('generatore_cdc/verifica_orario.html',
+        conflitti=conflitti, solo_future=solo_future)
