@@ -4,6 +4,53 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 71 — rotazione di apertura turno e orario per turno nel Generatore CdC (Cowork)
+
+Seguito dell'addendum 70 (ordine per indirizzo/anno). Roberto ha chiesto
+due estensioni operative:
+
+1. **Rotazione di chi apre il turno**: poter scegliere, turno per
+   turno, quale indirizzo apre la sequenza (con l'ordine canonico che
+   riparte da lì) e in che verso l'anno di corso (1ª→5ª o 5ª→1ª) — es.
+   scrutini del I periodo che partono dalla 1ª di un indirizzo, quelli
+   del II periodo che partono dalla 5ª dello stesso, o turni di CdC
+   successivi che cambiano indirizzo di apertura — per non far
+   ricadere sempre sugli stessi l'onere di essere i primi.
+2. **Orario/durata per singolo turno**: prima condivisi su tutta la
+   generazione (anche con più turni), ora impostabili singolarmente
+   per ciascuno — Roberto genera turni operativamente diversi (es.
+   scrutini pomeridiani brevi vs CdC di mattina più lunghi).
+
+Implementato in `modules/generatore_cdc.py::genera_bozza_cdc()`: nuovi
+parametri opzionali `indirizzo_iniziale` (ruota `_IND_SEQUENCE` per
+farla partire da lì, via `_ordine_indirizzi_ruotato()` — un valore non
+riconosciuto o None mantiene l'ordine canonico) e `ordine_anno`
+('crescente'/'decrescente', inverte solo il segno dell'anno di corso
+nella chiave di ordinamento). Nessun impatto sulle regole vincolanti
+(docenti condivisi, vincoli orario, DS) — solo sull'ordine di
+elaborazione già introdotto nell'addendum 70.
+
+`routes/generatore_cdc.py::index()` ora legge `ora_inizio_giorno_{t}`/
+`ora_fine_giorno_{t}`/`durata_min_{t}`/`indirizzo_iniziale_{t}`/
+`ordine_anno_{t}` per ogni turno (prima erano condivisi tra tutti i
+turni dello stesso invio), passandoli a `genera_bozza_cdc()` per
+ciascuno indipendentemente. `templates/generatore_cdc/index.html`
+aggiornato: rimosso il blocco "Orario giornaliero" condiviso, ogni
+riga turno ora ha i propri campi orario/durata/indirizzo di
+apertura/verso anno (JS `aggiungiTurno()`), con la durata di default
+che segue comunque il tipo di riunione selezionato (Consiglio di
+classe/Scrutinio/GLO) per i nuovi turni aggiunti.
+
+Verificato con 6 nuovi test in `tests/test_generatore_cdc.py`
+(rotazione indirizzo sposta quell'indirizzo in testa, valore non
+riconosciuto mantiene l'ordine canonico, ordine anno decrescente parte
+dalla 5ª, e un test end-to-end sul form con 2 turni che verifica
+orario/durata/rotazione letti correttamente e applicati in modo
+indipendente per ciascuno) — 284/284 nella suite completa. Verifica
+live su copia isolata del DB reale: turno con "Apre il turno: LLI",
+08:00, durata 30' — bozza risultante 1A LLI 08:00–08:30, 1A CAT
+08:30–09:00, esattamente come impostato.
+
 ## Sessione 66 addendum 70 — ordine del turno scrutini/CdC: indirizzo prima, poi anno di corso (Cowork)
 
 Roberto: generando un turno di scrutini per tutte le classi con la

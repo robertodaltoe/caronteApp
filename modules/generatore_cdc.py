@@ -42,7 +42,25 @@ _RE_CLASSE = re.compile(r'(\d+)([AB]?)\s+(.+)')
 
 # Ordine "canonico" degli indirizzi, stesso usato altrove nell'app
 # (es. routes/assegnazioni.py) per presentazioni/ordinamenti coerenti.
-_IND_ORDER = {'AFM': 0, 'RIM': 1, 'CAT': 2, 'LLI': 3, 'LSC': 4, 'LSP': 5, 'LSU': 6, 'SOS': 7}
+# Come lista (non solo dict) perché genera_bozza_cdc la ruota per far
+# partire un turno da un indirizzo diverso su richiesta di Roberto —
+# SOS resta sempre fuori dalla rotazione, ultimo per definizione.
+_IND_SEQUENCE = ['AFM', 'RIM', 'CAT', 'LLI', 'LSC', 'LSP', 'LSU']
+_IND_ORDER = {ind: i for i, ind in enumerate(_IND_SEQUENCE)}
+_IND_ORDER['SOS'] = len(_IND_SEQUENCE)
+
+
+def _ordine_indirizzi_ruotato(indirizzo_iniziale):
+    """{indirizzo: posizione} con la sequenza canonica ruotata per far
+    partire indirizzo_iniziale — se non è uno dei 7 indirizzi principali
+    (None, valore vuoto/sbagliato, o SOS), ritorna l'ordine invariato."""
+    if indirizzo_iniziale not in _IND_SEQUENCE:
+        return _IND_ORDER
+    i = _IND_SEQUENCE.index(indirizzo_iniziale)
+    ruotato = _IND_SEQUENCE[i:] + _IND_SEQUENCE[:i]
+    ordine = {ind: pos for pos, ind in enumerate(ruotato)}
+    ordine['SOS'] = len(_IND_SEQUENCE)
+    return ordine
 
 
 def _parse_classe(label):
@@ -236,15 +254,23 @@ def _slot_libero_per_classe(classe, giorno, ora_inizio_min, durata_min, vincoli_
 
 def genera_bozza_cdc(anno_scol, classi, data_inizio, data_fine,
                       ora_inizio_giorno, ora_fine_giorno, durata_min=60,
-                      classi_richiedono_ds=None):
+                      classi_richiedono_ds=None,
+                      indirizzo_iniziale=None, ordine_anno='crescente'):
     """
     Calcola una proposta di calendarizzazione per le classi indicate,
     senza scrivere nulla sul DB.
 
-    Ritorna una lista di dict, uno per classe:
-    {classe, data, ora_inizio, ora_fine, conflitto, motivo}
-    — se conflitto=True, data/ora_inizio/ora_fine sono None e va
-    piazzata a mano (nessuno slot valido trovato nel periodo).
+    indirizzo_iniziale/ordine_anno: rotazione di chi "apre" il turno —
+    richiesta esplicita di Roberto per distribuire nel tempo l'onere di
+    essere sempre i primi (es. scrutini del I periodo che partono dalla
+    1ª di un indirizzo, quelli del II periodo che partono invece dalla
+    5ª dello stesso, o turni di CdC successivi che cambiano l'indirizzo
+    di apertura). Riguardano solo l'ORDINE in cui le classi vengono
+    processate (vedi commento sopra "ordine di assegnazione" più sotto)
+    — nessun impatto sulle regole 1/2/3/5/6 (docenti condivisi, vincoli
+    orario, DS...), che restano identiche. indirizzo_iniziale=None (o
+    un valore non riconosciuto) mantiene l'ordine canonico consueto;
+    ordine_anno='decrescente' inverte solo il criterio anno di corso.
     """
     from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc
 
@@ -297,9 +323,11 @@ def genera_bozza_cdc(anno_scol, classi, data_inizio, data_fine,
              if vincoli_cdc.get(c) and vincoli_cdc[c].tipo == 'fissa'
              and vincoli_cdc[c].data_fissa and vincoli_cdc[c].ora_fissa]
     altre = [c for c in classi if c not in fisse]
+    ordine_indirizzi = _ordine_indirizzi_ruotato(indirizzo_iniziale)
+    segno_anno = -1 if ordine_anno == 'decrescente' else 1
     altre.sort(key=lambda c: (
-        _IND_ORDER.get(_parse_classe(c)[1], 99),
-        _parse_classe(c)[0] or 0,
+        ordine_indirizzi.get(_parse_classe(c)[1], 99),
+        segno_anno * (_parse_classe(c)[0] or 0),
         len(_slot_validi_per_classe(c)),
         vincoli_cdc[c].scadenza if vincoli_cdc.get(c) and vincoli_cdc[c].scadenza else date.max,
         c,

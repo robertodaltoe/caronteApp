@@ -185,6 +185,52 @@ def test_ordine_scrutini_con_ds_raggruppa_per_indirizzo_poi_anno(db_session, mon
     assert sequenza == ['1A CAT', '2A CAT', '1A LLI', '2A LLI']
 
 
+# ── Rotazione: chi apre il turno (indirizzo/verso anno di corso) ────────────
+# Roberto: vuole poter far ruotare, turno per turno, quale indirizzo
+# apre la sequenza e in che verso (1ª→5ª o 5ª→1ª), così l'onere di
+# essere sempre i primi non ricade sempre sugli stessi (es. scrutini
+# del I periodo che partono dalla 1ª di un indirizzo, quelli del II
+# periodo che partono dalla 5ª dello stesso).
+
+def test_indirizzo_iniziale_sposta_quellindirizzo_in_testa(db_session, monkeypatch):
+    _fissa_docenti(monkeypatch, {
+        '1A AFM': {1}, '1A CAT': {2}, '1A LLI': {3},
+    })
+    classi = ['1A AFM', '1A CAT', '1A LLI']
+    ris = gcdc.genera_bozza_cdc(
+        ANNO, classi, date(2026, 9, 14), date(2026, 9, 14),
+        '09:00', '13:00', durata_min=60,
+        classi_richiedono_ds=set(classi), indirizzo_iniziale='LLI')
+    assert all(not r['conflitto'] for r in ris)
+    sequenza = [r['classe'] for r in sorted(ris, key=lambda r: (r['data'], r['ora_inizio']))]
+    # LLI apre (richiesto), poi la sequenza canonica riparte da dove
+    # LLI si trova normalmente: AFM, CAT restano nel loro ordine tra
+    # loro, dopo LLI.
+    assert sequenza == ['1A LLI', '1A AFM', '1A CAT']
+
+
+def test_indirizzo_iniziale_non_riconosciuto_mantiene_lordine_canonico(db_session, monkeypatch):
+    _fissa_docenti(monkeypatch, {'1A AFM': {1}, '1A CAT': {2}})
+    classi = ['1A CAT', '1A AFM']
+    ris = gcdc.genera_bozza_cdc(
+        ANNO, classi, date(2026, 9, 14), date(2026, 9, 14),
+        '09:00', '13:00', durata_min=60,
+        classi_richiedono_ds=set(classi), indirizzo_iniziale='NON-ESISTE')
+    sequenza = [r['classe'] for r in sorted(ris, key=lambda r: (r['data'], r['ora_inizio']))]
+    assert sequenza == ['1A AFM', '1A CAT']  # ordine canonico invariato
+
+
+def test_ordine_anno_decrescente_parte_dalla_quinta(db_session, monkeypatch):
+    _fissa_docenti(monkeypatch, {'1A CAT': {1}, '3A CAT': {2}, '5A CAT': {3}})
+    classi = ['1A CAT', '3A CAT', '5A CAT']
+    ris = gcdc.genera_bozza_cdc(
+        ANNO, classi, date(2026, 9, 14), date(2026, 9, 14),
+        '09:00', '13:00', durata_min=60,
+        classi_richiedono_ds=set(classi), ordine_anno='decrescente')
+    sequenza = [r['classe'] for r in sorted(ris, key=lambda r: (r['data'], r['ora_inizio']))]
+    assert sequenza == ['5A CAT', '3A CAT', '1A CAT']
+
+
 def test_preferenza_stesso_indirizzo_a_parita_di_condizioni(db_session, monkeypatch):
     """Tre classi CAT senza docenti comuni e una LLI: il generatore deve
     preferire accorpare le CAT tra loro quando possibile, non sparpagliarle."""
@@ -402,6 +448,77 @@ def test_conferma_non_scrive_mai_un_placeholder_come_partecipante(app, db_sessio
     parts = AttivitaIstPartecipante.query.all()
     ids = {p.id_docente for p in parts}
     assert ids == {d1.id}
+
+
+# ── Orario/durata/rotazione impostabili per singolo turno ───────────────────
+# Roberto: turni operativamente diversi tra loro (es. scrutini
+# pomeridiani brevi vs CdC di mattina più lunghi) — orario, durata e
+# rotazione non devono essere condivisi tra i turni di uno stesso invio.
+
+def test_form_genera_legge_orario_e_rotazione_per_turno(app, db_session, monkeypatch):
+    import routes.generatore_cdc as mod
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(mod.generatore_cdc_bp)
+
+    cc = ClasseConcorso(codice='A026', nome='Matematica')
+    db.session.add(cc)
+    db.session.commit()
+    d1 = crea_docente('Rossi')
+    d2 = crea_docente('Bianchi')
+    for lbl, dset in (('1A CAT', {d1.id}), ('1A LLI', {d2.id})):
+        asgn = AssegnazioneDocente(anno_scol=ANNO, id_classe_concorso=cc.id,
+                                    id_docente=next(iter(dset)), tipo='titolare')
+        db.session.add(asgn)
+        db.session.flush()
+        m = gcdc._parse_classe(lbl)
+        db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo=m[1],
+                                           anno_corso=m[0], sezione='A', ore=4))
+    db.session.commit()
+
+    catturato = {}
+
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'genera', 'anno_scol': ANNO, 'tipo': 'consiglio_classe',
+            'classi': ['1A CAT', '1A LLI'],
+            # DS richiesto per entrambe: una sola classe per slot, così
+            # l'ordine di apertura (indirizzo_iniziale) si vede davvero
+            # nell'orario assegnato invece di finire nello stesso slot
+            # (senza DS, due classi senza docenti comuni vengono
+            # impacchettate insieme per regola 4/obiettivo primario).
+            'classi_ds': ['1A CAT', '1A LLI'],
+            'n_turni': '2',
+            'data_inizio_0': '2026-09-14', 'data_fine_0': '2026-09-14',
+            'ora_inizio_giorno_0': '08:00', 'ora_fine_giorno_0': '10:00',
+            'durata_min_0': '30', 'indirizzo_iniziale_0': 'LLI', 'ordine_anno_0': 'crescente',
+            'data_inizio_1': '2026-09-15', 'data_fine_1': '2026-09-15',
+            'ora_inizio_giorno_1': '15:00', 'ora_fine_giorno_1': '18:30',
+            'durata_min_1': '90', 'indirizzo_iniziale_1': '', 'ordine_anno_1': 'crescente',
+        })
+        assert r.status_code == 200
+
+    bozza = catturato['kwargs']['bozza']
+    turno1 = [r for r in bozza if r['turno'] == 1]
+    turno2 = [r for r in bozza if r['turno'] == 2]
+    assert all(not r['conflitto'] for r in turno1 + turno2)
+
+    # Turno 1: LLI apre (indirizzo_iniziale), orario 08:00, durata 30'.
+    t1_ordinato = sorted(turno1, key=lambda r: r['ora_inizio'])
+    assert t1_ordinato[0]['classe'] == '1A LLI'
+    assert t1_ordinato[0]['ora_inizio'] == '08:00'
+    assert t1_ordinato[0]['ora_fine'] == '08:30'
+
+    # Turno 2: nessuna rotazione (ordine canonico, CAT prima di LLI),
+    # orario 15:00, durata 90'.
+    t2_ordinato = sorted(turno2, key=lambda r: r['ora_inizio'])
+    assert t2_ordinato[0]['classe'] == '1A CAT'
+    assert t2_ordinato[0]['ora_inizio'] == '15:00'
+    assert t2_ordinato[0]['ora_fine'] == '16:30'
 
 
 # ── Redirect dopo conferma: resta sul generatore, non al Piano Annuale ───────

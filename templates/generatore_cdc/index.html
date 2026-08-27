@@ -77,27 +77,13 @@
             <label style="display:block; font-weight:600; margin-bottom:6px;">Turni da generare</label>
             <p style="color:var(--grigio); font-size:.78rem; margin-bottom:8px;">
                 Un periodo per turno (es. CdC di ottobre, dicembre, marzo, maggio) — stesse
-                classi/orario per ognuno, generati indipendentemente: ogni turno è un momento
-                diverso dell'anno, non gareggiano per lo stesso spazio.
+                classi/DS per ognuno, generati indipendentemente: ogni turno è un momento
+                diverso dell'anno, non gareggiano per lo stesso spazio. Orario, durata e chi
+                apre il turno sono invece impostabili singolarmente per ciascuno.
             </p>
             <div id="turni-container"></div>
             <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu); margin-top:6px;" onclick="aggiungiTurno()">+ Aggiungi turno</button>
             <input type="hidden" name="n_turni" id="inp-n-turni" value="0">
-        </div>
-
-        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
-            <div>
-                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Orario giornaliero dalle</label>
-                <input type="time" name="ora_inizio_giorno" value="14:30" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">alle</label>
-                <input type="time" name="ora_fine_giorno" value="18:30" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Durata (min)</label>
-                <input type="number" name="durata_min" id="inp-durata" value="60" min="15" step="15" required style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; width:90px;">
-            </div>
         </div>
 
         <div style="margin-bottom:18px;">
@@ -127,25 +113,51 @@
 function selTutte(sel) {
     document.querySelectorAll('.chk-classe').forEach(function(c) { c.checked = sel; });
 }
+// Stessi 7 indirizzi principali dell'elenco canonico usato nel
+// generatore (modules/generatore_cdc.py::_IND_SEQUENCE) — il sostegno
+// (SOS) non fa parte della rotazione, resta sempre per ultimo.
+var INDIRIZZI = ['AFM', 'RIM', 'CAT', 'LLI', 'LSC', 'LSP', 'LSU'];
+
+var durataDefaultCorrente = 60;
 function aggiornaDurata() {
     var sel = document.getElementById('sel-tipo');
     var opt = sel.options[sel.selectedIndex];
-    document.getElementById('inp-durata').value = opt.dataset.durata;
+    durataDefaultCorrente = opt.dataset.durata;
 }
 
 var contatoreTurni = 0;
 function aggiungiTurno() {
     var i = contatoreTurni++;
+    var optIndirizzi = '<option value="">— predefinito (AFM→RIM→...) —</option>';
+    INDIRIZZI.forEach(function(ind) {
+        optIndirizzi += '<option value="' + ind + '">' + ind + '</option>';
+    });
     var div = document.createElement('div');
     div.id = 'turno-' + i;
-    div.style.cssText = 'display:flex; gap:10px; align-items:flex-end; margin-bottom:8px; padding:8px; background:#f8f9fa; border-radius:8px;';
+    div.style.cssText = 'margin-bottom:10px; padding:10px; background:#f8f9fa; border-radius:8px;';
     div.innerHTML =
+        '<div style="display:flex; gap:10px; align-items:flex-end; margin-bottom:8px;">' +
         '<span style="font-size:.78rem; font-weight:700; color:var(--grigio); width:56px;">Turno ' + (i + 1) + '</span>' +
         '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Dal</label>' +
         '<input type="date" name="data_inizio_' + i + '" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;"></div>' +
         '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Al</label>' +
         '<input type="date" name="data_fine_' + i + '" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;"></div>' +
-        '<button type="button" class="btn btn-sm btn-danger" onclick="rimuoviTurno(' + i + ')">×</button>';
+        '<button type="button" class="btn btn-sm btn-danger" onclick="rimuoviTurno(' + i + ')">×</button>' +
+        '</div>' +
+        '<div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; padding-left:66px;">' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Orario dalle</label>' +
+        '<input type="time" name="ora_inizio_giorno_' + i + '" value="14:30" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;"></div>' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">alle</label>' +
+        '<input type="time" name="ora_fine_giorno_' + i + '" value="18:30" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;"></div>' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Durata (min)</label>' +
+        '<input type="number" name="durata_min_' + i + '" value="' + durataDefaultCorrente + '" min="15" step="15" required style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px; width:80px;"></div>' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Apre il turno</label>' +
+        '<select name="indirizzo_iniziale_' + i + '" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;">' + optIndirizzi + '</select></div>' +
+        '<div><label style="display:block; font-size:.72rem; color:var(--grigio);">Anno di corso</label>' +
+        '<select name="ordine_anno_' + i + '" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;">' +
+        '<option value="crescente">1ª → 5ª</option><option value="decrescente">5ª → 1ª</option>' +
+        '</select></div>' +
+        '</div>';
     document.getElementById('turni-container').appendChild(div);
     document.getElementById('inp-n-turni').value = contatoreTurni;
 }

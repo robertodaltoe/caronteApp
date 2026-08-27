@@ -161,9 +161,6 @@ def index():
         if tipo not in TIPI_GENERABILI:
             tipo = 'consiglio_classe'
         classi_sel = request.form.getlist('classi')
-        ora_inizio_giorno = request.form['ora_inizio_giorno']
-        ora_fine_giorno = request.form['ora_fine_giorno']
-        durata_min = int(request.form.get('durata_min', 60))
         classi_ds = set(request.form.getlist('classi_ds'))
 
         if not classi_sel:
@@ -171,10 +168,18 @@ def index():
             return redirect(url_for('generatore_cdc.index', anno=anno))
 
         # Più turni nello stesso invio (es. CdC di ottobre, dicembre,
-        # marzo, maggio): stesse classi/orario/DS per ognuno, generati
+        # marzo, maggio): stesse classi/DS per ognuno, generati
         # indipendentemente uno dall'altro — un turno non "sa" dello
         # slot usato da un altro, ha senso così perché sono periodi
         # diversi dell'anno, non in competizione per lo stesso spazio.
+        # Orario giornaliero, durata, indirizzo di apertura e verso
+        # dell'anno di corso sono invece per-turno (non condivisi):
+        # Roberto genera turni operativamente diversi tra loro (es.
+        # scrutini pomeridiani brevi vs CdC di mattina più lunghi), e
+        # vuole ruotare chi "apre" il turno tra un periodo e l'altro
+        # (es. I periodo dalla 1ª di un indirizzo, II periodo dalla 5ª
+        # dello stesso) per non far ricadere sempre sugli stessi lo
+        # stare per primi.
         n_turni = int(request.form.get('n_turni', 1))
         bozza = []
         turni_letti = 0
@@ -185,11 +190,17 @@ def index():
                 continue
             data_inizio = date.fromisoformat(ini_raw)
             data_fine = date.fromisoformat(fin_raw)
+            ora_inizio_giorno = request.form.get(f'ora_inizio_giorno_{t}', '14:30')
+            ora_fine_giorno = request.form.get(f'ora_fine_giorno_{t}', '18:30')
+            durata_min = int(request.form.get(f'durata_min_{t}', 60) or 60)
+            indirizzo_iniziale = request.form.get(f'indirizzo_iniziale_{t}', '').strip() or None
+            ordine_anno = request.form.get(f'ordine_anno_{t}', 'crescente')
             turni_letti += 1
             bozza_turno = genera_bozza_cdc(
                 anno, classi_sel, data_inizio, data_fine,
                 ora_inizio_giorno, ora_fine_giorno, durata_min=durata_min,
-                classi_richiedono_ds=classi_ds)
+                classi_richiedono_ds=classi_ds,
+                indirizzo_iniziale=indirizzo_iniziale, ordine_anno=ordine_anno)
             for r in bozza_turno:
                 r['turno'] = turni_letti
                 r['turno_periodo'] = f"{data_inizio.strftime('%d/%m')}–{data_fine.strftime('%d/%m/%Y')}"
@@ -200,7 +211,7 @@ def index():
             return redirect(url_for('generatore_cdc.index', anno=anno))
 
         return render_template('generatore_cdc/bozza.html',
-            anno=anno, bozza=bozza, durata_min=durata_min, n_turni=turni_letti,
+            anno=anno, bozza=bozza, n_turni=turni_letti,
             classi_ds=classi_ds, tipo=tipo, tipo_label=TIPI_GENERABILI[tipo]['label'])
 
     if request.method == 'POST' and request.form.get('azione') == 'conferma':
