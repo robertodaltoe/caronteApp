@@ -420,12 +420,83 @@ def eventi_unici():
         # addendum 69).
         return redirect(url_for('generatore_cdc.eventi_unici', anno=anno))
 
-    from models.docente import Docente
-    docenti_anno = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    sezioni_incarico, altri, selettori_rapidi = _docenti_per_riunione_extra(anno)
 
     return render_template('generatore_cdc/eventi_unici.html',
         anno=anno, anni_disponibili=anni_disponibili, tipi_unici=TIPI_UNICI,
-        docenti_anno=docenti_anno)
+        sezioni_incarico=sezioni_incarico, altri_docenti=altri,
+        selettori_rapidi=selettori_rapidi)
+
+
+def _docenti_per_riunione_extra(anno):
+    """
+    Docenti in servizio per l'anno indicato (stesso criterio di
+    routes/assegnazioni.py: esclude aspettativa/AP uscenti — non
+    fisicamente presenti), divisi in sezioni per categoria di incarico
+    (Incarichi strutturali, Funzioni strumentali, FIS...) più una
+    sezione "Altri" per chi non ne ha nessuno — richiesta di Roberto
+    per la checklist di "Altra riunione" (Commissione, Staff...), così
+    non deve scorrere una lista piatta di 90+ nomi ogni volta.
+
+    Ritorna anche selettori_rapidi: un pulsante per ogni categoria E per
+    ogni singolo tipo di incarico (es. "Funzioni strumentali" seleziona
+    tutti quelli con QUALUNQUE incarico in quella categoria,
+    "Commissione orario" solo chi ha esattamente quel tipo) — costruiti
+    dai dati (CategoriaIncarico/TipoIncarico), non da un elenco scritto
+    a mano: un nuovo incarico aggiunto in futuro compare qui da solo,
+    senza toccare questo codice.
+    """
+    from collections import defaultdict
+    from routes.impostazione_anno import _docenti_per_anno
+    from models.incarico import CategoriaIncarico, TipoIncarico, IncaricaDocente
+
+    tutti = _docenti_per_anno(anno)
+    docenti_anno = sorted(
+        (d for d in tutti if d.status_presenza not in ('aspettativa', 'ap_uscente')),
+        key=lambda d: d.cognome)
+    ids_in_servizio = {d.id for d in docenti_anno}
+
+    categorie = CategoriaIncarico.query.order_by(CategoriaIncarico.ordine).all()
+    tipi = TipoIncarico.query.filter_by(attivo=True).order_by(TipoIncarico.ordine).all()
+    incarichi = (IncaricaDocente.query.filter_by(anno_scol=anno)
+                 .filter(IncaricaDocente.id_docente.in_(ids_in_servizio)).all()
+                 if ids_in_servizio else [])
+
+    tipi_per_docente = defaultdict(set)   # id_docente -> {id_tipo_incarico,...}
+    docenti_per_tipo = defaultdict(set)   # id_tipo_incarico -> {id_docente,...}
+    for inc in incarichi:
+        tipi_per_docente[inc.id_docente].add(inc.id_tipo_incarico)
+        docenti_per_tipo[inc.id_tipo_incarico].add(inc.id_docente)
+
+    sezioni_incarico = []
+    assegnati_ids = set()
+    for cat in categorie:
+        tipi_cat = [t for t in tipi if t.categoria == cat.codice]
+        docenti_cat = []
+        for d in docenti_anno:
+            tipi_docente = [t for t in tipi_cat if t.id in tipi_per_docente.get(d.id, ())]
+            if tipi_docente:
+                docenti_cat.append((d, tipi_docente))
+                assegnati_ids.add(d.id)
+        if docenti_cat:
+            sezioni_incarico.append({'categoria': cat, 'docenti': docenti_cat})
+
+    altri = [d for d in docenti_anno if d.id not in assegnati_ids]
+
+    selettori_rapidi = []
+    for cat in categorie:
+        ids_cat = set()
+        for t in tipi:
+            if t.categoria == cat.codice:
+                ids_cat |= docenti_per_tipo.get(t.id, set())
+        if ids_cat:
+            selettori_rapidi.append({'label': cat.nome, 'docenti_ids': sorted(ids_cat)})
+    for t in tipi:
+        ids_tipo = docenti_per_tipo.get(t.id, set())
+        if ids_tipo:
+            selettori_rapidi.append({'label': t.nome, 'docenti_ids': sorted(ids_tipo)})
+
+    return sezioni_incarico, altri, selettori_rapidi
 
 
 # ── VERIFICA CONFLITTI CON L'ORARIO REALE ────────────────────────────────────

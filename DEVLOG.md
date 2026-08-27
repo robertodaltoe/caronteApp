@@ -4,6 +4,53 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 74 — checklist docenti per incarico in "Altra riunione" + fix "ROM"→"RIM" nei vincoli orario (Cowork)
+
+Due richieste di Roberto sulla checklist "Altra riunione" (addendum 73)
+e un bug sui dati reali.
+
+**1. Checklist docenti in servizio, divisa per incarico.** La lista
+mostrava tutti i docenti `attivo=True` piatti; ora usa
+`_docenti_per_anno(anno)` (stesso criterio di routes/assegnazioni.py:
+esclude aspettativa/AP uscenti) e li divide in sezioni per
+`CategoriaIncarico` (Incarichi strutturali, Funzioni strumentali,
+FIS...), con una sezione "Altri" per chi non ha nessun incarico
+nell'anno. Un docente con incarichi in più categorie compare in
+ognuna (corretto: può davvero far parte di più gruppi).
+
+**2. Selettori rapidi**, costruiti dai dati (`CategoriaIncarico`/
+`TipoIncarico`/`IncaricaDocente`) invece che scritti a mano — un
+pulsante per ogni CATEGORIA (es. "Funzioni strumentali" seleziona
+chiunque abbia un incarico in quella categoria) e uno per ogni singolo
+TIPO con almeno un titolare quest'anno (es. "Commissione orario"
+seleziona solo chi ha esattamente quel tipo) — un nuovo incarico
+aggiunto in futuro (nuova categoria o nuovo tipo) compare da solo,
+nessuna modifica al codice necessaria. Nuova funzione
+`routes/generatore_cdc.py::_docenti_per_riunione_extra()`.
+
+**3. Bug sui dati reali**: in "Vincoli orario fissi" il vincolo del
+martedì 13:30–15:30 (rientro pomeridiano) elencava gli indirizzi
+"CAT,AFM,ROM" — **"ROM" non esiste**, gli indirizzi reali sono
+AFM/RIM/CAT/LLI/LSC/LSP/LSU: il vincolo non ha mai davvero escluso
+nessuno slot per RIM, silenziosamente, da quando è stato creato.
+Backup cifrato (`data/backup/database_20260827_2346_pre_fix_vincolo_rim.db.enc`)
+prima della correzione, poi corretto a "RIM", verificato
+`PRAGMA integrity_check` (ok) e che nessun'altra riga contenesse lo
+stesso refuso. Verificato anche funzionalmente (sola lettura):
+`_slot_libero_per_classe('1A RIM', martedì, 13:30, ...)` ora ritorna
+`False` come deve, prima del fix avrebbe erroneamente ritornato `True`.
+
+Verificato con 4 nuovi test in `tests/test_eventi_unici.py` (un
+docente con incarico finisce nella sua sezione, selettore per
+categoria prende chiunque nella categoria, selettore per tipo prende
+solo quel tipo specifico, un docente non in servizio è escluso sia
+dalle sezioni sia da "Altri") — 298/298 nella suite completa. Verifica
+live su copia isolata del DB reale: 14 pulsanti rapidi generati dai
+dati reali (3 categorie + 11 tipi con almeno un titolare), 66 docenti
+in servizio 2026-2027 correttamente divisi in 3 sezioni + Altri,
+click su "Funzioni strumentali" seleziona esattamente i 5 titolari
+attesi.
+
 ## Sessione 66 addendum 73 — Eventi unici: redirect su se stesso + nuovo tipo "Altra riunione" (Cowork)
 
 Roberto: creando un evento unico o una riunione di dipartimento, il

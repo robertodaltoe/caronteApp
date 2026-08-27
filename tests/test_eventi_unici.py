@@ -75,3 +75,83 @@ def test_collegio_torna_alla_stessa_pagina_non_al_piano_annuale(app, db_session)
         })
         assert r.status_code == 302
         assert r.headers['Location'] == f'/generatore-cdc/eventi-unici?anno={ANNO}'
+
+
+# ── Checklist docenti per "Altra riunione": sezioni per incarico + ──────────
+# selettori rapidi. Roberto: l'elenco deve mostrare i docenti in
+# servizio per l'anno del piano, divisi in sezioni per categoria di
+# incarico (chi non ne ha nessuno in una sezione "Altri"), con un
+# pulsante rapido per categoria E per singolo tipo (es. "Funzioni
+# strumentali" seleziona tutti quelli con QUALUNQUE incarico in quella
+# categoria, "Commissione orario" solo chi ha esattamente quel tipo) —
+# costruiti dai dati, non da un elenco scritto a mano, così un nuovo
+# incarico aggiunto in futuro compare da solo.
+
+def _crea_incarico(db_session, cat_codice, cat_nome, tipo_nome, docente, anno=ANNO):
+    from models.incarico import CategoriaIncarico, TipoIncarico, IncaricaDocente
+    cat = CategoriaIncarico.query.filter_by(codice=cat_codice).first()
+    if not cat:
+        cat = CategoriaIncarico(codice=cat_codice, nome=cat_nome)
+        db.session.add(cat)
+        db.session.commit()
+    tipo = TipoIncarico.query.filter_by(nome=tipo_nome).first()
+    if not tipo:
+        tipo = TipoIncarico(nome=tipo_nome, categoria=cat_codice)
+        db.session.add(tipo)
+        db.session.commit()
+    db.session.add(IncaricaDocente(anno_scol=anno, id_tipo_incarico=tipo.id, id_docente=docente.id))
+    db.session.commit()
+    return cat, tipo
+
+
+def test_docente_con_incarico_finisce_nella_sua_sezione(app, db_session):
+    from routes.generatore_cdc import _docenti_per_riunione_extra
+    fs = crea_docente('Bianchi')
+    _crea_incarico(db_session, 'funzione_strumentale', 'Funzioni strumentali',
+                    'FS PTOF', fs)
+    senza = crea_docente('Verdi')
+
+    sezioni, altri, _ = _docenti_per_riunione_extra(ANNO)
+    assert len(sezioni) == 1
+    assert sezioni[0]['categoria'].nome == 'Funzioni strumentali'
+    ids_sezione = {d.id for d, _ in sezioni[0]['docenti']}
+    assert ids_sezione == {fs.id}
+    assert {d.id for d in altri} == {senza.id}
+
+
+def test_selettore_rapido_categoria_prende_qualunque_tipo_in_quella_categoria(app, db_session):
+    from routes.generatore_cdc import _docenti_per_riunione_extra
+    d1 = crea_docente('Bianchi')
+    d2 = crea_docente('Neri')
+    _crea_incarico(db_session, 'funzione_strumentale', 'Funzioni strumentali', 'FS PTOF', d1)
+    _crea_incarico(db_session, 'funzione_strumentale', 'Funzioni strumentali', 'FS Inclusione', d2)
+
+    _, _, selettori = _docenti_per_riunione_extra(ANNO)
+    sel_categoria = next(s for s in selettori if s['label'] == 'Funzioni strumentali')
+    assert set(sel_categoria['docenti_ids']) == {d1.id, d2.id}
+
+
+def test_selettore_rapido_tipo_prende_solo_quel_tipo_specifico(app, db_session):
+    from routes.generatore_cdc import _docenti_per_riunione_extra
+    d1 = crea_docente('Bianchi')
+    d2 = crea_docente('Neri')
+    _crea_incarico(db_session, 'fis', 'FIS', 'Commissione orario', d1)
+    _crea_incarico(db_session, 'fis', 'FIS', 'Commissione GLI', d2)
+
+    _, _, selettori = _docenti_per_riunione_extra(ANNO)
+    sel_tipo = next(s for s in selettori if s['label'] == 'Commissione orario')
+    assert set(sel_tipo['docenti_ids']) == {d1.id}
+
+
+def test_docente_non_in_servizio_escluso_da_sezioni_e_altri(app, db_session):
+    from routes.generatore_cdc import _docenti_per_riunione_extra
+    from models.docente import Docente
+    fuori = crea_docente('Uscito')
+    fuori.status_presenza = 'aspettativa'
+    db.session.commit()
+
+    sezioni, altri, selettori = _docenti_per_riunione_extra(ANNO)
+    tutti_ids = {d.id for d in altri}
+    for sez in sezioni:
+        tutti_ids |= {d.id for d, _ in sez['docenti']}
+    assert fuori.id not in tutti_ids

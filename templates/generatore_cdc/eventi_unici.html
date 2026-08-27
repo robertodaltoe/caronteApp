@@ -61,22 +61,56 @@
         <div id="blocco-docenti-manuali" style="margin-bottom:16px; display:none;">
             <label style="display:block; font-weight:600; margin-bottom:6px;">Partecipanti</label>
             <p style="color:var(--grigio); font-size:.78rem; margin-bottom:8px;">
-                Gruppo ad hoc, nessuna regola automatica — scegli a mano chi ne fa parte.
+                Gruppo ad hoc, nessuna regola automatica — scegli a mano chi ne fa parte,
+                o usa un selettore rapido qui sotto.
             </p>
-            {% if docenti_anno %}
-            <div style="display:flex; gap:8px; margin-bottom:8px;">
+
+            {% if selettori_rapidi %}
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                {% for s in selettori_rapidi %}
+                <button type="button" class="btn btn-sm" style="background:#eef1f5;color:var(--blu);"
+                        onclick="selDocentiIds([{{ s.docenti_ids|join(',') }}])">{{ s.label }}</button>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selDocenti(true)">Tutti</button>
                 <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selDocenti(false)">Nessuno</button>
             </div>
-            <div style="max-height:220px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:2px;">
-                {% for d in docenti_anno %}
-                <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
-                    <input type="checkbox" name="docenti_manuali" value="{{ d.id }}" class="chk-docente-manuale"> {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-                </label>
-                {% endfor %}
-            </div>
+
+            {% if not sezioni_incarico and not altri_docenti %}
+            <p style="color:var(--rosso); font-size:.85rem;">Nessun docente in servizio trovato per l'a.s. {{ anno }}.</p>
             {% else %}
-            <p style="color:var(--rosso); font-size:.85rem;">Nessun docente attivo trovato.</p>
+            <div style="max-height:320px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px;">
+                {% for sez in sezioni_incarico %}
+                <div style="font-size:.75rem; font-weight:700; color:var(--blu); text-transform:uppercase;
+                            letter-spacing:.03em; margin:8px 0 4px; padding-top:6px;
+                            border-top:1px solid #f0f0f0;">{{ sez.categoria.nome }}</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:2px;">
+                    {% for d, tipi_doc in sez.docenti %}
+                    <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;"
+                           title="{{ tipi_doc|map(attribute='nome')|join(', ') }}">
+                        <input type="checkbox" name="docenti_manuali" value="{{ d.id }}" class="chk-docente-manuale">
+                        {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                {% if altri_docenti %}
+                <div style="font-size:.75rem; font-weight:700; color:var(--grigio); text-transform:uppercase;
+                            letter-spacing:.03em; margin:8px 0 4px; padding-top:6px;
+                            border-top:1px solid #f0f0f0;">Altri</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:2px;">
+                    {% for d in altri_docenti %}
+                    <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
+                        <input type="checkbox" name="docenti_manuali" value="{{ d.id }}" class="chk-docente-manuale">
+                        {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
             {% endif %}
         </div>
 
@@ -113,6 +147,12 @@ function aggiorna() {
 }
 function selDocenti(sel) {
     document.querySelectorAll('.chk-docente-manuale').forEach(function(c) { c.checked = sel; });
+}
+function selDocentiIds(ids) {
+    var set = new Set(ids.map(String));
+    document.querySelectorAll('.chk-docente-manuale').forEach(function(c) {
+        c.checked = set.has(c.value);
+    });
 }
 aggiorna();
 </script>
