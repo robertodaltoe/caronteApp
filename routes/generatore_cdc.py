@@ -345,16 +345,24 @@ def dipartimenti():
         tipi_dipartimento=TIPI_DIPARTIMENTO)
 
 
-# ── EVENTI UNICI (Collegio, Incontro scuola-famiglia) ────────────────────────
+# ── EVENTI UNICI (Collegio, Incontro scuola-famiglia, altre riunioni) ────────
 # Un solo evento per l'intero istituto, non "tante unità che si
 # dividono gli slot" come Consigli/dipartimenti — niente bozza con più
 # righe, si crea direttamente. L'unica scelta non banale è per
 # l'Incontro scuola-famiglia: tutti i docenti o solo i coordinatori di
 # classe (segnalato da Roberto — è sempre una sola riunione, cambia
 # solo chi vi partecipa).
+#
+# 'riunione_extra' (Roberto): riunioni come Commissione, Staff o altro
+# — il titolo esatto lo specifica lui nel campo Titolo — che non
+# rientrano in nessun bucket normativo (tipo_ora 'fuori conteggio',
+# come gli scrutini — vedi models/attivita_ist.py::TIPI_ATTIVITA,
+# BUCKET_NO). A differenza degli altri due tipi qui, i partecipanti non
+# sono "tutti" né "coordinatori": è un gruppo ad hoc, scelto a mano.
 TIPI_UNICI = {
     'collegio':          {'label': 'Collegio docenti',         'durata_default': 120},
     'incontro_famiglie': {'label': 'Incontro scuola-famiglia', 'durata_default': 120},
+    'riunione_extra':    {'label': 'Altra riunione (Commissione, Staff...)', 'durata_default': 60},
 }
 
 
@@ -385,7 +393,12 @@ def eventi_unici():
         ora_fine = f'{fine_min // 60:02d}:{fine_min % 60:02d}'
 
         esclusi = _non_in_servizio_per_data(data_ev)
-        if tipo == 'incontro_famiglie' and partecipanti_sel == 'coordinatori':
+        if tipo == 'riunione_extra':
+            # Gruppo ad hoc (Commissione, Staff...): niente "tutti" o
+            # "coordinatori", la lista è scelta a mano — vedi checklist
+            # docenti nel template, visibile solo per questo tipo.
+            id_docenti = {int(i) for i in request.form.getlist('docenti_manuali')} - esclusi
+        elif tipo == 'incontro_famiglie' and partecipanti_sel == 'coordinatori':
             id_docenti = coordinatori_di_classe(anno) - esclusi
         else:
             id_docenti = {d.id for d in Docente.query.filter_by(attivo=True).all()} - esclusi
@@ -401,10 +414,18 @@ def eventi_unici():
                 id_attivita=ev.id, id_docente=id_doc, preset=True))
         db.session.commit()
         flash(f'Evento "{titolo}" creato ({len(id_docenti)} partecipanti).', 'success')
-        return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
+        # Torna qui, non al Piano Annuale: Roberto crea più eventi
+        # unici/di dipartimento di seguito (stesso motivo già applicato
+        # al generatore CdC/scrutini e a quello dipartimenti — vedi
+        # addendum 69).
+        return redirect(url_for('generatore_cdc.eventi_unici', anno=anno))
+
+    from models.docente import Docente
+    docenti_anno = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
 
     return render_template('generatore_cdc/eventi_unici.html',
-        anno=anno, anni_disponibili=anni_disponibili, tipi_unici=TIPI_UNICI)
+        anno=anno, anni_disponibili=anni_disponibili, tipi_unici=TIPI_UNICI,
+        docenti_anno=docenti_anno)
 
 
 # ── VERIFICA CONFLITTI CON L'ORARIO REALE ────────────────────────────────────

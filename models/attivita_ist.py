@@ -10,7 +10,7 @@ from datetime import datetime
 # ── Bucket CCNL ──────────────────────────────────────────────────────────────
 BUCKET_A  = 'A'   # max 40h: Collegio, info famiglie, formazione residua
 BUCKET_B  = 'B'   # max 40h: CdC, dipartimenti, GLO
-BUCKET_NO = None  # fuori conteggio: scrutini, esami
+BUCKET_NO = None  # fuori conteggio: scrutini, esami, riunioni ad hoc (Commissione/Staff...)
 
 TIPI_ATTIVITA = {
     'collegio':           {'label': 'Collegio docenti',          'bucket': BUCKET_A,  'emoji': '▨︎'},
@@ -23,6 +23,11 @@ TIPI_ATTIVITA = {
     'formazione':         {'label': 'Formazione',                'bucket': BUCKET_A,  'emoji': '△︎'},
     'riunione_referenti': {'label': 'Riunione referenti dip.',   'bucket': BUCKET_B,  'emoji': '◆︎'},
     'altro':              {'label': 'Altro',                     'bucket': BUCKET_A,  'emoji': '◆︎'},
+    # Commissione, Staff o altro gruppo ad hoc — titolo libero scelto
+    # da Roberto, mai un bucket normativo (art.44 lett.a/b): non è un
+    # obbligo contrattuale che rientra nelle 40+40h, stesso principio
+    # di "fuori conteggio" già usato per gli scrutini.
+    'riunione_extra':     {'label': 'Altra riunione',            'bucket': BUCKET_NO, 'emoji': '◇︎'},
 }
 
 LIMITE_BUCKET = 40  # ore annue per bucket A e B

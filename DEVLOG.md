@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 73 — Eventi unici: redirect su se stesso + nuovo tipo "Altra riunione" (Cowork)
+
+Roberto: creando un evento unico o una riunione di dipartimento, il
+redirect finiva sempre su Attività istituzionali — vuole restare dove
+stava lavorando per inserirne altri di seguito.
+
+Verificato: `dipartimenti()` era già stato corretto nell'addendum 69
+(torna a `generatore_cdc.dipartimenti`), ma `eventi_unici()` era
+rimasto com'era (deliberatamente, all'epoca: "un solo evento, non un
+turno in batch") — Roberto ha chiarito che vale anche lì. Corretto:
+`eventi_unici()` torna ora a `generatore_cdc.eventi_unici` invece che
+ad `attivita_ist.piano_annuale`.
+
+Aggiunta anche la seconda richiesta: un nuovo tipo **"Altra riunione"**
+(`riunione_extra`) per Commissione, Staff o qualunque altro gruppo —
+titolo libero scelto da Roberto nel campo Titolo — che non rientra in
+nessun bucket normativo (`bucket=None`/fuori conteggio, stesso
+principio già usato per gli scrutini — vedi
+`models/attivita_ist.py::TIPI_ATTIVITA`/`BUCKET_NO`). A differenza di
+Collegio/Incontro famiglie, i partecipanti non sono "tutti i docenti"
+né "coordinatori": è un gruppo ad hoc, ora scelto a mano da una
+checklist docenti dedicata (visibile solo per questo tipo) in
+`templates/generatore_cdc/eventi_unici.html`, con gli esclusi da
+`_non_in_servizio_per_data` filtrati comunque anche qui.
+
+Verificato con 4 nuovi test in `tests/test_eventi_unici.py`
+("riunione_extra" è fuori conteggio, usa solo i docenti selezionati a
+mano, redirect sulla stessa pagina sia per il nuovo tipo sia per
+Collegio) — 294/294 nella suite completa. Verifica live su copia
+isolata del DB reale: la checklist compare solo per "Altra riunione"
+(97 docenti reali caricati), l'evento creato ha esattamente i 2
+partecipanti selezionati, e la pagina dopo la conferma resta su Eventi
+unici.
+
 ## Sessione 66 addendum 72 — verifica conflitti tra orario reale e riunioni già programmate (Cowork)
 
 Roberto: le riunioni pomeridiane si programmano dalle Assegnazioni, ben

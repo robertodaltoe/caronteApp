@@ -23,7 +23,8 @@
     </div>
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:20px;">
-    Collegio ed Incontro scuola-famiglia coinvolgono tutto l'istituto insieme — un solo
+    Collegio ed Incontro scuola-famiglia coinvolgono tutto l'istituto insieme, "Altra
+    riunione" un gruppo scelto a mano (Commissione, Staff...) — in tutti i casi un solo
     evento, non tante unità da mettere in parallelo: si crea direttamente, senza bozza
     intermedia (puoi comunque modificarlo dopo come ogni altro evento).
 </p>
@@ -57,6 +58,28 @@
             </label>
         </div>
 
+        <div id="blocco-docenti-manuali" style="margin-bottom:16px; display:none;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Partecipanti</label>
+            <p style="color:var(--grigio); font-size:.78rem; margin-bottom:8px;">
+                Gruppo ad hoc, nessuna regola automatica — scegli a mano chi ne fa parte.
+            </p>
+            {% if docenti_anno %}
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selDocenti(true)">Tutti</button>
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selDocenti(false)">Nessuno</button>
+            </div>
+            <div style="max-height:220px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:2px;">
+                {% for d in docenti_anno %}
+                <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
+                    <input type="checkbox" name="docenti_manuali" value="{{ d.id }}" class="chk-docente-manuale"> {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--rosso); font-size:.85rem;">Nessun docente attivo trovato.</p>
+            {% endif %}
+        </div>
+
         <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
             <div>
                 <label style="display:block; font-size:.8rem; font-weight:600; margin-bottom:4px;">Data</label>
@@ -85,6 +108,11 @@ function aggiorna() {
     document.getElementById('inp-durata').value = opt.dataset.durata;
     document.getElementById('blocco-partecipanti').style.display =
         (sel.value === 'incontro_famiglie') ? '' : 'none';
+    document.getElementById('blocco-docenti-manuali').style.display =
+        (sel.value === 'riunione_extra') ? '' : 'none';
+}
+function selDocenti(sel) {
+    document.querySelectorAll('.chk-docente-manuale').forEach(function(c) { c.checked = sel; });
 }
 aggiorna();
 </script>
