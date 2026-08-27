@@ -164,6 +164,27 @@ def test_ds_non_conflitto_se_solo_una_classe_lo_richiede(db_session, monkeypatch
     assert (a['data'], a['ora_inizio']) == (b['data'], b['ora_inizio'])  # stesso slot, ok
 
 
+def test_ordine_scrutini_con_ds_raggruppa_per_indirizzo_poi_anno(db_session, monkeypatch):
+    """Roberto: generando un turno di scrutini con la presenza del DS
+    richiesta per tutte le classi (quindi una sola classe per slot,
+    perché il DS non può essere in due posti insieme), vuole vedere in
+    sequenza cronologica tutte le classi dello stesso indirizzo, in
+    ordine di anno di corso — non tutte le prime poi tutte le seconde
+    (comportamento precedente: il fallback alfabetico sull'etichetta
+    raggruppava di fatto per anno, essendo il primo carattere)."""
+    _fissa_docenti(monkeypatch, {
+        '2A CAT': {1}, '1A LLI': {2}, '1A CAT': {3}, '2A LLI': {4},
+    })
+    classi = ['2A CAT', '1A LLI', '1A CAT', '2A LLI']
+    ris = gcdc.genera_bozza_cdc(
+        ANNO, classi, date(2026, 9, 14), date(2026, 9, 14),
+        '09:00', '13:00', durata_min=60,  # 4 slot in un solo giorno
+        classi_richiedono_ds=set(classi))
+    assert all(not r['conflitto'] for r in ris)
+    sequenza = [r['classe'] for r in sorted(ris, key=lambda r: (r['data'], r['ora_inizio']))]
+    assert sequenza == ['1A CAT', '2A CAT', '1A LLI', '2A LLI']
+
+
 def test_preferenza_stesso_indirizzo_a_parita_di_condizioni(db_session, monkeypatch):
     """Tre classi CAT senza docenti comuni e una LLI: il generatore deve
     preferire accorpare le CAT tra loro quando possibile, non sparpagliarle."""

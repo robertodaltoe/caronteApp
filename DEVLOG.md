@@ -4,6 +4,43 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 70 — ordine del turno scrutini/CdC: indirizzo prima, poi anno di corso (Cowork)
+
+Roberto: generando un turno di scrutini per tutte le classi con la
+presenza del DS sempre richiesta, il generatore sembrava mettere in
+sequenza tutte le prime, poi tutte le seconde ecc. — vuole invece,
+prioritariamente, tutte le classi dello stesso indirizzo nella stessa
+giornata, in ordine di anno di corso.
+
+Causa: quando il DS è richiesto per ogni classe, ogni slot può
+contenerne una sola (regola 6, nessuna doveva mai condividerlo) — in
+quel caso l'ORDINE con cui `genera_bozza_cdc` (modules/generatore_cdc.py)
+*processa* le classi diventa anche l'ordine cronologico finale
+(`_punteggio` sceglie sempre lo slot libero più vicino). Quell'ordine
+era: classe più vincolata prima (meno slot validi per via dei vincoli
+orario), poi scadenza, poi **alfabetico sull'etichetta** come ultimo
+spareggio — e siccome l'etichetta è "{anno}{sezione} {indirizzo}" (es.
+"1A AFM"), il primo carattere è l'ANNO: lo spareggio alfabetico
+raggruppava di fatto per anno di corso su tutti gli indirizzi insieme,
+il contrario di quanto voluto.
+
+Corretto anteponendo alla stessa chiave di ordinamento indirizzo
+(ordine canonico AFM/RIM/CAT/LLI/LSC/LSP/LSU, stesso già usato altrove
+nell'app) e anno di corso, prima del numero di slot validi/scadenza/
+alfabetico (questi ultimi restano comunque un sotto-criterio, per non
+perdere la protezione contro i conflitti tardivi su classi molto
+vincolate). Aggiornata anche la regola 4 nel docstring del modulo per
+riflettere che ora vale sia per l'impacchettamento nello stesso slot
+sia per l'ordine di elaborazione.
+
+Verificato con 1 nuovo test in `tests/test_generatore_cdc.py`
+(4 classi su 2 indirizzi, tutte con DS richiesto, sequenza attesa
+1A CAT → 2A CAT → 1A LLI → 2A LLI) — 280/280 nella suite completa.
+Verifica anche su dati reali (sola lettura, nessuna scrittura): turno
+completo di scrutini per le 38 classi 2026-2027 con DS richiesto
+ovunque — sequenza risultante AFM (1A,1B,2A) → RIM (3A,3B,4A,5A) → CAT
+(1A...5A) → LLI → ..., esattamente l'ordine richiesto.
+
 ## Sessione 66 addendum 69 — dopo la conferma, il generatore torna su se stesso invece che al Piano Annuale (Cowork)
 
 Roberto: generando un turno di scrutini o riunioni dal Generatore CdC,

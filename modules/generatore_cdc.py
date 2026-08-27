@@ -22,7 +22,13 @@ Regole implementate (decise con Roberto durante l'analisi):
 3. Vincoli orario fissi (VincoloOrarioClasse, es. rientro pomeridiano)
    escludono a priori certi slot per un indirizzo/anno di corso.
 4. A parità di condizioni, preferisce accorpare classi dello stesso
-   indirizzo nello stesso slot — mai a scapito della regola 1.
+   indirizzo nello stesso slot — mai a scapito della regola 1. Anche
+   l'ORDINE con cui le classi vengono processate (che diventa l'ordine
+   cronologico finale quando, come per gli scrutini con DS sempre
+   richiesto, ogni slot può contenere una sola classe) raggruppa prima
+   per indirizzo e poi per anno di corso — priorità esplicita di
+   Roberto: stessa giornata, stesso indirizzo, anni in ordine
+   crescente.
 5. Vincoli manuali (VincoloGeneratoreCdc) impostabili PRIMA di
    generare: scadenza ("entro il 20") o slot fisso (data+ora esatte).
 6. Presenza del Dirigente Scolastico (classi_richiedono_ds) come
@@ -33,6 +39,10 @@ import re
 from datetime import date, timedelta
 
 _RE_CLASSE = re.compile(r'(\d+)([AB]?)\s+(.+)')
+
+# Ordine "canonico" degli indirizzi, stesso usato altrove nell'app
+# (es. routes/assegnazioni.py) per presentazioni/ordinamenti coerenti.
+_IND_ORDER = {'AFM': 0, 'RIM': 1, 'CAT': 2, 'LLI': 3, 'LSC': 4, 'LSP': 5, 'LSU': 6, 'SOS': 7}
 
 
 def _parse_classe(label):
@@ -266,14 +276,30 @@ def genera_bozza_cdc(anno_scol, classi, data_inizio, data_fine,
         return [s for s in base if _slot_valido(classe, s)]
 
     # Ordine di assegnazione: prima gli slot fissi (già decisi, occupano
-    # subito), poi le classi più vincolate (meno slot validi possibili)
-    # — euristica CSP standard, riduce il rischio di conflitti tardivi —
-    # a parità la scadenza più vicina, poi alfabetico per determinismo.
+    # subito), poi le altre classi raggruppate per indirizzo (in ordine
+    # canonico) e, dentro lo stesso indirizzo, per anno di corso —
+    # priorità esplicita di Roberto: quando (tipicamente per gli
+    # scrutini, con la presenza del DS richiesta per ogni classe — vedi
+    # regola 6) ogni slot può contenere una sola classe, l'ORDINE con
+    # cui le classi vengono processate È l'ordine finale in cui
+    # occupano gli slot in sequenza cronologica (_punteggio più sotto,
+    # a parità di livello di riempimento, sceglie sempre lo slot libero
+    # più vicino) — prima si processava per "classe più vincolata"
+    # (meno slot validi) con fallback alfabetico sull'etichetta, che
+    # nella pratica raggruppava per ANNO di corso (il primo carattere
+    # dell'etichetta, es. "1A AFM" prima di "2A AFM") invece che per
+    # indirizzo, il contrario di quanto Roberto vuole in giornata. Il
+    # numero di slot validi resta comunque un criterio di sotto-priorità
+    # (classe più vincolata prima, così un vincolo orario stretto non
+    # finisce senza slot residui), a parità la scadenza più vicina, poi
+    # alfabetico per determinismo finale.
     fisse = [c for c in classi
              if vincoli_cdc.get(c) and vincoli_cdc[c].tipo == 'fissa'
              and vincoli_cdc[c].data_fissa and vincoli_cdc[c].ora_fissa]
     altre = [c for c in classi if c not in fisse]
     altre.sort(key=lambda c: (
+        _IND_ORDER.get(_parse_classe(c)[1], 99),
+        _parse_classe(c)[0] or 0,
         len(_slot_validi_per_classe(c)),
         vincoli_cdc[c].scadenza if vincoli_cdc.get(c) and vincoli_cdc[c].scadenza else date.max,
         c,
