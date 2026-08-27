@@ -4,6 +4,43 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 67 — login sempre fallito da Chrome: pagina /login servita dalla cache HTTP (Cowork)
+
+Seguito diretto dell'addendum 66 (messaggio CSRF ora visibile). Roberto
+ha confermato di vedere il banner "La sessione era scaduta...", ma il
+login falliva ANCHE riprovando subito dopo (stessa pagina appena
+ricaricata) e ANCHE in incognito (quindi non un'estensione) — sempre,
+con qualsiasi utenza. Cookie "session" presente e verificato.
+
+Causa: nessuna risposta dell'app aveva mai un header `Cache-Control`
+esplicito. `/login` contiene un token CSRF legato alla sessione
+corrente — senza `Cache-Control: no-store`, Chrome può servire quella
+pagina dalla propria cache HTTP locale invece di richiederla di nuovo
+al server dopo un redirect: il "reload" che sembra mostrare una pagina
+fresca in realtà ripresenta lo STESSO HTML con lo STESSO token già
+scaduto, che quindi fallisce di nuovo — un ciclo che si ripete
+all'infinito, indipendentemente da estensioni o profilo, coerente con
+entrambe le risposte negative di Roberto.
+
+Corretto con un `@app.after_request` in app.py (accanto
+all'errorhandler di CSRFError, addendum 66) che imposta
+`Cache-Control: no-store, no-cache, must-revalidate` + `Pragma:
+no-cache` sulla risposta di `/login` — mai cacheable, sempre
+rigenerata dal server con un token coerente con la sessione corrente.
+
+Verificato con 1 nuovo test in `tests/test_csrf.py`
+(`test_login_non_e_mai_servito_dalla_cache`, stesso pattern delle app
+minimali già in uso in quel file — `create_app()` punta sempre a
+`database.db` reale, vedi regola non negoziabile n.1) — 275/275 nella
+suite completa. Verifica live: header confermato sulla risposta reale
+di `/login` da una copia isolata del DB reale (`curl -sD -`).
+
+**Ancora da confermare con Roberto** se questo risolve davvero il
+problema — il fix affronta la causa più plausibile trovata (nessuna
+delle due precedenti, cookie ed estensioni, spiegava un fallimento
+sistematico anche al reload), ma senza riprodurre l'ambiente esatto di
+Chrome di Roberto resta un'ipotesi solida, non una certezza assoluta.
+
 ## Sessione 66 addendum 66 — login "che non fa niente" da Chrome: messaggi flash invisibili su login.html (Cowork)
 
 Roberto: problemi di login con qualsiasi utenza da Google Chrome,

@@ -104,6 +104,28 @@ def create_app(avvio_con_reloader=True):
             return redirect(url_for('auth.login'))
         return redirect(request.referrer or url_for('dashboard.index'))
 
+    @app.after_request
+    def _no_cache_login(response):
+        """
+        Roberto: login che falliva SEMPRE da Chrome, con qualsiasi
+        utenza, anche riprovando subito dopo il messaggio di sessione
+        scaduta (addendum 66) e anche in incognito (quindi non
+        un'estensione) — nessuna delle due risposte del redirect-loop
+        aveva un header Cache-Control esplicito. Senza, Chrome può
+        servire /login dalla cache HTTP locale invece di richiederla di
+        nuovo al server: il "reload" che sembra mostrare una pagina
+        fresca in realtà ripresenta lo STESSO HTML con lo STESSO
+        csrf_token già scaduto, che quindi fallisce di nuovo — un ciclo
+        che si ripete all'infinito. Nessun altro browser testato da
+        Roberto (o con cache meno aggressiva su un redirect) mostrava
+        il problema. La pagina di login non deve mai essere servita
+        dalla cache: contiene un token legato alla sessione corrente.
+        """
+        if request.endpoint == 'auth.login':
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
     try:
         locale.setlocale(locale.LC_TIME, 'it_IT.UTF-8')
     except locale.Error:

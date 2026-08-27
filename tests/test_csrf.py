@@ -102,6 +102,13 @@ def app_csrf_con_handler(app_csrf):
             return redirect(url_for('auth.login'))
         return redirect(request.referrer or url_for('dashboard.index'))
 
+    @app_csrf.after_request
+    def _no_cache_login(response):
+        if request.endpoint == 'auth.login':
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
     return app_csrf
 
 
@@ -127,3 +134,21 @@ def test_csrf_mismatch_su_login_mostra_un_messaggio_non_pagina_bianca(app_csrf_c
         assert r.status_code == 200
         html = r.get_data(as_text=True)
         assert 'sessione era scaduta o non più valida' in html
+
+
+def test_login_non_e_mai_servito_dalla_cache(app_csrf_con_handler):
+    """
+    Roberto: da Chrome il login falliva SEMPRE (anche riprovando subito
+    dopo il messaggio di sessione scaduta, anche in incognito quindi non
+    un'estensione) — nessuna risposta di /login aveva un header
+    Cache-Control esplicito. Senza, Chrome può servire /login dalla
+    cache HTTP invece di richiederla di nuovo al server: il "reload"
+    dopo un redirect mostra in realtà lo STESSO HTML con lo STESSO
+    csrf_token già scaduto, che fallisce di nuovo — un ciclo infinito.
+    La pagina di login (contiene un token legato alla sessione corrente)
+    non deve mai essere cacheable.
+    """
+    with app_csrf_con_handler.test_client() as c:
+        r = c.get('/login')
+        cache_control = r.headers.get('Cache-Control', '')
+        assert 'no-store' in cache_control
