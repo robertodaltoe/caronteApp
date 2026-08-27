@@ -257,6 +257,35 @@ def create_app(avvio_con_reloader=True):
         if endpoint in ROUTE_PUBBLICHE or endpoint.startswith('static'):
             return None
 
+        if request.endpoint is None:
+            # Nessuna rotta corrisponde a questo URL (es. /favicon.ico,
+            # /robots.txt, sonde automatiche del browser): un 404 genuino,
+            # non una pagina che richiede il login — lascia che Flask
+            # risponda normalmente, senza toccare la sessione.
+            #
+            # Roberto: login che falliva SEMPRE da Chrome, con qualsiasi
+            # utenza, verificato non essere cookie/estensioni/cache/
+            # Keychain — causa reale trovata nella tab Network: Chrome
+            # richiede automaticamente /favicon.ico quando una pagina
+            # non ne dichiara uno esplicito (templates/login.html non lo
+            # fa, è un documento a sé — vedi addendum 66), e quella
+            # richiesta, prima di questo fix, arrivava fin qui: nessuna
+            # rotta corrispondente, endpoint='', utente non loggato →
+            # session.clear() + redirect a /login. La richiesta del
+            # favicon, generata dalla STESSA pagina di login appena
+            # caricata, cancellava così la sessione appena creata —
+            # invalidando il token CSRF incollato nel modulo ancora
+            # prima che l'utente potesse inviarlo. Un ciclo garantito ad
+            # ogni caricamento, non un caso raro: spiega perché nessuna
+            # delle cause escluse (profilo Chrome, estensioni, cache,
+            # Keychain) faceva differenza — il problema non era mai nel
+            # browser, ma in questo prelogin che si autodistruggeva da
+            # solo. Vedi anche templates/login.html, a cui è stato
+            # aggiunto un <link rel="icon"> esplicito per evitare del
+            # tutto la richiesta di fallback — due difese indipendenti,
+            # non serve che entrambe restino per essere al sicuro.
+            return None
+
         # ── BYPASS SOLO PER VERIFICA VISIVA IN LOCALE ──────────────────
         # Attivo SOLO se CARONTE_SKIP_LOGIN=1 *e* CARONTE_DEBUG=1 sono
         # entrambe impostate esplicitamente prima dell'avvio (il secondo

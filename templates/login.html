@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Accesso — CaronteApp</title>
+    <!-- Senza questo link, il browser richiede da solo /favicon.ico (rotta
+         inesistente in questa app) — vedi app.py::check_auth() per cosa
+         succedeva prima di questo fix quando quella richiesta arrivava
+         qui mentre la sessione di login era ancora in corso. -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/brand/favicon.png') }}">
     <style>
         @font-face {
             font-family: 'Oswald Local'; font-weight: 700; font-style: normal; font-display: swap;

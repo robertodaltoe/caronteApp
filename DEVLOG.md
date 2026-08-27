@@ -4,6 +4,61 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 68 — causa reale del login fallito da Chrome: /favicon.ico cancellava la sessione di login (Cowork)
+
+Seguito degli addendum 66/67. Nonostante il messaggio ora visibile e
+l'header no-store, Roberto continuava ad avere login sempre fallito da
+Chrome — confermato anche in incognito, in un profilo Chrome nuovo di
+zecca, e dopo aver rigenerato la voce "Chrome Safe Storage" nel
+Portachiavi macOS. Il server, testato più volte con `curl` end-to-end
+(GET token+cookie → POST), risultava sempre sano. Risolto guardando
+direttamente la tab Network di Chrome, su sua richiesta.
+
+**Causa reale, non del browser**: tra le richieste della pagina di
+login compariva `GET /login?next=http://localhost:5002/favicon.ico`.
+`templates/login.html` non dichiara un'icona esplicita (documento a sé,
+non estende base.html) — Chrome richiede quindi da solo il fallback
+`/favicon.ico`, rotta inesistente in questa app. Quella richiesta
+arrivava a `app.py::check_auth()` (l'`@app.before_request` globale) con
+`request.endpoint = None` (nessuna rotta corrispondente) → diventava
+`''`, non in `ROUTE_PUBBLICHE` → utente non loggato →
+**`session.clear()`** + redirect a `/login`. Risultato: la richiesta
+"fantasma" del favicon, generata dalla STESSA pagina di login appena
+caricata, cancellava la sessione (e il token CSRF già incollato nel
+modulo) ancora prima che Roberto potesse inviarlo — ad OGNI
+caricamento, non un caso raro, indipendentemente da account, profilo,
+estensioni o Keychain: la causa non è mai stata nel browser.
+
+Due correzioni indipendenti, nessuna delle due basterebbe da sola a
+essere robusta ovunque:
+1. `app.py::check_auth()` ora esce subito (`return None`, niente
+   `session.clear()`) quando `request.endpoint is None` — un 404
+   genuino (favicon, robots.txt, sonde varie del browser) non deve mai
+   più toccare la sessione di un'altra richiesta in corso.
+2. `templates/login.html` ha ora un `<link rel="icon">` esplicito
+   (stessa favicon di base.html), così Chrome non fa più la richiesta
+   di fallback per questa pagina specifica.
+
+Verificato con 2 nuovi test in `tests/test_login_favicon_race.py`
+(uno riproduce il bug con una replica minimale del check_auth
+"prima del fix", uno conferma che la stessa sequenza funziona "dopo")
+— 277/277 nella suite completa. Verifica end-to-end contro il vero
+`app.py` su una copia isolata del DB reale: GET /login → GET
+/favicon.ico (ora 404 pulito, cookie invariato) → POST /login con lo
+stesso token di prima → validato correttamente (vedi "Credenziali non
+corrette", non più l'errore di sessione scaduta).
+
+Percorso di diagnosi lungo (addendum 66/67/68): messaggio flash
+invisibile → header di cache mancante → infine causa vera trovata
+solo ispezionando la tab Network reale di Chrome insieme a Roberto,
+dopo aver escluso metodicamente cookie, estensioni, profilo Chrome e
+Keychain macOS. Lezione per il futuro: quando un bug sembra "solo di
+un browser" ma persiste attraverso ogni variabile del browser stesso
+(profilo, estensioni, cache), il sospetto dovrebbe spostarsi prima sul
+comportamento nativo di quel browser (qui: fallback automatico del
+favicon) intersecato con la logica dell'app, non su ulteriori cause
+lato client.
+
 ## Sessione 66 addendum 67 — login sempre fallito da Chrome: pagina /login servita dalla cache HTTP (Cowork)
 
 Seguito diretto dell'addendum 66 (messaggio CSRF ora visibile). Roberto
