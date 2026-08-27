@@ -4,6 +4,26 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 69 — dopo la conferma, il generatore torna su se stesso invece che al Piano Annuale (Cowork)
+
+Roberto: generando un turno di scrutini o riunioni dal Generatore CdC,
+dopo aver confermato la bozza veniva sempre rimandato ad Attività
+istituzionali → Piano Annuale, mentre genera più turni in sequenza (es.
+scrutini di giugno, poi CdC di settembre) e preferisce restare sulla
+pagina di generazione.
+
+Cambiati i due redirect dopo "conferma" (routes/generatore_cdc.py):
+`index()` (Consigli di classe/scrutini/GLO) torna ora a
+`generatore_cdc.index`, `dipartimenti()` (riunioni dipartimento/
+materia/referenti) torna a `generatore_cdc.dipartimenti` — entrambi
+con l'anno preservato. Non toccato `eventi_unici()` (Collegio/Incontro
+famiglie): crea un solo evento, non un "turno" in batch, resta com'era.
+
+Verificato con 2 nuovi test in `tests/test_generatore_cdc.py`
+(redirect a `/generatore-cdc?anno=...` e a
+`/generatore-cdc/dipartimenti?anno=...`) — 279/279 nella suite
+completa.
+
 ## Sessione 66 addendum 68 — causa reale del login fallito da Chrome: /favicon.ico cancellava la sessione di login (Cowork)
 
 Seguito degli addendum 66/67. Nonostante il messaggio ora visibile e

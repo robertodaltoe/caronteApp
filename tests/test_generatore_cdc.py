@@ -383,6 +383,39 @@ def test_conferma_non_scrive_mai_un_placeholder_come_partecipante(app, db_sessio
     assert ids == {d1.id}
 
 
+# ── Redirect dopo conferma: resta sul generatore, non al Piano Annuale ───────
+# Roberto genera più turni in sequenza (es. scrutini di giugno, poi CdC
+# di settembre) — vuole restare sulla pagina di generazione invece di
+# dover tornare indietro ogni volta dal Piano Annuale.
+
+def test_conferma_cdc_torna_al_generatore_non_al_piano_annuale(app, db_session):
+    import routes.generatore_cdc as mod
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(mod.generatore_cdc_bp)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'consiglio_classe',
+            'n_righe': '0',
+        })
+        assert r.status_code == 302
+        assert r.headers['Location'] == f'/generatore-cdc?anno={ANNO}'
+
+
+def test_conferma_dipartimenti_torna_al_generatore_non_al_piano_annuale(app, db_session):
+    import routes.generatore_cdc as mod
+    if 'generatore_cdc' not in app.blueprints:
+        app.register_blueprint(mod.generatore_cdc_bp)
+
+    with app.test_client() as c:
+        r = c.post('/generatore-cdc/dipartimenti', data={
+            'azione': 'conferma', 'anno_scol': ANNO, 'tipo': 'dipartimento',
+            'n_righe': '0',
+        })
+        assert r.status_code == 302
+        assert r.headers['Location'] == f'/generatore-cdc/dipartimenti?anno={ANNO}'
+
+
 # ── Anno di default: attività preparatoria per il nuovo anno ────────────────
 
 def test_pagina_generatore_apre_di_default_sullanno_in_preparazione(app, db_session, monkeypatch):

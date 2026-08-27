@@ -234,7 +234,11 @@ def index():
             creati += 1
         db.session.commit()
         flash(f'{creati} eventi "{tipo_label}" creati.', 'success')
-        return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
+        # Torna al generatore, non al Piano Annuale: Roberto genera più
+        # turni in sequenza (es. scrutini di giugno, poi CdC di
+        # settembre) e vuole restare sulla pagina di generazione invece
+        # di dover navigare indietro ogni volta.
+        return redirect(url_for('generatore_cdc.index', anno=anno))
 
     return render_template('generatore_cdc/index.html',
         anno=anno, anni_disponibili=anni_disponibili, classi_disponibili=classi_disponibili,
@@ -320,7 +324,10 @@ def dipartimenti():
             creati += 1
         db.session.commit()
         flash(f'{creati} eventi "{tipo_label}" creati.', 'success')
-        return redirect(url_for('attivita_ist.piano_annuale', anno=anno))
+        # Torna al generatore di riunioni dipartimento, stesso motivo
+        # del generatore CdC/scrutini sopra: si genera un turno alla
+        # volta, restare qui evita di dover tornare indietro ogni volta.
+        return redirect(url_for('generatore_cdc.dipartimenti', anno=anno))
 
     return render_template('generatore_cdc/dipartimenti_index.html',
         anno=anno, anni_disponibili=anni_disponibili, dipartimenti=dips,
