@@ -153,7 +153,7 @@ def _pulisci_docente_materie_orfane(id_docente, anno_scol):
 # ── Aree disciplinari e CC (dal file ASSEGNAZIONI CLASSI) ─────────────
 AREE = [
     {'nome': 'Area Umanistica',
-     'cc':   ['A-11', 'A-12', 'A-18', 'A-19']},
+     'cc':   ['A-11', 'AS12', 'A-18', 'A-19']},
     {'nome': 'Matematica e Scienze',
      'cc':   ['A-20', 'A-21', 'A-26', 'A-27', 'A-34', 'A-41', 'A-47', 'A-50']},
     {'nome': 'Tecnici Geo/Cost',

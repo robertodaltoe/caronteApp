@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 75 — codice classe di concorso A-12 rimasto non aggiornato ad AS12 (Cowork)
+
+Roberto: in Impostazione Anno → Classi di concorso ci sono ancora
+codici non aggiornati — chiesto di verificare, ricordando di aver già
+segnalato in passato di aggiornarli tutti ai codici più recenti.
+
+Trovato in DEVLOG (addendum 23, Sessione 66): quella richiesta risale
+a un ticket che riguardava soprattutto A-21 mancante da Assegnazioni,
+e in una sessione precedente ancora (Sessione 32) risultano già
+rinominati A-22-ING/SPA/TED → AS2B/AS2C/AS2D e A-48 → AS48 — ma **A-12
+era rimasto indietro**, unico codice ancora con il prefisso "A-" tra
+quelli il cui nome contiene esplicitamente "sec. II grado" (lo stesso
+schema di AS01 e AS48, già corretti): conferma che è stato solo
+dimenticato nel giro di aggiornamenti precedente, non un caso
+volutamente diverso.
+
+Corretto: `ClasseConcorso.codice` da "A-12" ad "AS12" (backup cifrato
+`data/backup/database_20260829_2307_pre_fix_codice_a12_as12.db.enc`
+prima della modifica, `PRAGMA integrity_check` ok dopo — il nome
+"Discipline Letterarie sec. II grado" non cambia, l'id resta lo
+stesso, quindi tutti i collegamenti via FK — piano studi, assegnazioni,
+materie — restano intatti). Aggiornato anche l'unico riferimento
+funzionale al vecchio codice nel codice sorgente:
+`routes/assegnazioni.py::AREE` (Area Umanistica), che elenca i codici
+a mano — senza questo aggiornamento la cattedra sarebbe sparita da
+Assegnazioni, stesso bug di A-21 nell'addendum 23. Nessun'altra
+occorrenza funzionale trovata nel repo (solo un commento d'esempio in
+`templates/impostazione_anno/piano_studi.html`, lasciato invariato).
+
+Verificato a video (sola lettura) su `_build_area()`: AS12 compare
+ancora in Area Umanistica con le sue 16 classi e 7 assegnazioni
+intatte. 298/298 test invariati (nessuna logica nuova, solo un dato
+anagrafico corretto).
+
 ## Sessione 66 addendum 74 — checklist docenti per incarico in "Altra riunione" + fix "ROM"→"RIM" nei vincoli orario (Cowork)
 
 Due richieste di Roberto sulla checklist "Altra riunione" (addendum 73)
