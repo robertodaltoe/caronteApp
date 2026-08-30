@@ -4,6 +4,72 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 92 — INCIDENTE: sync_db.py ha sovrascritto attivita_ist con una copia stale da Drive
+
+Roberto: "c'è qualcosa che non va sui dati che vedo nell'app. in
+piano annuale sono sparite le modifiche che ho fatto al piano delle
+attività, non ci sono le riunioni create per i consigli di classe dal
+22 in poi. puoi verificare cosa è successo analizzando i backup del
+db?"
+
+**Diagnosi.** Decifrati in sequenza tutti i backup cifrati dal 20/08
+al 31/08 e confrontato il conteggio di `attivita_ist` tipo
+'consiglio_classe' in ciascuno:
+- fino al 29/08: sempre 10 righe, tutte 18/09 (batch originale).
+- 30/08 22:36–23:26 (durante il lavoro di questa sessione): **38
+  righe, 4 giorni distinti (18/09–24/09)** — le riunioni CdC di
+  Roberto per il 21/09-24/09 erano presenti e corrette.
+- 31/08 00:07: tornate a **10 righe, solo 18/09** — sparite.
+
+Trovato anche `database.db.bak` nella cartella del progetto (mtime
+30/08 23:31), il file che `sync_db.py::scarica()` salva SEMPRE in
+automatico un istante prima di sovrascrivere il locale con il download
+da Drive (righe 134/181 di sync_db.py: `shutil.copy2(db, str(db)+
+".bak")`). Contenuto confrontato tabella per tabella con `database.db`
+attuale: `attivita_ist` 255 righe nel `.bak` contro 95 nell'attuale,
+`attivita_ist_partecipanti` 3282 contro 1404, più la perdita di
+diversi fix di questa sessione (AS12→A-12 tornato indietro,
+`piano_studi_override` svuotato, `vincoli_orario_classe` da 3 a 2,
+Modulo 1bis non più eliminato, le 4 sessioni di Modulo 1 sparite).
+Uniche tabelle identiche tra i due file: `assenze`, `supplenze`,
+`indisponibilita`, `docenti`, `assegnazioni_docenti` — esattamente le
+tabelle del sync automatico ogni 30s (`modules/auto_sync.py`).
+`attivita_ist` ne è deliberatamente esclusa (vedi CLAUDE.md, "troppo
+delicate per merge automatico"), quindi resta esposta a questo rischio
+quando si passa dal sync automatico al check-out/check-in manuale di
+`sync_db.py`.
+
+**Causa**: un `sync_db.py scarica` (probabilmente da un'altra
+postazione con una copia locale non ancora sincronizzata, o una
+chiusura dell'app lì che ha `carica`-to prima una versione stale su
+Drive) ha scaricato e imposto localmente una copia di `attivita_ist`
+antecedente a tutto il lavoro di questa sessione — confermato anche da
+Roberto: "probabilmente i dati in questo backup locale [...] sono
+quelli corretti sovrascritti dalla chiusura sull'altra macchina con
+dati del db non sincronizzati".
+
+**Ripristino** (confermato esplicitamente da Roberto prima di
+procedere — l'azione di sovrascrivere `database.db` è stata bloccata
+una prima volta dal classificatore di sicurezza dell'agente, corretto
+chiedere conferma esplicita invece di aggirarlo): backup cifrato dello
+stato stale prima di toccare nulla
+(`data/backup/database_20260831_0041_pre_ripristino_da_bak_locale_perdita_cdc.db.enc`),
+poi copiato `database.db.bak` → `database.db`, `PRAGMA integrity_check`
+ok. Verificato: 38 eventi consiglio di classe (18/09–24/09), AS12,
+Paolini 18h, PLS durata corretta, Modulo 1bis eliminato, le 4 sessioni
+di Modulo 1 — tutto tornato come alla fine della sessione precedente.
+Unica tabella dove l'attuale (stale) aveva qualcosa in più:
+`log_accessi` (265 vs 263 righe, solo log di accesso, irrilevante).
+
+**Da fare, non affrontato qui — coordinamento multi-postazione**:
+Roberto deve verificare che l'altra macchina coinvolta abbia scaricato
+l'ultima versione prima di lavorarci di nuovo (altrimenti rischia di
+sovrascrivere ancora), e poi fare un `sync_db.py carica` da QUESTA
+macchina appena possibile per ripubblicare su Drive la versione
+corretta appena ripristinata — finché non lo fa, Drive resta sulla
+copia stale e un'altra `scarica` da qualunque postazione ripeterebbe
+l'incidente.
+
 ## Sessione 66 addendum 91 — backup cifrato dedicato prima di "Attiva" (cambio anno)
 
 Roberto: "Backup cifrato prima di 'Attiva' questo è predisposto?" —
