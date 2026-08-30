@@ -4,6 +4,31 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 80 — Paolini in Assegnazioni: 22h invece di 18 (dato reale, non bug)
+
+Roberto: "in assegnazione verifica Paolini. le risultano 22h ma io ne
+ho inserite 18".
+
+Il totale mostrato (22h) è la somma corretta delle righe salvate —
+nessun bug di calcolo. Confrontando `assegnazioni_classi` con l'orario
+reale importato (`orario_docenti`, 18h — combacia col contratto di
+Paolini, `ore_contratto=18`), le classi non coincidevano affatto:
+Assegnazioni aveva 1B LLI, 4A LSC (Lettere+Latino), 5A LSC, 1A LSP,
+3A LSP; l'orario reale ha 3A LSC, 4A LSC (solo Latino), 5A LLI, 5B LLI.
+Segnalata l'incoerenza completa a Roberto (regola non negoziabile #6)
+invece di correggerla di mia iniziativa.
+
+Roberto ha confermato: "1 lsp non deve esserci" — riferito alla riga
+1A LSP (4h, Lettere italiane), l'unica differenza esplicitamente
+indicata. Backup cifrato
+(`data/backup/database_20260830_1817_pre_rimozione_1A_LSP_paolini.db.enc`),
+eliminata `AssegnazioneClasse` id=578 (LSP, 1° anno, sez. A, 4h,
+materia Lettere italiane), `PRAGMA integrity_check` ok. Totale ora
+18h, coerente con l'orario e col contratto. Le altre differenze
+(3A LSP tuttora in Assegnazioni ma non in orario; 3A LSC/5A LLI/5B LLI
+in orario ma non in Assegnazioni) NON sono state toccate — Roberto ha
+indicato solo 1A LSP, non l'intera cattedra.
+
 ## Sessione 66 addendum 79 — Piano studi: eliminazione riga singola (per anno) mancante nell'interfaccia + rimossa la riga fantasma segnalata nell'addendum 78 (Cowork)
 
 Seguito dell'addendum 78: Roberto ha confermato l'ipotesi — "credo ci
