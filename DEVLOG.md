@@ -4,6 +4,37 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 85 — Piano annuale: tabella sfasata espandendo un gruppo dipartimenti
+
+Roberto: "attenzione perchè la funzione espandi cliccata su una
+riunione mi espande anche le altre" — poi rettificato: "è solo
+impaginato male nella tabella".
+
+Causa reale: la colonna "Giorno" di `piano_annuale.html` usa
+`rowspan="{{ contenuto|length }}"` sulla prima riga del giorno, dove
+`contenuto|length` è il conteggio DOPO il compattamento (addendum 83).
+Le righe dei singoli dipartimenti di un gruppo espandibile esistono
+comunque nel DOM (`display:none` finché non si espandono) — finché
+restano nascoste il browser non le conta ai fini del rowspan (una riga
+`display:none` non genera alcun box), ma appena espanse (`toggleGruppo`
+le porta a `display:table-row`) il numero di righe VISIBILI nel blocco
+del giorno supera il valore di rowspan calcolato: la cella "Giorno"
+smette di coprire tutte le righe una volta esaurito il conteggio, e da
+lì in poi ogni riga perde una colonna — tutte le celle successive si
+spostano di una posizione. Sembrava che "espandere una riunione ne
+espandesse un'altra" perché il contenuto sfasato di una riga successiva
+finiva visivamente addosso alla riga sbagliata.
+
+Fix: rimosso `rowspan` dalla colonna Giorno — ogni riga (comprese le
+sotto-righe nascoste) ha ora una propria cella, valorizzata solo sulla
+primissima del giorno. Nessuna riga "in debito" di colonne, il conteggio
+fisso non serve più. Nessuna modifica Python (solo markup). Verificato
+dal vivo col browser: creato un gruppo di test (3 dipartimenti, stesso
+orario) più un evento successivo lo stesso giorno, cliccato "espandi",
+letto il DOM via JS — le 3 sotto-righe hanno tutte le 9 celle
+correttamente allineate, e la riga successiva ("Collegio docenti") non
+risulta più spostata.
+
 ## Sessione 66 addendum 84 — compattamento esteso a "Riunione referenti (capidipartimento)"
 
 Seguito dell'addendum 83: Roberto ha chiesto lo stesso compattamento

@@ -98,15 +98,21 @@
                     </td>
                 </tr>
                 {% else %}
+                    {# Niente più rowspan sulla colonna Giorno: con le righe di un
+                       gruppo espandibile nascoste via display:none, il numero di
+                       <tr> effettivamente presenti nel giorno supera quello
+                       "compattato" usato per calcolare lo span — una volta espanse
+                       le righe extra restavano scoperte e tutte le colonne
+                       successive si sfasavano di una posizione (segnalato da
+                       Roberto: "impaginato male"). Ogni riga ha ora una propria
+                       cella Giorno, valorizzata solo sulla primissima. #}
                     {% for e in contenuto %}
                     {% if e.is_gruppo is defined and e.is_gruppo %}
                     {% set grp_id = 'pgrp-' ~ e.eventi[0].id %}
                     <tr style="cursor:pointer; background:#fafbfc;" onclick="toggleGruppo('{{ grp_id }}')">
-                        {% if loop.first %}
-                        <td rowspan="{{ contenuto|length }}" style="font-weight:700; vertical-align:top; text-transform:capitalize;">
-                            {{ data_r.strftime('%A %d/%m') }}
+                        <td style="font-weight:700; vertical-align:top; text-transform:capitalize;">
+                            {% if loop.first %}{{ data_r.strftime('%A %d/%m') }}{% endif %}
                         </td>
-                        {% endif %}
                         <td>
                             {{ icon('chevron-down') }}
                             <span class="tipo-dot dot-{{ e.tipo }}"></span>{{ e.titolo }}
@@ -122,6 +128,7 @@
                     </tr>
                     {% for sub in e.eventi %}
                     <tr data-grp="{{ grp_id }}" style="display:none; background:#f8fafc;">
+                        <td></td>
                         <td>
                             <span class="tipo-dot dot-{{ sub.tipo }}"></span>
                             <span style="padding-left:20px;">{{ sub.titolo }}</span>
@@ -149,11 +156,9 @@
                     {% endfor %}
                     {% else %}
                     <tr>
-                        {% if loop.first %}
-                        <td rowspan="{{ contenuto|length }}" style="font-weight:700; vertical-align:top; text-transform:capitalize;">
-                            {{ data_r.strftime('%A %d/%m') }}
+                        <td style="font-weight:700; vertical-align:top; text-transform:capitalize;">
+                            {% if loop.first %}{{ data_r.strftime('%A %d/%m') }}{% endif %}
                         </td>
-                        {% endif %}
                         <td>
                             <span class="tipo-dot dot-{{ e.tipo }}"></span>{{ e.titolo }}
                             {%- if e.dipartimento %} <span style="font-size:.72rem; color:var(--grigio);">{{ e.dipartimento.sigla }}</span>{% endif %}
