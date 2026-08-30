@@ -4,6 +4,45 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 89 — consolidato Modulo 1/1bis Valutazione (dato reale)
+
+Seguito dell'addendum 88: Roberto — "va recuperato il modulo 1/1bis.
+Le date del modulo 1 le trovi in piano delle attività". Nel frattempo
+Roberto aveva già inserito lui, direttamente dall'app con la nuova
+funzione "+ Giornata", le 4 giornate reali di "Modulo 1 - Valutazione"
+(AttivitaIst id 91): 15/09 (2h), 28/09 (2h), 12/10 (3h), 26/10 (3h) —
+totale 10h, esattamente i "2+2+3+3" indicati in precedenza.
+
+Trovato anche un residuo del vecchio "Modulo 1bis" creato oggi
+(AttivitaIst id 287, "manuale", nessuna data/ora reale, nessun corso
+in Piano della formazione collegato, ma con gli stessi 61 partecipanti
+preset già su Modulo 1 — nessun dato unico da perdere) — probabilmente
+un tentativo di ricreare il corso mancante prima di scoprire che
+bastava aggiungere le giornate a quello esistente.
+
+Backup cifrato
+(`data/backup/database_20260830_2326_pre_consolidamento_modulo1_valutazione.db.enc`),
+poi:
+- Allineati i campi base dell'evento 91 (data/ora_inizio/ora_fine) alla
+  prima delle sue 4 sessioni reali (erano rimasti al valore
+  dell'importazione originale, 15/09 11:30–13:30 — coincide con la
+  prima sessione, quindi già corretto).
+- Aggiornato il periodo di `CorsoFormazione` id 1 (Modulo 1) a
+  15/09–26/10 (l'intervallo reale delle 4 giornate, prima fermo al
+  15/09 singolo dell'importazione).
+- Eliminato `CorsoFormazione` id 4 ("Modulo 1bis"), il riferimento
+  rotto verso l'evento 94 ormai inesistente (vedi addendum 88).
+- Eliminato l'`AttivitaIst` id 287 (il residuo "Modulo 1bis" orfano,
+  nessun corso collegato).
+
+`PRAGMA integrity_check` ok, 326/326 test invariati (nessuna modifica
+di codice, solo dati). Verificato: in Piano annuale "Modulo 1 -
+Valutazione" ora compare correttamente sulle 4 giornate reali (giorno
+1/4 … 4/4) con le rispettive ore, "Modulo 1bis" non compare più da
+nessuna parte. Restano da fare, in sospeso con Roberto: la stessa
+consolidazione per Modulo 2/2bis (Psicologa, 12h) e Modulo 3/3bis
+(Coaching, 8h) — mancano ancora le date reali per quei due.
+
 ## Sessione 66 addendum 88 — Piano della formazione e Piano delle attività: le ore erano due numeri separati, mai sincronizzati
 
 Roberto, dopo il fix dell'addendum 87: "ti spiego cosa succede. in
