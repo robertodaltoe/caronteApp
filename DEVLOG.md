@@ -4,6 +4,54 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 83 — compattamento riunioni dipartimento/materia con stesso orario
+
+Roberto: le riunioni di dipartimento/materia compaiono una riga per
+dipartimento anche quando sono tutte allo stesso orario (create tutte
+insieme da `generatore_cdc.dipartimenti`, un `AttivitaIst` per
+dipartimento, sempre stato così per come sono modellate — non hanno
+mai condiviso docenti quindi possono stare tutte nello stesso slot).
+Proposta e confermata da Roberto: compattarle in una riga generica
+("Riunione dipartimento (N)" / "Riunione per materia (N)") quando
+condividono giorno+orario, lasciarle separate (col proprio dipartimento
+nel titolo, comportamento già esistente) quando gli orari differiscono.
+Chiesto e confermato: applicarlo sia a Piano annuale sia a Elenco/
+gestione eventi, con **espansione** nella pagina di gestione (ogni
+dipartimento resta un `AttivitaIst` distinto — presenze/partecipanti/
+modifica/elimina restano per singolo dipartimento, non ha senso farle
+sul gruppo).
+
+Nuovo `routes/attivita_ist.py::_raggruppa_eventi_dipartimento()`: pura
+compattazione di VISTA (nessuna scrittura sul DB), raggruppa per
+(tipo, data, ora_inizio, ora_fine) solo tipo `dipartimento`/
+`riunione_materia`, sostituendo un cluster con un wrapper
+`SimpleNamespace` (`.is_gruppo=True`, `.eventi=[...]` gli originali,
+titolo generico, sigle dei dipartimenti coinvolti, partecipanti =
+unione dei singoli). Usato sia in `lista()` sia in
+`_righe_piano_annuale()` — quest'ultima condivisa anche da export PDF
+e XLSX del Piano annuale, che quindi mostrano automaticamente la stessa
+vista compattata (statica, senza espansione — coerente per un
+documento). `n_eventi` (contatore in cima alla pagina) resta il conteggio
+REALE, calcolato prima del raggruppamento.
+
+UI: riga di gruppo cliccabile (chevron + "espandi"), le righe dei
+singoli dipartimenti restano nel DOM con `style="display:none"` e un
+attributo `data-grp`, mostrate/nascoste da un piccolo `toggleGruppo(id)`
+via `querySelectorAll('tr[data-grp="..."]')` — stesso pattern minimale
+già usato altrove nell'app (es. `toggleOverride` in piano_studi.html),
+aggiunto in entrambi i template (`lista.html`, `piano_annuale.html`).
+
+6 test nuovi in `tests/test_raggruppa_eventi_dipartimento.py` (stesso
+orario compattato, orari diversi separati, dipartimento e riunione
+materia non si mescolano anche a parità di orario, eventi non
+dipartimentali invariati, partecipanti = unione, un solo evento in uno
+slot non viene incapsulato in un gruppo inutile). 313/313 test
+invariati. Verificato dal vivo su copia isolata del DB reale: creati 3
+eventi di test allo stesso orario → compattati in "Riunione
+dipartimento (3) — LET, LIN, MAT-SCI", espandibili; trovato anche un
+gruppo REALE preesistente di 8 dipartimenti allo stesso orario,
+compattato correttamente.
+
 ## Sessione 66 addendum 82 — "+ Nuovo evento" diretto in Piano annuale
 
 Roberto: da Piano annuale vuole un tasto per inserire un impegno

@@ -99,6 +99,55 @@
                 </tr>
                 {% else %}
                     {% for e in contenuto %}
+                    {% if e.is_gruppo is defined and e.is_gruppo %}
+                    {% set grp_id = 'pgrp-' ~ e.eventi[0].id %}
+                    <tr style="cursor:pointer; background:#fafbfc;" onclick="toggleGruppo('{{ grp_id }}')">
+                        {% if loop.first %}
+                        <td rowspan="{{ contenuto|length }}" style="font-weight:700; vertical-align:top; text-transform:capitalize;">
+                            {{ data_r.strftime('%A %d/%m') }}
+                        </td>
+                        {% endif %}
+                        <td>
+                            {{ icon('chevron-down') }}
+                            <span class="tipo-dot dot-{{ e.tipo }}"></span>{{ e.titolo }}
+                            <span style="font-size:.72rem; color:var(--grigio);">{{ e.sigle_dipartimenti|join(', ') }}</span>
+                        </td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>{{ e.ora_inizio or '—' }}</td>
+                        <td>{{ e.ora_fine or '—' }}</td>
+                        <td style="text-align:center;">{{ '%.1f'|format(e.durata_ore) }}</td>
+                        <td>{{ e.col_categoria }}</td>
+                        <td style="text-align:center;"><span style="font-size:.72rem; color:var(--grigio);">espandi</span></td>
+                    </tr>
+                    {% for sub in e.eventi %}
+                    <tr data-grp="{{ grp_id }}" style="display:none; background:#f8fafc;">
+                        <td>
+                            <span class="tipo-dot dot-{{ sub.tipo }}"></span>
+                            <span style="padding-left:20px;">{{ sub.titolo }}</span>
+                            {%- if sub.dipartimento %} <span style="font-size:.72rem; color:var(--grigio);">{{ sub.dipartimento.sigla }}</span>{% endif %}
+                        </td>
+                        <td>{{ sub.col_indirizzo or '—' }}</td>
+                        <td>{{ sub.col_classe or '—' }}</td>
+                        <td>{{ sub.ora_inizio or '—' }}</td>
+                        <td>{{ sub.ora_fine or '—' }}</td>
+                        <td style="text-align:center;">{{ '%.1f'|format(sub.durata_ore) }}</td>
+                        <td>{{ sub.col_categoria }}</td>
+                        <td style="padding:6px 14px 6px 6px; overflow:visible;">
+                            <div style="display:flex; gap:5px;">
+                                <a href="{{ url_for('attivita_ist.form', id=sub.id, next=request.full_path) }}"
+                                   class="btn btn-primary btn-sm" style="padding:2px 7px;" title="Modifica">{{ icon('edit') }}</a>
+                                <form method="post" action="{{ url_for('attivita_ist.elimina', id=sub.id) }}"
+                                      onsubmit="return confirm('Eliminare questo evento? L\'operazione non si può annullare.')"
+                                      style="margin:0;">
+                                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                                    <button class="btn btn-danger btn-sm" type="submit" style="padding:2px 7px;" title="Elimina">{{ icon('trash') }}</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
                     <tr>
                         {% if loop.first %}
                         <td rowspan="{{ contenuto|length }}" style="font-weight:700; vertical-align:top; text-transform:capitalize;">
@@ -128,6 +177,7 @@
                             </div>
                         </td>
                     </tr>
+                    {% endif %}
                     {% endfor %}
                 {% endif %}
             {% endfor %}
@@ -136,4 +186,14 @@
     </div>
 </div>
 {% endfor %}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function toggleGruppo(id) {
+    document.querySelectorAll('tr[data-grp="' + id + '"]').forEach(function(r) {
+        r.style.display = (r.style.display === 'none' || r.style.display === '') ? 'table-row' : 'none';
+    });
+}
+</script>
 {% endblock %}

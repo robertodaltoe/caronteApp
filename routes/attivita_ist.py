@@ -392,6 +392,74 @@ def _auto_presenze(attivita):
         ))
 
 
+def _raggruppa_eventi_dipartimento(eventi):
+    """
+    Compatta, SOLO per la vista (screen/PDF/XLSX), i consecutivi eventi
+    'dipartimento'/'riunione_materia' con stesso giorno+orario in
+    un'unica riga generica ("Riunione dipartimento"/"Riunione per
+    materia" con il conteggio) — Roberto: un evento identico per ogni
+    dipartimento nello stesso slot è solo rumore, comparivano una riga
+    per dipartimento anche quando in pratica è la stessa riunione allo
+    stesso orario. Se invece hanno orari diversi restano separati come
+    prima — il titolo di ognuno mostra già il proprio dipartimento.
+
+    Nessun AttivitaIst viene toccato nel DB: è un merge di sola vista.
+    Il wrapper "gruppo" (SimpleNamespace, non un modello) espone gli
+    eventi originali in .eventi, cosi' un template puo' mostrarli
+    espansi con le loro azioni singole (Presenze/Modifica/Elimina
+    restano per singolo dipartimento — non ha senso farle sul gruppo).
+    """
+    from collections import OrderedDict
+    from types import SimpleNamespace
+    TIPI_RAGGRUPPABILI = {'dipartimento', 'riunione_materia'}
+
+    per_chiave = OrderedDict()
+    for e in eventi:
+        if e.tipo in TIPI_RAGGRUPPABILI:
+            chiave = (e.tipo, e.data, e.ora_inizio, e.ora_fine)
+            per_chiave.setdefault(chiave, []).append(e)
+
+    emessi = set()
+    risultato = []
+    for e in eventi:
+        if e.tipo not in TIPI_RAGGRUPPABILI:
+            risultato.append(e)
+            continue
+        chiave = (e.tipo, e.data, e.ora_inizio, e.ora_fine)
+        gruppo = per_chiave[chiave]
+        if len(gruppo) == 1:
+            risultato.append(e)
+            continue
+        if chiave in emessi:
+            continue  # già emesso per questo gruppo, salta i successivi
+        emessi.add(chiave)
+        primo = gruppo[0]
+        sigle = [g.dipartimento.sigla for g in gruppo if g.dipartimento]
+        risultato.append(SimpleNamespace(
+            is_gruppo=True,
+            eventi=gruppo,
+            id=None,
+            tipo=primo.tipo,
+            titolo=f'{primo.tipo_label} ({len(gruppo)})',
+            tipo_label=primo.tipo_label,
+            tipo_emoji=primo.tipo_emoji,
+            bucket=primo.bucket,
+            data=primo.data,
+            ora_inizio=primo.ora_inizio,
+            ora_fine=primo.ora_fine,
+            durata_ore=primo.durata_ore,
+            durata_min=primo.durata_min,
+            classe=None,
+            col_classe=getattr(primo, 'col_classe', ''),
+            col_indirizzo=getattr(primo, 'col_indirizzo', ''),
+            col_categoria=getattr(primo, 'col_categoria', primo.tipo_label),
+            dipartimento=None,
+            sigle_dipartimenti=sigle,
+            partecipanti=[p for g in gruppo for p in g.partecipanti],
+        ))
+    return risultato
+
+
 # ── LISTA ────────────────────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist')
@@ -413,6 +481,7 @@ def lista():
     if mese_f:
         q = q.filter(db.func.strftime('%m', AttivitaIst.data) == mese_f.zfill(2))
     eventi = q.order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all()
+    eventi = _raggruppa_eventi_dipartimento(eventi)
 
     # Separa le attività già svolte (data passata) da quelle future/odierne:
     # le prime finiscono in una tabella a parte, in fondo alla pagina,
@@ -470,6 +539,9 @@ def _righe_piano_annuale(anno):
         ev.col_indirizzo = m.group(2) if m else ''
         ev.col_categoria = ev.tipo_label
 
+    n_eventi = len(eventi)
+    eventi = _raggruppa_eventi_dipartimento(eventi)
+
     marcatori = []  # (data, tipo, contenuto)
     for s in SospensioneDidattica.query.filter(
             SospensioneDidattica.data_fine >= ini,
@@ -502,7 +574,7 @@ def _righe_piano_annuale(anno):
         if giorno['eventi']:
             righe_mese_corrente.append((data_g, 'eventi', giorno['eventi']))
 
-    return mesi, anni_disponibili, len(eventi)
+    return mesi, anni_disponibili, n_eventi
 
 
 # ── VISTA PIANO ANNUALE (Fase 2 del Piano Annuale delle Attività) ────────────

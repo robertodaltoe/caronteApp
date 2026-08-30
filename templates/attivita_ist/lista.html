@@ -68,6 +68,21 @@
     </form>
 </div>
 
+{% macro _azioni_evento(e) %}
+<div class="azioni-row" style="justify-content:center;">
+    <a href="{{ url_for('attivita_ist.presenze', id=e.id) }}"
+       class="btn btn-sm" style="background:#0369a1;color:white;padding:3px 7px;" title="Presenze">{{ icon('check') }}</a>
+    <a href="{{ url_for('attivita_ist.form', id=e.id, next=request.full_path) }}"
+       class="btn btn-primary btn-sm" style="padding:3px 7px;" title="Modifica">{{ icon('edit') }}</a>
+    <form method="post" action="{{ url_for('attivita_ist.elimina', id=e.id) }}"
+          onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">
+        <input type="hidden" name="next" value="{{ request.full_path }}">
+        <button class="btn btn-danger btn-sm" type="submit"
+                style="padding:3px 7px;">{{ icon('close') }}</button>
+    </form>
+</div>
+{% endmacro %}
+
 {% macro tabella_eventi(eventi, svolte=false) %}
     <div style="overflow-x:auto;">
     <table style="table-layout:fixed; min-width:960px; width:100%;">
@@ -84,6 +99,58 @@
         </thead>
         <tbody>
         {% for e in eventi %}
+        {% if e.is_gruppo is defined and e.is_gruppo %}
+        {% set grp_id = 'grp-' ~ e.eventi[0].id %}
+        <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}"
+            style="cursor:pointer; background:#fafbfc;" onclick="toggleGruppo('{{ grp_id }}')">
+            <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
+                <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
+            </td>
+            <td style="font-size:.84rem; white-space:nowrap;">
+                {% if e.ora_inizio %}{{ e.ora_inizio }}{% if e.ora_fine %}–{{ e.ora_fine }}{% endif %}
+                <br><span style="color:var(--grigio);">{{ '%.1f'|format(e.durata_ore) }}h</span>
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                <span class="tipo-dot dot-{{ e.tipo }}"></span>
+                <span style="font-size:.82rem;">{{ e.tipo_emoji }} {{ e.tipo_label }}</span>
+            </td>
+            <td style="white-space:normal; word-wrap:break-word;">
+                {{ icon('chevron-down') }}
+                <strong style="font-size:.92rem;">{{ e.titolo }}</strong>
+                <span style="font-size:.72rem; color:var(--grigio);">{{ e.sigle_dipartimenti|join(', ') }}</span>
+            </td>
+            <td>
+                {% if e.bucket == 'A' %}<span class="bucket-pill pill-a">A</span>
+                {% elif e.bucket == 'B' %}<span class="bucket-pill pill-b">B</span>
+                {% else %}<span class="bucket-pill pill-no">—</span>{% endif %}
+            </td>
+            <td style="text-align:center;">
+                <span style="font-size:.9rem; font-weight:700;">{{ e.partecipanti|length }}</span>
+            </td>
+            <td style="text-align:center;">
+                <span style="font-size:.72rem; color:var(--grigio);">espandi</span>
+            </td>
+        </tr>
+        {% for sub in e.eventi %}
+        <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}" data-grp="{{ grp_id }}" style="display:none; background:#f8fafc;">
+            <td></td>
+            <td style="font-size:.8rem; color:var(--grigio); white-space:nowrap;">
+                {% if sub.ora_inizio %}{{ sub.ora_inizio }}{% if sub.ora_fine %}–{{ sub.ora_fine }}{% endif %}{% else %}—{% endif %}
+            </td>
+            <td></td>
+            <td style="white-space:normal; word-wrap:break-word; padding-left:26px;">
+                {{ sub.titolo }}
+                {%- if sub.dipartimento %} <span style="font-size:.72rem; color:var(--grigio);">{{ sub.dipartimento.sigla }}</span>{% endif %}
+            </td>
+            <td></td>
+            <td style="text-align:center;">
+                <span style="font-size:.85rem;">{{ sub.partecipanti|length }}</span>
+            </td>
+            <td style="text-align:center;">{{ _azioni_evento(sub) }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
         <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}">
             <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
                 <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
@@ -110,21 +177,9 @@
             <td style="text-align:center;">
                 <span style="font-size:.9rem; font-weight:700;">{{ e.partecipanti|length }}</span>
             </td>
-            <td style="text-align:center;">
-                <div class="azioni-row" style="justify-content:center;">
-                    <a href="{{ url_for('attivita_ist.presenze', id=e.id) }}"
-                       class="btn btn-sm" style="background:#0369a1;color:white;padding:3px 7px;" title="Presenze">{{ icon('check') }}</a>
-                    <a href="{{ url_for('attivita_ist.form', id=e.id, next=request.full_path) }}"
-                       class="btn btn-primary btn-sm" style="padding:3px 7px;" title="Modifica">{{ icon('edit') }}</a>
-                    <form method="post" action="{{ url_for('attivita_ist.elimina', id=e.id) }}"
-                          onsubmit="return confirm('Eliminare?')" style="display:inline; margin:0;">
-                        <input type="hidden" name="next" value="{{ request.full_path }}">
-                        <button class="btn btn-danger btn-sm" type="submit"
-                                style="padding:3px 7px;">{{ icon('close') }}</button>
-                    </form>
-                </div>
-            </td>
+            <td style="text-align:center;">{{ _azioni_evento(e) }}</td>
         </tr>
+        {% endif %}
         {% endfor %}
         </tbody>
     </table>
@@ -152,4 +207,14 @@
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function toggleGruppo(id) {
+    document.querySelectorAll('tr[data-grp="' + id + '"]').forEach(function(r) {
+        r.style.display = (r.style.display === 'none' || r.style.display === '') ? 'table-row' : 'none';
+    });
+}
+</script>
 {% endblock %}
