@@ -4,6 +4,42 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 79 — Piano studi: eliminazione riga singola (per anno) mancante nell'interfaccia + rimossa la riga fantasma segnalata nell'addendum 78 (Cowork)
+
+Seguito dell'addendum 78: Roberto ha confermato l'ipotesi — "credo ci
+sia un buco anche lì perché io non posso eliminare da una materia le
+singole classi, posso eliminare o l'intera riga o l'intera classe di
+concorso". Confermato nel codice: `routes/impostazione_anno.py` aveva
+già da tempo una route per l'eliminazione di UNA singola riga
+(`piano_studi_elimina(ps_id)`, cancella un solo anno_corso), ma nessun
+pulsante in `piano_studi.html` la richiamava — solo `eliminaRighe()`
+(via `/piano-studi/elimina-multi`), sempre con la lista COMPLETA delle
+righe di una materia (tutti gli anni) o dell'intera CC. Backend pronto,
+non raggiungibile dall'interfaccia — stesso pattern ricorrente già
+visto altre volte (Agenda, pulsante "Nomina", ecc.).
+
+Fix: aggiunta una piccola ✕ accanto al campo ore di ogni cella
+anno/materia, in entrambi i layout della tabella (materia singola e
+multi-materia compatto) — riusa semplicemente `eliminaRighe([id])` già
+esistente (accetta già una lista di un solo id, nessuna nuova route
+necessaria) invece della nuova route `piano_studi_elimina` che quindi
+resta comunque disponibile ma non più necessaria per questo caso
+d'uso. Verificato dal vivo su copia isolata del DB reale: eliminata una
+singola riga (3° anno di una materia con 5 anni), le altre 4 righe
+della stessa materia restano intatte.
+
+**Rimossa la riga fantasma segnalata nell'addendum 78** (probabile
+causa di quel "buco": un tentativo precedente di rimuovere solo
+un anno aveva probabilmente azzerato le ore invece di eliminare la
+riga, non potendola eliminare singolarmente). Backup cifrato
+(`data/backup/database_20260830_1800_pre_elimina_riga_371_lettere_lli_duplicata.db.enc`),
+verificato che non avesse override collegati, eliminata
+`PianoStudi` id=371 (0 ore, "Lettere italiane" 1° LLI sotto A-11,
+duplicato della riga reale spostata su AS12), `PRAGMA integrity_check`
+ok, ricalcolo `_build_area()` invariato (la riga contribuiva 0 ore alla
+somma, quindi nessun cambiamento nei totali — solo rimossa la riga
+spuria). 305/305 test invariati.
+
 ## Sessione 66 addendum 78 — Assegnazioni ignorava gli override per-sezione del piano studi (Cowork)
 
 Roberto ha modificato il piano studi 1° LLI: "Lettere italiane" passa
