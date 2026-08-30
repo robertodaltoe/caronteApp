@@ -395,11 +395,12 @@ def _auto_presenze(attivita):
 def _raggruppa_eventi_dipartimento(eventi):
     """
     Compatta, SOLO per la vista (screen/PDF/XLSX), i consecutivi eventi
-    'dipartimento'/'riunione_materia' con stesso giorno+orario in
-    un'unica riga generica ("Riunione dipartimento"/"Riunione per
-    materia" con il conteggio) — Roberto: un evento identico per ogni
-    dipartimento nello stesso slot è solo rumore, comparivano una riga
-    per dipartimento anche quando in pratica è la stessa riunione allo
+    'dipartimento'/'riunione_materia'/'riunione_referenti' con stesso
+    giorno+orario in un'unica riga generica ("Riunione dipartimento"/
+    "Riunione per materia"/"Riunione referenti (capidipartimento)" con
+    il conteggio) — Roberto: un evento identico per ogni dipartimento
+    nello stesso slot è solo rumore, comparivano una riga per
+    dipartimento anche quando in pratica è la stessa riunione allo
     stesso orario. Se invece hanno orari diversi restano separati come
     prima — il titolo di ognuno mostra già il proprio dipartimento.
 
@@ -411,7 +412,7 @@ def _raggruppa_eventi_dipartimento(eventi):
     """
     from collections import OrderedDict
     from types import SimpleNamespace
-    TIPI_RAGGRUPPABILI = {'dipartimento', 'riunione_materia'}
+    TIPI_RAGGRUPPABILI = {'dipartimento', 'riunione_materia', 'riunione_referenti'}
 
     per_chiave = OrderedDict()
     for e in eventi:

@@ -4,6 +4,16 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 84 — compattamento esteso a "Riunione referenti (capidipartimento)"
+
+Seguito dell'addendum 83: Roberto ha chiesto lo stesso compattamento
+anche per `riunione_referenti` (stesso modello di `dipartimento`/
+`riunione_materia`: un `AttivitaIst` per dipartimento, `id_dipartimento`
+valorizzato). Aggiunto `'riunione_referenti'` all'insieme
+`TIPI_RAGGRUPPABILI` in `_raggruppa_eventi_dipartimento()` —
+nessun'altra modifica necessaria, la funzione e i template erano già
+generici sul tipo. 1 test nuovo, 314/314 invariati.
+
 ## Sessione 66 addendum 83 — compattamento riunioni dipartimento/materia con stesso orario
 
 Roberto: le riunioni di dipartimento/materia compaiono una riga per

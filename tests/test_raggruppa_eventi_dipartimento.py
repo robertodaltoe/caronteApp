@@ -69,6 +69,22 @@ def test_orari_diversi_restano_separati(app, db_session):
     assert not any(getattr(r, 'is_gruppo', False) for r in risultato)
 
 
+def test_riunione_referenti_stesso_orario_compattata(app, db_session):
+    from routes.attivita_ist import _raggruppa_eventi_dipartimento
+    let = _crea_dip('LET')
+    mat = _crea_dip('MAT')
+    e1 = _crea_evento('riunione_referenti', let, date(2026, 10, 6), '15:00', '16:00')
+    e2 = _crea_evento('riunione_referenti', mat, date(2026, 10, 6), '15:00', '16:00')
+
+    risultato = _raggruppa_eventi_dipartimento([e1, e2])
+
+    assert len(risultato) == 1
+    g = risultato[0]
+    assert g.is_gruppo is True
+    assert 'Riunione referenti' in g.titolo
+    assert sorted(g.sigle_dipartimenti) == ['LET', 'MAT']
+
+
 def test_riunione_materia_non_si_mescola_con_dipartimento_anche_a_stesso_orario(app, db_session):
     from routes.attivita_ist import _raggruppa_eventi_dipartimento
     let = _crea_dip('LET')
