@@ -806,6 +806,14 @@ def form(id=None):
 
         db.session.commit()
         flash(f'Evento {"aggiornato" if id else "registrato"}: {titolo}', 'success')
+
+        # Torna alla pagina da cui si è arrivati (es. Piano delle attività),
+        # non sempre a "Attività istituzionali" — stesso motivo/pattern di
+        # elimina() qui sotto: si accetta solo un percorso relativo di
+        # questa stessa app.
+        next_url = request.form.get('next', '').strip()
+        if next_url.startswith('/') and not next_url.startswith('//'):
+            return redirect(next_url)
         return redirect(url_for('attivita_ist.lista'))
 
     # Pre-selezione docenti per preset

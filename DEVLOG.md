@@ -4,6 +4,27 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 77 — Piano annuale: modifica evento non tornava alla pagina di origine (Cowork)
+
+Roberto: modificando un appuntamento da Piano annuale 2026/2027 veniva
+rimandato ad Attività istituzionali invece che restare sulla stessa
+pagina (mese/filtri) per fare altre modifiche di fila.
+
+Il template `attivita_ist/piano_annuale.html` passava già
+`next=request.full_path` al link di modifica, e `form.html` lo
+riportava in un campo nascosto — ma `routes/attivita_ist.py::form()`,
+nel ramo POST, ignorava quel valore e reindirizzava sempre a
+`attivita_ist.lista`. Stesso identico pattern già presente e corretto
+in `elimina()` poche righe sotto (redirect a `next` solo se percorso
+relativo interno, mai un URL assoluto/esterno) — copiato in `form()`.
+
+3 test nuovi in `tests/test_attivita_ist_form_next.py` (torna a next
+se fornito, torna a lista se assente, rifiuta un next assoluto/esterno
+tipo `//evil.example.com`). 301/301 test invariati. Verificato dal
+vivo su copia isolata del DB reale: submit del form di modifica con
+`next=/attivita-ist/piano-annuale?anno=2026-2027` → redirect finale
+esattamente a quell'URL (non più a `/attivita-ist`).
+
 ## Sessione 66 addendum 76 — box "CC confermate" in /impostazioni non conta il sostegno (Cowork)
 
 Roberto: "ne ho inseriti 31 ma nel box in /impostazioni mi compare
