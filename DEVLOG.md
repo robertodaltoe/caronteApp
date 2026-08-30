@@ -4,6 +4,29 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 93 — UNPLUGGED: verifica falso allarme + data prima giornata sbagliata (dato reale)
+
+Roberto: "non mi risulta il corso unplugged. l'avevo diviso su tre
+giorni ma qui compare solo in uno."
+
+Verificato con una copia isolata del DB reale via HTTP (non solo a
+Python): il collegamento Piano della formazione ↔ Piano delle attività
+funziona correttamente — l'evento compare su tutte le sue giornate sia
+in Piano annuale ("(giorno N/3)") sia in Elenco/gestione eventi
+(indicatore "+2 giorni" con tooltip). Non era un bug di visualizzazione:
+mentre verificavo, Roberto ha modificato il corso da Piano della
+formazione, e la prima giornata è passata da 07/09 a **15/09**
+(probabilmente un errore di battitura sulla data), lasciando 08/09 e
+09/09 invariate — quindi le "3 giornate" restavano 3, ma con un buco
+nel mezzo invece di essere consecutive, ed è questo che dava
+l'impressione di dati mancanti.
+
+Confermato da Roberto: doveva restare 7-8-9 settembre. Backup cifrato
+(`data/backup/database_20260831_0053_pre_fix_data_unplugged_07set.db.enc`),
+corretta la prima sessione (id 15) e il campo `data` dell'evento da
+15/09 a 07/09, `PRAGMA integrity_check` ok. Ora: 07/09, 08/09, 09/09,
+22h totali invariate.
+
 ## Sessione 66 addendum 92 — INCIDENTE: sync_db.py ha sovrascritto attivita_ist con una copia stale da Drive
 
 Roberto: "c'è qualcosa che non va sui dati che vedo nell'app. in
