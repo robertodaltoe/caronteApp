@@ -4,6 +4,64 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 78 — Assegnazioni ignorava gli override per-sezione del piano studi (Cowork)
+
+Roberto ha modificato il piano studi 1° LLI: "Lettere italiane" passa
+da A-11 ad AS12 in generale, con un override per la sola sezione B
+verso A-11 ("per Sportelli", tramite il ＋sez di Impostazione Anno →
+Piano di studi). Tre problemi segnalati insieme:
+
+**1. Assegnazioni non rispettava l'override.** `_classi_per_cc()` in
+`routes/assegnazioni.py` derivava le colonne (classi) di ogni CC
+filtrando `PianoStudi.id_classe_concorso == cc_id`, senza mai guardare
+`PianoStudiOverride`: AS12 continuava a mostrare "1B LLI" (già spostata
+via dall'override) e A-11 non la riceveva mai. Stesso problema
+simmetrico nel calcolo delle "ore previste" (`_build_area()`,
+`aggiorna_ore()`, `_resolve_id_materia()`): tutti derivavano le ore
+dalla riga generale della CC, ignorando che per una sezione specifica
+la CC effettiva può essere diversa — la riga di controllo in fondo
+alla tabella confrontava quindi "ore assegnate" con un "ore previste"
+sbagliato per entrambe le CC coinvolte.
+
+Aggiunta `_override_map(anno_scol)` (stesso formato/query già usati da
+`_ricalcola_organico()` in `impostazione_anno.py` per il calcolo
+organico, che l'override lo rispettava già — solo Assegnazioni ne era
+rimasta indietro) e `_righe_piano_sezione()`, che calcola la CC
+"effettiva" per (riga di piano studi, sezione) invece di fidarsi della
+CC generale. `_classi_per_cc()`, la costruzione di `piano` in
+`_build_area()`, `aggiorna_ore()` e `_resolve_id_materia()` ora la
+usano tutte. 4 test nuovi in `tests/test_assegnazioni_override_sezione.py`
+(colonne corrette su entrambe le CC, ore corrette per sezione,
+end-to-end su `_build_area()`). Verificato anche sul DB reale: AS12 ora
+mostra solo "1A LLI", A-11 mostra "1A LLI" (Latino+Storia, invariato) e
+"1B LLI" con le ore corrette (5 e 9) invece della colonna sbagliata.
+
+**2. In Piano di studi, "＋sez" non compariva per A-11.** Il template
+`piano_studi.html` ha due layout diversi per riga di tabella: uno per
+CC con una sola materia (con menu cambio-CC, atipicità e ＋sez), uno
+compatto per CC con più materie nello stesso anno_corso/indirizzo (qui
+A-11, che a 1° LLI insegna sia Lettere che Latino che Storia — da qui
+`n_materie > 1`, l'altro ramo). Un commento nel codice del ramo
+compatto ricordava che il menu cambio-CC/atipicità era già mancato lì
+una volta ("mancava qui... una CC con più materie... perdeva sia la
+possibilità di cambiare CC sia l'avviso di atipicità") ed era stato
+aggiunto — ma il blocco ＋sez/override non era mai stato replicato nello
+stesso punto. Aggiunto, identico a quello del ramo materia-singola
+(stessa azione POST, stesso JS `toggleOverride`/`cercaCC` già generico
+per `riga.id`). Verificato dal vivo sulla copia isolata del DB reale:
+il blocco A-11 ora ha i controlli ＋sez per ogni materia/anno, prima
+assenti.
+
+**Segnalazione — non un bug di codice, dato da controllare**: in
+`piano_studi` per il 2026-2027 esiste una seconda riga per "Lettere
+italiane" 1° LLI (id=371, CC=A-11, **0 ore settimanali**), separata da
+quella che Roberto ha impostato oggi (id=11, CC=AS12, 4 ore). Con
+l'override attivo è innocua per ora (contribuisce 0 alla somma ore di
+A-11), ma è un doppione: stessa materia, stesso anno_corso/indirizzo,
+due righe. Non l'ho toccata — segnalo solo, per decisione di Roberto
+(regola non negoziabile #6), che verifichi se va eliminata o se è lì
+per un motivo che non emerge dai soli dati.
+
 ## Sessione 66 addendum 77 — Piano annuale: modifica evento non tornava alla pagina di origine (Cowork)
 
 Roberto: modificando un appuntamento da Piano annuale 2026/2027 veniva

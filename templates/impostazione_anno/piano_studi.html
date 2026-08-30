@@ -277,6 +277,86 @@
                             comp.
                         </label>
                         {% endif %}
+                        {# Override per-sezione — stesso blocco del layout "singola
+                           materia": mancava anche qui, stessa causa della nota sopra
+                           (mancava CC-select/atipica in questo ramo compatto), per cui
+                           una CC con più materie (es. A-11 con Lettere+Latino+Storia)
+                           non aveva modo di impostare un override per sezione. #}
+                        {% set ovs = override_map.get(riga.id, []) %}
+                        {% if ovs %}
+                        <div style="margin-top:2px; display:flex; flex-direction:column; gap:2px;">
+                            {% for ov in ovs %}
+                            <div style="display:inline-flex; align-items:center; gap:2px;
+                                        background:#fef3c7; border:1px solid #fde68a;
+                                        border-radius:4px; padding:1px 4px; font-size:.6rem;">
+                                <span style="font-weight:700;">{{ ov.sezione }}</span>→︎
+                                <span style="color:#92400e; font-weight:700;">{{ ov.cc_override.codice }}</span>
+                                <form method="post" action="{{ url_for('impostazione_anno.piano_studi_override_elimina', ov_id=ov.id) }}"
+                                      style="display:inline; margin:0; padding:0;">
+                                    <button type="submit" style="background:none; border:none; cursor:pointer;
+                                            color:#dc2626; font-size:.6rem; padding:0; line-height:1;"
+                                            title="Rimuovi override sezione {{ ov.sezione }}">{{ icon('close') }}</button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <button type="button"
+                                onclick="toggleOverride('ov-{{ riga.id }}')"
+                                style="background:none; border:none; cursor:pointer; font-size:.6rem;
+                                       color:#6366f1; margin-top:1px;" title="Override CC per sezione specifica">
+                            ＋ sez
+                        </button>
+                        <div id="ov-{{ riga.id }}"
+                             style="display:none; position:absolute; z-index:100; margin-top:2px;
+                                    background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px;
+                                    padding:8px 10px; font-size:.74rem; min-width:220px; text-align:left;
+                                    box-shadow:0 4px 12px rgba(0,0,0,.1);">
+                            <form method="post"
+                                  action="{{ url_for('impostazione_anno.piano_studi_override_salva') }}">
+                                <input type="hidden" name="id_piano_studi" value="{{ riga.id }}">
+                                <div style="font-weight:700; color:#0369a1; margin-bottom:6px; font-size:.76rem;">
+                                    {{ icon('gear') }} Override sezione — {{ riga.classe_concorso.codice }}
+                                </div>
+                                <div style="display:flex; gap:4px; margin-bottom:4px;">
+                                    <div>
+                                        <div style="font-size:.68rem; color:#64748b; margin-bottom:2px;">Sez.</div>
+                                        <input type="text" name="sezione" placeholder="A" maxlength="2" required
+                                               style="width:40px; padding:3px 5px; border:1px solid #bae6fd;
+                                                      border-radius:4px; font-size:.78rem; text-align:center;
+                                                      text-transform:uppercase;">
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="font-size:.68rem; color:#64748b; margin-bottom:2px;">Nuova CC</div>
+                                        <input type="text" id="cc-text-{{ riga.id }}"
+                                               placeholder="es. A-26" required
+                                               style="width:100%; padding:3px 5px; border:1px solid #bae6fd;
+                                                      border-radius:4px; font-size:.78rem; text-transform:uppercase;"
+                                               oninput="cercaCC({{ riga.id }}, this.value)">
+                                        <input type="hidden" id="cc-id-{{ riga.id }}">
+                                    </div>
+                                </div>
+                                <div id="cc-label-{{ riga.id }}"
+                                     style="font-size:.68rem; margin-bottom:4px; min-height:14px;"></div>
+                                <div style="margin-bottom:4px;">
+                                    <div style="font-size:.68rem; color:#64748b; margin-bottom:2px;">Nota *</div>
+                                    <input type="text" name="note" required
+                                           placeholder="es. A-26 solo per 1A LSC per carenza A-27"
+                                           style="width:100%; padding:3px 5px; border:1px solid #bae6fd;
+                                                  border-radius:4px; font-size:.74rem;">
+                                </div>
+                                <div style="display:flex; gap:4px;">
+                                    <button type="submit" class="btn btn-sm"
+                                            style="background:#0369a1; color:white; padding:3px 10px;
+                                                   font-size:.72rem;">Salva</button>
+                                    <button type="button"
+                                            onclick="toggleOverride('ov-{{ riga.id }}')"
+                                            style="background:none; border:1px solid #bae6fd; border-radius:4px;
+                                                   cursor:pointer; padding:3px 8px; font-size:.72rem; color:#64748b;">
+                                        Annulla</button>
+                                </div>
+                            </form>
+                        </div>
                         {% else %}
                         <span style="color:#9ca3af; font-size:.78rem;">—</span>
                         {% endif %}

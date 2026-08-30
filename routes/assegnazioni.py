@@ -38,6 +38,52 @@ def _righe_piano(anno_scol, cc_id, anno_corso=None, indirizzo=None):
     return righe
 
 
+def _override_map(anno_scol):
+    """
+    {id_piano_studi: {sezione: id_cc_override}} per l'anno — stesso
+    formato/query usati da _ricalcola_organico() in impostazione_anno.py
+    per il calcolo organico. Qui serve per rendere Assegnazioni coerente
+    con un override per-sezione (PianoStudiOverride): senza, la pagina
+    ignorava del tutto gli override, mostrando sia nella CC di partenza
+    che in quella di arrivo colonne/ore sbagliate per la sezione
+    spostata (segnalato da Roberto per un override AS12→A-11 sulla
+    sezione B di 1° LLI).
+    """
+    from models.piano_studi import PianoStudiOverride
+    m = {}
+    for ov in (PianoStudiOverride.query
+               .join(PianoStudi, PianoStudiOverride.id_piano_studi == PianoStudi.id)
+               .filter(PianoStudi.anno_scol == anno_scol).all()):
+        m.setdefault(ov.id_piano_studi, {})[ov.sezione] = ov.id_cc_override
+    return m
+
+
+def _righe_piano_sezione(anno_scol, cc_id, anno_corso, indirizzo, sezione, override_map=None):
+    """
+    Come _righe_piano, ma per UNA sezione specifica: rispetta un
+    eventuale PianoStudiOverride su quella sezione. _righe_piano filtra
+    subito per id_classe_concorso=cc_id, quindi non può sapere che per
+    la sezione B quella riga "appartiene" in realtà a un'altra CC (o
+    viceversa, che una riga di un'altra CC è stata spostata qui per la
+    sezione B) — guarda invece TUTTE le righe di quell'anno_corso/
+    indirizzo e calcola per ciascuna la CC "effettiva" per la sezione
+    richiesta (quella dell'override se esiste, altrimenti quella
+    generale della riga).
+    """
+    if override_map is None:
+        override_map = _override_map(anno_scol)
+    righe_tutte = PianoStudi.query.filter_by(
+        anno_scol=anno_scol, anno_corso=anno_corso, indirizzo=indirizzo).all()
+
+    def _cc_effettiva(p):
+        return override_map.get(p.id, {}).get(sezione, p.id_classe_concorso)
+
+    righe = [p for p in righe_tutte if _cc_effettiva(p) == cc_id and not p.compresenza]
+    if not righe:
+        righe = [p for p in righe_tutte if _cc_effettiva(p) == cc_id and p.compresenza]
+    return righe
+
+
 def _resolve_id_materia(anno_scol, cc_id, label):
     """
     Se la classe ha un'unica materia associata a questa classe di
@@ -69,8 +115,9 @@ def _resolve_id_materia(anno_scol, cc_id, label):
     if not m:
         return None
     anno_corso = int(m.group(1))
+    sezione    = m.group(2) or 'A'
     indirizzo  = m.group(3).strip()
-    righe = _righe_piano(anno_scol, cc_id, anno_corso, indirizzo)
+    righe = _righe_piano_sezione(anno_scol, cc_id, anno_corso, indirizzo, sezione)
     if len(righe) == 1:
         # id_materia, non id: AssegnazioneClasse.id_materia è FK verso la
         # tabella Materia, non verso PianoStudi (sono due entità diverse
@@ -251,20 +298,36 @@ def _classi_per_cc(anno_scol, cc_id):
     (_righe_piano con anno_corso/indirizzo specificati) resta invariato
     e già corretto: sceglie giustamente compresenza solo se quella
     specifica classe non ha una riga propria.
+
+    OVERRIDE PER-SEZIONE (PianoStudiOverride): una riga di piano studi
+    vale per TUTTE le sezioni attive del suo anno_corso/indirizzo, TRANNE
+    quelle per cui esiste un override verso un'altra CC — e viceversa,
+    una sezione con un override VERSO questa CC va inclusa anche se la
+    riga di piano studi "di casa" per quella sezione appartiene a
+    un'altra CC. Senza tenerne conto, sia la CC di partenza che quella
+    di arrivo di un override mostravano colonne sbagliate (segnalato da
+    Roberto per un override AS12→A-11 sulla sezione B di 1° LLI: AS12
+    continuava a mostrare la B già spostata via, A-11 non la riceveva).
+    Per questo si scorrono TUTTE le righe dell'anno (non solo quelle con
+    id_classe_concorso=cc_id) e si calcola la CC effettiva per sezione.
     """
     cc = db.session.get(ClasseConcorso, cc_id)
     if cc and cc.tipo_posto == 'sostegno':
         classi = [f'{s.anno_corso}{s.sezione} {s.indirizzo}' for s in
                   ClasseSezione.query.filter_by(anno_scol=anno_scol, attiva=True).all()]
     else:
-        righe = PianoStudi.query.filter_by(
-            anno_scol=anno_scol, id_classe_concorso=cc_id).all()
+        override_map = _override_map(anno_scol)
+        righe = PianoStudi.query.filter_by(anno_scol=anno_scol).all()
         classi = []
         for p in righe:
             sezioni = ClasseSezione.query.filter_by(
                 anno_scol=anno_scol, indirizzo=p.indirizzo,
                 anno_corso=p.anno_corso, attiva=True).all()
+            override_sez = override_map.get(p.id, {})
             for s in sezioni:
+                cc_eff = override_sez.get(s.sezione, p.id_classe_concorso)
+                if cc_eff != cc_id:
+                    continue
                 lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
                 if lbl not in classi:
                     classi.append(lbl)
@@ -280,14 +343,16 @@ def _classi_per_cc(anno_scol, cc_id):
 
 
 def _ore_piano_per_classe(anno_scol, cc_id, label_classe):
-    """Ore previste dal piano studi per una classe specifica."""
+    """Ore previste dal piano studi per una classe specifica, rispettando
+    un eventuale override per-sezione (vedi _righe_piano_sezione)."""
     import re
     m = re.match(r'(\d)([AB]?)\s+(.+)', label_classe)
     if not m:
         return 0
     anno_corso = int(m.group(1))
+    sezione    = m.group(2) or 'A'
     indirizzo  = m.group(3).strip()
-    righe = _righe_piano(anno_scol, cc_id, anno_corso, indirizzo)
+    righe = _righe_piano_sezione(anno_scol, cc_id, anno_corso, indirizzo, sezione)
     return righe[0].ore_settimanali if righe else 0
 
 
@@ -314,6 +379,7 @@ def _build_area(anno_scol, area):
       - ore_per_classe: {label: ore_coperte}
     """
     blocks = []
+    override_map = _override_map(anno_scol)
     for codice in area['cc']:
         cc = ClasseConcorso.query.filter_by(codice=codice).first()
         if not cc:
@@ -335,6 +401,7 @@ def _build_area(anno_scol, area):
                 piano_materie[c] = []
                 continue
             ac = int(m.group(1))
+            sez = m.group(2) or 'A'
             ind = m.group(3).strip()
             if cc.tipo_posto == 'sostegno':
                 # Niente piano studi proprio per il sostegno: il tetto è
@@ -344,7 +411,7 @@ def _build_area(anno_scol, area):
                 piano[c] = _monte_ore_classe(anno_scol, ac, ind)
                 piano_materie[c] = []
                 continue
-            righe_p = _righe_piano(anno_scol, cc.id, ac, ind)
+            righe_p = _righe_piano_sezione(anno_scol, cc.id, ac, ind, sez, override_map)
             piano[c] = sum(r.ore_settimanali for r in righe_p)
             # 'id' qui DEVE essere r.id_materia (la FK verso la tabella
             # Materia, quella che AssegnazioneClasse.id_materia referenzia
@@ -754,10 +821,11 @@ def aggiorna_ore(asgn_id):
         if ac_row.indirizzo == 'POT':
             continue
 
-        # Ore totali previste per questa CC in questa classe (vedi
-        # _righe_piano per il fallback sulle CC solo-compresenza)
-        ps_all = _righe_piano(asgn.anno_scol, asgn.id_classe_concorso,
-                               ac_row.anno_corso, ac_row.indirizzo)
+        # Ore totali previste per questa CC in questa classe, rispettando
+        # un eventuale override per-sezione (vedi _righe_piano_sezione)
+        ps_all = _righe_piano_sezione(asgn.anno_scol, asgn.id_classe_concorso,
+                                       ac_row.anno_corso, ac_row.indirizzo,
+                                       ac_row.sezione)
         ore_previste_tot = sum(p.ore_settimanali for p in ps_all)
 
         # Ore assegnate a questa classe da questo docente (tutte le materie)
