@@ -42,6 +42,7 @@
             {% endfor %}
         </div>
         {% endif %}
+        <a href="{{ url_for('attivita_ist.form', next=request.full_path) }}" class="btn btn-success btn-sm">+ Nuovo evento</a>
         <a href="{{ url_for('attivita_ist.piano_annuale_xlsx', anno=anno) }}" class="btn btn-sm" style="background:#1d6f42;color:white;">{{ icon('download') }} Esporta Excel</a>
         <a href="{{ url_for('attivita_ist.piano_annuale_pdf', anno=anno) }}" class="btn btn-sm" style="background:var(--verde);color:white;">{{ icon('download') }} Esporta PDF</a>
         <a href="{{ url_for('attivita_ist.riepilogo_ore', anno=anno) }}" class="btn btn-sm" style="background:#0369a1;color:white;">{{ icon('check') }} Riepilogo ore</a>
@@ -51,8 +52,9 @@
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:18px;">
     {{ n_eventi }} eventi nell'anno — stesso modello del piano condiviso (colonne
     Attività/Indirizzo/Classe/Inizio/Fine/Ore/Categoria, sospensioni e termine lezioni
-    segnati come nel calendario). Vista di sola lettura: per creare/modificare un
-    evento usa "Elenco/gestione eventi".
+    segnati come nel calendario). Vista di sola lettura: per un nuovo evento usa
+    "+ Nuovo evento" qui sopra, per modificarne uno esistente clicca sulla riga
+    o usa "Elenco/gestione eventi".
 </p>
 
 {% if not mesi %}

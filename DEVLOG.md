@@ -4,6 +4,22 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 82 — "+ Nuovo evento" diretto in Piano annuale
+
+Roberto: da Piano annuale vuole un tasto per inserire un impegno
+qualsiasi (consiglio, GLO, collegio o altro) che porti direttamente
+alla pagina di creazione, invece di dover prima passare da "Elenco/
+gestione eventi". Aggiunto in `templates/attivita_ist/piano_annuale.html`
+un pulsante "+ Nuovo evento" verso `attivita_ist.form` (stesso form
+generico già usato per qualunque tipo, incluso il nuovo "Altra
+riunione"), con `next=request.full_path` — riusa il meccanismo già
+introdotto nell'addendum 77 per tornare alla pagina di origine dopo il
+salvataggio, quindi da Piano annuale si crea l'evento e si torna lì
+(non a "Elenco/gestione eventi"). Verificato dal vivo end-to-end su
+copia isolata del DB reale: link con `next` corretto, salvataggio di
+un evento GLO di prova, redirect finale a Piano annuale. 307/307 test
+invariati (solo markup).
+
 ## Sessione 66 addendum 81 — stesso bug override-per-sezione duplicato nell'export XLSX P9 (Cowork)
 
 Roberto: "tutte le pagine che prendono i dati da assegnazione sono
