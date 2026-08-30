@@ -4,6 +4,32 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 94 — audit completo date corsi Piano della formazione (dato reale)
+
+Roberto: "verifica tutte le date dei corsi in piano della formazione,
+è successo qualcosa e si sono modificate" — dopo l'incidente di sync
+(addendum 92) e la correzione UNPLUGGED (addendum 93), voleva la
+certezza che non fosse successo altrove.
+
+Confrontati programmaticamente TUTTI i `CorsoFormazione` (con evento
+`AttivitaIst` e `AttivitaIstSessione` collegati) tra il DB attuale e
+`database.db.bak` (lo snapshot certo di prima dell'incidente,
+addendum 92). Nessuna altra divergenza trovata — solo UNPLUGGED era
+cambiato, già corretto. Anche `CorsoFormazione.data_inizio/data_fine`
+di UNPLUGGED era rimasto fermo al 15/09 singolo (mai risincronizzato
+quando ho corretto l'evento nell'addendum 93): aggiornato a
+07/09–09/09, coerente con le 3 giornate reali.
+
+Trovate invece **anomalie preesistenti**, già presenti nel backup di
+riferimento (quindi risalgono all'importazione originale del 20/08,
+non all'incidente): Modulo 2/2bis (Psicologa), Modulo 3/3bis
+(Coaching) e Modulo 1bis (Valutazione, il residuo ancora da
+recuperare) hanno tutti data 15/11/2026 — un **sabato** — senza alcun
+orario. Le note dicono esplicitamente "Data provvisoria (bozza) — da
+confermare in Collegio Docenti": sembrano segnaposto mai finalizzati
+dal foglio originale. Segnalate a Roberto, non toccate (regola non
+negoziabile #6 — decide lui se e come sistemarle).
+
 ## Sessione 66 addendum 93 — UNPLUGGED: verifica falso allarme + data prima giornata sbagliata (dato reale)
 
 Roberto: "non mi risulta il corso unplugged. l'avevo diviso su tre
