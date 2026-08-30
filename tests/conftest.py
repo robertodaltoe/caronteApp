@@ -47,7 +47,7 @@ def app():
         from models.utente import Utente  # noqa
         from models.log_accesso import LogAccesso  # noqa
         from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,  # noqa
-                                          AttivitaIstPresenza)
+                                          AttivitaIstPresenza, AttivitaIstSessione)
         from models.formazione import CorsoFormazione  # noqa
         from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse  # noqa
         from models.piano_studi import PianoStudi  # noqa

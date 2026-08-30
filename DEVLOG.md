@@ -4,6 +4,75 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 86 — eventi su più giornate con orari diversi (es. corsi di formazione multi-giorno)
+
+Roberto: "alcuni eventi di formazione non sono concentrati in un
+giorno solo, ad esempio il corso unplugged si svolge su 3 giorni in
+orari anche diversi. Al momento io non posso gestire questa
+situazione." Verificato sul DB reale: l'evento "UNPLUGGED — ATS
+Montagna" (id 97) aveva infatti `durata_min` forzato a 1200 (20h) su
+un'unica data/orario fittizi (07/09 09:00–18:00, che sono solo 9h) —
+l'unico modo esistente per far quadrare il totale ore reale.
+
+Chiesto e confermato il modello: **un solo AttivitaIst** (non più
+eventi separati collegati) con le giornate aggiuntive in una nuova
+tabella figlia. Nuovo modello `AttivitaIstSessione` (`models/
+attivita_ist.py`): id_attivita, data, ora_inizio, ora_fine — vuota per
+la stragrande maggioranza degli eventi (un solo giorno, invariati);
+popolata solo per i pochi eventi realmente multi-giorno. Nessuna
+migrazione manuale necessaria: `db.create_all()` in `app.py` crea la
+tabella nuova da sé al prossimo avvio (le migrazioni manuali in
+`_auto_migrate()` servono solo per colonne aggiunte a tabelle
+esistenti).
+
+`AttivitaIst.durata_ore` ora somma le ore di ciascuna sessione quando
+presenti, invece del `durata_min` forzato — il totale diventa quello
+reale, calcolato dalle giornate vere, non più un numero scritto a
+mano che nessuno ricontrolla se cambia l'orario di una giornata.
+
+**Form** (`attivita_ist/form.html`): sotto Data/Ora inizio/Ora fine
+(che restano la prima giornata) un pulsante "+ Giornata" aggiunge righe
+data+ora_inizio+ora_fine per le giornate successive — un titolo comune,
+N righe, come richiesto. In modifica, le giornate già salvate (dalla
+seconda in poi) vengono precaricate. Al salvo (`routes/attivita_ist.py
+::form()`), le sessioni si rigenerano sempre da zero (cancella e
+ricrea) invece di provare un match tra righe vecchie e nuove — più
+semplice e sicuro.
+
+**Piano annuale** (vista calendario, giorno per giorno): un evento
+multi-giorno ora compare una volta per ciascuna giornata REALE, non
+una sola volta nel giorno "principale" col totale aggregato — nuovo
+`_espandi_eventi_multi_giorno()`, usato anche da export PDF/XLSX
+(condividono `_righe_piano_annuale()`). Ogni comparsa mostra
+"(giorno N/M)" nel titolo e le proprie ore/orario di quel giorno;
+Modifica/Elimina puntano sempre all'evento intero (le giornate si
+gestiscono dal form, non da lì). `n_eventi` (contatore in cima alla
+pagina) conta l'evento una sola volta, non una per giornata.
+
+**Elenco/gestione eventi** (lista piatta, non per-giorno): l'evento
+resta UNA riga (già così, nessun cambio di struttura lì), con un
+indicatore "+N giorni" accanto alla data (tooltip con l'elenco
+completo) e il totale ore ora corretto.
+
+**Limite noto, non affrontato**: `modules/assenze_registrazione.py::
+_sync_presenza_ist()` aggiorna la presenza di un docente assente
+filtrando `AttivitaIst.query.filter_by(data=...)` sulla SOLA data
+principale dell'evento — un'assenza durante la 2ª/3ª giornata di un
+corso multi-giorno non aggiorna automaticamente la presenza per
+quell'evento (limite preesistente, non peggiorato da questo cambio: già
+prima l'intero corso stava su un'unica data fittizia).
+
+7 test nuovi in `tests/test_evento_multi_giorno.py` (durata_ore somma
+le sessioni, espansione una riga per giornata, piano annuale mostra
+l'evento sui giorni reali, form crea/rigenera le sessioni dalle
+giornate extra, caso comune senza giornate extra invariato). 321/321
+test totali. Verificato dal vivo su copia isolata del DB reale:
+aggiunte 2 giornate all'evento UNPLUGGED esistente dal form, salvato,
+verificato che compare sui 3 giorni reali in Piano annuale (9h+8h+8h)
+e come riga unica con "+2 giorni"/25.0h in Elenco/gestione eventi. Non
+ho toccato l'evento reale con date inventate: Roberto può ora
+aggiungere lui le giornate vere dal form, o darmele per farlo io.
+
 ## Sessione 66 addendum 85 — Piano annuale: tabella sfasata espandendo un gruppo dipartimenti
 
 Roberto: "attenzione perchè la funzione espandi cliccata su una

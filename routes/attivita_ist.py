@@ -461,6 +461,46 @@ def _raggruppa_eventi_dipartimento(eventi):
     return risultato
 
 
+def _espandi_eventi_multi_giorno(eventi):
+    """
+    Un evento con più giornate (AttivitaIst.sessioni valorizzata — es.
+    un corso di formazione su 3 giorni con orari diversi) va mostrato
+    una volta per ciascuna giornata reale nella vista a calendario del
+    Piano annuale, non una volta sola nel giorno "principale" col
+    totale ore aggregato (che lì non avrebbe senso: non è la durata di
+    QUEL giorno). Ogni riga virtuale porta lo stesso id dell'evento
+    originale — Modifica/Elimina agiscono sempre sull'intero evento,
+    non su una singola giornata (le giornate si modificano dal form,
+    non da qui).
+
+    Usata solo per la vista a calendario (screen/PDF/XLSX di
+    _righe_piano_annuale); l'Elenco/gestione eventi (lista()) mostra
+    l'evento una volta sola con il totale, dato che lì non è
+    organizzato per giorno.
+    """
+    from types import SimpleNamespace
+    risultato = []
+    for e in eventi:
+        if len(e.sessioni) > 1:
+            n = len(e.sessioni)
+            for i, s in enumerate(e.sessioni, start=1):
+                risultato.append(SimpleNamespace(
+                    id=e.id, tipo=e.tipo,
+                    titolo=f'{e.titolo} (giorno {i}/{n})',
+                    data=s.data, ora_inizio=s.ora_inizio, ora_fine=s.ora_fine,
+                    durata_ore=s.durata_ore, durata_min=None,
+                    classe=e.classe, col_classe=getattr(e, 'col_classe', ''),
+                    col_indirizzo=getattr(e, 'col_indirizzo', ''),
+                    col_categoria=getattr(e, 'col_categoria', e.tipo_label),
+                    dipartimento=e.dipartimento, tipo_label=e.tipo_label,
+                    tipo_emoji=e.tipo_emoji, bucket=e.bucket,
+                    partecipanti=e.partecipanti,
+                ))
+        else:
+            risultato.append(e)
+    return risultato
+
+
 # ── LISTA ────────────────────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist')
@@ -541,6 +581,7 @@ def _righe_piano_annuale(anno):
         ev.col_categoria = ev.tipo_label
 
     n_eventi = len(eventi)
+    eventi = _espandi_eventi_multi_giorno(eventi)
     eventi = _raggruppa_eventi_dipartimento(eventi)
 
     marcatori = []  # (data, tipo, contenuto)
@@ -869,6 +910,32 @@ def form(id=None):
             )
             db.session.add(evento)
         db.session.flush()
+
+        # Altre giornate (evento su più date con orari diversi, es. un
+        # corso di formazione su 3 giorni) — la prima giornata resta nei
+        # campi data/ora_inizio/ora_fine sopra; qui solo quelle in più.
+        # Si rigenerano sempre da zero: più semplice e sicuro che
+        # provare a fare il match tra righe esistenti e nuove.
+        from models.attivita_ist import AttivitaIstSessione
+        extra_date = request.form.getlist('extra_data[]')
+        extra_ini  = request.form.getlist('extra_ora_inizio[]')
+        extra_fin  = request.form.getlist('extra_ora_fine[]')
+        extra_righe = [(d, i or None, f or None)
+                       for d, i, f in zip(extra_date, extra_ini, extra_fin) if d.strip()]
+
+        AttivitaIstSessione.query.filter_by(id_attivita=evento.id).delete()
+        if extra_righe:
+            # La prima giornata (quella già nei campi data/ora_inizio/
+            # ora_fine dell'evento) diventa anch'essa una sessione, così
+            # durata_ore/le viste calendario trattano tutte le giornate
+            # allo stesso modo invece di trattare la prima diversamente.
+            db.session.add(AttivitaIstSessione(
+                id_attivita=evento.id, data=evento.data,
+                ora_inizio=evento.ora_inizio, ora_fine=evento.ora_fine))
+            for d, i, f in extra_righe:
+                db.session.add(AttivitaIstSessione(
+                    id_attivita=evento.id, data=date.fromisoformat(d),
+                    ora_inizio=i, ora_fine=f))
 
         # Partecipanti: usa preset se nessuna selezione manuale
         if not doc_ids:

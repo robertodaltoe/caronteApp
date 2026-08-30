@@ -154,6 +154,8 @@
         <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}">
             <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
                 <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
+                {%- if e.sessioni|length > 1 %} <span style="font-size:.7rem; color:var(--bronzo); font-weight:700;"
+                    title="Evento su più giornate: {% for s in e.sessioni %}{{ s.data.strftime('%d/%m') }}{% if s.ora_inizio %} ({{ s.ora_inizio }}–{{ s.ora_fine or '?' }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}">+{{ e.sessioni|length - 1 }} giorni</span>{% endif %}
             </td>
             <td style="font-size:.84rem; white-space:nowrap;">
                 {% if e.ora_inizio %}{{ e.ora_inizio }}{% if e.ora_fine %}–{{ e.ora_fine }}{% endif %}

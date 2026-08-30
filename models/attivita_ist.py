@@ -73,6 +73,17 @@ class AttivitaIst(db.Model):
     presenze      = db.relationship('AttivitaIstPresenza',
                                     back_populates='attivita',
                                     cascade='all, delete-orphan')
+    # Giornate aggiuntive per eventi su più date con orari diversi (es.
+    # corso di formazione su 3 giorni) — vuota per la stragrande
+    # maggioranza degli eventi (una sola giornata, i campi data/
+    # ora_inizio/ora_fine sopra bastano). Quando valorizzata, la prima
+    # riga rispecchia sempre data/ora_inizio/ora_fine di questo stesso
+    # evento (sincronizzata al salvataggio in routes/attivita_ist.py::
+    # form()) — vedi durata_ore sotto per il motivo.
+    sessioni      = db.relationship('AttivitaIstSessione',
+                                    back_populates='attivita',
+                                    cascade='all, delete-orphan',
+                                    order_by='AttivitaIstSessione.data')
 
     @property
     def bucket(self):
@@ -88,7 +99,15 @@ class AttivitaIst(db.Model):
 
     @property
     def durata_ore(self):
-        """Durata in ore (float), calcolata da ora_inizio/ora_fine o da durata_min."""
+        """
+        Durata in ore (float). Se l'evento ha più giornate (sessioni),
+        somma le ore di ciascuna — prima si doveva forzare un totale
+        finto su durata_min con un'unica data (segnalato da Roberto per
+        un corso di formazione su 3 giorni con orari diversi), ora il
+        totale è la somma reale delle giornate.
+        """
+        if self.sessioni:
+            return round(sum(s.durata_ore for s in self.sessioni), 2)
         if self.durata_min:
             return round(self.durata_min / 60, 2)
         if self.ora_inizio and self.ora_fine:
@@ -102,6 +121,38 @@ class AttivitaIst(db.Model):
 
     def __repr__(self):
         return f'<AttivitaIst {self.tipo} {self.data} {self.titolo[:30]}>'
+
+
+class AttivitaIstSessione(db.Model):
+    """
+    Una singola giornata di un evento che si svolge su più date con
+    orari diversi (es. un corso di formazione su 3 giorni) — Roberto:
+    prima non c'era modo di rappresentarlo, si forzava il totale ore
+    reale su un'unica data fittizia. Popolata solo per i pochi eventi
+    davvero multi-giorno: la maggioranza degli AttivitaIst non ne ha
+    nessuna e usa solo i propri campi data/ora_inizio/ora_fine.
+    """
+    __tablename__ = 'attivita_ist_sessioni'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    id_attivita = db.Column(db.Integer,
+                            db.ForeignKey('attivita_ist.id'), nullable=False)
+    data        = db.Column(db.Date, nullable=False)
+    ora_inizio  = db.Column(db.String(5), nullable=True)
+    ora_fine    = db.Column(db.String(5), nullable=True)
+
+    attivita = db.relationship('AttivitaIst', back_populates='sessioni')
+
+    @property
+    def durata_ore(self):
+        if self.ora_inizio and self.ora_fine:
+            try:
+                hi, mi = map(int, self.ora_inizio.split(':'))
+                hf, mf = map(int, self.ora_fine.split(':'))
+                return round(((hf * 60 + mf) - (hi * 60 + mi)) / 60, 2)
+            except Exception:
+                pass
+        return 0.0
 
 
 class AttivitaIstPartecipante(db.Model):

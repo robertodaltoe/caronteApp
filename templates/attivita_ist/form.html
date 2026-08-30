@@ -46,6 +46,19 @@
         </div>
     </div>
 
+    <!-- Altre giornate: per eventi che si svolgono su più date con orari
+         diversi (es. un corso di formazione su 3 giorni) — Roberto: prima
+         non c'era modo di rappresentarlo, si forzava un totale ore finto
+         su un giorno solo. La prima giornata resta nei campi Data/Ora
+         sopra; qui si aggiungono solo quelle successive. -->
+    <div class="form-group">
+        <label style="display:flex; align-items:center; justify-content:space-between;">
+            <span>Altre giornate <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">(evento su più date con orari diversi)</span></span>
+            <button type="button" onclick="aggiungiGiornata()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">+ Giornata</button>
+        </label>
+        <div id="extra-giornate"></div>
+    </div>
+
     <!-- Solo per CdC / Scrutini -->
     <div class="form-group" id="sez-classe" style="display:none;">
         <label>Classe</label>
@@ -163,6 +176,31 @@ function aggiornaTipo() {
 }
 function selTutti()  { document.querySelectorAll('.doc-check').forEach(c => c.checked = true); }
 function deselTutti(){ document.querySelectorAll('.doc-check').forEach(c => c.checked = false); }
+
+function aggiungiGiornata(data, oraIni, oraFin) {
+    const cont = document.getElementById('extra-giornate');
+    const riga = document.createElement('div');
+    riga.style.cssText = 'display:flex; gap:8px; align-items:center; margin-top:6px;';
+    riga.innerHTML =
+        '<input type="date" name="extra_data[]" value="' + (data || '') + '" required ' +
+            'style="flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">' +
+        '<input type="time" name="extra_ora_inizio[]" value="' + (oraIni || '') + '" ' +
+            'style="width:100px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">' +
+        '<input type="time" name="extra_ora_fine[]" value="' + (oraFin || '') + '" ' +
+            'style="width:100px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">' +
+        '<button type="button" onclick="this.parentElement.remove()" ' +
+            'style="background:none; border:none; cursor:pointer; color:#dc2626;">' +
+            '{{ icon("close") }}</button>';
+    cont.appendChild(riga);
+}
+{% if evento and evento.sessioni|length > 1 %}
+// Precarica le giornate già salvate (la prima resta nei campi Data/Ora
+// sopra, qui solo dalla seconda in poi).
+{% for s in evento.sessioni[1:] %}
+aggiungiGiornata('{{ s.data.isoformat() }}', '{{ s.ora_inizio or "" }}', '{{ s.ora_fine or "" }}');
+{% endfor %}
+{% endif %}
+
 document.addEventListener('DOMContentLoaded', aggiornaTipo);
 </script>
 {% endblock %}
