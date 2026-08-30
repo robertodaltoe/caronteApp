@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 81 — stesso bug override-per-sezione duplicato nell'export XLSX P9 (Cowork)
+
+Roberto: "tutte le pagine che prendono i dati da assegnazione sono
+corrette?" — dopo il fix dell'addendum 78 (override per-sezione
+ignorato in Assegnazioni).
+
+Censiti tutti i consumer di `AssegnazioneDocente`/`AssegnazioneClasse`:
+`modules/generatore_cdc.py`, `routes/attivita_ist.py`,
+`routes/dashboard_anno.py`, `routes/docenti.py` leggono tutti le righe
+di assegnazione grezze (già salvate, già corrette) senza mai
+riderivare "quali classi appartengono a questa CC" dal piano studi —
+non toccati dal bug, corretti.
+
+**Trovata un'altra occorrenza dello stesso bug**, esattamente il
+pattern "stessa logica duplicata altrove" di CLAUDE.md:
+`routes/export_xlsx.py::_p9_scrivi_blocco_cc()` (export "Passo 9",
+foglio "organico compless.", griglia RICHIESTA) ha una sua query
+indipendente su `PianoStudi` per costruire "materia → ore per classe"
+per CC, invece di riusare `_build_area()` di `routes/assegnazioni.py`
+— e quindi ignorava anch'essa `PianoStudiOverride`. Stesso scenario
+1° LLI: AS12 avrebbe continuato a mostrare ore per "1B LLI" nell'export
+anche dopo il fix della pagina web, A-11 non le avrebbe mai ricevute.
+
+Corretto riusando `_righe_piano_sezione()`/`_override_map()` già
+introdotte nell'addendum 78 invece di duplicare ancora la logica.
+Sistemato anche un caso più piccolo nello stesso file
+(`_riempi_foglio_classe()`, risoluzione dell'`id_materia` per righe
+storiche con `id_materia` NULL) per coerenza, stesso helper.
+2 test nuovi in `tests/test_export_xlsx_override_sezione.py`.
+307/307 test invariati. Verificato anche sul DB reale: il blocco AS12
+dell'export ora mostra "Lettere italiane" solo per 1A LLI, il blocco
+A-11 solo per 1B LLI (con Latino/Storia invariati su entrambe le
+sezioni, corretto perché non hanno override).
+
 ## Sessione 66 addendum 80 — Paolini in Assegnazioni: 22h invece di 18 (dato reale, non bug)
 
 Roberto: "in assegnazione verifica Paolini. le risultano 22h ma io ne

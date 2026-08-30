@@ -434,22 +434,32 @@ def _p9_scrivi_intestazione2(ws, start_row, anno, gruppi_classi):
 def _p9_scrivi_blocco_cc(ws, r, anno, cc, label_col, label_color, ultima_classe_col,
                           col_pot, col_richiesta, col_titolari):
     """Scrive il blocco di una classe di concorso: titolo + una riga per materia."""
-    from models.piano_studi import PianoStudi, ClasseSezione
     from models.assegnazione import CattedraPotenziamento, AssegnazioneDocente
     from collections import OrderedDict
     from openpyxl.utils import get_column_letter as gcl
+    import re as _re9
+    from routes.assegnazioni import _righe_piano_sezione, _override_map
 
     thin = Side(style='thin', color='FF000000')
     box  = Border(left=thin, right=thin, top=thin, bottom=thin)
 
+    # Rispetta un eventuale override per-sezione (PianoStudiOverride):
+    # prima si derivava l'elenco materie/ore filtrando solo per
+    # id_classe_concorso=cc.id, senza mai guardare l'override — stesso
+    # bug già corretto in routes/assegnazioni.py::_classi_per_cc()
+    # (duplicato qui perché questo export ha una sua logica indipendente
+    # per costruire la stessa griglia, invece di riusare _build_area()).
+    override_map = _override_map(anno)
     materie = OrderedDict()  # nome_materia -> {label_classe: ore}
-    for p in PianoStudi.query.filter_by(anno_scol=anno, id_classe_concorso=cc.id,
-                                          compresenza=False).all():
-        secs = ClasseSezione.query.filter_by(anno_scol=anno, indirizzo=p.indirizzo,
-                                              anno_corso=p.anno_corso, attiva=True).all()
-        for s in secs:
-            lbl = f'{p.anno_corso}{s.sezione} {p.indirizzo}'
-            if lbl not in label_col:
+    for lbl in label_col:
+        m = _re9.match(r'(\d+)([AB]?)\s+(.+)', lbl)
+        if not m:
+            continue
+        ac  = int(m.group(1))
+        sez = m.group(2) or 'A'
+        ind = m.group(3).strip()
+        for p in _righe_piano_sezione(anno, cc.id, ac, ind, sez, override_map):
+            if p.compresenza:
                 continue
             materie.setdefault(p.nome_materia_locale, {})
             materie[p.nome_materia_locale][lbl] = (
@@ -761,10 +771,10 @@ def _riempi_foglio_classe(ws, anno, label_classe):
             # (routes/assegnazioni.py::_resolve_id_materia): prova a
             # risolverla ora dal piano studi invece di mostrare il tipo
             # di contratto al posto del nome materia.
-            from models.piano_studi import PianoStudi as _PS
-            righe_p = _PS.query.filter_by(
-                anno_scol=anno, id_classe_concorso=a.id_classe_concorso,
-                anno_corso=anno_corso, indirizzo=indirizzo, compresenza=False).all()
+            from routes.assegnazioni import _righe_piano_sezione
+            righe_p = [p for p in _righe_piano_sezione(
+                anno, a.id_classe_concorso, anno_corso, indirizzo, sezione)
+                if not p.compresenza]
             if len(righe_p) == 1:
                 id_mat = righe_p[0].id_materia
         mat = Materia.query.get(id_mat) if id_mat else None
