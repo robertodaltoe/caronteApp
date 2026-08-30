@@ -155,12 +155,24 @@ def attiva():
     db.session.commit()
     risultati.append(f'✓︎ Orario docenti: {n_orario} righe archiviate (svuotato)')
 
-    # 3. Svuota indisponibilità non ricorrenti
+    # 3. Svuota le indisponibilità dell'anno che si chiude — SOLO quelle
+    # datate entro la sua fine (31/08). Prima cancellava TUTTE le righe
+    # senza alcun filtro per data (Indisponibilita.query.delete() sulla
+    # tabella intera): un'indisponibilità già inserita per il nuovo
+    # anno (es. ottobre) sarebbe sparita insieme a quelle vecchie —
+    # segnalato da Roberto prima di eseguire il cambio anno reale.
     from models.indisponibilita import Indisponibilita
-    n_ind = Indisponibilita.query.count()
-    Indisponibilita.query.delete()
+    from config_anno import intervallo_anno_scolastico
+    _, fine_anno_precedente = intervallo_anno_scolastico(anno_precedente)
+    ind_da_eliminare = Indisponibilita.query.filter(
+        Indisponibilita.data <= fine_anno_precedente).all()
+    n_ind = len(ind_da_eliminare)
+    for i in ind_da_eliminare:
+        db.session.delete(i)
     db.session.commit()
-    risultati.append(f'✓︎ Indisponibilità: {n_ind} righe archiviate (svuotato)')
+    risultati.append(
+        f'✓︎ Indisponibilità: {n_ind} righe di {anno_precedente} eliminate '
+        f'(quelle già inserite per {anno_nuovo} restano intatte)')
 
     # 4. Banca ore: nessuna azione necessaria. Il saldo mostrato ovunque
     # (routes/report.py::get_saldi_docente) è sempre filtrato per anno

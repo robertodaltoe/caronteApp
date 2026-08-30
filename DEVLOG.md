@@ -4,6 +4,52 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 90 — cambio anno: attiva() cancellava TUTTE le indisponibilità, non solo quelle dell'anno chiuso
+
+Roberto, prima di eseguire il cambio anno reale (2025-2026→2026-2027):
+"ho un dubbio; ho delle indisponibilità che scavalcano l'anno
+scolastico (Del Curto, Santagata) quelli li perderò?"
+
+Verificato nel codice: `routes/cambio_anno.py::attiva()` faceva
+`Indisponibilita.query.delete()` sull'intera tabella, senza alcun
+filtro per data — nonostante il commento dicesse "svuota indisponibilità
+non ricorrenti" (concetto che nel modello `Indisponibilita` non esiste
+nemmeno: nessun campo "ricorrente", solo una data singola per riga).
+Un'indisponibilità già inserita per il nuovo anno sarebbe sparita
+insieme a quelle vecchie. Sui dati reali, al momento della domanda, Del
+Curto/Santagata non avevano ancora nulla oltre agosto — nessuna perdita
+già avvenuta, ma il rischio era concreto per il futuro.
+
+Fix: elimina solo le righe datate entro la fine dell'anno che si
+chiude (`intervallo_anno_scolastico(anno_precedente)`, stesso
+31/08 usato altrove in tutta l'app per i confini di anno scolastico),
+lasciando intatte quelle già inserite per il nuovo anno. Messaggio di
+conferma aggiornato per dirlo esplicitamente, invece del fuorviante
+"archiviate" (non veniva archiviato nulla, solo cancellato).
+
+2 test nuovi in `tests/test_cambio_anno_attiva.py` (elimina solo
+l'anno precedente lasciando intatta una riga già inserita per il
+nuovo anno; caso comune senza righe future, comportamento invariato).
+328/328 test totali. Verificato anche dal vivo su copia isolata del
+DB reale, simulando la transizione reale 2025-2026→2026-2027: su 335
+indisponibilità, solo quella già datata nel nuovo anno è sopravvissuta.
+
+Confermato anche a Roberto (stessa domanda, sul workflow generale):
+Assegnazioni e Hub impostazione anno non seguono l'anno corrente
+(quello cambiato da "Attiva") ma `_anno_default_piano()`/
+`_anno_default()` — l'anno più recente con dati reali in piano studi/
+calcolo organico. Oggi l'unico anno con dati è 2026-2027 (nessuna riga
+ancora per 2027-2028): dopo aver attivato il 2026-2027, quelle pagine
+continueranno a puntarci, non salteranno al 2027-2028 finché non si
+userà "Prepara anno" per quello — stesso meccanismo già documentato in
+CLAUDE.md per non confondere "anno operativo" e "anno in preparazione".
+
+**Non ancora eseguito sul DB reale**: la transizione vera
+2025-2026→2026-2027 (anno corrente reale ancora 2025-2026 al momento
+di questo addendum) — Roberto la farà lui quando pronto, con le
+precauzioni già indicate (backup cifrato, verifica "Prepara" fatta,
+sync multi-postazione).
+
 ## Sessione 66 addendum 89 — consolidato Modulo 1/1bis Valutazione (dato reale)
 
 Seguito dell'addendum 88: Roberto — "va recuperato il modulo 1/1bis.
