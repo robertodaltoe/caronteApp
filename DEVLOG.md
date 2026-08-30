@@ -4,6 +4,28 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 87 — durata_min forzato incoerente con gli orari su alcuni eventi importati (dato reale)
+
+Roberto: "formazione PLS e Formazioni Ver.di sono indicate dall 8.30
+alle 9.00 eppure il calcolo delle ore è fissato a 2 ore, perchè?"
+
+Causa: `AttivitaIst.durata_ore` usa `durata_min` se valorizzato, PRIMA
+di calcolarlo da ora_inizio/ora_fine (vedi addendum 86) — per questi
+due eventi (id 98/99, `origine='import_piano'`) `durata_min` era
+fissato a 120 (2h), incoerente con gli orari salvati (08:30–09:00,
+0.5h). Cercato lo stesso pattern su tutto il DB: trovate anche id 91
+("[POC — DM 38] Modulo 1 - Valutazione", orari 11:30–13:30=2h ma
+durata_min=600=10h) e id 97 (UNPLUGGED, già sistemato nell'addendum 86
+con le sessioni reali, durata_min ormai ignorato). Segnalata id 91 a
+Roberto (regola non negoziabile #6) invece di correggerla di mia
+iniziativa — non toccata.
+
+Confermato da Roberto per PLS/Ver.di: gli orari sono giusti, va tolto
+il durata_min forzato. Backup cifrato
+(`data/backup/database_20260830_2236_pre_fix_durata_formazione_pls_verdi.db.enc`),
+`durata_min` impostato a NULL per id 98 e 99, `PRAGMA integrity_check`
+ok. `durata_ore` ora calcolato dagli orari: 0.5h per entrambi (era 2.0h).
+
 ## Sessione 66 addendum 86 — eventi su più giornate con orari diversi (es. corsi di formazione multi-giorno)
 
 Roberto: "alcuni eventi di formazione non sono concentrati in un
