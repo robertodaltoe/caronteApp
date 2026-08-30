@@ -4,6 +4,34 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 91 — backup cifrato dedicato prima di "Attiva" (cambio anno)
+
+Roberto: "Backup cifrato prima di 'Attiva' questo è predisposto?" —
+No: l'unico backup esistente era quello giornaliero legato all'avvio
+del server (`app.py::_backup_automatico`, al massimo uno al giorno) —
+se il server resta acceso per giorni non garantiva un backup recente
+proprio prima di un'operazione irreversibile come questa.
+
+Aggiunto in `routes/cambio_anno.py::attiva()` un backup cifrato
+dedicato, PRIMA di qualunque scrittura (cambio anno corrente, svuotamento
+orario/indisponibilità, ricalcolo organico): `crea_backup_cifrato()` con
+suffisso descrittivo (`_pre_attiva_anno_<precedente>_a_<nuovo>`). Se il
+backup fallisce (es. disco pieno), l'intera operazione si ferma subito
+— niente anno cambiato, niente dati cancellati — invece di procedere
+senza rete di sicurezza. `crea_backup_cifrato` spostata da import
+locale a import a livello di modulo, per poterla monkeypatchare nei
+test senza mai toccare il vero `database.db`/la vera cartella
+`data/backup` del progetto.
+
+2 test nuovi in `tests/test_cambio_anno_attiva.py` (il backup viene
+richiesto con il suffisso giusto prima di procedere; se il backup
+fallisce l'operazione si annulla completamente — anno invariato,
+nessuna indisponibilità cancellata). 330/330 test totali. Verificato
+anche dal vivo su copia isolata del DB reale, stessa simulazione della
+transizione 2025-2026→2026-2027 dell'addendum 90: il file
+`database_20260831_0035_pre_attiva_anno_2025-2026_a_2026-2027.db.enc`
+viene creato correttamente in `data/backup/` prima di ogni scrittura.
+
 ## Sessione 66 addendum 90 — cambio anno: attiva() cancellava TUTTE le indisponibilità, non solo quelle dell'anno chiuso
 
 Roberto, prima di eseguire il cambio anno reale (2025-2026→2026-2027):

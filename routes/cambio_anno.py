@@ -7,6 +7,7 @@ Due operazioni distinte:
   B. attiva_anno(nuovo_anno)   — rende operativo il nuovo anno,
                                   eseguita il 1 settembre (o manualmente)
 """
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db
 from models.docente import Docente
@@ -14,6 +15,7 @@ from models.piano_studi import ClasseSezione, PianoStudi, CalcoloOrganico
 from models.config_app import ConfigApp
 from config_anno import get_anno_corrente, set_anno_corrente
 from routes.impostazione_anno import _ricalcola_organico
+from modules.backup_cifrato import crea_backup_cifrato
 
 cambio_anno_bp = Blueprint('cambio_anno', __name__)
 
@@ -141,10 +143,28 @@ def attiva():
         flash(f'Anno {anno_nuovo} non ancora preparato. Esegui prima "Prepara anno".', 'danger')
         return redirect(url_for('cambio_anno.index'))
 
+    anno_precedente = get_anno_corrente()
+
+    # Backup cifrato dedicato PRIMA di qualunque scrittura — l'unico
+    # backup automatico esistente (app.py::_backup_automatico) è
+    # giornaliero e legato all'avvio del server: se il server è acceso
+    # da giorni non garantisce un backup recente proprio prima di
+    # un'operazione irreversibile come questa (richiesto da Roberto).
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    db_path = os.path.join(base_dir, 'database.db')
+    backup_dir = os.path.join(base_dir, 'data', 'backup')
+    try:
+        backup_path = crea_backup_cifrato(
+            db_path, backup_dir,
+            suffisso=f'_pre_attiva_anno_{anno_precedente}_a_{anno_nuovo}')
+    except Exception as e:
+        flash(f'Backup non riuscito, operazione annullata per sicurezza: {e}', 'danger')
+        return redirect(url_for('cambio_anno.index'))
+
     risultati = []
+    risultati.append(f'✓︎ Backup cifrato creato: {os.path.basename(backup_path)}')
 
     # 1. Cambia anno scolastico corrente
-    anno_precedente = get_anno_corrente()
     set_anno_corrente(anno_nuovo)
     risultati.append(f'✓︎ Anno corrente: {anno_precedente} →︎ {anno_nuovo}')
 
