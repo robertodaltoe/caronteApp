@@ -46,7 +46,9 @@
     {% if anno_piano %}
     <div class="kpi-row">
         <div class="kpi"><div class="kpi-n">{{ n_sezioni_attive }}</div><div class="kpi-l">Sezioni attive</div></div>
-        <div class="kpi"><div class="kpi-n">{{ n_cc_confermate }}/{{ n_cc_tot }}</div><div class="kpi-l">CC confermate</div></div>
+        <div class="kpi" title="Classi di concorso con calcolo COI/COE (ore da piano di studi); il sostegno non ne fa parte e non è conteggiato qui.">
+            <div class="kpi-n">{{ n_cc_confermate }}/{{ n_cc_tot }}</div><div class="kpi-l">CC confermate (no sostegno)</div>
+        </div>
         <div class="kpi"><div class="kpi-n">{{ n_ti }}</div><div class="kpi-l">Docenti TI</div></div>
         <div class="kpi"><div class="kpi-n">{{ n_docenti }}</div><div class="kpi-l">Docenti attivi</div></div>
     </div>

@@ -4,6 +4,33 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 76 — box "CC confermate" in /impostazioni non conta il sostegno (Cowork)
+
+Roberto: "ne ho inseriti 31 ma nel box in /impostazioni mi compare
+30/30 assegnate. perchè non 31/31?"
+
+Investigato sul DB reale: `calcolo_organico` per il 2026-2027 ha
+esattamente 30 righe, una per ogni classe di concorso "normale" — ma
+`classi_concorso` ne ha 31 in totale. La 31ª è ADSS (Area Unica
+Sostegno, id 23), per cui Roberto aveva correttamente inserito
+l'organico in `cattedre_organico` (25/08, fatto: n_docenti=1, n_coi=6,
+ore_residue=9). Il sostegno però non ha mai una riga in
+`calcolo_organico` perché quella tabella è alimentata solo da
+`_ricalcola_organico()` sommando le ore settimanali per materia del
+piano di studi (`routes/impostazione_anno.py`) — e il sostegno non ha
+ore-materia nel piano di studi (si assegna per alunno certificato, non
+per COI/COE a 18 ore): comportamento corretto della pipeline, non un
+bug di calcolo, ma il box non lo segnalava, dando l'impressione di una
+CC "dimenticata".
+
+Scelta Roberto tra due opzioni proposte (segnalare l'anomalia senza
+decidere, come da regola non negoziabile #6): **strada 1**, lasciare
+il box com'è e solo chiarire l'etichetta. Modificato
+`templates/impostazioni/index.html`: etichetta "CC confermate" →
+"CC confermate (no sostegno)", con `title` esplicativo sul box.
+Nessuna modifica a Python/logica — solo testo del template, verificato
+a video con una copia isolata del DB reale su porta temporanea.
+
 ## Sessione 66 addendum 75 — codice classe di concorso A-12 rimasto non aggiornato ad AS12 (Cowork)
 
 Roberto: in Impostazione Anno → Classi di concorso ci sono ancora
