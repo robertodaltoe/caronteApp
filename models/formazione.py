@@ -32,7 +32,16 @@ class CorsoFormazione(db.Model):
                                     db.ForeignKey('attivita_ist.id'), nullable=False)
     titolo              = db.Column(db.String(200), nullable=False)
     tipologia           = db.Column(db.String(100), nullable=True)
-    ore                 = db.Column(db.Float, nullable=False)
+    # Colonna storica (NOT NULL nello schema esistente) — non più la
+    # fonte di verità delle ore, vedi la proprietà `ore` sotto. Tenuta
+    # solo per compatibilità di schema (evitare una migrazione SQLite
+    # per rimuovere una colonna NOT NULL), scritta allo stesso valore
+    # calcolato ad ogni salvataggio (routes/formazione.py), mai letta
+    # altrove — prima era un numero inserito a mano completamente
+    # slegato dalla durata reale dell'evento collegato: modificando
+    # l'orario in Piano delle attività il valore qui restava quello
+    # vecchio (segnalato da Roberto).
+    _ore_legacy         = db.Column('ore', db.Float, nullable=False)
     modalita            = db.Column(db.String(20), default='presenza')
     data_inizio         = db.Column(db.Date, nullable=False)
     data_fine           = db.Column(db.Date, nullable=False)
@@ -42,6 +51,17 @@ class CorsoFormazione(db.Model):
     creato_il           = db.Column(db.DateTime, default=datetime.utcnow)
 
     attivita = db.relationship('AttivitaIst')
+
+    @property
+    def ore(self):
+        """
+        Ore reali del corso — sempre quelle dell'evento collegato (somma
+        delle giornate se ne ha più di una, vedi AttivitaIst.durata_ore),
+        mai un numero inserito a mano: unica fonte di verità, niente da
+        tenere sincronizzato a mano tra Piano della formazione e Piano
+        delle attività.
+        """
+        return self.attivita.durata_ore if self.attivita else 0.0
 
     @property
     def modalita_label(self):

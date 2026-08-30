@@ -10,6 +10,7 @@ from models import db
 from models.formazione import CorsoFormazione, MODALITA
 from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
 from models.docente import Docente
+from routes.attivita_ist import _salva_sessioni_extra
 from datetime import date
 
 formazione_bp = Blueprint('formazione', __name__)
@@ -48,7 +49,8 @@ def form(id=None):
     if request.method == 'POST':
         titolo    = request.form['titolo'].strip()
         tipologia = request.form.get('tipologia', '').strip() or None
-        ore       = float(request.form['ore'])
+        ora_ini   = request.form.get('ora_inizio', '').strip() or None
+        ora_fin   = request.form.get('ora_fine', '').strip() or None
         modalita  = request.form.get('modalita', 'presenza')
         ini       = date.fromisoformat(request.form['data_inizio'])
         fin_raw   = request.form.get('data_fine', '').strip()
@@ -58,29 +60,42 @@ def form(id=None):
         anno_scol = request.form.get('anno_scol', '').strip() or _anno_scolastico(ini)
 
         if corso:
-            corso.titolo = titolo; corso.tipologia = tipologia; corso.ore = ore
+            corso.titolo = titolo; corso.tipologia = tipologia
             corso.modalita = modalita; corso.data_inizio = ini; corso.data_fine = fin
             corso.obbligatorio_tutti = obbl; corso.note = note
             corso.anno_scol = anno_scol
             evento = corso.attivita
             evento.titolo = titolo
             evento.data = ini
-            evento.durata_min = round(ore * 60)
+            evento.ora_inizio = ora_ini; evento.ora_fine = ora_fin
             evento.note = note
         else:
             evento = AttivitaIst(
                 tipo='formazione', titolo=titolo, data=ini,
-                durata_min=round(ore * 60), note=note, origine='manuale',
+                ora_inizio=ora_ini, ora_fine=ora_fin, note=note, origine='manuale',
             )
             db.session.add(evento)
             db.session.flush()
+            # _ore_legacy: colonna storica NOT NULL, non più letta da
+            # nessuno (vedi CorsoFormazione.ore) — valorizzata solo per
+            # rispettare il vincolo di schema, aggiornata subito sotto
+            # con la durata vera calcolata dall'evento.
             corso = CorsoFormazione(
                 id_attivita=evento.id, titolo=titolo, tipologia=tipologia,
-                ore=ore, modalita=modalita, data_inizio=ini, data_fine=fin,
+                _ore_legacy=0, modalita=modalita, data_inizio=ini, data_fine=fin,
                 obbligatorio_tutti=obbl, anno_scol=anno_scol, note=note,
             )
             db.session.add(corso)
         db.session.flush()
+
+        _salva_sessioni_extra(evento, request.form)
+        db.session.flush()
+        # La query bulk di _salva_sessioni_extra (.delete()) non
+        # aggiorna da sola evento.sessioni già in memoria — si forza il
+        # ricaricamento prima di leggere durata_ore, altrimenti
+        # rischierebbe di sommare le sessioni vecchie.
+        db.session.expire(evento, ['sessioni'])
+        corso._ore_legacy = evento.durata_ore
 
         if obbl:
             # Aggiunge chi manca fra i docenti in servizio, senza duplicare

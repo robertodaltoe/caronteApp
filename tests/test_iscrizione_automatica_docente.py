@@ -66,7 +66,7 @@ def test_docente_si_iscrive_a_corso_formazione_obbligatorio(db_session):
     db.session.add(ev)
     db.session.flush()
     db.session.add(CorsoFormazione(
-        id_attivita=ev.id, titolo='Sicurezza', ore=0.5, modalita='presenza',
+        id_attivita=ev.id, titolo='Sicurezza', _ore_legacy=0.5, modalita='presenza',
         data_inizio=DOMANI, data_fine=DOMANI, obbligatorio_tutti=True,
         anno_scol='2026-2027'))
     db.session.commit()
@@ -82,7 +82,7 @@ def test_docente_non_si_iscrive_a_corso_formazione_volontario(db_session):
     db.session.add(ev)
     db.session.flush()
     db.session.add(CorsoFormazione(
-        id_attivita=ev.id, titolo='Corso libero', ore=1, modalita='online',
+        id_attivita=ev.id, titolo='Corso libero', _ore_legacy=1, modalita='online',
         data_inizio=DOMANI, data_fine=DOMANI, obbligatorio_tutti=False,
         anno_scol='2026-2027'))
     db.session.commit()

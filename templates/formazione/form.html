@@ -22,12 +22,6 @@
                        style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
             </div>
             <div style="flex:1;">
-                <label style="display:block; font-weight:600; margin-bottom:4px;">Ore</label>
-                <input type="number" name="ore" step="0.5" min="0" required
-                       value="{{ corso.ore if corso else '' }}"
-                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
-            </div>
-            <div style="flex:1;">
                 <label style="display:block; font-weight:600; margin-bottom:4px;">Modalità</label>
                 <select name="modalita" style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
                     {% for k, v in modalita.items() %}
@@ -44,6 +38,31 @@
                        style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
             </div>
             <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Ora inizio</label>
+                <input type="time" name="ora_inizio"
+                       value="{{ corso.attivita.ora_inizio if corso else '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Ora fine</label>
+                <input type="time" name="ora_fine"
+                       value="{{ corso.attivita.ora_fine if corso else '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+        </div>
+        <!-- Altre giornate: per corsi su più date con orari diversi (es.
+             UNPLUGGED, 3 giorni) — la prima giornata resta nei campi
+             sopra. Le ore totali (mostrate sotto) sono sempre la somma
+             reale delle giornate, non un numero da inserire a mano. -->
+        <div class="form-group" style="margin-bottom:14px;">
+            <label style="display:flex; align-items:center; justify-content:space-between; font-weight:600;">
+                <span>Altre giornate <span style="font-weight:400; color:#6b7280; font-size:.78rem;">(corso su più date con orari diversi)</span></span>
+                <button type="button" onclick="aggiungiGiornata()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">+ Giornata</button>
+            </label>
+            <div id="extra-giornate"></div>
+        </div>
+        <div style="display:flex; gap:14px; margin-bottom:14px; align-items:flex-end;">
+            <div style="flex:1;">
                 <label style="display:block; font-weight:600; margin-bottom:4px;">Data fine</label>
                 <input type="date" name="data_fine"
                        value="{{ corso.data_fine.isoformat() if corso else '' }}"
@@ -54,6 +73,10 @@
                 <input type="text" name="anno_scol" placeholder="es. 2026-2027"
                        value="{{ corso.anno_scol if corso else anno_default }}"
                        style="width:100%; padding:7px 10px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div style="flex:1; padding:7px 10px; border-radius:6px; background:var(--blu-light); color:var(--blu); font-size:.85rem;">
+                <strong>{{ '%.1f'|format(corso.ore) if corso else '—' }}</strong> ore totali
+                {% if corso %}<span style="font-size:.72rem; display:block; color:#6b7280;">calcolate dagli orari sopra</span>{% endif %}
             </div>
         </div>
         <div style="margin-bottom:14px;">
@@ -111,4 +134,30 @@
     collegato in <a href="{{ url_for('attivita_ist.lista') }}">Attività istituzionali</a>.
 </div>
 {% endif %}
+
+<script>
+function aggiungiGiornata(data, oraIni, oraFin) {
+    const cont = document.getElementById('extra-giornate');
+    const riga = document.createElement('div');
+    riga.style.cssText = 'display:flex; gap:8px; align-items:center; margin-top:6px;';
+    riga.innerHTML =
+        '<input type="date" name="extra_data[]" value="' + (data || '') + '" required ' +
+            'style="flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">' +
+        '<input type="time" name="extra_ora_inizio[]" value="' + (oraIni || '') + '" ' +
+            'style="width:100px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">' +
+        '<input type="time" name="extra_ora_fine[]" value="' + (oraFin || '') + '" ' +
+            'style="width:100px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">' +
+        '<button type="button" onclick="this.parentElement.remove()" ' +
+            'style="background:none; border:none; cursor:pointer; color:#dc2626;">' +
+            '{{ icon("close") }}</button>';
+    cont.appendChild(riga);
+}
+{% if corso and corso.attivita.sessioni|length > 1 %}
+// Precarica le giornate già salvate (la prima resta nei campi Data/Ora
+// sopra, qui solo dalla seconda in poi).
+{% for s in corso.attivita.sessioni[1:] %}
+aggiungiGiornata('{{ s.data.isoformat() }}', '{{ s.ora_inizio or "" }}', '{{ s.ora_fine or "" }}');
+{% endfor %}
+{% endif %}
+</script>
 {% endblock %}

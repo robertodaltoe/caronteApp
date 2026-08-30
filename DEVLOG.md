@@ -4,6 +4,70 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 88 — Piano della formazione e Piano delle attività: le ore erano due numeri separati, mai sincronizzati
+
+Roberto, dopo il fix dell'addendum 87: "ti spiego cosa succede. in
+piano della formazione ho inserito dei dati che compaiono anche in
+piano delle attività [...] come possiamo gestire e collegare queste
+voci affinché modificandola in piano delle attività si aggiorni anche
+piano della formazione e viceversa? e come risolviamo il bug delle
+voci separate?"
+
+**Causa radice trovata**: `CorsoFormazione.ore` (models/formazione.py)
+era una colonna salvata a parte, scritta una volta sola al
+salvataggio del form di Piano della formazione
+(`evento.durata_min = round(ore*60)`), MAI riletta o aggiornata da
+nessun altro punto — modificare l'orario dell'evento da Piano delle
+attività non toccava quel numero, e viceversa. Prova diretta: dopo il
+fix dell'addendum 87 su "Formazione Ver.di." (AttivitaIst corretto a
+0.5h), `CorsoFormazione.ore` per lo stesso corso era rimasto a 2.0 —
+disallineamento riprodotto dal vivo, non solo teorico.
+
+Trovato anche il "bug delle voci separate": `CorsoFormazione` id=4
+("Modulo 1bis - Valutazione") punta a un `id_attivita` (94) che non
+esiste più in `attivita_ist` — riferimento rotto, probabilmente un
+evento cancellato da Roberto mentre lavorava dall'app durante la
+sessione. Segnalato, non toccato (serve una decisione sua, vedi sotto).
+
+**Fix (confermato da Roberto: "un solo valore, calcolato")**:
+`CorsoFormazione.ore` non è più una colonna modificabile — ora è una
+`@property` che legge sempre `self.attivita.durata_ore` (che a sua
+volta somma le sessioni se il corso è su più giorni, addendum 86).
+La vecchia colonna `ore` nello schema (NOT NULL) resta fisicamente nel
+DB come `_ore_legacy` — nessuna migrazione SQLite necessaria per
+toglierla, semplicemente non viene più letta da nessuno, solo scritta
+allo stesso valore calcolato per rispettare il vincolo NOT NULL.
+
+Il form di Piano della formazione (`templates/formazione/form.html`)
+non chiede più un campo "Ore" libero: chiede Data/Ora inizio/Ora fine
+(più "+ Giornata" per corsi multi-giorno, stesso meccanismo
+dell'addendum 86, fattorizzato in `_salva_sessioni_extra()` — condiviso
+ora da `routes/attivita_ist.py::form()` e `routes/formazione.py::
+form()`, invece di due copie della stessa logica) — le ore totali sono
+mostrate a video ma calcolate, mai inserite a mano.
+
+5 test nuovi in `tests/test_formazione_ore_sincronizzate.py`
+(creazione calcola le ore dall'orario, modifica in Formazione
+aggiorna le ore, modifica in Piano delle attività si riflette nel
+corso — il percorso inverso, corso multi-giorno somma le giornate,
+caso comune invariato). Aggiornati i test esistenti che creavano
+`CorsoFormazione(ore=...)` a mano (`_ore_legacy=...`, il nuovo nome
+della colonna storica). 326/326 test totali. Verificato dal vivo su
+copia isolata del DB reale: lista Piano della formazione ora mostra
+0.5h per Ver.di. (era rimasto a 2.0 lì, nonostante il fix
+dell'addendum 87 sul lato Piano delle attività).
+
+**Da fare con Roberto, non affrontato qui** (dati reali, richiede la
+sua conferma sui valori):
+- Consolidare Modulo 1/1bis (Valutazione, 10h = 2+2+3+3 su 4 giorni —
+  confermato l'importo, mancano le date reali), Modulo 2/2bis
+  (Psicologa, 12h) e Modulo 3/3bis (Coaching, 8h) in un solo corso a
+  più giornate ciascuno invece di due corsi separati — ora possibile
+  con "+ Giornata", ma serve la ripartizione data-per-data reale.
+- Decidere cosa fare di `CorsoFormazione` id=4 ("Modulo 1bis"), il
+  riferimento rotto: eliminarlo (se il contenuto confluisce nel nuovo
+  Modulo 1 multi-giorno) o altro.
+
 ## Sessione 66 addendum 87 — durata_min forzato incoerente con gli orari su alcuni eventi importati (dato reale)
 
 Roberto: "formazione PLS e Formazioni Ver.di sono indicate dall 8.30

@@ -222,7 +222,7 @@ def test_riepilogo_ore_placeholder_conta_formazione_obbligatoria(app, db_session
     db.session.add(ev)
     db.session.flush()
     db.session.add(CorsoFormazione(
-        id_attivita=ev.id, titolo='Sicurezza', ore=0.5, modalita='presenza',
+        id_attivita=ev.id, titolo='Sicurezza', _ore_legacy=0.5, modalita='presenza',
         data_inizio=date(2026, 9, 15), data_fine=date(2026, 9, 15),
         obbligatorio_tutti=True, anno_scol=ANNO))
     db.session.commit()

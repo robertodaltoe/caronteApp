@@ -501,6 +501,43 @@ def _espandi_eventi_multi_giorno(eventi):
     return risultato
 
 
+def _salva_sessioni_extra(evento, form):
+    """
+    Salva le giornate aggiuntive di un evento su più date con orari
+    diversi (es. un corso di formazione su 3 giorni) — la prima
+    giornata resta nei campi data/ora_inizio/ora_fine di `evento`
+    stesso; qui si leggono solo quelle in più (campi ripetuti
+    extra_data[]/extra_ora_inizio[]/extra_ora_fine[] del form). Si
+    rigenerano sempre da zero: più semplice e sicuro che provare a fare
+    il match tra righe esistenti e nuove.
+
+    Condivisa da routes/attivita_ist.py::form() e
+    routes/formazione.py::form() — stesso meccanismo, stesso campo
+    "+ Giornata" in entrambi i form (un corso di formazione È un
+    AttivitaIst, vedi models/formazione.py).
+    """
+    from models.attivita_ist import AttivitaIstSessione
+    extra_date = form.getlist('extra_data[]')
+    extra_ini  = form.getlist('extra_ora_inizio[]')
+    extra_fin  = form.getlist('extra_ora_fine[]')
+    extra_righe = [(d, i or None, f or None)
+                   for d, i, f in zip(extra_date, extra_ini, extra_fin) if d.strip()]
+
+    AttivitaIstSessione.query.filter_by(id_attivita=evento.id).delete()
+    if extra_righe:
+        # La prima giornata (quella già nei campi data/ora_inizio/
+        # ora_fine dell'evento) diventa anch'essa una sessione, così
+        # durata_ore/le viste calendario trattano tutte le giornate
+        # allo stesso modo invece di trattare la prima diversamente.
+        db.session.add(AttivitaIstSessione(
+            id_attivita=evento.id, data=evento.data,
+            ora_inizio=evento.ora_inizio, ora_fine=evento.ora_fine))
+        for d, i, f in extra_righe:
+            db.session.add(AttivitaIstSessione(
+                id_attivita=evento.id, data=date.fromisoformat(d),
+                ora_inizio=i, ora_fine=f))
+
+
 # ── LISTA ────────────────────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist')
@@ -911,31 +948,7 @@ def form(id=None):
             db.session.add(evento)
         db.session.flush()
 
-        # Altre giornate (evento su più date con orari diversi, es. un
-        # corso di formazione su 3 giorni) — la prima giornata resta nei
-        # campi data/ora_inizio/ora_fine sopra; qui solo quelle in più.
-        # Si rigenerano sempre da zero: più semplice e sicuro che
-        # provare a fare il match tra righe esistenti e nuove.
-        from models.attivita_ist import AttivitaIstSessione
-        extra_date = request.form.getlist('extra_data[]')
-        extra_ini  = request.form.getlist('extra_ora_inizio[]')
-        extra_fin  = request.form.getlist('extra_ora_fine[]')
-        extra_righe = [(d, i or None, f or None)
-                       for d, i, f in zip(extra_date, extra_ini, extra_fin) if d.strip()]
-
-        AttivitaIstSessione.query.filter_by(id_attivita=evento.id).delete()
-        if extra_righe:
-            # La prima giornata (quella già nei campi data/ora_inizio/
-            # ora_fine dell'evento) diventa anch'essa una sessione, così
-            # durata_ore/le viste calendario trattano tutte le giornate
-            # allo stesso modo invece di trattare la prima diversamente.
-            db.session.add(AttivitaIstSessione(
-                id_attivita=evento.id, data=evento.data,
-                ora_inizio=evento.ora_inizio, ora_fine=evento.ora_fine))
-            for d, i, f in extra_righe:
-                db.session.add(AttivitaIstSessione(
-                    id_attivita=evento.id, data=date.fromisoformat(d),
-                    ora_inizio=i, ora_fine=f))
+        _salva_sessioni_extra(evento, request.form)
 
         # Partecipanti: usa preset se nessuna selezione manuale
         if not doc_ids:

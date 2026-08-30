@@ -17,7 +17,7 @@ def _crea_corso(obbligatorio=False, docenti=None, ore=4):
     db.session.add(ev)
     db.session.flush()
     corso = CorsoFormazione(
-        id_attivita=ev.id, titolo='Corso test', tipologia='test', ore=ore,
+        id_attivita=ev.id, titolo='Corso test', tipologia='test', _ore_legacy=ore,
         modalita='presenza', data_inizio=date(2026, 11, 10), data_fine=date(2026, 11, 10),
         obbligatorio_tutti=obbligatorio, anno_scol='2026-2027',
     )
@@ -88,7 +88,7 @@ def test_periodo_label_giorno_singolo_vs_intervallo(db_session):
 
     corso2 = CorsoFormazione(
         id_attivita=corso.id_attivita, titolo='Corso lungo', tipologia=None,
-        ore=10, modalita='online', data_inizio=date(2027, 1, 15),
+        _ore_legacy=10, modalita='online', data_inizio=date(2027, 1, 15),
         data_fine=date(2027, 1, 20), obbligatorio_tutti=False, anno_scol='2026-2027',
     )
     assert '–' in corso2.periodo_label

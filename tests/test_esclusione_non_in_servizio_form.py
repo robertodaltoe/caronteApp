@@ -58,7 +58,7 @@ def test_formazione_form_esclude_docente_uscito_dai_selezionabili(app, db_sessio
                       durata_min=60, origine='manuale')
     db.session.add(ev)
     db.session.flush()
-    corso = CorsoFormazione(id_attivita=ev.id, titolo='Corso 26-27', ore=1,
+    corso = CorsoFormazione(id_attivita=ev.id, titolo='Corso 26-27', _ore_legacy=1,
                              modalita='presenza', data_inizio=date(2026, 10, 1),
                              data_fine=date(2026, 10, 1), obbligatorio_tutti=False,
                              anno_scol='2026-2027')
@@ -91,7 +91,7 @@ def test_formazione_form_non_nasconde_iscritto_gia_uscito(app, db_session, monke
                       durata_min=60, origine='manuale')
     db.session.add(ev)
     db.session.flush()
-    corso = CorsoFormazione(id_attivita=ev.id, titolo='Corso', ore=1,
+    corso = CorsoFormazione(id_attivita=ev.id, titolo='Corso', _ore_legacy=1,
                              modalita='presenza', data_inizio=date(2026, 10, 1),
                              data_fine=date(2026, 10, 1), obbligatorio_tutti=False,
                              anno_scol='2026-2027')
