@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 95 — corretta anche la prima giornata di Modulo 1 - Valutazione (dato reale)
+
+Seguito dell'addendum 94: Roberto — "avevo messo il corso Modulo 1 -
+Valutazione non il 15/09 ma il 14/09.. le altre date coincidono".
+
+Verificato decifrando in sequenza i backup a cavallo della consolidazione
+(addendum 89): quello delle 23:26 del 30/08 (subito prima della
+consolidazione) ha ancora la sessione con data 14/09 corretta; quello
+delle 23:31 (`database.db.bak`, l'istantanea automatica di sync_db.py
+usata per il ripristino dell'addendum 92) ha già 15/09 — il cambio è
+avvenuto in una finestra di ~5 minuti, non per mano dello script di
+consolidazione (che non tocca mai le date delle sessioni, solo il
+campo `data` dell'evento principale, letto per intero da una sessione
+già esistente).
+
+Stessa dinamica "prima giornata spostata di un giorno" già vista per
+UNPLUGGED (addendum 93) — probabile modifica manuale in quella stessa
+finestra concitata (Roberto attivo sull'app in contemporanea al lavoro
+di consolidazione), non individuata alcuna causa nel codice. Segnalata
+la coincidenza a Roberto senza affermare un bug non confermato.
+
+Backup cifrato
+(`data/backup/database_20260831_0058_pre_fix_data_modulo1_14set.db.enc`),
+corretta la sessione (id 11, 15/09→14/09) e il campo `data`
+dell'evento 91, aggiornato anche il periodo di `CorsoFormazione` id 1
+(14/09–26/10), `PRAGMA integrity_check` ok. Le altre 3 giornate
+(28/09, 12/10, 26/10) invariate, come confermato da Roberto. Totale
+ore invariato (10h).
+
 ## Sessione 66 addendum 94 — audit completo date corsi Piano della formazione (dato reale)
 
 Roberto: "verifica tutte le date dei corsi in piano della formazione,
