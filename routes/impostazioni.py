@@ -23,8 +23,20 @@ def index():
     # da Roberto subito dopo il cambio anno (fine_td/trasferimento/
     # pensionamento con anno_scol_uscita == anno corrente). Stessa
     # funzione già usata da Docenti/Assegnazioni per questo motivo.
+    #
+    # _docenti_per_anno() include DELIBERATAMENTE anche aspettativa/AP
+    # uscente (restano titolari della scuola, sono "sulla pianta
+    # organica" — vedi la sua docstring) — vanno esclusi qui, come già
+    # fa Assegnazioni, perché "Docenti attivi" in questo box significa
+    # fisicamente in servizio. Senza questa esclusione risultavano 2
+    # persone in più rispetto ai presenti reali al Collegio docenti
+    # (Roberto, confronto diretto il giorno del cambio anno: Toracca
+    # in aspettativa, Tarabini AP uscente).
     anno_corrente = get_anno_corrente()
-    docenti_in_servizio = _docenti_per_anno(anno_corrente)
+    docenti_in_servizio = [
+        d for d in _docenti_per_anno(anno_corrente)
+        if d.status_presenza not in ('aspettativa', 'ap_uscente')
+    ]
     n_docenti = len(docenti_in_servizio)
     n_ti      = sum(1 for d in docenti_in_servizio
                      if tipo_contratto_per_anno(d, anno_corrente) == 'TI')

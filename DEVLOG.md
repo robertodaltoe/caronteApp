@@ -4,6 +4,30 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 104 — box "Docenti attivi": mancava ancora l'esclusione aspettativa/AP uscente
+
+Seguito immediato dell'addendum 103: Roberto — "ok i 74 docenti però
+ce ne sono comunque 2 di troppo se li confronto a quelli che mi
+risultano nell'elenco dei docenti presenti al collegio di questa
+mattina. chi sono?"
+
+Confrontato l'elenco `_docenti_per_anno('2026-2027')` (74) con i 72
+partecipanti preset del Collegio del 01/09/2026 (evento id 41): 2
+persone in più, **Toracca Donatella** (in aspettativa) e **Tarabini
+Anna** (AP uscente). Causa: `_docenti_per_anno()` le include
+*deliberatamente* per design (restano titolari della scuola, sono
+"sulla pianta organica" — vedi la sua docstring), e sta ai chiamanti
+escluderle dove serve fisicamente in servizio — esattamente come già
+fa Assegnazioni (`status_presenza not in ('aspettativa',
+'ap_uscente')`), esclusione che il fix dell'addendum 103 non aveva
+riportato nel box di Impostazioni.
+
+Aggiunta la stessa esclusione. 1 test nuovo in
+`tests/test_impostazioni_conteggio_docenti.py` (aspettativa e AP
+uscente non contano come "attivi" nel box). 325/325 test rilevanti.
+Verificato sul DB reale: **72 docenti attivi** (60 TI) — combacia
+esattamente con i 72 partecipanti del Collegio di stamattina.
+
 ## Sessione 66 addendum 103 — box "Docenti attivi" in Impostazioni contava anche chi era uscito dall'anno corrente
 
 Roberto: "perchè risultano 106 docenti attivi? non sono 106 i docenti

@@ -57,3 +57,37 @@ def test_docente_uscito_dallanno_corrente_non_conta_come_attivo(app, db_session,
 
     assert catturato['kwargs']['n_docenti'] == 1
     assert catturato['kwargs']['n_ti'] == 1
+
+
+def test_aspettativa_e_ap_uscente_non_contano_come_attivi(app, db_session, monkeypatch):
+    """Seguito: Roberto confronta i 74 "docenti attivi" con i presenti
+    reali al Collegio docenti e ne trova 2 in più — Toracca (aspettativa)
+    e Tarabini (AP uscente). _docenti_per_anno() le include apposta
+    (restano titolari della scuola), ma il box "Docenti attivi" deve
+    escluderle come già fa Assegnazioni."""
+    _registra_blueprint(app)
+    _imposta_anno_corrente('2026-2027')
+
+    db.session.add(Docente(cognome='ROSSI', nome='Mario', attivo=True,
+                            tipo_contratto='TI'))
+    db.session.add(Docente(cognome='TORACCA', nome='Donatella', attivo=True,
+                            tipo_contratto='TI', anno_scol_inizio='2026-2027',
+                            status_presenza='aspettativa'))
+    db.session.add(Docente(cognome='TARABINI', nome='Anna', attivo=True,
+                            tipo_contratto='TI', anno_scol_inizio='2026-2027',
+                            status_presenza='ap_uscente'))
+    db.session.commit()
+
+    import routes.impostazioni as mod
+    catturato = {}
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.get('/impostazioni')
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['n_docenti'] == 1
+    assert catturato['kwargs']['n_ti'] == 1
