@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 100 — annulla_uscita: mancava anche anno_scol_inizio per i TD (caso reale: May, Verderame)
+
+Seguito immediato dell'addendum 99: Roberto — "may e verderame".
+Controllati: `attivo=1`, uscita già vuota — il fix precedente aveva già
+funzionato lì. Ma entrambe hanno contratto `TD_GS` con
+`anno_scol_inizio=None`, e l'anno operativo reale dell'app è ancora
+2025-2026 (Roberto non ha ancora eseguito "Attiva" per il 2026-2027,
+vedi addendum 90/91) — per un anno FUTURO rispetto a quello corrente,
+`_docenti_per_anno()` esclude apposta i TD/supplenti/IRC senza
+`anno_scol_inizio` esplicito (non ancora nominati per quell'anno,
+comportamento voluto). `annulla_uscita` non lo valorizzava mai, a
+differenza di `docenti.riattiva()` che lo chiede esplicitamente
+all'utente — stesso bug dell'addendum 99, un pezzo in più non coperto
+dal primo fix.
+
+Aggiunto a `annulla_uscita`: se `anno_scol_inizio` è vuoto e il
+contratto non è TI, lo valorizza con l'anno della pagina (`anno_f`) —
+non sovrascrive un `anno_scol_inizio` già presente. 2 test nuovi
+(TD senza anno_inizio riattivato per un anno futuro compare dopo il
+fix; un `anno_scol_inizio` già impostato non viene toccato). 322/322
+test rilevanti.
+
+Backup cifrato
+(`data/backup/database_20260901_2137_pre_fix_anno_inizio_may_verderame.db.enc`),
+impostato `anno_scol_inizio='2026-2027'` per May (id 56) e Verderame
+(id 85), `PRAGMA integrity_check` ok. Verificato: entrambe ora
+compaiono in `_docenti_per_anno('2026-2027')`, quindi nel menu di
+Assegnazioni.
+
 ## Sessione 66 addendum 99 — "annulla uscita" da Docenti per anno non riattivava attivo=True
 
 Roberto: "in assegnazioni, dopo aver ripristinato un docente che aveva

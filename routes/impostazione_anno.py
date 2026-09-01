@@ -1634,9 +1634,21 @@ def docenti_anno():
             # sostituire un placeholder. Stesso campo già gestito da
             # routes/docenti.py::riattiva() (l'altro pulsante di
             # riattivazione, dalla pagina Docenti).
+            #
+            # Per un TD/supplente/IRC senza anno_scol_inizio, occorre
+            # anche valorizzarlo con l'anno di questa pagina (anno_f):
+            # per gli anni futuri rispetto all'anno corrente reale,
+            # _docenti_per_anno() esclude apposta i TD senza data di
+            # inizio esplicita (non ancora nominati per quell'anno) —
+            # altrimenti restava invisibile anche con attivo=True e
+            # uscita annullata (caso reale: May, Verderame). Non
+            # sovrascrive un anno_scol_inizio già presente (es. un TI
+            # storico "sempre stato qui").
             d.anno_scol_uscita = None
             d.motivo_uscita    = None
             d.attivo           = True
+            if not d.anno_scol_inizio and d.tipo_contratto not in ('TI',):
+                d.anno_scol_inizio = anno_f
             db.session.commit()
             flash(f'{d.cognome} {d.nome}: uscita annullata.', 'success')
 
