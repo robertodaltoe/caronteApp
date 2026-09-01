@@ -4,6 +4,48 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 102 — supplenze orfane dopo il cambio anno + calendario senza inizio lezioni (dato reale)
+
+Roberto, dopo il cambio anno (addendum 101): "aprendo dashboard, mi
+trovo delle sostituzioni da dover compilare [...] i due docenti che
+dovrei sostituire hanno un'assenza registrata ed è giusto che risulti;
+però non dovrebbero comparire supplenze da assegnare visto che non c'è
+un orario per il nuovo anno. inoltre, oggi fino al 13/09 non ci sono
+lezioni".
+
+**Supplenze orfane**: trovate 43 righe in `supplenze`
+(`origine='automatica'`, `stato='scoperta'`) per Del Curto e Santagata,
+1–12 settembre 2026 — create il 19/08 (quando esisteva ancora un
+orario), mai ripulite quando "Attiva" (addendum 101) ha svuotato
+`orario_docenti`. Le assenze sottostanti restano corrette (confermato
+da Roberto: devono continuare a risultare), solo le "supplenze da
+coprire" derivate erano ormai senza base. Backup cifrato
+(`data/backup/database_20260901_2204_pre_pulizia_supplenze_orfane_settembre.db.enc`),
+eliminate le 43 righe **con lapide registrata per ciascuna**
+(`registra_eliminazione('supplenze', ...)` — stessa tabella
+sincronizzata automaticamente ogni 30s, stesso rischio di
+resurrezione già incontrato per le indisponibilità nell'addendum 101),
+`PRAGMA integrity_check` ok. Le 19 assenze di quel periodo per i due
+docenti restano invariate.
+
+**Calendario senza "inizio lezioni"**: verificato che l'app non ha
+alcun concetto di "data di inizio lezioni" (esiste solo
+`get_data_fine_lezioni`, l'equivalente per l'inizio non esiste), e
+nessuna `SospensioneDidattica` copriva l'inizio di settembre — un
+buco strutturale che ha reso possibile il problema sopra (e potrebbe
+ripresentarsi per altre assenze nella stessa finestra). Confermato da
+Roberto: aggiunta una `SospensioneDidattica` 01–13/09/2026
+(`tipo='sospensione_istituto'`, "Inizio anno scolastico — lezioni non
+ancora iniziate"), stesso meccanismo già esistente in Impostazioni →
+Sospensioni — compare correttamente anche nel Piano annuale. Backup
+cifrato
+(`data/backup/database_20260901_2208_pre_sospensione_inizio_anno_1_13_set.db.enc`),
+`PRAGMA integrity_check` ok.
+
+Nessuna modifica di codice in questo addendum: solo dati reali corretti
+(supplenze orfane) e una voce di calendario mancante aggiunta col
+meccanismo già esistente.
+
 ## Sessione 66 addendum 101 — cambio anno reale eseguito: attiva() eliminava le indisponibilità senza lapide, resuscitate dal sync
 
 Roberto ha eseguito "Attiva" per davvero: 2025-2026 → 2026-2027.
