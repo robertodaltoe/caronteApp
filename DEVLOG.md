@@ -4,6 +4,39 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 96 — Paolini/Sportelli: assegnazioni non aggiornate dopo la modifica del piano studi (dato reale)
+
+Roberto: "verifica Paolini e Sportelli, hanno 4 ore in più perchè ho
+modificato il piano di studi ma non si sono tolte automaticamente le
+ore dall'assegnazione". Nota: Assegnazioni non ha mai avuto una
+sincronizzazione automatica con il piano studi (le ore assegnate sono
+un dato indipendente, con solo un avviso `warn_classe`/`warn_materia`
+in `aggiorna_ore()` se si sfora — non un aggiustamento automatico), per
+scelta esistente dell'app.
+
+Trovato: Roberto ha rimosso l'override AS12/A-11 su "Lettere italiane"
+1° LLI (creato negli addendum 78-79) e unificato la riga di piano
+studi su A-11 per entrambe le sezioni, senza override. Le due
+assegnazioni non seguite:
+- **Sportelli** (cattedra AS12): aveva ancora "1A LLI — Lettere
+  italiane: 4h" sotto la sua cattedra AS12 — righe ORFANE, AS12 non ha
+  più alcuna riga di piano studi per quella classe.
+- **Paolini** (cattedra A-11): aveva SIA "1A LLI: 4h" SIA "1B LLI: 4h"
+  (22h totali contro 18h di contratto) — la stessa classe (1A LLI
+  Lettere) risultava coperta due volte, da lei sotto A-11 e da
+  Sportelli sotto AS12.
+
+Chiesto a Roberto chi dovesse coprire 1A LLI: confermato Sportelli.
+Backup cifrato
+(`data/backup/database_20260901_0856_pre_fix_1A_LLI_sportelli_paolini.db.enc`),
+poi: eliminata la riga duplicata di Paolini su 1A LLI; spostata la riga
+di Sportelli dalla sua `AssegnazioneDocente` AS12 a una nuova
+`AssegnazioneDocente` A-11 (un docente può avere più cattedre/classi di
+concorso, pattern già esistente in Assegnazioni). `PRAGMA
+integrity_check` ok. Verificato con `_build_area()`: Sportelli 18h su
+AS12 + 4h su A-11 (nuova cattedra), Paolini 18h su A-11, 1A LLI sotto
+A-11 ora previsto=9h assegnato=9h (prima 13h assegnate, 4 in eccesso).
+
 ## Sessione 66 addendum 95 — corretta anche la prima giornata di Modulo 1 - Valutazione (dato reale)
 
 Seguito dell'addendum 94: Roberto — "avevo messo il corso Modulo 1 -
