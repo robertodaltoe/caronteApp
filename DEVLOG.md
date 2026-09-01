@@ -4,6 +4,24 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 97 — correzione addendum 96: Paolini copre davvero 1A LLI (dato reale)
+
+Roberto, subito dopo l'addendum 96: "no, ho sbagliato. Paolini copre
+la 1a lli". Backup cifrato
+(`data/backup/database_20260901_0922_pre_correzione_1A_LLI_paolini.db.enc`),
+rimossa la cattedra A-11 creata per errore per Sportelli (con la sua
+unica riga, 1A LLI), ripristinata la riga di Paolini su 1A LLI sotto
+la sua cattedra A-11. Sportelli torna a 18h solo su AS12 (nessun
+residuo su 1A LLI), Paolini torna a 22h (di nuovo l'eccesso di
+partenza, essendo di nuovo su entrambe le sezioni 1A+1B LLI).
+
+Segnalato l'eccesso a Roberto, che ha risposto: "a Paolini va tolta
+lassegnazione che potrebbe essere rimasta in lsp" — trovata "3A LSP:
+4h" ancora tra le sue righe (id 579). Backup cifrato
+(`data/backup/database_20260901_0924_pre_rimozione_3A_LSP_paolini.db.enc`),
+eliminata, `PRAGMA integrity_check` ok. Paolini torna a 18h: 1A LLI
+(4h), 1B LLI (4h), 4A LSC (4h+3h), 5A LSC (3h).
+
 ## Sessione 66 addendum 96 — Paolini/Sportelli: assegnazioni non aggiornate dopo la modifica del piano studi (dato reale)
 
 Roberto: "verifica Paolini e Sportelli, hanno 4 ore in più perchè ho
