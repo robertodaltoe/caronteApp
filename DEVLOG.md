@@ -4,6 +4,46 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 101 — cambio anno reale eseguito: attiva() eliminava le indisponibilità senza lapide, resuscitate dal sync
+
+Roberto ha eseguito "Attiva" per davvero: 2025-2026 → 2026-2027.
+Controllo richiesto ("controlla") subito dopo.
+
+**Verifica**: anno corrente cambiato correttamente, orario docenti
+svuotato, organico ricalcolato per 2026-2027 — ma le indisponibilità
+**non erano state eliminate**: tutte e 333 ancora presenti, tutte
+datate entro il 31/08/2026 (il fix dell'addendum 90 sul filtro data
+era corretto). Confrontato col backup automatico
+`_pre_attiva_anno_2025-2026_a_2026-2027.db.enc`: stesse 333 righe
+identiche prima e dopo — la `db.session.delete()` diretta introdotta
+nell'addendum 90 **non aveva mai eliminato nulla in modo persistente**.
+
+**Causa reale**: `indisponibilita` è una delle tabelle del sync
+automatico additivo (`modules/auto_sync.py`, ogni 30s) — un'eliminazione
+senza registrare prima una "lapide" in `SyncTombstone`
+(`registra_eliminazione()`, già usata per questa tabella altrove, es.
+`routes/agenda.py`) viene vista dal giro successivo del thread in
+background come "riga nuova sull'altra macchina/Drive" e
+**resuscitata** — esattamente il rischio già documentato in CLAUDE.md
+per questo meccanismo, non ancora incappato nel fix dell'addendum 90
+perché mai testato dal vivo con il thread di sync realmente attivo
+(solo su copie isolate, dove il thread non gira).
+
+Corretto `attiva()`: chiama `registra_eliminazione('indisponibilita',
+...)` per ciascuna riga prima di eliminarla, stessa chiave logica
+(`id_docente`, `data`, `ora`) già usata dal sync. 1 test nuovo in
+`tests/test_cambio_anno_attiva.py` (verifica che venga registrata
+esattamente una lapide con la chiave corretta per ogni riga eliminata).
+323/323 test rilevanti.
+
+**Corretto anche il dato reale**: backup cifrato
+(`data/backup/database_20260901_2154_pre_eliminazione_indisponibilita_2025_2026_con_lapidi.db.enc`),
+eliminate per davvero le 333 righe residue con lapide registrata per
+ciascuna (333 `SyncTombstone` creati), `PRAGMA integrity_check` ok.
+Verifica finale: anno corrente 2026-2027, indisponibilità 0, orario
+docenti 0, organico presente solo per 2026-2027 — cambio anno
+completo e coerente.
+
 ## Sessione 66 addendum 100 — annulla_uscita: mancava anche anno_scol_inizio per i TD (caso reale: May, Verderame)
 
 Seguito immediato dell'addendum 99: Roberto — "may e verderame".

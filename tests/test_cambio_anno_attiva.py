@@ -124,6 +124,34 @@ def test_attiva_elimina_solo_indisponibilita_anno_precedente(app, db_session, mo
     assert rimaste[0].data == date(2026, 10, 15)
 
 
+def test_attiva_registra_le_lapidi_per_le_indisponibilita_eliminate(app, db_session, monkeypatch):
+    """Prova reale (prima esecuzione di attiva() sul DB reale): le righe
+    eliminate senza lapide sono state resuscitate dal thread di sync
+    automatico in background alla prima occasione utile — 'indisponibilita'
+    è una delle tabelle sincronizzate additivamente (modules/auto_sync.py).
+    Senza una lapide per ciascuna, il prossimo giro di sync le rivede
+    come "nuove dall'altra macchina" e le reinserisce."""
+    from models.sync_tombstone import SyncTombstone
+    mod = _registra_blueprint(app)
+    monkeypatch.setattr(mod, 'crea_backup_cifrato', _finto_backup([]))
+    _imposta_anno_corrente('2025-2026')
+    db.session.add(ClasseSezione(anno_scol='2026-2027', indirizzo='AFM',
+                                  anno_corso=1, sezione='A', attiva=False))
+    db.session.add(Indisponibilita(id_docente=7, data=date(2026, 6, 4), ora=None, motivo='altro'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        c.post('/cambio-anno/attiva', data={
+            'anno_nuovo': '2026-2027', 'conferma': 'CONFERMO',
+        })
+
+    lapidi = SyncTombstone.query.filter_by(tabella='indisponibilita').all()
+    assert len(lapidi) == 1
+    import json
+    chiave = json.loads(lapidi[0].chiave_logica)
+    assert chiave == {'id_docente': 7, 'data': '2026-06-04', 'ora': None}
+
+
 def test_attiva_senza_indisponibilita_future_le_elimina_tutte(app, db_session, monkeypatch):
     """Caso comune (nessuna indisponibilità ancora inserita per il nuovo
     anno): il comportamento resta lo stesso di prima, tutto svuotato."""

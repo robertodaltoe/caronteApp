@@ -8,7 +8,7 @@ Due operazioni distinte:
                                   eseguita il 1 settembre (o manualmente)
 """
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 from models import db
 from models.docente import Docente
 from models.piano_studi import ClasseSezione, PianoStudi, CalcoloOrganico
@@ -181,13 +181,27 @@ def attiva():
     # tabella intera): un'indisponibilità già inserita per il nuovo
     # anno (es. ottobre) sarebbe sparita insieme a quelle vecchie —
     # segnalato da Roberto prima di eseguire il cambio anno reale.
+    #
+    # 'indisponibilita' è una delle tabelle del sync automatico additivo
+    # (modules/auto_sync.py, ogni 30s): un'eliminazione senza lapide
+    # (SyncTombstone) viene vista dal giro successivo come "riga nuova
+    # sull'altra macchina" e RESUSCITATA — capitato davvero alla prima
+    # esecuzione reale di questo fix (le 333 righe erano ancora tutte lì
+    # subito dopo "Attiva", nessun errore, solo resuscitate dal thread in
+    # background prima ancora di poterle verificare). Stesso pattern già
+    # usato altrove per questa tabella, vedi routes/agenda.py.
     from models.indisponibilita import Indisponibilita
     from config_anno import intervallo_anno_scolastico
+    from modules.auto_sync import registra_eliminazione
+    utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
     _, fine_anno_precedente = intervallo_anno_scolastico(anno_precedente)
     ind_da_eliminare = Indisponibilita.query.filter(
         Indisponibilita.data <= fine_anno_precedente).all()
     n_ind = len(ind_da_eliminare)
     for i in ind_da_eliminare:
+        registra_eliminazione('indisponibilita', {
+            'id_docente': i.id_docente, 'data': i.data.isoformat(), 'ora': i.ora,
+        }, utente=utente_corrente)
         db.session.delete(i)
     db.session.commit()
     risultati.append(
