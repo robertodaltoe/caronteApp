@@ -1,6 +1,5 @@
 from config_anno import get_anno_corrente
 from flask import Blueprint, render_template
-from models.docente import Docente
 from models.materia import Dipartimento, Materia
 from datetime import date
 
@@ -11,10 +10,24 @@ impostazioni_bp = Blueprint('impostazioni', __name__)
 def index():
     from models.piano_studi import ClasseSezione, CalcoloOrganico
     from models.classe_concorso import ClasseConcorso
+    from models.docente import tipo_contratto_per_anno
+    from routes.impostazione_anno import _docenti_per_anno
     n_dip     = Dipartimento.query.count()
     n_materie = Materia.query.count()
-    n_docenti = Docente.query.filter_by(attivo=True).count()
-    n_ti      = Docente.query.filter_by(attivo=True, tipo_contratto='TI').count()
+    # "Docenti attivi"/"Docenti TI" per l'anno CORRENTE — non il
+    # semplice conteggio Docente.attivo=True: quel flag non viene mai
+    # azzerato automaticamente quando arriva anno_scol_uscita (si
+    # aggiorna solo a mano, es. da "Elimina" in Docenti), quindi
+    # restava a includere chiunque avesse lasciato la scuola proprio a
+    # partire da questo anno — 32 persone sui 106 mostrati, segnalato
+    # da Roberto subito dopo il cambio anno (fine_td/trasferimento/
+    # pensionamento con anno_scol_uscita == anno corrente). Stessa
+    # funzione già usata da Docenti/Assegnazioni per questo motivo.
+    anno_corrente = get_anno_corrente()
+    docenti_in_servizio = _docenti_per_anno(anno_corrente)
+    n_docenti = len(docenti_in_servizio)
+    n_ti      = sum(1 for d in docenti_in_servizio
+                     if tipo_contratto_per_anno(d, anno_corrente) == 'TI')
     # Anno con dati reali nel piano studi
     anni_piano = sorted({r.anno_scol for r in __import__('models.piano_studi',
         fromlist=['PianoStudi']).PianoStudi.query.all()}, reverse=True)

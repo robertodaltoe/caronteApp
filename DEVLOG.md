@@ -4,6 +4,33 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 103 — box "Docenti attivi" in Impostazioni contava anche chi era uscito dall'anno corrente
+
+Roberto: "perchè risultano 106 docenti attivi? non sono 106 i docenti
+attivi".
+
+Causa: `routes/impostazioni.py::index()` calcolava `n_docenti`/`n_ti`
+con `Docente.query.filter_by(attivo=True).count()` — un conteggio
+grezzo sul flag `attivo`, che non viene mai azzerato automaticamente
+quando arriva `anno_scol_uscita` (si aggiorna solo a mano, es. da
+"Elimina" nella scheda docente). Sul DB reale: 32 dei 106 "attivi"
+avevano `anno_scol_uscita='2026-2027'` con motivo `fine_td`,
+`trasferimento` o `pensionamento` — cioè escono proprio a partire
+dall'anno appena attivato (addendum 101), ma il flag non lo riflette.
+Unico punto dell'app con questo conteggio grezzo: Docenti e
+Assegnazioni usano già `_docenti_per_anno(anno)` (routes/
+impostazione_anno.py), che filtra correttamente su
+`anno_scol_inizio`/`anno_scol_uscita` rispetto all'anno richiesto.
+
+Corretto per usare la stessa `_docenti_per_anno(anno_corrente)`, con
+`tipo_contratto_per_anno()` (models/docente.py) per il conteggio TI —
+stessa coppia di funzioni già usata altrove per questo genere di KPI
+(es. dashboard_anno.py), invece di un terzo conteggio indipendente.
+1 test nuovo in `tests/test_impostazioni_conteggio_docenti.py`
+(un docente con `anno_scol_uscita` pari all'anno corrente non conta
+più come attivo, nonostante `attivo=True`). 324/324 test rilevanti.
+Verificato sul DB reale: **74 docenti attivi** (62 TI) invece di 106.
+
 ## Sessione 66 addendum 102 — supplenze orfane dopo il cambio anno + calendario senza inizio lezioni (dato reale)
 
 Roberto, dopo il cambio anno (addendum 101): "aprendo dashboard, mi
