@@ -100,6 +100,14 @@
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
         Il preset è calcolato automaticamente dal tipo evento. Puoi modificarlo.
     </p>
+    <!-- Sentinella: distingue "checklist presente ma nessuno selezionato"
+         (l'utente ha cliccato "Nessuno" e vuole zero partecipanti) da
+         "campo docenti_ids del tutto assente dalla richiesta" — senza,
+         il ramo POST non poteva distinguerli e ricadeva sempre sul
+         preset anche quando l'utente aveva scelto deliberatamente
+         nessuno (segnalato da Roberto: selezionare "Nessuno" e salvare
+         non aveva alcun effetto, il preset ricompariva sempre). -->
+    <input type="hidden" name="partecipanti_form_presente" value="1">
     <div style="margin-bottom:8px;">
         <button type="button" onclick="selTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Tutti</button>
         <button type="button" onclick="deselTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Nessuno</button>

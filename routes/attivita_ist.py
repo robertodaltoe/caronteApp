@@ -950,8 +950,15 @@ def form(id=None):
 
         _salva_sessioni_extra(evento, request.form)
 
-        # Partecipanti: usa preset se nessuna selezione manuale
-        if not doc_ids:
+        # Partecipanti: usa il preset SOLO se il form non ha proprio
+        # inviato la checklist (campo sentinella assente) — non se
+        # l'ha inviata con zero selezioni, che significa "nessuno"
+        # scelto deliberatamente (es. pulsante "Nessuno"). Prima,
+        # doc_ids vuoto ricadeva sempre sul preset in entrambi i casi:
+        # selezionare "Nessuno" e salvare non aveva alcun effetto,
+        # perché il preset veniva sempre reinserito subito dopo
+        # (segnalato da Roberto per il corso di formazione UNPLUGGED).
+        if not doc_ids and 'partecipanti_form_presente' not in request.form:
             doc_ids = _preset_partecipanti(evento)
         for did in doc_ids:
             db.session.add(AttivitaIstPartecipante(

@@ -4,6 +4,36 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 105 — "Nessuno" nei partecipanti di un evento non aveva mai effetto
+
+Roberto: "sto cercando cambiare il numero di partecipanti al corso
+unplugged selezionando nessuno dei docenti e poi salvando ma tornando
+in riepilogo la modifica non diventa effettiva".
+
+Causa in `routes/attivita_ist.py::form()`: `doc_ids` vuoto veniva
+sempre interpretato come "nessuna selezione manuale, usa il preset"
+— ma un form inviato con la checklist Partecipanti presente e ZERO
+checkbox spuntate (l'utente ha cliccato "Nessuno", pulsante già
+esistente apposta) produce esattamente lo stesso `request.form.getlist
+('docenti_ids') == []` di un form che non invia affatto quel campo:
+non c'era modo di distinguerli lato server, quindi "Nessuno" veniva
+sempre silenziosamente riscritto col preset subito dopo il salvataggio
+— l'utente vedeva la lista tornare quella di prima ad ogni tentativo.
+
+Fix: un campo nascosto sentinella (`partecipanti_form_presente`) nel
+template, inviato sempre insieme alla checklist — il preset scatta ora
+solo se quel campo manca del tutto dalla richiesta (nessun chiamante
+attuale di questa route lo fa, ma il comportamento resta per eventuali
+altri in futuro), non più quando la checklist c'era ma è stata
+volutamente svuotata. 3 test nuovi in
+`tests/test_partecipanti_nessuno_selezionato.py` (selezionare
+"Nessuno" svuota davvero; senza la sentinella il preset resta il
+fallback; una selezione manuale normale non viene toccata). 328/328
+test rilevanti. Verificato dal vivo su copia isolata del DB reale:
+UNPLUGGED (72 partecipanti) → 0 dopo "Nessuno" + salva, esattamente il
+comportamento cercato da Roberto — non applicato al DB reale, lo può
+ora rifare lui stesso dall'app.
+
 ## Sessione 66 addendum 104 — box "Docenti attivi": mancava ancora l'esclusione aspettativa/AP uscente
 
 Seguito immediato dell'addendum 103: Roberto — "ok i 74 docenti però
