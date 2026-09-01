@@ -4,6 +4,53 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 106 — GLO: la risincronizzazione proponeva sempre di rimuovere tutti i partecipanti
+
+Roberto, su "GLO 1 LSC": "se provo a risincronizzare le presenze in
+glo 1 lsc mi dice che vanno rimossi tutti e gli otto partecipanti
+membri del consiglio indicati da assegnazioni. come mai?" — e a
+chiarimento: "anche perchè nei glo partecipa il consiglio di classe
+completo del docente di sostegno (già assegnato correttamente alla
+classe come un docenti titolare)".
+
+Causa in `routes/attivita_ist.py::_preset_partecipanti()`: il branch
+`tipo == 'glo'` ritornava sempre lista vuota, con un commento "solo
+manuale" — pensato in origine perché la composizione di un GLO
+dipenderebbe dallo specifico alunno seguito, non dall'intera classe.
+Nella pratica reale di Roberto invece un GLO coinvolge tutto il
+consiglio di classe, sostegno compreso — stesso identico calcolo di
+consiglio_classe/scrutinio. La risincronizzazione (aggiunta
+nell'addendum precedente in questa stessa area) confronta l'elenco
+congelato alla creazione con questo preset "adesso": essendo sempre
+vuoto per i GLO, proponeva SEMPRE di rimuovere ogni singolo
+partecipante, per qualunque evento GLO — non un caso isolato di "GLO 1
+LSC".
+
+Da notare: questo era anche un caso di "due meccanismi paralleli" (già
+in CLAUDE.md) — `routes/generatore_cdc.py` usa da sempre, in fase di
+generazione bozza, lo stesso insieme docenti dell'intera classe come
+segnale di conflitto per i GLO (documentato lì come "stima per
+eccesso", esplicitamente diverso dal preset "solo manuale" di
+`_preset_partecipanti()`). I due meccanismi non erano mai stati
+allineati; ora lo sono.
+
+Fix: il branch `glo` di `_preset_partecipanti()` ora usa lo stesso
+calcolo di consiglio_classe/scrutinio (`OrarioDocente.classe` +
+`_docenti_sostegno_per_classe`, invariato). Aggiunto anche `glo` al
+filtro tipi in `iscrivi_docente_a_eventi_classe()`, così un docente
+(sostegno compreso) appena assegnato a una classe viene iscritto
+automaticamente anche ai GLO futuri già creati per quella classe, non
+solo a CdC/scrutini. Aggiornati i commenti ormai obsoleti in
+`routes/generatore_cdc.py` e `routes/attivita_ist.py` che descrivevano
+il vecchio disallineamento. 2 test nuovi in
+`tests/test_glo_preset_consiglio_completo.py` (preset GLO coincide con
+quello di un CdC sulla stessa classe; risincronizzazione non propone
+più di svuotare un GLO correttamente popolato da Assegnazioni).
+330/342 test rilevanti (i 12 falliti sono il problema ambientale già
+noto, orologio di sistema avanzato a settembre 2026, non collegato a
+questo fix). Non toccato il DB reale: nessuna scrittura necessaria,
+solo logica di calcolo del preset.
+
 ## Sessione 66 addendum 105 — "Nessuno" nei partecipanti di un evento non aveva mai effetto
 
 Roberto: "sto cercando cambiare il numero di partecipanti al corso

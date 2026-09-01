@@ -18,18 +18,15 @@ generatore_cdc_bp = Blueprint('generatore_cdc', __name__)
 # insieme, non ha nulla da mettere in parallelo (non è "tante classi
 # che si dividono gli slot").
 #
-# GLO: _preset_partecipanti() lo tratta altrove come "solo manuale"
-# (nessun preset automatico, perché la composizione reale dipende
-# dall'alunno seguito, non dall'intera classe) — qui invece, per
-# evitare sovrapposizioni in fase di generazione, si usa comunque
-# l'insieme docenti dell'intera classe come segnale di conflitto: è
-# una stima per eccesso (i docenti coinvolti in un GLO specifico sono
-# di solito un sottoinsieme più piccolo, tipicamente il sostegno più
-# pochi curricolari), quindi il generatore potrebbe evitare
-# sovrapposizioni non realmente necessarie e proporre meno slot del
-# possibile — mai il contrario (nessun rischio di doppio impegno). I
-# partecipanti dell'evento creato restano comunque una proposta,
-# modificabile come sempre dalla pagina presenze.
+# GLO: usa lo stesso insieme docenti dell'intera classe di
+# consiglio_classe/scrutinio (orario + sostegno via Assegnazioni) come
+# segnale di conflitto per evitare sovrapposizioni in fase di
+# generazione — coerente con _preset_partecipanti(), che dalla
+# Sessione 66 calcola i GLO allo stesso modo (confermato da Roberto:
+# nella pratica il GLO coinvolge tutto il consiglio di classe,
+# sostegno compreso). I partecipanti dell'evento creato restano
+# comunque una proposta, modificabile come sempre dalla pagina
+# presenze.
 TIPI_GENERABILI = {
     'consiglio_classe': {'label': 'Consiglio di classe', 'durata_default': 60},
     'scrutinio':         {'label': 'Scrutinio',           'durata_default': 45},

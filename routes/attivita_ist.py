@@ -145,7 +145,15 @@ def _preset_partecipanti(attivita):
     if tipo in ('collegio', 'incontro_famiglie', 'formazione'):
         risultato = [d.id for d in docenti_attivi]
 
-    elif tipo in ('consiglio_classe', 'scrutinio') and attivita.classe:
+    elif tipo in ('consiglio_classe', 'scrutinio', 'glo') and attivita.classe:
+        # GLO: Roberto conferma che nella pratica reale il GLO coinvolge
+        # tutto il consiglio di classe (sostegno compreso, già assegnato
+        # come titolare sulla classe) — stesso identico calcolo del
+        # consiglio di classe, non "solo manuale" come si pensava in
+        # origine. Il vecchio commento "solo manuale" produceva un
+        # preset sempre vuoto per i GLO, che rendeva la risincronizzazione
+        # inutilizzabile (proponeva sempre di rimuovere tutti i
+        # partecipanti reali, segnalato da Roberto su "GLO 1 LSC").
         from models.orario_docente import OrarioDocente
         ids = {s.id_docente for s in OrarioDocente.query.filter_by(
             classe=attivita.classe).all()}
@@ -165,7 +173,7 @@ def _preset_partecipanti(attivita):
         risultato = [i for i in ids if i not in esclusi_ids]
 
     elif tipo == 'glo':
-        risultato = []  # solo manuale
+        risultato = []  # GLO senza classe indicata: nessun preset calcolabile
 
     else:
         risultato = [d.id for d in docenti_attivi]
@@ -296,7 +304,7 @@ def iscrivi_docente_a_eventi_classe(id_docente, classi_label, anno_scol=None):
     oggi = date.today()
     eventi = AttivitaIst.query.filter(
         AttivitaIst.data >= oggi,
-        AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio')),
+        AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio', 'glo')),
         AttivitaIst.classe.in_(list(classi_label)),
     ).all()
     if anno_scol:
@@ -312,10 +320,10 @@ def iscrivi_docente_a_eventi_dipartimento(id_docente, id_dipartimento):
     aver sincronizzato una nuova DocenteMateria (stesso segnale, non
     serve aspettare altro).
 
-    GLO resta fuori anche da questo: il preset del GLO è sempre vuoto
-    (solo manuale, vedi _preset_partecipanti) perché la partecipazione
-    dipende dall'alunno seguito, non dalla classe o dal dipartimento —
-    non esiste un dato di assegnazione da cui derivarla automaticamente.
+    GLO resta fuori anche da questo: è scoped per classe (vedi
+    iscrivi_docente_a_eventi_classe), non per dipartimento — un
+    docente non ha un dato di "dipartimento" da cui derivare
+    l'iscrizione a un GLO.
     """
     if not id_dipartimento:
         return 0
