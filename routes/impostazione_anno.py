@@ -1625,8 +1625,18 @@ def docenti_anno():
             flash(f'Contratti {anno_f} confermati per {n_confermati} docenti.', 'success')
 
         elif azione == 'annulla_uscita' and d:
+            # Riattiva anche attivo=True — senza, un docente disattivato
+            # anche sulla scheda anagrafica (non solo con anno_scol_uscita)
+            # restava invisibile in Assegnazioni/_docenti_per_anno() (che
+            # richiede sempre attivo=True) nonostante l'uscita fosse stata
+            # annullata qui. Segnalato da Roberto: dopo "annulla uscita" da
+            # questa pagina, il docente non compariva nel menu per
+            # sostituire un placeholder. Stesso campo già gestito da
+            # routes/docenti.py::riattiva() (l'altro pulsante di
+            # riattivazione, dalla pagina Docenti).
             d.anno_scol_uscita = None
             d.motivo_uscita    = None
+            d.attivo           = True
             db.session.commit()
             flash(f'{d.cognome} {d.nome}: uscita annullata.', 'success')
 

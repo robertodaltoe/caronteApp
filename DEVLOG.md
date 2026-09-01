@@ -4,6 +4,41 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 99 — "annulla uscita" da Docenti per anno non riattivava attivo=True
+
+Roberto: "in assegnazioni, dopo aver ripristinato un docente che aveva
+finito il contratto nell'a.s. precedente (in docenti anno), non vedo
+nell'elenco a tendina per sostituire un ph il docente che ho
+'riattivato'".
+
+Trovati due meccanismi paralleli per riattivare un docente (pattern
+CLAUDE.md): `routes/docenti.py::riattiva()` (pulsante "Riattiva" nella
+pagina Docenti, elenco inattivi) imposta correttamente `attivo=True`
+oltre a pulire uscita/motivo/status_presenza; l'azione `annulla_uscita`
+di `routes/impostazione_anno.py::docenti_anno()` (quella usata da
+Roberto) puliva solo `anno_scol_uscita`/`motivo_uscita`, **mai**
+`attivo`. Se il docente era stato disattivato anche su quel campo (non
+solo con la data di uscita), restava escluso da `_docenti_per_anno()`
+— che richiede sempre `attivo=True` — quindi invisibile ovunque quella
+funzione alimenti un elenco, incluso il menu "nomina" per sostituire un
+placeholder in Assegnazioni.
+
+Aggiunto `d.attivo = True` anche a `annulla_uscita`, allineandola a
+`docenti.riattiva()` sullo stesso campo (non unificate le due route per
+intero: `riattiva()` fa anche altro — redirect alla scheda, iscrizione
+automatica ai corsi obbligatori — cambio di comportamento più ampio non
+richiesto qui). 2 test nuovi in `tests/test_annulla_uscita_riattiva.py`
+(riattiva anche `attivo`; il docente ricompare in `_docenti_per_anno()`
+dopo l'azione, lo stesso elenco che alimenta il menu di Assegnazioni).
+320/320 test rilevanti (i 12 falliti in questa sessione restano gli
+stessi, pre-esistenti e legati al passaggio della data di sistema).
+
+Cercato un docente reale nello stesso stato (attivo=False, uscita già
+annullata) per correggere anche il dato — nessun candidato trovato con
+nome valorizzato: il docente specifico di Roberto non risulta ancora in
+questo stato nel DB attuale. Se serve sistemarlo anche lì, va indicato
+a mano quale.
+
 ## Sessione 66 addendum 98 — ancoraggio allo scroll dopo Salva/Modifica/Elimina, in tutta l'app
 
 Roberto: "Quando in assegnazione inserisco un docente al posto di un
