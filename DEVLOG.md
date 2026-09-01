@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 98 — ancoraggio allo scroll dopo Salva/Modifica/Elimina, in tutta l'app
+
+Roberto: "Quando in assegnazione inserisco un docente al posto di un
+ph, la pagina si ricarica e mi riporta in testa [...] questa cosa
+dovrebbe funzionare in tutto il codice. [...] tutti i tasti, tutti i
+salva e tutti i modifica o elimina" — richiesta esplicitamente
+generale, non un fix pagina per pagina.
+
+Aggiunto un unico meccanismo generico in `templates/base.html` (esteso
+da ogni pagina): un piccolo script salva `window.scrollY` in
+`sessionStorage` (chiave per `location.pathname`, con timestamp) su
+`beforeunload` — che scatta per QUALSIASI navigazione, submit di un
+form incluso — e lo ripristina su `DOMContentLoaded` se la pagina di
+arrivo ha lo stesso percorso, consumandolo una sola volta e scartando
+posizioni più vecchie di 15s (per non ripristinare uno scroll di una
+visita precedente non collegata). Nessuna pagina/form/bottone deve
+dichiararsi esplicitamente — vale ovunque senza toccare le singole
+route o template, esattamente come richiesto.
+
+Verificato dal vivo col browser su una copia isolata del DB reale:
+aperta Elenco/gestione eventi, portato lo scroll a 1500px, aperto
+"Modifica" su un evento, salvato — tornati sulla stessa pagina con lo
+scroll esattamente a 1500px (prima: sempre 0, in cima). Nessun test
+automatico nuovo (comportamento puramente lato browser, non
+verificabile con pytest); 318/318 test Python invariati (gli altri 12
+falliti in questa sessione sono pre-esistenti e legati al passaggio
+della data di sistema nei test di recupero giugno/agosto e rientro,
+non c'entrano con questa modifica).
+
 ## Sessione 66 addendum 97 — correzione addendum 96: Paolini copre davvero 1A LLI (dato reale)
 
 Roberto, subito dopo l'addendum 96: "no, ho sbagliato. Paolini copre

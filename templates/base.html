@@ -778,5 +778,41 @@ function toggleNavDrop(id) {
     });
 }
 </script>
+<script>
+// Ancoraggio allo scroll — Roberto: dopo un Salva/Modifica/Elimina/Nomina
+// da qualunque pagina, la ricarica riportava sempre in cima, costringendo
+// a scorrere di nuovo fino al punto da cui si era partiti. Generico per
+// tutta l'app (base.html è esteso da ogni pagina): salva la posizione di
+// scroll un istante prima di QUALUNQUE navigazione (submit di un form,
+// click su un link, redirect lato server dopo un salvataggio) e la
+// ripristina al ricaricamento, se la pagina di arrivo ha lo stesso
+// percorso di quella di partenza — nessun bottone/form deve dichiararsi
+// esplicitamente, non serve toccare le singole pagine.
+(function() {
+    var CHIAVE = 'caronte_scroll_' + location.pathname;
+
+    function salvaPosizione() {
+        try {
+            sessionStorage.setItem(CHIAVE, JSON.stringify({y: window.scrollY, t: Date.now()}));
+        } catch (e) {}
+    }
+    window.addEventListener('beforeunload', salvaPosizione);
+
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var grezzo = sessionStorage.getItem(CHIAVE);
+            if (!grezzo) return;
+            sessionStorage.removeItem(CHIAVE);  // consumo one-shot
+            var dato = JSON.parse(grezzo);
+            // Scarta posizioni troppo vecchie (es. una visita precedente,
+            // ore prima, alla stessa pagina) — solo il ciclo appena
+            // avvenuto (submit/click → redirect → ricarica) deve valere.
+            if (Date.now() - dato.t < 15000) {
+                window.scrollTo(0, dato.y);
+            }
+        } catch (e) {}
+    });
+})();
+</script>
 </body>
 </html>
