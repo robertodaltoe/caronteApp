@@ -4,6 +4,60 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 109 — "Riunione referenti FSL": due bug distinti dietro un solo sintomo
+
+Roberto: "con il risincronizza ho inserito in automatico tutti i
+docenti in riunione FSL che però erano stati selezionati appositamente.
+ora continuano a comparire nell'elenco per segnare la presenza anche se
+ho modificato la riunione segnando coinvolti solo i miei 9 docenti".
+
+Due bug indipendenti, entrambi coinvolti in questo episodio:
+
+1. **`_preset_partecipanti()` non aveva un branch per `riunione_extra`**
+   ("Commissione, Staff o altro gruppo ad hoc — titolo libero", vedi
+   `models/attivita_ist.py` TIPI_ATTIVITA — pensato apposta per essere
+   sempre composto a mano). Cadeva nel ramo `else` generico ("tutti i
+   docenti attivi"): la risincronizzazione sulla riunione FSL (9
+   referenti scelti a mano da Roberto) ha proposto di aggiungere tutti
+   e 64 i docenti attivi dell'istituto. Aggiunto un branch dedicato,
+   preset sempre vuoto (stesso principio già usato per un GLO senza
+   classe indicata) — nessuna proposta automatica per questo tipo.
+
+2. **Il bug più serio, generale, non limitato a `riunione_extra`**: in
+   `routes/attivita_ist.py::form()`, il ramo POST "Modifica" ricreava
+   da zero `AttivitaIstPartecipante` ma non toccava mai
+   `AttivitaIstPresenza` — che è la tabella che la pagina Presenze
+   mostra davvero (`presenze.html` itera su `evento.presenze`, non su
+   `evento.partecipanti`). Un docente tolto dalla checklist e salvato
+   restava quindi "orfano" per sempre in Presenze, con la sua riga di
+   presenza mai cancellata — indipendentemente da come fosse arrivato
+   in elenco (risincronizzazione, preset iniziale, selezione manuale).
+   Roberto aveva ridotto la riunione FSL a 9 docenti modificando
+   l'evento, ma i 63 tolti (i 64 aggiunti dal bug 1, meno 1 già
+   presente) continuavano a comparire in Presenze per colpa di questo
+   secondo bug — motivo per cui il sintomo persisteva anche DOPO aver
+   corretto l'elenco partecipanti a mano.
+
+Fix: alla modifica di un evento, le righe `AttivitaIstPresenza` di chi
+non è più tra i partecipanti selezionati vengono cancellate insieme al
+`AttivitaIstPartecipante` corrispondente — a differenza della
+risincronizzazione (che protegge chi ha già una presenza modificata a
+mano), qui l'utente sta scegliendo esplicitamente e direttamente chi
+deve restare in elenco, quindi la rimozione si applica comunque (senza
+questo, il caso di Roberto non si sarebbe risolto: la sua presenza
+"vergine" sarebbe stata protetta e mai ripulita).
+
+4 test nuovi (`test_form_rimozione_partecipanti_pulisce_presenze.py`,
+`test_preset_riunione_extra_manuale.py`). 341/353 test rilevanti (12
+falliti ambientali, invariati).
+
+**Dato reale corretto**: `AttivitaIst` id 286 ("Riunione referenti
+FSL") aveva 9 partecipanti ma 72 righe di presenza — 63 orfane (tutte
+"vergini", nessuna modificata a mano, verificato prima di agire).
+Backup cifrato (`database_20260902_1039_pre_pulizia_presenze_orfane_fsl.db.enc`),
+cancellate le 63 righe orfane, `PRAGMA integrity_check` → `ok`. Ora 9
+partecipanti e 9 presenze, coerenti.
+
 ## Sessione 66 addendum 108 — Consigli/scrutini/GLO: preset spostato da Orario a Assegnazioni
 
 Seguito immediato dell'addendum 107 (l'avviso su `orario_docenti` vuoto

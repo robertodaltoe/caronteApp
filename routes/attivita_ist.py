@@ -172,6 +172,17 @@ def _preset_partecipanti(attivita):
     elif tipo == 'glo':
         risultato = []  # GLO senza classe indicata: nessun preset calcolabile
 
+    elif tipo == 'riunione_extra':
+        # "Commissione, Staff o altro gruppo ad hoc — titolo libero
+        # scelto da Roberto" (vedi models/attivita_ist.py, TIPI_ATTIVITA):
+        # per definizione un gruppo scelto a mano volta per volta, non
+        # esiste un preset automatico sensato. Cadeva nel ramo "else"
+        # sotto (tutti i docenti attivi) — segnalato da Roberto: una
+        # risincronizzazione sulla "Riunione referenti FSL" (9 persone
+        # scelte a mano) aveva convocato in automatico tutti e 64 i
+        # docenti attivi dell'istituto.
+        risultato = []
+
     else:
         risultato = [d.id for d in docenti_attivi]
 
@@ -934,6 +945,7 @@ def form(id=None):
 
         if evento:
             # Modifica
+            vecchi_partecipanti_ids = {p.id_docente for p in evento.partecipanti}
             evento.tipo = tipo; evento.titolo = titolo
             evento.data = date.fromisoformat(data_s)
             evento.ora_inizio = ora_ini; evento.ora_fine = ora_fin
@@ -942,6 +954,7 @@ def form(id=None):
             # Ricrea partecipanti
             AttivitaIstPartecipante.query.filter_by(id_attivita=evento.id).delete()
         else:
+            vecchi_partecipanti_ids = set()
             evento = AttivitaIst(
                 tipo=tipo, titolo=titolo,
                 data=date.fromisoformat(data_s),
@@ -968,6 +981,23 @@ def form(id=None):
         for did in doc_ids:
             db.session.add(AttivitaIstPartecipante(
                 id_attivita=evento.id, id_docente=did, preset=True))
+
+        # Ripulisce anche le presenze di chi è stato tolto dalla
+        # checklist: AttivitaIstPartecipante viene già ricreata da zero
+        # sopra, ma AttivitaIstPresenza (quella che la pagina Presenze
+        # mostra davvero, vedi presenze.html) non c'entra e restava
+        # "orfana" per sempre — segnalato da Roberto sulla riunione
+        # referenti FSL: una risincronizzazione aveva convocato in
+        # automatico tutti i 64 docenti del dipartimento, poi ridotti a
+        # mano a 9 modificando l'evento, ma i 55 tolti continuavano a
+        # comparire in Presenze perché la loro riga AttivitaIstPresenza
+        # non veniva mai cancellata.
+        rimossi_ids = vecchi_partecipanti_ids - set(doc_ids)
+        if rimossi_ids:
+            AttivitaIstPresenza.query.filter(
+                AttivitaIstPresenza.id_attivita == evento.id,
+                AttivitaIstPresenza.id_docente.in_(rimossi_ids)
+            ).delete(synchronize_session=False)
 
         db.session.commit()
         flash(f'Evento {"aggiornato" if id else "registrato"}: {titolo}', 'success')
