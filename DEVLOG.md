@@ -4,6 +4,42 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 108 — Consigli/scrutini/GLO: preset spostato da Orario a Assegnazioni
+
+Seguito immediato dell'addendum 107 (l'avviso su `orario_docenti` vuoto
+dopo il cambio anno). Roberto: "e se risolvessimo alla radice facendo
+in modo che i nominativi dei consigli e dei glo e di tutte le riunioni
+che fanno riferimento ai cdc venissero presi direttamente dalle
+assegnazioni anzichè dall'orario?".
+
+Verificato prima di procedere (copia isolata del DB reale): le
+Assegnazioni 2026-2027 sono già compilate (92 assegnazioni_docenti,
+472 righe assegnazioni_classi) mentre `orario_docenti` è a 0 righe —
+le Assegnazioni si fanno mesi prima dell'orario delle lezioni, quindi
+sono la fonte giusta per questo caso d'uso.
+
+Il branch `consiglio_classe`/`scrutinio`/`glo` di `_preset_partecipanti()`
+(`routes/attivita_ist.py`) ora usa solo Assegnazioni
+(`_docenti_da_assegnazioni_per_classe`, generalizzazione della vecchia
+`_docenti_sostegno_per_classe` — non serve più l'integrazione separata
+per il sostegno, le Assegnazioni coprono già tutte le classi di
+concorso). `OrarioDocente` non è più coinvolto in questo calcolo.
+
+Aggiornati anche i test esistenti che si appoggiavano a OrarioDocente
+per questi tre tipi (`test_glo_preset_consiglio_completo.py`,
+`test_piano_attivita_personale.py::test_scrutinio_non_influenzato_dal_piano_personale`)
+per usare Assegnazioni, più un test nuovo che verifica esplicitamente
+che il preset funzioni anche con `orario_docenti` completamente vuoto
+(la condizione reale che ha fatto scoprire il problema). 337/349 test
+rilevanti (12 falliti ambientali, invariati). Verificato dal vivo su
+copia isolata del DB reale: "Risincronizza tutti" prima di questo fix
+mostrava 7-10 rimozioni per quasi ogni CdC/GLO/scrutinio (Assegnazioni
+in orario_docenti vuoto → preset sempre vuoto), dopo mostra differenze
+minime (1 docente qua e là, deriva reale di organico) — la
+risincronizzazione torna utilizzabile fin da subito dopo un cambio
+anno, senza dover aspettare che l'orario del nuovo anno sia inserito.
+Non toccato il DB reale.
+
 ## Sessione 66 addendum 107 — Risincronizzazione: selezione per-badge + tasto "tutti gli eventi", e un avviso importante
 
 Roberto: "quando 'risincronizza' mi suggerisce aggiunte o rimozioni,

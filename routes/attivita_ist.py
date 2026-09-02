@@ -79,35 +79,37 @@ def _non_in_servizio_per_data(data_evento):
 
 
 
-def _docenti_sostegno_per_classe(anno_scol, classe_label):
+def _docenti_da_assegnazioni_per_classe(anno_scol, classe_label):
     """
-    Docenti di sostegno (Assegnazioni, CC con tipo_posto='sostegno')
-    reali (non placeholder) assegnati su questa classe per l'anno
-    indicato — usato come integrazione a OrarioDocente in
-    _preset_partecipanti() per Consiglio di classe/scrutinio.
+    Tutti i docenti reali (non placeholder) assegnati su questa classe
+    per l'anno indicato, da Assegnazioni — fonte usata da
+    _preset_partecipanti() per Consiglio di classe/scrutinio/GLO al
+    posto di OrarioDocente (fino alla Sessione 66 addendum 107).
 
-    Il sostegno non ha mai righe in OrarioDocente (il suo orario vive
-    in models.orario_sostegno.OrarioSostegno, tabella separata — vedi
-    routes/orario_sostegno.py): senza questa integrazione, un docente
-    di sostegno assegnato via Assegnazioni non comparirebbe mai nel
-    preset di una riunione creata DOPO l'assegnazione (per una già
-    esistente al momento dell'assegnazione ci pensa già
-    iscrivi_docente_a_eventi_classe, chiamata da routes/assegnazioni.py
-    su salva/aggiorna-ore/nomina) — segnalato da Roberto.
+    Motivo del cambio: le Assegnazioni si compilano molto prima
+    dell'orario delle lezioni — a inizio anno scolastico l'orario può
+    restare del tutto vuoto per settimane (appena dopo un cambio anno,
+    `orario_docenti` viene svuotato e il nuovo va reinserito a mano),
+    rendendo nel frattempo inutilizzabile la risincronizzazione per
+    ogni singolo Consiglio di classe/GLO già programmato (segnalato da
+    Roberto: proponeva di rimuovere quasi tutti i partecipanti,
+    trovato lanciando "Risincronizza tutti"). Le Assegnazioni sono
+    invece già presenti in questa fase. Include anche il sostegno
+    (prima serviva un'integrazione separata, _docenti_sostegno_per_classe:
+    il sostegno non ha mai righe in OrarioDocente, il suo orario vive
+    in models.orario_sostegno.OrarioSostegno — qui non serve più,
+    perché le Assegnazioni coprono già tutte le classi di concorso,
+    sostegno compreso).
     """
     m = re.match(r'(\d+)([AB]?)\s+(.+)', classe_label or '')
     if not m:
         return set()
     from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
-    from models.classe_concorso import ClasseConcorso
     righe = (AssegnazioneClasse.query
              .join(AssegnazioneDocente,
                    AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
-             .join(ClasseConcorso,
-                   ClasseConcorso.id == AssegnazioneDocente.id_classe_concorso)
              .filter(AssegnazioneDocente.anno_scol == anno_scol,
                      AssegnazioneDocente.id_docente.isnot(None),
-                     ClasseConcorso.tipo_posto == 'sostegno',
                      AssegnazioneClasse.anno_corso == int(m.group(1)),
                      AssegnazioneClasse.sezione == (m.group(2) or 'A'),
                      AssegnazioneClasse.indirizzo == m.group(3).strip())
@@ -147,17 +149,12 @@ def _preset_partecipanti(attivita):
 
     elif tipo in ('consiglio_classe', 'scrutinio', 'glo') and attivita.classe:
         # GLO: Roberto conferma che nella pratica reale il GLO coinvolge
-        # tutto il consiglio di classe (sostegno compreso, già assegnato
-        # come titolare sulla classe) — stesso identico calcolo del
-        # consiglio di classe, non "solo manuale" come si pensava in
-        # origine. Il vecchio commento "solo manuale" produceva un
-        # preset sempre vuoto per i GLO, che rendeva la risincronizzazione
-        # inutilizzabile (proponeva sempre di rimuovere tutti i
-        # partecipanti reali, segnalato da Roberto su "GLO 1 LSC").
-        from models.orario_docente import OrarioDocente
-        ids = {s.id_docente for s in OrarioDocente.query.filter_by(
-            classe=attivita.classe).all()}
-        ids |= _docenti_sostegno_per_classe(_anno_scolastico(attivita.data), attivita.classe)
+        # tutto il consiglio di classe (sostegno compreso) — stesso
+        # identico calcolo del consiglio di classe, non "solo manuale"
+        # come si pensava in origine (Sessione 66 addendum 106).
+        # Fonte Assegnazioni invece di OrarioDocente (addendum 107): vedi
+        # _docenti_da_assegnazioni_per_classe.
+        ids = _docenti_da_assegnazioni_per_classe(_anno_scolastico(attivita.data), attivita.classe)
         risultato = [i for i in ids if i not in esclusi_ids]
 
     elif tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \

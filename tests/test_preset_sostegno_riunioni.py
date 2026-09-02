@@ -8,11 +8,16 @@ consiglio_classe/scrutinio derivava l'elenco docenti solo da
 OrarioDocente, e il sostegno non ha mai righe lì (il suo orario vive
 in OrarioSostegno, tabella separata).
 
-Estesa _preset_partecipanti() (via il nuovo _docenti_sostegno_per_classe)
-a includere anche i docenti di sostegno assegnati su quella classe per
-l'anno scolastico dell'evento, così un Consiglio di classe/scrutinio
-creato dopo l'assegnazione include comunque il docente di sostegno fin
-dalla creazione.
+Estesa in origine _preset_partecipanti() a includere anche i docenti
+di sostegno assegnati su quella classe per l'anno scolastico
+dell'evento, così un Consiglio di classe/scrutinio creato dopo
+l'assegnazione include comunque il docente di sostegno fin dalla
+creazione. Dalla Sessione 66 addendum 107 questo non è più
+un'integrazione separata: l'intero calcolo per consiglio_classe/
+scrutinio/glo usa solo Assegnazioni
+(_docenti_da_assegnazioni_per_classe), sostegno compreso — questi test
+restano validi perché verificano il comportamento osservabile
+(il sostegno compare nel preset), non il meccanismo interno.
 """
 from datetime import date, timedelta
 from models import db

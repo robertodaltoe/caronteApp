@@ -186,11 +186,26 @@ def test_scrutinio_non_influenzato_dal_piano_personale(app, db_session):
         d.ore_contratto = 9
         d.part_time = True
         d.ore_contratto_pt = 9
-        db.session.add(OrarioDocente(id_docente=d.id, giorno=0, ora=1, classe='1A', tipo_ora='lezione'))
+        db.session.commit()
+
+        # Il preset di scrutinio/consiglio_classe/glo deriva da
+        # Assegnazioni (Sessione 66 addendum 107), non più da
+        # OrarioDocente.
+        from models.classe_concorso import ClasseConcorso
+        from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
+        cc = ClasseConcorso(codice='A012', nome='A012')
+        db.session.add(cc)
+        db.session.commit()
+        asgn = AssegnazioneDocente(anno_scol='2025-2026', id_classe_concorso=cc.id,
+                                    id_docente=d.id, tipo='titolare')
+        db.session.add(asgn)
+        db.session.flush()
+        db.session.add(AssegnazioneClasse(id_assegnazione=asgn.id, indirizzo='LSC',
+                                           anno_corso=1, sezione='A', ore=9))
         db.session.commit()
 
         ev = _crea_evento('scrutinio', date(2025, 10, 10))
-        ev.classe = '1A'
+        ev.classe = '1A LSC'
         db.session.commit()
 
         from models.piano_attivita_personale import PianoAttivitaPersonale, genera_token
@@ -198,9 +213,10 @@ def test_scrutinio_non_influenzato_dal_piano_personale(app, db_session):
         db.session.commit()
 
         from routes.attivita_ist import _preset_partecipanti
-        # Lo scrutinio segue la logica normale (orario classe), non il piano
-        # personale: il docente compare comunque, anche se il piano non lo
-        # include (perché gli scrutini non fanno parte del piano stesso).
+        # Lo scrutinio segue la logica normale (Assegnazioni sulla classe),
+        # non il piano personale: il docente compare comunque, anche se il
+        # piano non lo include (perché gli scrutini non fanno parte del
+        # piano stesso).
         assert d.id in _preset_partecipanti(ev)
 
 
