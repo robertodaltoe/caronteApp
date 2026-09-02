@@ -1182,6 +1182,34 @@ def aggiungi_partecipante(id):
     return redirect(url_for('attivita_ist.presenze', id=id))
 
 
+def _applica_scelte_risincronizzazione(evento, da_aggiungere, da_rimuovibili,
+                                        aggiungi_ids=None, rimuovi_ids=None):
+    """
+    Applica le aggiunte/rimozioni proposte da _diff_risincronizzazione(),
+    filtrate a chi è stato effettivamente selezionato — aggiungi_ids/
+    rimuovi_ids None (non passati, caso bulk) significa "applica tutti i
+    proposti", non "nessuno": la pagina singola invece manda sempre gli
+    id selezionati dai badge (anche vuoti se l'utente li ha deselezionati
+    tutti). Ritorna (n_aggiunti, n_rimossi).
+    """
+    n_agg = n_rim = 0
+    for d in da_aggiungere:
+        if aggiungi_ids is not None and d.id not in aggiungi_ids:
+            continue
+        db.session.add(AttivitaIstPartecipante(
+            id_attivita=evento.id, id_docente=d.id, preset=True))
+        n_agg += 1
+    for d in da_rimuovibili:
+        if rimuovi_ids is not None and d.id not in rimuovi_ids:
+            continue
+        AttivitaIstPartecipante.query.filter_by(
+            id_attivita=evento.id, id_docente=d.id).delete()
+        AttivitaIstPresenza.query.filter_by(
+            id_attivita=evento.id, id_docente=d.id).delete()
+        n_rim += 1
+    return n_agg, n_rim
+
+
 @attivita_ist_bp.route('/attivita-ist/<int:id>/risincronizza', methods=['GET', 'POST'])
 def risincronizza_partecipanti(id):
     evento = AttivitaIst.query.get_or_404(id)
@@ -1194,24 +1222,71 @@ def risincronizza_partecipanti(id):
         return redirect(url_for('attivita_ist.presenze', id=id))
 
     if request.method == 'POST':
+        # Selezione per-badge (Roberto: poter scegliere chi aggiungere e
+        # chi no con un click). Sentinelle (stesso pattern già usato per
+        # "Nessuno" nei partecipanti, vedi form.html) per distinguere
+        # "gruppo non inviato affatto" (nessun chiamante attuale lo fa,
+        # ma se succedesse si applica tutta la proposta, comportamento
+        # di sempre) da "inviato ma con zero badge selezionati" (l'utente
+        # li ha deselezionati tutti a mano — non si applica nulla).
+        aggiungi_ids = ({int(v) for v in request.form.getlist('aggiungi_ids')}
+                        if 'aggiungi_selezione_presente' in request.form else None)
+        rimuovi_ids = ({int(v) for v in request.form.getlist('rimuovi_ids')}
+                       if 'rimuovi_selezione_presente' in request.form else None)
         da_aggiungere, da_rimuovibili, _ = _diff_risincronizzazione(evento)
-        for d in da_aggiungere:
-            db.session.add(AttivitaIstPartecipante(
-                id_attivita=evento.id, id_docente=d.id, preset=True))
-        for d in da_rimuovibili:
-            AttivitaIstPartecipante.query.filter_by(
-                id_attivita=evento.id, id_docente=d.id).delete()
-            AttivitaIstPresenza.query.filter_by(
-                id_attivita=evento.id, id_docente=d.id).delete()
+        n_agg, n_rim = _applica_scelte_risincronizzazione(
+            evento, da_aggiungere, da_rimuovibili, aggiungi_ids, rimuovi_ids)
         db.session.commit()
-        flash(f'Risincronizzato: {len(da_aggiungere)} aggiunti, '
-              f'{len(da_rimuovibili)} rimossi.', 'success')
+        flash(f'Risincronizzato: {n_agg} aggiunti, {n_rim} rimossi.', 'success')
         return redirect(url_for('attivita_ist.presenze', id=id))
 
     da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(evento)
     return render_template('attivita_ist/risincronizza.html',
         evento=evento, da_aggiungere=da_aggiungere,
         da_rimuovibili=da_rimuovibili, non_rimovibili=non_rimovibili)
+
+
+@attivita_ist_bp.route('/attivita-ist/risincronizza-tutti', methods=['GET', 'POST'])
+def risincronizza_tutti():
+    """
+    Risincronizzazione in blocco su tutte le riunioni future già
+    programmate, invece di doverle aprire una per una (Roberto: "non è
+    possibile mettere un tasto sincronizza che agisca su tutte le
+    riunioni già programmate?"). Stesse regole di sicurezza della pagina
+    singola, applicate automaticamente evento per evento — qui non c'è
+    selezione per-badge (impraticabile su decine di eventi insieme):
+    ogni proposta "da aggiungere"/"da rimuovibili" viene presa per
+    intero, mai i non_rimovibili (presenza già modificata a mano) né i
+    partecipanti aggiunti manualmente (preset=False) — la stessa
+    garanzia di _diff_risincronizzazione già usata dalla pagina singola.
+    """
+    oggi = date.today()
+    eventi = (AttivitaIst.query.filter(AttivitaIst.data >= oggi)
+              .order_by(AttivitaIst.data).all())
+
+    righe = []
+    for ev in eventi:
+        da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(ev)
+        if da_aggiungere or da_rimuovibili or non_rimovibili:
+            righe.append({'evento': ev, 'da_aggiungere': da_aggiungere,
+                           'da_rimuovibili': da_rimuovibili,
+                           'non_rimovibili': non_rimovibili})
+
+    if request.method == 'POST':
+        n_eventi = tot_agg = tot_rim = 0
+        for r in righe:
+            n_agg, n_rim = _applica_scelte_risincronizzazione(
+                r['evento'], r['da_aggiungere'], r['da_rimuovibili'])
+            if n_agg or n_rim:
+                n_eventi += 1
+            tot_agg += n_agg
+            tot_rim += n_rim
+        db.session.commit()
+        flash(f'Risincronizzati {n_eventi} eventi: {tot_agg} aggiunti in totale, '
+              f'{tot_rim} rimossi in totale.', 'success')
+        return redirect(url_for('attivita_ist.lista'))
+
+    return render_template('attivita_ist/risincronizza_tutti.html', righe=righe)
 
 
 # ── IMPORT PIANO ANNUALE ─────────────────────────────────────────────────────

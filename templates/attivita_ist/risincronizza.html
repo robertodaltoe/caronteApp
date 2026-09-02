@@ -15,7 +15,8 @@
     attuali di organico, e quello congelato quando l'evento è stato
     creato. Solo le righe generate automaticamente vengono proposte in
     rimozione: quelle aggiunte o modificate a mano non vengono mai
-    toccate. Nulla viene applicato finché non confermi.
+    toccate. Clicca su un nome per escluderlo dalla conferma — partono
+    tutti selezionati. Nulla viene applicato finché non confermi.
 </p>
 
 {% if not da_aggiungere and not da_rimuovibili and not non_rimovibili %}
@@ -27,20 +28,24 @@
 </div>
 {% else %}
 
-<form method="post">
+<form method="post" id="form-risync">
 {% if da_aggiungere %}
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
     <h3 style="font-size:.9rem; color:var(--verde); margin-bottom:10px;">
-        {{ icon('plus') }} Da aggiungere ({{ da_aggiungere|length }})
+        {{ icon('plus') }} Da aggiungere (<span class="cnt-sel" data-gruppo="agg">{{ da_aggiungere|length }}</span>/{{ da_aggiungere|length }})
     </h3>
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
         Ora previsti dal preset ma non ancora in elenco — probabilmente assunti dopo la creazione dell'evento.
     </p>
+    <input type="hidden" name="aggiungi_selezione_presente" value="1">
     <div style="display:flex; flex-wrap:wrap; gap:6px;">
         {% for d in da_aggiungere %}
-        <span class="badge" style="background:var(--verde-bg); color:var(--verde); font-size:.8rem; padding:3px 10px;">
+        <label class="badge-toggle" data-gruppo="agg"
+               style="cursor:pointer; user-select:none; font-size:.8rem; padding:3px 10px; border-radius:999px;
+                      background:var(--verde-bg); color:var(--verde); border:1px solid transparent;">
+            <input type="checkbox" name="aggiungi_ids" value="{{ d.id }}" checked style="display:none;">
             {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-        </span>
+        </label>
         {% endfor %}
     </div>
 </div>
@@ -49,16 +54,20 @@
 {% if da_rimuovibili %}
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
     <h3 style="font-size:.9rem; color:var(--rosso); margin-bottom:10px;">
-        {{ icon('trash') }} Da rimuovere ({{ da_rimuovibili|length }})
+        {{ icon('trash') }} Da rimuovere (<span class="cnt-sel" data-gruppo="rim">{{ da_rimuovibili|length }}</span>/{{ da_rimuovibili|length }})
     </h3>
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
         Non più previsti dal preset attuale (usciti/contratto scaduto) e con presenza ancora invariata — sicuri da togliere.
     </p>
+    <input type="hidden" name="rimuovi_selezione_presente" value="1">
     <div style="display:flex; flex-wrap:wrap; gap:6px;">
         {% for d in da_rimuovibili %}
-        <span class="badge" style="background:var(--rosso-bg); color:var(--rosso); font-size:.8rem; padding:3px 10px;">
+        <label class="badge-toggle" data-gruppo="rim"
+               style="cursor:pointer; user-select:none; font-size:.8rem; padding:3px 10px; border-radius:999px;
+                      background:var(--rosso-bg); color:var(--rosso); border:1px solid transparent;">
+            <input type="checkbox" name="rimuovi_ids" value="{{ d.id }}" checked style="display:none;">
             {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
-        </span>
+        </label>
         {% endfor %}
     </div>
 </div>
@@ -85,12 +94,42 @@
 
 <div style="display:flex; gap:10px;">
     {% if da_aggiungere or da_rimuovibili %}
-    <button type="submit" class="btn btn-success">
-        {{ icon('check') }} Conferma ({{ da_aggiungere|length }} aggiunti, {{ da_rimuovibili|length }} rimossi)
+    <button type="submit" class="btn btn-success" id="btn-conferma">
+        {{ icon('check') }} Conferma (<span id="tot-agg">{{ da_aggiungere|length }}</span> aggiunti, <span id="tot-rim">{{ da_rimuovibili|length }}</span> rimossi)
     </button>
     {% endif %}
     <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">Annulla</a>
 </div>
 </form>
+
+<style>
+.badge-toggle.deselezionato {
+    background: #e5e7eb !important;
+    color: #9ca3af !important;
+    text-decoration: line-through;
+}
+</style>
+<script>
+function aggiornaContatori() {
+    document.querySelectorAll('.cnt-sel').forEach(el => {
+        const gruppo = el.dataset.gruppo;
+        el.textContent = document.querySelectorAll(
+            '.badge-toggle[data-gruppo="' + gruppo + '"]:not(.deselezionato)').length;
+    });
+    const totAgg = document.getElementById('tot-agg');
+    const totRim = document.getElementById('tot-rim');
+    if (totAgg) totAgg.textContent = document.querySelectorAll('.badge-toggle[data-gruppo="agg"]:not(.deselezionato)').length;
+    if (totRim) totRim.textContent = document.querySelectorAll('.badge-toggle[data-gruppo="rim"]:not(.deselezionato)').length;
+}
+document.querySelectorAll('.badge-toggle').forEach(label => {
+    label.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        const cb = this.querySelector('input[type=checkbox]');
+        cb.checked = !cb.checked;
+        this.classList.toggle('deselezionato', !cb.checked);
+        aggiornaContatori();
+    });
+});
+</script>
 {% endif %}
 {% endblock %}

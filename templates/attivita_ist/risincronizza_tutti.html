@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Risincronizza tutti gli eventi{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('refresh') }} Risincronizza tutte le riunioni programmate</h1>
+    <p style="font-size:.84rem; color:var(--grigio); max-width:640px;">
+        Applica in blocco la stessa risincronizzazione disponibile evento
+        per evento (vedi presenze → Risincronizza) a tutti gli eventi
+        futuri con differenze rispetto ai dati attuali di organico. Stesse
+        garanzie della pagina singola: mai toccati i partecipanti aggiunti
+        a mano, mai rimosso chi ha già una presenza modificata (quelli
+        restano segnalati, da rivedere a mano). Qui non è possibile
+        scegliere singolarmente chi aggiungere/rimuovere evento per
+        evento — per un controllo puntuale usa la pagina del singolo
+        evento.
+    </p>
+</div>
+
+{% if not righe %}
+<div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
+    {{ icon('check') }} Nessun evento futuro con differenze da risincronizzare.
+</div>
+<div style="margin-top:16px;">
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">{{ icon('arrow-left') }} Torna all'elenco</a>
+</div>
+{% else %}
+
+<form method="post">
+<div class="card" style="padding:0; margin-bottom:16px; overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+        <thead>
+            <tr style="background:#f8fafc; text-align:left;">
+                <th style="padding:10px 14px;">Evento</th>
+                <th style="padding:10px 14px;">Data</th>
+                <th style="padding:10px 14px; color:var(--verde);">Da aggiungere</th>
+                <th style="padding:10px 14px; color:var(--rosso);">Da rimuovere</th>
+                <th style="padding:10px 14px; color:#92400e;">Da rivedere a mano</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in righe %}
+            <tr style="border-top:1px solid #eef1f4;">
+                <td style="padding:10px 14px;">
+                    <a href="{{ url_for('attivita_ist.risincronizza_partecipanti', id=r.evento.id) }}">
+                        {{ r.evento.tipo_emoji }} {{ r.evento.titolo }}
+                    </a>
+                </td>
+                <td style="padding:10px 14px; white-space:nowrap;">{{ r.evento.data.strftime('%d/%m/%Y') }}</td>
+                <td style="padding:10px 14px;">
+                    {% if r.da_aggiungere %}
+                    <span class="badge" style="background:var(--verde-bg); color:var(--verde);">{{ r.da_aggiungere|length }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="padding:10px 14px;">
+                    {% if r.da_rimuovibili %}
+                    <span class="badge" style="background:var(--rosso-bg); color:var(--rosso);">{{ r.da_rimuovibili|length }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="padding:10px 14px;">
+                    {% if r.non_rimovibili %}
+                    <span class="badge" style="background:#fde68a; color:#92400e;">{{ r.non_rimovibili|length }}</span>
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="display:flex; gap:10px;">
+    <button type="submit" class="btn btn-success"
+            onclick="return confirm('Risincronizzare tutti i {{ righe|length }} eventi elencati? L\'operazione applica subito le aggiunte/rimozioni proposte.')">
+        {{ icon('check') }} Risincronizza tutti ({{ righe|length }} eventi)
+    </button>
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>
+</div>
+</form>
+{% endif %}
+{% endblock %}

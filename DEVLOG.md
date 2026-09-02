@@ -4,6 +4,52 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 107 — Risincronizzazione: selezione per-badge + tasto "tutti gli eventi", e un avviso importante
+
+Roberto: "quando 'risincronizza' mi suggerisce aggiunte o rimozioni,
+dovrei poter scegliere chi aggiungere e chi no con un click sul badge
+del nome. Inoltre, non è possibile mettere un tasto sincronizza che
+agisca su tutte le riunioni già programmate?"
+
+Due estensioni a `routes/attivita_ist.py::risincronizza_partecipanti()`:
+
+1. I badge "da aggiungere"/"da rimuovere" in `risincronizza.html` sono
+   ora checkbox cliccabili (tutti selezionati di default, click per
+   escludere) — la POST applica solo i selezionati. Sentinella per
+   gruppo (`aggiungi_selezione_presente`/`rimuovi_selezione_presente`,
+   stesso pattern già usato per "Nessuno" nei partecipanti,
+   addendum 105) per distinguere "gruppo non inviato" (retrocompatibile:
+   applica tutta la proposta) da "inviato con zero selezionati".
+
+2. Nuova route `risincronizza_tutti()` + template
+   `risincronizza_tutti.html`, raggiungibile da un tasto in cima
+   all'elenco Attività istituzionali: elenca tutti gli eventi futuri
+   con differenze e le applica in blocco con un solo click (senza
+   selezione per-badge, impraticabile su tanti eventi insieme, ma con
+   le stesse garanzie di sicurezza di sempre — mai i `non_rimovibili`,
+   mai i partecipanti aggiunti a mano).
+
+6 test nuovi in `tests/test_risincronizza_selezione_e_bulk.py`.
+336/348 test rilevanti (i 12 falliti sono il problema ambientale
+già noto). Non toccato il DB reale.
+
+**Avviso importante trovato durante la verifica dal vivo** (copia
+isolata del DB reale, non applicato): in questo momento
+`orario_docenti` è **completamente vuoto** (0 righe) — conseguenza
+diretta del cambio anno 2025-2026→2026-2027 di pochi giorni fa
+(addendum 100, `cambio_anno.py::attiva()` svuota l'orario del vecchio
+anno, il nuovo va ancora inserito). Poiché `_preset_partecipanti()`
+per Consigli di classe/scrutini/GLO deriva l'elenco proprio da
+`orario_docenti` (+ sostegno via Assegnazioni), la risincronizzazione
+oggi proporrebbe di rimuovere QUASI TUTTI i partecipanti di QUASI OGNI
+CdC/GLO già programmato per settembre — non solo dei GLO come
+segnalato nell'addendum 106, un effetto molto più ampio e ancora più
+distruttivo se lanciato in blocco col nuovo tasto "Risincronizza
+tutti". **Non usare la risincronizzazione (singola o in blocco) su
+Consigli di classe/scrutini/GLO finché l'orario dei docenti per il
+2026-2027 non è stato inserito** — segnalato a Roberto, nessuna azione
+correttiva presa qui: è un dato mancante, non un bug di questo fix.
+
 ## Sessione 66 addendum 106 — GLO: la risincronizzazione proponeva sempre di rimuovere tutti i partecipanti
 
 Roberto, su "GLO 1 LSC": "se provo a risincronizzare le presenze in
