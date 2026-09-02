@@ -4,6 +4,44 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 110 — Orario troncato in elenco + classe persa alla modifica di un CdC/GLO
+
+Due segnalazioni di Roberto in sequenza sulla pagina Attività
+istituzionali: la colonna Orario ancora troncata con "…" nonostante il
+fix dell'addendum precedente, e "quando modifico una voce con il tasto
+modifica che era stata creata in automatico mi scompare il badge della
+classe".
+
+**Colonna Orario**: 120px non bastava comunque (misurato: "13:30–16:30"
+richiede ~108px solo di testo, più il padding delle celle). Portata a
+150px, verificato che non tronca più con un giro sul filtro Consigli
+di classe.
+
+**Classe persa al salvataggio — bug più serio**: la tendina "Classe"
+del form (`routes/attivita_ist.py::form()`, `classi_db`) veniva
+popolata solo da `OrarioDocente.query.all()` — vuoto per settimane a
+inizio anno (addendum 107/108). Aprendo il form di un CdC/GLO già
+creato per una classe non ancora in orario, la tendina non aveva
+quell'opzione: mostrava "— nessuna —", e salvando il form la classe
+veniva silenziosamente sovrascritta a `None`. Fix: `classi_db` ora
+unisce anche le classi da Assegnazioni (`AssegnazioneClasse.label_classe`,
+già disponibili molto prima dell'orario).
+
+**Dato reale già danneggiato, trovato e corretto**: 4 Consigli di
+classe (id 346-349, "1B AFM"/"2A AFM"/"3A RIM"/"3B RIM" del 23/11/2026)
+avevano già `classe` a `NULL` — quasi certamente le stesse modifiche
+che Roberto ha appena fatto per risolvere le sovrapposizioni Zampetti/
+Ghezzi segnalate in precedenza (stessi orari 14:30-18:30 in sequenza
+sullo stesso pomeriggio). Backup cifrato
+(`database_20260902_1536_pre_ripristino_classe_cdc_346_349.db.enc`),
+classe ricostruita dal titolo (univoco: "Consiglio di classe {classe}"),
+`PRAGMA integrity_check` → `ok`. Partecipanti già presenti e intatti
+(9/9/8/8), non toccati.
+
+2 test nuovi (`test_form_classe_da_assegnazioni.py`, più la larghezza
+Orario non ha test dedicato — è solo CSS). 341/353 test rilevanti (12
+falliti ambientali, invariati).
+
 ## Sessione 66 addendum 109 — "Riunione referenti FSL": due bug distinti dietro un solo sintomo
 
 Roberto: "con il risincronizza ho inserito in automatico tutti i

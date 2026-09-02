@@ -926,10 +926,20 @@ def form(id=None):
     evento = AttivitaIst.query.get_or_404(id) if id else None
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     dipartimenti = Dipartimento.query.order_by(Dipartimento.ordine).all()
-    classi_db = sorted({s.classe for s in
-                        __import__('models.orario_docente', fromlist=['OrarioDocente'])
-                        .OrarioDocente.query.all()
-                        if s.classe and s.classe not in ('POTENZIAMENTO','---','-x-','')})
+    # Unione Orario + Assegnazioni: l'orario resta vuoto per settimane a
+    # inizio anno scolastico (Sessione 66 addendum 107/108), quindi non
+    # basta più da solo per popolare questa tendina — senza le
+    # Assegnazioni, un Consiglio di classe/GLO creato per una classe non
+    # (ancora) in orario perdeva silenziosamente la classe al primo
+    # salvataggio del form (la tendina non aveva quell'opzione, quindi
+    # veniva inviata vuota) — segnalato da Roberto.
+    from models.assegnazione import AssegnazioneClasse
+    classi_db = sorted(
+        {s.classe for s in
+         __import__('models.orario_docente', fromlist=['OrarioDocente'])
+         .OrarioDocente.query.all()
+         if s.classe and s.classe not in ('POTENZIAMENTO','---','-x-','')}
+        | {ac.label_classe for ac in AssegnazioneClasse.query.all()})
 
     if request.method == 'POST':
         tipo        = request.form['tipo']
