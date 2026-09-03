@@ -4,6 +4,44 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 111 — Registra assenza: tendina docenti includeva chi ha il contratto scaduto
+
+Roberto: "in registra assenza, nel menu a tendina di selezione docenti,
+mi compaiono ancora i docenti non più attivi (in teoria) cioè quelli
+che hanno il contratto scaduto".
+
+Causa in `modules/assenze_registrazione.py::contesto_form_assenza()`:
+la tendina si popolava con `Docente.query.filter_by(attivo=True)` — lo
+stesso pattern "flag mai azzerato da solo" già corretto altrove questa
+sessione (KPI Impostazioni, addendum 103/104). Fix: applicato lo stesso
+controllo puntuale sulla data già usato per i partecipanti agli eventi
+istituzionali (`_non_in_servizio_per_data`, da `routes/attivita_ist.py`)
+— copre uscita già segnalata, AP uscente/aspettativa, non ancora
+arrivato, e per luglio/agosto anche il contratto a termine scaduto
+(supplenti brevi, TD fino a GS) — esattamente il caso di Roberto.
+
+Trovato anche un secondo bug nello stesso posto, pattern "stessa
+verifica duplicata altrove" (CLAUDE.md): `routes/assenze.py::modifica()`
+calcolava una SUA lista docenti separata (stessa query naive `attivo=True`)
+e la passava al template al posto di quella già corretta restituita da
+`contesto_form_assenza()` — il fix sopra sarebbe stato invisibile nella
+pagina di modifica di un'assenza esistente. Ora usa `ctx['docenti']`
+come già fa `nuova()`.
+
+Attenzione alla modifica di un'assenza storica: se il fix venisse
+applicato ciecamente, modificare un'assenza di un docente uscito nel
+frattempo lo farebbe sparire dalla tendina, rompendo il salvataggio.
+`contesto_form_assenza()` ora reinserisce sempre il docente già
+assegnato all'assenza in modifica (`escludi_assenza_id`), anche se
+risulta "non in servizio" per la data.
+
+3 test nuovi (`test_assenza_form_docenti_non_in_servizio.py`). 345/357
+test rilevanti (12 falliti ambientali, invariati). Verificato dal vivo
+su copia isolata del DB reale: tendina "Registra assenza" passata da
+106 a 73 opzioni (72 docenti reali + placeholder vuoto) — combacia con
+i 72 docenti realmente in servizio già confermati in precedenza in
+questa sessione (Collegio docenti). Non toccato il DB reale.
+
 ## Sessione 66 addendum 110 — Orario troncato in elenco + classe persa alla modifica di un CdC/GLO
 
 Due segnalazioni di Roberto in sequenza sulla pagina Attività

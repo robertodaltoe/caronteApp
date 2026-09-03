@@ -602,7 +602,37 @@ def contesto_form_assenza(data_str, escludi_assenza_id=None, ruolo=None):
     from models.assenza import LIMITI_CCNL, MOTIVI_RISERVATI, RUOLI_MOTIVO_SPECIFICO
 
     oggi = date.today()
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    try:
+        data_rif = date.fromisoformat(data_str)
+    except (TypeError, ValueError):
+        data_rif = oggi
+
+    # Non basta attivo=True (Roberto: comparivano ancora docenti col
+    # contratto scaduto): quel flag non si azzera mai da solo quando
+    # arriva anno_scol_uscita o un contratto a termine scade — serve lo
+    # stesso controllo puntuale sulla data già usato per i partecipanti
+    # agli eventi istituzionali (uscita già segnalata, AP uscente/
+    # aspettativa, non ancora arrivato, e per luglio/agosto anche il
+    # tipo di contratto scaduto: supplenti brevi e TD fino a GS).
+    from routes.attivita_ist import _non_in_servizio_per_data
+    non_in_servizio_ids = _non_in_servizio_per_data(data_rif)
+    docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+               if d.id not in non_in_servizio_ids]
+
+    # In modifica (escludi_assenza_id valorizzato), il docente già
+    # assegnato a QUESTA assenza non deve mai sparire dalla tendina anche
+    # se ora risulta "non in servizio" per la data — altrimenti si
+    # romperebbe la modifica di un'assenza storica di un docente uscito
+    # nel frattempo (stesso principio già applicato in
+    # routes/attivita_ist.py::form() per non far sparire una selezione
+    # esistente).
+    if escludi_assenza_id is not None:
+        assenza_in_modifica = Assenza.query.get(escludi_assenza_id)
+        if (assenza_in_modifica and
+                assenza_in_modifica.id_docente not in {d.id for d in docenti}):
+            doc_gia_assegnato = Docente.query.get(assenza_in_modifica.id_docente)
+            if doc_gia_assegnato:
+                docenti = sorted(docenti + [doc_gia_assegnato], key=lambda d: d.cognome)
 
     vede_specifico = ruolo in RUOLI_MOTIVO_SPECIFICO
     tipi_visivi = ((_TIPI_VISIVI_SPECIFICI if vede_specifico else _TIPI_VISIVI_RISERVATO)

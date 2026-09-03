@@ -236,7 +236,6 @@ def modifica(id):
         next_url = request.form.get("next") or url_for("dashboard.index", data=new_data.isoformat())
         return redirect(next_url)
 
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     from flask import session
     ruolo = session.get('ruolo', 'segreteria')
 
@@ -246,7 +245,7 @@ def modifica(id):
     return render_template("assenza_form.html",
         assenza=a,
         motivo_visibile=motivo_visibile(a.motivo, ruolo),
-        docenti=docenti,
+        docenti=ctx['docenti'],
         data_sel=a.data.isoformat(),
         ore_list=range(1, 10),
         tipi_visivi=ctx['tipi_visivi'],
