@@ -4,6 +4,82 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 113 — A-11 non sincronizzava Docenti↔Materie + INCIDENTE: scritture accidentali sul DB reale durante il debug
+
+Roberto: "perche in docenti-materia per la classe di concorso a-11 non
+ho la compilazione automatica dalla pagina assegnazioni?"
+
+**Diagnosi**: `_sync_docente_materie()` (routes/assegnazioni.py, esiste
+dal 10/07/2026) funziona correttamente quando chiamata — verificato
+chiamandola a mano. Il problema è che non è mai stata chiamata per
+buona parte delle Assegnazioni reali: lo script una tantum
+`scripts/backfill_id_materia.py` (usato per correggere id_materia
+storicamente sbagliati) sincronizzava Docenti↔Materie SOLO per i
+docenti che doveva effettivamente correggere — chi aveva già
+id_materia corretto ("caso OK") non veniva toccato, e quindi non è mai
+stato sincronizzato da nulla, né allora né dai salvataggi successivi
+(che sincronizzano solo quello che salvano in quel momento, non
+retroattivamente). Confermato con una query diretta: 0 righe
+`docente_materie` con `origine='auto'` su tutto il 2026-2027 nonostante
+centinaia di AssegnazioneClasse con id_materia valorizzato. Non solo
+A-11: anche AS48, A-20, A-47, A-37, B-02-TED, AS2B, AS2D.
+
+Scritto `scripts/backfill_docente_materie.py` (stesso stile/pattern di
+backfill_id_materia.py, dry-run di default) che applica
+`_sync_docente_materie()` — la stessa funzione già usata dai
+salvataggi normali, nessuna logica nuova — a ogni AssegnazioneDocente
+con docente reale e materie mancanti in DocenteMateria.
+
+---
+
+**INCIDENTE, segnalato per intero invece di minimizzarlo**: verificando
+questo fix su quella che credevo una copia isolata (`/tmp/caronte_debug/
+database.db`), sia una chiamata diretta di test a
+`_sync_docente_materie()` sia poi l'esecuzione (dry-run e --applica) di
+`scripts/backfill_docente_materie.py` hanno in realtà scritto sul
+**database reale**, non sulla copia. Causa: il pattern usato in questa
+sessione per puntare un `create_app()` a un DB diverso
+(`flask_app.config['SQLALCHEMY_DATABASE_URI'] = ...` DOPO aver chiamato
+`create_app()`) non funziona — `create_app()` esegue `_auto_migrate()`
+dentro un `with app.app_context()` PRIMA di ritornare (riga ~365 di
+app.py), quindi l'engine si lega al path reale (`os.path.join(base_dir,
+'database.db')`, impostato a riga 70) ancora prima che il mio override
+successivo abbia effetto — l'override arriva troppo tardi. Lo stesso
+pattern è stato usato per diversi server di verifica "isolati" in
+questa sessione (addendum 106-112): per le sole letture (GET,
+screenshot) è innocuo, ma un salvataggio di form fatto tramite browser
+contro uno di quei server tocca il DB reale.
+
+Verificato l'impatto concreto:
+- Un salvataggio di test sul form di modifica evento 223 (verifica del
+  fix "classe persa", addendum 110) ha ri-salvato `classe='1A AFM'` —
+  valore identico a quello già presente, nessun cambiamento reale.
+- Le scritture di `_sync_docente_materie()`/`backfill_docente_materie.py`
+  hanno creato 18 righe `docente_materie` con `origine='auto'` — TUTTE
+  verificate corrette (nessun duplicato, id_materia coerenti con le
+  AssegnazioneClasse reali): sono esattamente il dato che la
+  sincronizzazione automatica avrebbe dovuto creare da sola, solo
+  applicato senza backup preventivo né conferma esplicita, in
+  violazione della regola CLAUDE.md #1/#2.
+
+`PRAGMA integrity_check` → `ok`. Backup cifrato preso A POSTERIORI per
+fissare lo stato attuale
+(`database_20260903_1452_post_backfill_docente_materie_accidentale.db.enc`)
+— non sostituisce un backup preventivo che avrebbe dovuto esserci prima.
+
+**Corretto il metodo per il resto della sessione**: il pattern giusto
+per un `create_app()` puntato altrove è intercettare il path PRIMA che
+`create_app()` lo usi (es. monkeypatchando `os.path.join` solo per la
+durata della chiamata a `create_app()`), non impostare l'URI dopo.
+Nessun altro server di verifica in questa sessione ha eseguito
+salvataggi di form (solo letture), quindi il rischio reale è limitato
+ai due casi sopra — ma va detto con chiarezza: la protezione "sto
+lavorando su una copia" che questa sessione ha dichiarato più volte non
+era effettiva per gli score con `flask_app.run()`.
+
+341/353 → 345/357 test rilevanti nel corso della sessione (12 falliti
+ambientali, invariati, nessuna regressione).
+
 ## Sessione 66 addendum 112 — Genera piano delle attività: tasti rapidi "Tutte"/"Nessuna" anche per la presenza DS
 
 Roberto: "in genera piano delle attività, è possibile avere i tasti di
