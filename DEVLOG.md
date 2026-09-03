@@ -4,6 +4,21 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 112 — Genera piano delle attività: tasti rapidi "Tutte"/"Nessuna" anche per la presenza DS
+
+Roberto: "in genera piano delle attività, è possibile avere i tasti di
+selezione rapida nessuno e tutti per la presenza del DS?".
+
+`templates/generatore_cdc/index.html`: la sezione "Classi da
+calendarizzare" aveva già i pulsanti "Tutte"/"Nessuna"
+(`selTutte()`/`.chk-classe`); la sezione sotto, "Richiede la presenza
+del Dirigente Scolastico" (`classi_ds`), no. Aggiunta la stessa coppia
+di pulsanti (`selTutteDs()`/`.chk-classe-ds`), indipendente dall'altra.
+Solo template, nessuna modifica alla logica di generazione. Verificato
+dal vivo su copia isolata del DB reale: "Tutte" seleziona tutte le 38
+classi della sezione DS, "Nessuna" le deseleziona senza toccare la
+sezione "Classi da calendarizzare" sopra.
+
 ## Sessione 66 addendum 111 — Registra assenza: tendina docenti includeva chi ha il contratto scaduto
 
 Roberto: "in registra assenza, nel menu a tendina di selezione docenti,

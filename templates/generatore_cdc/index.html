@@ -94,10 +94,14 @@
                 anche se non condividono docenti — il DS può essere in un solo posto alla volta.
             </p>
             {% if classi_disponibili %}
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selTutteDs(true)">Tutte</button>
+                <button type="button" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);" onclick="selTutteDs(false)">Nessuna</button>
+            </div>
             <div style="max-height:180px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:2px;">
                 {% for c in classi_disponibili %}
                 <label style="display:flex; align-items:center; gap:6px; padding:4px 6px; font-size:.85rem; cursor:pointer;">
-                    <input type="checkbox" name="classi_ds" value="{{ c }}"> {{ c }}
+                    <input type="checkbox" name="classi_ds" value="{{ c }}" class="chk-classe-ds"> {{ c }}
                 </label>
                 {% endfor %}
             </div>
@@ -113,6 +117,9 @@
 <script>
 function selTutte(sel) {
     document.querySelectorAll('.chk-classe').forEach(function(c) { c.checked = sel; });
+}
+function selTutteDs(sel) {
+    document.querySelectorAll('.chk-classe-ds').forEach(function(c) { c.checked = sel; });
 }
 // Stessi 7 indirizzi principali dell'elenco canonico usato nel
 // generatore (modules/generatore_cdc.py::_IND_SEQUENCE) — il sostegno
