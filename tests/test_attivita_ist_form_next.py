@@ -65,3 +65,30 @@ def test_modifica_rifiuta_next_assoluto_esterno(app, db_session):
         })
         assert r.status_code == 302
         assert r.headers['Location'] == '/attivita-ist'
+
+
+def test_template_invia_davvero_il_campo_next_nel_form_principale():
+    """Regressione: il ramo POST di form() sapeva già gestire 'next'
+    (vedi i test sopra), ma il <form> principale del template — quello
+    del pulsante Salva — non aveva mai il campo nascosto 'next': solo
+    il form separato di eliminazione ce l'aveva. Il GET riceveva
+    correttamente ?next=... (i link "Modifica" da Piano annuale/Elenco
+    lo passano), ma quel valore andava perso al salvataggio, tornando
+    sempre a "Attività istituzionali" invece che al punto di partenza
+    (segnalato da Roberto per Piano delle attività). Verifica diretta
+    sul sorgente del template, senza bisogno di un render Jinja
+    completo: il campo nascosto 'next' deve comparire PRIMA del
+    </form> di chiusura del form principale (id="form-ist")."""
+    import re
+    with open('templates/attivita_ist/form.html', encoding='utf-8') as f:
+        html = f.read()
+
+    inizio = html.index('id="form-ist"')
+    fine_form_principale = html.index('</form>', inizio)
+    corpo_form_principale = html[inizio:fine_form_principale]
+
+    assert re.search(r'name="next"', corpo_form_principale), (
+        "Il form principale (id=form-ist) non contiene più un campo "
+        "nascosto 'next': il salvataggio tornerebbe sempre a "
+        "'Attività istituzionali' invece che alla pagina di origine."
+    )

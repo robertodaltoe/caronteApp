@@ -131,6 +131,11 @@
 
 </div>
 
+{# "next" arriva dalla pagina di provenienza (es. Piano delle attività) —
+   mancava qui (c'era solo nel form di eliminazione sotto), quindi il
+   salvataggio tornava sempre a "Attività istituzionali" invece che al
+   punto di partenza (segnalato da Roberto per Piano delle attività). #}
+<input type="hidden" name="next" value="{{ next_url }}">
 <div style="margin-top:16px; display:flex; gap:10px;">
     <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
     <a href="{{ next_url or url_for('attivita_ist.lista') }}" class="btn btn-primary">Annulla</a>

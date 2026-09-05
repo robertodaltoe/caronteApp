@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 118 — Salvare da Piano delle attività tornava sempre a Elenco eventi
+
+Roberto: "Quando modifico con il tasto edit in piano delle attività e
+salvo devo tornare su piano delle attività al punto di partenza, non
+in attività ist".
+
+Causa in `templates/attivita_ist/form.html`: il `<form id="form-ist">`
+principale (quello del pulsante Salva) non aveva mai un campo nascosto
+`next` — solo il form separato di eliminazione, più sotto, ce l'aveva.
+Il link "Modifica" da Piano annuale/Elenco passa correttamente
+`?next=...` nella GET, e il ramo POST di `form()` sa già gestirlo (test
+già esistenti in `test_attivita_ist_form_next.py` lo confermavano) —
+ma quel valore non veniva mai rimandato indietro al salvataggio, perché
+il form che lo invia non lo conteneva. Un gap fra backend e template
+mai emerso dai test esistenti perché testavano solo la route
+direttamente (POST con `next` già nei dati), non il rendering reale
+del form.
+
+Aggiunto il campo mancante. Aggiunto anche un test che legge il
+sorgente del template stesso (non un render Jinja completo, che
+richiederebbe un template_folder che i fixture di test non hanno) per
+verificare che il campo nascosto `next` resti dentro il form
+principale — così un'eventuale rimozione futura verrebbe presa subito,
+non solo quando qualcuno lo nota di persona in produzione.
+
+1 test nuovo, 3 già esistenti confermati ancora validi
+(`test_attivita_ist_form_next.py`). 359/371 test rilevanti (12 falliti
+ambientali, invariati). Verificato dal vivo su copia isolata: aperto
+"Modifica" da Piano Annuale filtrato su settembre, il campo nascosto
+`next` risultava valorizzato (`/attivita-ist/piano-annuale?mese=9`), e
+dopo "Salva" il redirect è tornato esattamente lì.
+
 ## Sessione 66 addendum 117 — Piano Annuale: filtro tipo/mese + mesi collassabili
 
 Roberto: "aggiungi filtro anche in piano delle attività e rendi i box
