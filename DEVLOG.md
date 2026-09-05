@@ -4,6 +4,33 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 116 — Selezione in blocco anche in Piano Annuale
+
+Seguito immediato dell'addendum 115: Roberto — "solo in attività
+istituzionali? in piano delle attività no?".
+
+Estesa la stessa selezione multipla (checkbox per riga + Sposta/Elimina
+selezionati) a `templates/attivita_ist/piano_annuale.html`. Differenza
+di layout rispetto a Elenco/gestione eventi: qui gli eventi sono divisi
+in una tabella per mese, quindi la barra delle azioni è unica per
+l'intera pagina (sticky in cima, non dentro ogni tabella) e "Seleziona/
+Deseleziona tutti" copre tutti i mesi insieme, non solo quello dove si
+spunta la prima riga — verificato dal vivo: 281 selezionati su tutto
+l'anno con un click. Stesso backend (`elimina_blocco`/`sposta_blocco`,
+nessuna nuova route), stesso accorgimento sui form annidati (il
+form di invio è costruito al volo in JS, mai avvolgendo la tabella che
+contiene già un `<form>` per riga per "Elimina" singolo) — JS duplicato
+identico a quello di lista.html invece di condiviso: pagina autonoma,
+snippet minimo, non sembrava valesse la pena introdurre un file JS
+condiviso solo per questo.
+
+Nessun test nuovo (stessa logica di backend già coperta dai test
+dell'addendum 115, qui solo template). Verificato dal vivo su copia
+isolata (md5sum del DB reale invariato prima/dopo): checkbox visibili
+su tutte le righe di tutti i mesi, "Seleziona tutti" → 281, spostati 2
+eventi di test avanti di 3 giorni (01/09→04/09), confermato sulla
+copia, DB reale intatto.
+
 ## Sessione 66 addendum 115 — Attività istituzionali: elimina/sposta un blocco di eventi insieme
 
 Roberto: "come posso cancellare un intero blocco di eventi. Ad esempio
