@@ -84,11 +84,14 @@
 </div>
 {% endmacro %}
 
-{% macro tabella_eventi(eventi, svolte=false) %}
+{% macro tabella_eventi(eventi, svolte=false, blocco_id='') %}
     <div style="overflow-x:auto;">
     <table style="table-layout:fixed; min-width:960px; width:100%;">
         <thead>
             <tr>
+                {% if blocco_id %}
+                <th style="width:28px;"><input type="checkbox" onclick="toggleTuttiBlocco('{{ blocco_id }}', this.checked)" title="Seleziona tutti"></th>
+                {% endif %}
                 <th style="width:130px; white-space:nowrap;">Data</th>
                 <th style="width:150px; white-space:nowrap;">Orario</th>
                 <th style="width:170px;">Tipo</th>
@@ -104,6 +107,7 @@
         {% set grp_id = 'grp-' ~ e.eventi[0].id %}
         <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}"
             style="cursor:pointer; background:#fafbfc;" onclick="toggleGruppo('{{ grp_id }}')">
+            {% if blocco_id %}<td onclick="event.stopPropagation()"></td>{% endif %}
             <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
                 <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
             </td>
@@ -135,6 +139,9 @@
         </tr>
         {% for sub in e.eventi %}
         <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}" data-grp="{{ grp_id }}" style="display:none; background:#f8fafc;">
+            {% if blocco_id %}
+            <td><input type="checkbox" name="ids" value="{{ sub.id }}" class="chk-blocco-{{ blocco_id }}" onchange="aggiornaBarraBlocco('{{ blocco_id }}')"></td>
+            {% endif %}
             <td></td>
             <td style="font-size:.8rem; color:var(--grigio); white-space:nowrap;">
                 {% if sub.ora_inizio %}{{ sub.ora_inizio }}{% if sub.ora_fine %}–{{ sub.ora_fine }}{% endif %}{% else %}—{% endif %}
@@ -153,6 +160,9 @@
         {% endfor %}
         {% else %}
         <tr class="ev-row{% if svolte %} ev-row-svolta{% endif %}">
+            {% if blocco_id %}
+            <td><input type="checkbox" name="ids" value="{{ e.id }}" class="chk-blocco-{{ blocco_id }}" onchange="aggiornaBarraBlocco('{{ blocco_id }}')"></td>
+            {% endif %}
             <td style="white-space:nowrap;"><strong>{{ e.data.strftime('%d/%m/%Y') }}</strong><br>
                 <span style="font-size:.75rem; color:var(--grigio);">{{ e.data.strftime('%a') | capitalize }}</span>
                 {%- if e.sessioni|length > 1 %} <span style="font-size:.7rem; color:var(--bronzo); font-weight:700;"
@@ -192,7 +202,20 @@
 <!-- TABELLA EVENTI FUTURI/ODIERNI -->
 <div class="card" style="padding:0; overflow:hidden;">
     {% if eventi_futuri %}
-        {{ tabella_eventi(eventi_futuri) }}
+    <div id="barra-blocco-futuri" style="display:none; align-items:center; gap:10px; flex-wrap:wrap;
+         padding:10px 16px; background:#fffbeb; border-bottom:1px solid #fde68a;">
+        <strong style="font-size:.82rem; color:#92400e;"><span id="cnt-blocco-futuri">0</span> selezionati</strong>
+        <label style="font-size:.8rem; color:#92400e;">Sposta di
+            <input type="number" id="giorni-blocco-futuri" value="7" style="width:60px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px;">
+            giorni (negativo per indietro)
+        </label>
+        <button type="button" class="btn btn-sm btn-primary"
+                onclick="submitBlocco('futuri', 'sposta-blocco')">{{ icon('calendar') }} Sposta selezionati</button>
+        <button type="button" class="btn btn-sm btn-danger"
+                onclick="if(confirm('Eliminare gli eventi selezionati? L\'operazione non si può annullare.')) submitBlocco('futuri', 'elimina-blocco')">
+            {{ icon('close') }} Elimina selezionati</button>
+    </div>
+    {{ tabella_eventi(eventi_futuri, blocco_id='futuri') }}
     {% else %}
     <p style="text-align:center; color:var(--grigio); padding:32px;">
         Nessun evento trovato.<br>
@@ -206,7 +229,14 @@
 <div style="margin-top:28px;">
     <h2 style="font-size:1.05rem; color:var(--grigio); margin-bottom:10px;">{{ icon('list') }} Attività già svolte</h2>
     <div class="card" style="background:#f8f9fa; padding:0; overflow:hidden;">
-        {{ tabella_eventi(eventi_passati, svolte=true) }}
+    <div id="barra-blocco-passati" style="display:none; align-items:center; gap:10px; flex-wrap:wrap;
+         padding:10px 16px; background:#fffbeb; border-bottom:1px solid #fde68a;">
+        <strong style="font-size:.82rem; color:#92400e;"><span id="cnt-blocco-passati">0</span> selezionati</strong>
+        <button type="button" class="btn btn-sm btn-danger"
+                onclick="if(confirm('Eliminare gli eventi selezionati? L\'operazione non si può annullare.')) submitBlocco('passati', 'elimina-blocco')">
+            {{ icon('close') }} Elimina selezionati</button>
+    </div>
+    {{ tabella_eventi(eventi_passati, svolte=true, blocco_id='passati') }}
     </div>
 </div>
 {% endif %}
@@ -218,6 +248,73 @@ function toggleGruppo(id) {
     document.querySelectorAll('tr[data-grp="' + id + '"]').forEach(function(r) {
         r.style.display = (r.style.display === 'none' || r.style.display === '') ? 'table-row' : 'none';
     });
+}
+
+// Selezione in blocco (Roberto: cancellare o spostare più eventi
+// insieme, es. tutti gli scrutini di gennaio filtrati sopra) — un
+// blocco indipendente per la tabella "futuri" e per "già svolte", mai
+// mischiati fra loro.
+const URL_ELIMINA_BLOCCO = "{{ url_for('attivita_ist.elimina_blocco') }}";
+const URL_SPOSTA_BLOCCO  = "{{ url_for('attivita_ist.sposta_blocco') }}";
+
+function toggleTuttiBlocco(bloccoId, checked) {
+    document.querySelectorAll('.chk-blocco-' + bloccoId).forEach(function(c) { c.checked = checked; });
+    aggiornaBarraBlocco(bloccoId);
+}
+
+function aggiornaBarraBlocco(bloccoId) {
+    const n = document.querySelectorAll('.chk-blocco-' + bloccoId + ':checked').length;
+    const barra = document.getElementById('barra-blocco-' + bloccoId);
+    const cnt   = document.getElementById('cnt-blocco-' + bloccoId);
+    if (cnt) cnt.textContent = n;
+    if (barra) barra.style.display = n > 0 ? 'flex' : 'none';
+}
+
+function submitBlocco(bloccoId, azione) {
+    // Form costruito al volo e aggiunto a <body>, MAI annidato dentro
+    // le righe della tabella: quelle contengono già un <form> proprio
+    // per il pulsante "Elimina" di riga, e l'HTML non ammette un
+    // <form> dentro un altro (il browser lo spezzerebbe in modo
+    // imprevedibile, rompendo l'eliminazione singola).
+    const ids = Array.from(document.querySelectorAll('.chk-blocco-' + bloccoId + ':checked'))
+        .map(function(c) { return c.value; });
+    if (ids.length === 0) return;
+
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = (azione === 'sposta-blocco') ? URL_SPOSTA_BLOCCO : URL_ELIMINA_BLOCCO;
+    form.style.display = 'none';
+
+    ids.forEach(function(id) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'ids'; inp.value = id;
+        form.appendChild(inp);
+    });
+
+    const next = document.createElement('input');
+    next.type = 'hidden'; next.name = 'next'; next.value = location.pathname + location.search;
+    form.appendChild(next);
+
+    if (azione === 'sposta-blocco') {
+        const giorni = document.createElement('input');
+        giorni.type = 'hidden'; giorni.name = 'giorni';
+        giorni.value = document.getElementById('giorni-blocco-' + bloccoId).value;
+        form.appendChild(giorni);
+    }
+
+    // Iniezione manuale del token CSRF: questo form non esisteva al
+    // DOMContentLoaded, quindi l'iniezione automatica di base.html non
+    // lo ha mai visto — e submit() diretto non genera l'evento
+    // "submit" che farebbe scattare il fallback.
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) {
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden'; csrf.name = 'csrf_token'; csrf.value = meta.getAttribute('content');
+        form.appendChild(csrf);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 {% endblock %}

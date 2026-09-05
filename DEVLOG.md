@@ -4,6 +4,49 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 115 — Attività istituzionali: elimina/sposta un blocco di eventi insieme
+
+Roberto: "come posso cancellare un intero blocco di eventi. Ad esempio
+vorrei spostare in avanti di una settimana tutti gli scrutini di
+Gennaio. C'è già un modo?" — non c'era: solo Modifica/Elimina per
+singolo evento.
+
+Aggiunta selezione multipla nell'elenco Attività istituzionali
+(`templates/attivita_ist/lista.html`): checkbox per riga + "seleziona
+tutti" in testata, combinabile con i filtri tipo/mese già esistenti
+(bastano "Scrutinio" + "Gennaio" per isolare esattamente il caso
+citato). Compare una barra con due azioni: "Sposta selezionati" (campo
+giorni, anche negativo per indietro — sposta solo la data, orario
+invariato, e anche le sessioni di eventi multi-giorno della stessa
+quantità) e "Elimina selezionati" (con conferma). Il tasto "Sposta"
+c'è solo per gli eventi futuri, non per quelli già svolti — non ha
+senso spostare una data passata.
+
+Due nuove route in `routes/attivita_ist.py`: `elimina_blocco()` e
+`sposta_blocco()`. La cancellazione riusa `_elimina_evento_core()`,
+fattorizzata dal vecchio `elimina()` (stessa pulizia delle lapidi
+SostituzioneScrutinio, mai duplicata).
+
+**Attenzione tecnica**: la tabella conteneva già, per riga, un
+`<form>` proprio per il pulsante "Elimina" singolo — annidare l'intera
+tabella in un secondo `<form>` per la selezione multipla avrebbe
+prodotto HTML non valido (form annidati, il browser li spezza in modo
+imprevedibile, a rischio di rompere l'eliminazione singola). Le
+checkbox restano fuori da qualunque `<form>`; il form di invio per
+l'azione in blocco viene costruito al volo in JS (`submitBlocco()`),
+aggiunto a `<body>` solo al momento dell'invio, con iniezione manuale
+del token CSRF (il form non esiste al `DOMContentLoaded`, quindi
+l'iniezione automatica di base.html non lo vede).
+
+6 test nuovi (`test_attivita_ist_blocco.py`). 354/366 test rilevanti
+(12 falliti ambientali, invariati). Verificato dal vivo su copia
+isolata (metodo corretto post-incidente addendum 113, md5sum del DB
+reale confermato invariato prima/dopo): filtro Scrutinio+Gennaio →
+37 eventi, "Sposta selezionati" di 7 giorni → tutte le date spostate,
+orari invariati; poi "Elimina selezionati" → 37 eliminati, 0 rimasti.
+Verificato anche che il pulsante Elimina di singola riga funzioni
+ancora, nessun form annidato nella pagina risultante.
+
 ## Sessione 66 addendum 114 — Selettore anno anche su Report Dirigente e Report Docenti
 
 Roberto: "ma se volessi vedere il report del dirigente dell'anno

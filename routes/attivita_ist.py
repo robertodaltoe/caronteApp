@@ -5,7 +5,7 @@ from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,
 from models.materia import Dipartimento, Materia, DocenteMateria
 from models.docente import Docente
 from models.assenza import Assenza
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import json
 import re
 
@@ -1050,28 +1050,36 @@ def form(id=None):
 
 # ── ELIMINA ──────────────────────────────────────────────────────────────────
 
-@attivita_ist_bp.route('/attivita-ist/<int:id>/elimina', methods=['POST'])
-def elimina(id):
-    e = AttivitaIst.query.get_or_404(id)
+def _elimina_evento_core(e):
+    """
+    Cancellazione di un singolo evento (senza commit, così sia elimina()
+    sia elimina_blocco() possono committare una volta sola). Fattorizzata
+    da elimina() per riuso nella cancellazione in blocco.
 
-    # AttivitaIstPartecipante/AttivitaIstPresenza sono in cascade
-    # 'delete-orphan' sul modello, spariscono da sole con l'evento. Le
-    # sostituzioni scrutinio no (SostituzioneScrutinio non ha una
-    # relazione con cascade dal lato AttivitaIst) — senza ripulirle qui
-    # a mano restano righe orfane che puntano a un id_attivita ormai
-    # inesistente. Registra la lapide per ognuna (come le altre
-    # cancellazioni di questa tabella nel sync automatico, vedi
-    # modules/auto_sync.py) prima di cancellarle, altrimenti una
-    # postazione non ancora allineata potrebbe farle risuscitare.
+    AttivitaIstPartecipante/AttivitaIstPresenza sono in cascade
+    'delete-orphan' sul modello, spariscono da sole con l'evento. Le
+    sostituzioni scrutinio no (SostituzioneScrutinio non ha una
+    relazione con cascade dal lato AttivitaIst) — senza ripulirle qui
+    a mano restano righe orfane che puntano a un id_attivita ormai
+    inesistente. Registra la lapide per ognuna (come le altre
+    cancellazioni di questa tabella nel sync automatico, vedi
+    modules/auto_sync.py) prima di cancellarle, altrimenti una
+    postazione non ancora allineata potrebbe farle risuscitare.
+    """
     from models.sostituzione_scrutinio import SostituzioneScrutinio
     from modules.auto_sync import registra_eliminazione
-    sostituzioni = SostituzioneScrutinio.query.filter_by(id_attivita=id).all()
+    sostituzioni = SostituzioneScrutinio.query.filter_by(id_attivita=e.id).all()
     for s in sostituzioni:
         registra_eliminazione('sostituzioni_scrutinio',
                                {'id_attivita': s.id_attivita, 'id_assente': s.id_assente})
         db.session.delete(s)
-
     db.session.delete(e)
+
+
+@attivita_ist_bp.route('/attivita-ist/<int:id>/elimina', methods=['POST'])
+def elimina(id):
+    e = AttivitaIst.query.get_or_404(id)
+    _elimina_evento_core(e)
     db.session.commit()
     flash('Evento eliminato.', 'warning')
 
@@ -1081,6 +1089,66 @@ def elimina(id):
     # chiamante passa la propria URL come campo nascosto "next"; per
     # sicurezza si accetta solo un percorso relativo di questa stessa
     # app (mai un URL assoluto/esterno).
+    next_url = request.form.get('next', '').strip()
+    if next_url.startswith('/') and not next_url.startswith('//'):
+        return redirect(next_url)
+    return redirect(url_for('attivita_ist.lista'))
+
+
+@attivita_ist_bp.route('/attivita-ist/elimina-blocco', methods=['POST'])
+def elimina_blocco():
+    """
+    Cancellazione di più eventi insieme (Roberto: "come posso cancellare
+    un intero blocco di eventi?") — checkbox per riga nell'elenco,
+    stessa pulizia (lapidi sostituzioni scrutinio) del singolo elimina(),
+    fattorizzata in _elimina_evento_core().
+    """
+    ids = [int(i) for i in request.form.getlist('ids') if i.isdigit()]
+    eventi = AttivitaIst.query.filter(AttivitaIst.id.in_(ids)).all() if ids else []
+    for e in eventi:
+        _elimina_evento_core(e)
+    db.session.commit()
+    if eventi:
+        flash(f'{len(eventi)} eventi eliminati.', 'warning')
+    else:
+        flash('Nessun evento selezionato.', 'warning')
+
+    next_url = request.form.get('next', '').strip()
+    if next_url.startswith('/') and not next_url.startswith('//'):
+        return redirect(next_url)
+    return redirect(url_for('attivita_ist.lista'))
+
+
+@attivita_ist_bp.route('/attivita-ist/sposta-blocco', methods=['POST'])
+def sposta_blocco():
+    """
+    Sposta più eventi insieme avanti/indietro di N giorni, stesso orario
+    (Roberto: "vorrei spostare in avanti di una settimana tutti gli
+    scrutini di Gennaio" — con i filtri tipo/mese già in lista() bastano
+    due click per isolarli, poi si selezionano e si spostano insieme).
+    Sposta anche le sessioni di un evento multi-giorno
+    (AttivitaIstSessione), della stessa quantità, per non disallineare
+    le giornate successive dalla prima.
+    """
+    ids = [int(i) for i in request.form.getlist('ids') if i.isdigit()]
+    try:
+        giorni = int(request.form.get('giorni', '0'))
+    except ValueError:
+        giorni = 0
+
+    if not ids or giorni == 0:
+        flash('Seleziona almeno un evento e un numero di giorni diverso da zero.', 'warning')
+    else:
+        delta = timedelta(days=giorni)
+        eventi = AttivitaIst.query.filter(AttivitaIst.id.in_(ids)).all()
+        for e in eventi:
+            e.data = e.data + delta
+            for s in e.sessioni:
+                s.data = s.data + delta
+        db.session.commit()
+        verso = 'avanti' if giorni > 0 else 'indietro'
+        flash(f'{len(eventi)} eventi spostati {verso} di {abs(giorni)} giorni.', 'success')
+
     next_url = request.form.get('next', '').strip()
     if next_url.startswith('/') and not next_url.startswith('//'):
         return redirect(next_url)
