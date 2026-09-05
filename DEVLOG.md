@@ -4,6 +4,35 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 117 — Piano Annuale: filtro tipo/mese + mesi collassabili
+
+Roberto: "aggiungi filtro anche in piano delle attività e rendi i box
+dei mesi chiudibili".
+
+**Filtro**: stesso filtro tipo/mese già presente in Elenco/gestione
+eventi (`lista()`), riusato qui — `_righe_piano_annuale(anno, tipo_f,
+mese_f)` prende due parametri opzionali in più, applicati alla query
+eventi e (solo il mese, i marcatori non hanno un tipo) alle
+sospensioni/termine lezioni. Passato SOLO dalla vista a schermo
+(`piano_annuale()`): gli export PDF/xlsx restano sempre il piano
+ufficiale completo, mai una vista filtrata — nessuna richiesta in tal
+senso, e sarebbe stata una sorpresa scaricare un PDF "parziale" senza
+un'indicazione esplicita in più.
+
+**Mesi collassabili**: ogni blocco mese in `templates/attivita_ist/
+piano_annuale.html` è ora un `<details>` nativo (aperto di default),
+etichetta cliccabile con freccia che cambia direzione — nessun JS
+aggiuntivo, il browser gestisce apertura/chiusura da solo. Le checkbox
+di selezione in blocco (addendum 116) restano funzionanti anche a mese
+chiuso: un mese collassato nasconde le righe ma non deseleziona nulla.
+
+4 test nuovi (`test_piano_annuale_filtro.py`). 358/370 test rilevanti
+(12 falliti ambientali, invariati). Verificato dal vivo su copia
+isolata (md5sum del DB reale invariato prima/dopo): filtro
+Scrutinio+Gennaio → 38 eventi, un solo blocco mese mostrato; box
+"Gennaio 2027" chiuso e riaperto correttamente; senza filtro, 9 blocchi
+mese indipendenti nella pagina.
+
 ## Sessione 66 addendum 116 — Selezione in blocco anche in Piano Annuale
 
 Seguito immediato dell'addendum 115: Roberto — "solo in attività

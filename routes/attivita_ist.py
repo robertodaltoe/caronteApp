@@ -593,7 +593,7 @@ def lista():
     )
 
 
-def _righe_piano_annuale(anno):
+def _righe_piano_annuale(anno, tipo_f='', mese_f=''):
     """
     Costruisce la struttura dati condivisa fra la vista a schermo e
     l'export PDF del Piano Annuale — stesso identico modello del
@@ -603,6 +603,11 @@ def _righe_piano_annuale(anno):
     le sospensioni/vacanze e il termine lezioni segnati come nel
     calendario colorato del foglio "Introduzione" — non solo gli
     eventi, anche i giorni di non-lezione compaiono nel piano.
+
+    tipo_f/mese_f: stesso filtro già disponibile in lista() (Roberto:
+    "aggiungi filtro anche in piano delle attività") — usato solo dalla
+    vista a schermo, MAI dagli export PDF/xlsx (quelli restano sempre
+    il piano ufficiale completo, non una vista filtrata).
 
     Ritorna (mesi, anni_disponibili, n_eventi) dove mesi è
     [(etichetta_mese, [(data, tipo_giorno, contenuto), ...])] — righe
@@ -620,9 +625,12 @@ def _righe_piano_annuale(anno):
         anni_disponibili.insert(0, anno)
 
     ini, fine = intervallo_anno_scolastico(anno)
-    eventi = AttivitaIst.query.filter(
-        AttivitaIst.data >= ini, AttivitaIst.data <= fine
-    ).order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all()
+    q = AttivitaIst.query.filter(AttivitaIst.data >= ini, AttivitaIst.data <= fine)
+    if tipo_f:
+        q = q.filter_by(tipo=tipo_f)
+    if mese_f:
+        q = q.filter(db.func.strftime('%m', AttivitaIst.data) == mese_f.zfill(2))
+    eventi = q.order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all()
 
     # Arricchisce ogni evento con le colonne esatte del foglio: Indirizzo
     # e Classe separati (il modello li tiene insieme in un'unica label
@@ -637,15 +645,21 @@ def _righe_piano_annuale(anno):
     eventi = _espandi_eventi_multi_giorno(eventi)
     eventi = _raggruppa_eventi_dipartimento(eventi)
 
+    # I marcatori (sospensioni/termine lezioni) seguono solo il filtro
+    # mese, mai quello tipo — non sono eventi, non hanno un tipo_ist.
     marcatori = []  # (data, tipo, contenuto)
     for s in SospensioneDidattica.query.filter(
             SospensioneDidattica.data_fine >= ini,
             SospensioneDidattica.data_inizio <= fine).order_by(SospensioneDidattica.data_inizio).all():
-        marcatori.append((max(s.data_inizio, ini), 'sospensione', s))
+        d_marcatore = max(s.data_inizio, ini)
+        if mese_f and f'{d_marcatore.month:02d}' != mese_f.zfill(2):
+            continue
+        marcatori.append((d_marcatore, 'sospensione', s))
 
     termine = get_data_fine_lezioni(anno)
     if termine and ini <= termine <= fine:
-        marcatori.append((termine, 'termine_lezioni', None))
+        if not mese_f or f'{termine.month:02d}' == mese_f.zfill(2):
+            marcatori.append((termine, 'termine_lezioni', None))
 
     per_giorno = {}  # data -> {'eventi': [...], 'marcatori': [...]}
     for ev in eventi:
@@ -687,11 +701,14 @@ def piano_annuale():
     """
     from routes.impostazione_anno import _anno_default_piano
     anno = request.args.get('anno', _anno_default_piano())
-    mesi, anni_disponibili, n_eventi = _righe_piano_annuale(anno)
+    tipo_f = request.args.get('tipo', '')
+    mese_f = request.args.get('mese', '')
+    mesi, anni_disponibili, n_eventi = _righe_piano_annuale(anno, tipo_f=tipo_f, mese_f=mese_f)
 
     return render_template('attivita_ist/piano_annuale.html',
         mesi=mesi, anno=anno, anni_disponibili=anni_disponibili,
-        tipi=TIPI_ATTIVITA, oggi=date.today(), n_eventi=n_eventi)
+        tipi=TIPI_ATTIVITA, oggi=date.today(), n_eventi=n_eventi,
+        tipo_f=tipo_f, mese_f=mese_f)
 
 
 @attivita_ist_bp.route('/attivita-ist/piano-annuale/pdf')
