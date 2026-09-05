@@ -4,6 +4,55 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 114 — Selettore anno anche su Report Dirigente e Report Docenti
+
+Roberto: "ma se volessi vedere il report del dirigente dell'anno
+precedente?" (Banca Ore aveva già il selettore, il Report Dirigente
+no) — poi: "mettilo per ogni report della pagina report".
+
+`routes/report.py::dirigente()` non accettava affatto `?anno=`: sempre
+`Docente.query.filter_by(attivo=True)` e `get_saldi_docente(d.id)`
+senza anno_scol, quindi solo l'anno corrente. Stessa cosa per il tab
+"Report Docenti" di `report.index()`.
+
+Aggiunto lo stesso pattern già in uso in Banca Ore
+(`routes/banca_ore.py::_anni_disponibili()`, riusato non duplicato):
+selettore "Anno scolastico", badge "Archivio {anno}", banner con link
+per tornare all'anno corrente. `_docenti_per_anno(anno)` al posto del
+filtro naive `attivo=True` — consultando un anno passato va incluso
+chi è uscito nel frattempo ed escluso chi non era ancora in servizio
+allora, stesso principio già applicato più volte in questa sessione.
+
+**Deliberatamente NON esteso al tab Cruscotto** (pannello in tempo
+reale: andamento mese in corso, supplenze scoperte nei prossimi 7
+giorni — "consultarlo per l'anno scorso" non ha un significato
+coerente, un selettore lì sarebbe fuorviante) né al tab Segreteria
+(solo un elenco di link ad altri strumenti, nessun dato proprio).
+
+Trovato anche un "due meccanismi paralleli": `report.singolo()`
+(vista dettaglio docente) è una versione più vecchia della stessa
+pagina già duplicata come `banca_ore.singolo()` — quest'ultima aveva
+già selettore anno, banner archivio, stessa struttura, dati identici
+(confrontate riga per riga). Invece di aggiungere l'anno anche alla
+vecchia, il link "Dettaglio" nel tab Report Docenti ora punta a
+`banca_ore.singolo` (che già lo gestiva); i link "Scarica XLSX"/PDF
+portano `?anno=` all'export. `report.singolo()` resta funzionante ma
+non più raggiunto dall'interfaccia (non rimosso: nessun altro punto lo
+richiama, nessun rischio a lasciarlo).
+
+3 test nuovi (`test_report_selettore_anno.py`). 348/360 test rilevanti
+(12 falliti ambientali, invariati). Verificato dal vivo su copia
+isolata: Report Dirigente passa da 73 docenti (2026-2027) a 80
+(2025-2026, "archivio", con situazione "sotto pressione" invece di
+"equilibrata" — dato storico reale, non un errore); Report Docenti
+idem, con i tre link di riga che portano correttamente `anno=2025-2026`.
+
+**Nota sul metodo di verifica**: dopo l'incidente dell'addendum 113,
+usato da qui in poi il pattern corretto per puntare `create_app()` a
+una copia (intercettare `os.path.join` PRIMA della chiamata, non
+impostare l'URI dopo) — verificato con un confronto md5sum di
+`database.db` prima/dopo: invariato.
+
 ## Sessione 66 addendum 113 — A-11 non sincronizzava Docenti↔Materie + INCIDENTE: scritture accidentali sul DB reale durante il debug
 
 Roberto: "perche in docenti-materia per la classe di concorso a-11 non

@@ -198,12 +198,34 @@
 {% elif tab == 'docenti' %}
 {# ══════════════════ REPORT PER DOCENTE ══════════════════ #}
 <div class="card" style="padding:2px; overflow:visible;">
-    <div style="padding:20px 24px 12px;">
-        <h2 style="border:none; margin-bottom:4px;">Report per singolo docente</h2>
-        <p style="color:var(--grigio); font-size:.83rem;">
-            Clicca su un docente per vedere il suo report completo con storico settimanale.
-        </p>
+    <div style="padding:20px 24px 12px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+        <div>
+            <h2 style="border:none; margin-bottom:4px;">Report per singolo docente</h2>
+            <p style="color:var(--grigio); font-size:.83rem;">
+                Clicca su un docente per vedere il suo report completo con storico settimanale.
+                {% if anno != anno_corrente %}
+                <span class="saldo-pill pill-giallo" style="margin-left:8px;">{{ icon('package') }} Archivio {{ anno }}</span>
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <label style="font-size:.7rem; color:var(--grigio); display:block;">Anno scolastico</label>
+            <select onchange="location.href='{{ url_for('report.index', tab='docenti') }}&anno='+this.value"
+                    style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                {% for a in anni_disponibili %}
+                <option value="{{ a }}" {% if a == anno %}selected{% endif %}>
+                    {{ a }}{% if a == anno_corrente %} (corrente){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
+    {% if anno != anno_corrente %}
+    <div style="margin:0 24px 16px; padding:10px 16px; border-radius:8px; background:var(--giallo-bg); color:var(--giallo); font-size:.85rem;">
+        <strong>{{ icon('package') }} Stai consultando l'archivio dell'anno {{ anno }}.</strong>
+        <a href="{{ url_for('report.index', tab='docenti') }}" style="margin-left:8px;">→︎ Torna all'anno corrente ({{ anno_corrente }})</a>
+    </div>
+    {% endif %}
     <table style="table-layout:fixed; width:100%; overflow:visible;">
         <thead>
             <tr>
@@ -296,9 +318,9 @@
                             style="padding:3px 10px; font-size:.82rem;"
                             >{{ icon('search') }}</button>
                     <div class="azione-menu">
-                        <a href="{{ url_for('report.singolo', id=d.id) }}" class="azione-item">{{ icon('search') }} Dettaglio</a>
-                        <a href="{{ url_for('report.singolo_xlsx', id=d.id) }}" class="azione-item">{{ icon('chart') }} Scarica XLSX</a>
-                        <a href="{{ url_for('report.singolo_pdf', id=d.id) }}" class="azione-item">{{ icon('layers') }} Scarica PDF</a>
+                        <a href="{{ url_for('banca_ore.singolo', id=d.id, anno=anno) }}" class="azione-item">{{ icon('search') }} Dettaglio</a>
+                        <a href="{{ url_for('report.singolo_xlsx', id=d.id, anno=anno) }}" class="azione-item">{{ icon('chart') }} Scarica XLSX</a>
+                        <a href="{{ url_for('report.singolo_pdf', id=d.id, anno=anno) }}" class="azione-item">{{ icon('layers') }} Scarica PDF</a>
                     </div>
                 </div>
             </td>

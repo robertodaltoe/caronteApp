@@ -368,13 +368,55 @@ def index():
     if tab == 'cruscotto':
         cruscotto = _dati_cruscotto(docenti, saldi, COSTO_ORA)
 
+    # Selettore "archivio" (Roberto: "mettilo per ogni report della
+    # pagina report") — solo per il tab Docenti, l'unico che qui mostra
+    # dati realmente riferiti a un anno scolastico. Il Cruscotto resta
+    # sempre sull'anno corrente di proposito: è un pannello in tempo
+    # reale (andamento mese in corso, supplenze scoperte nei prossimi
+    # 7 giorni) — "consultare il cruscotto dell'anno scorso" non ha un
+    # significato coerente, un selettore lì sarebbe fuorviante. Il tab
+    # Segreteria è solo un elenco di link ad altri strumenti, nessun
+    # dato proprio da filtrare per anno.
+    from config_anno import get_anno_corrente
+    anno_corrente = get_anno_corrente()
+    anno_docenti = anno_corrente
+    docenti_report = docenti
+    saldi_report = saldi
+    ore_ist_report = ore_ist_idx
+    anni_disponibili_docenti = [anno_corrente]
+    if tab == 'docenti':
+        from routes.impostazione_anno import _docenti_per_anno
+        from routes.banca_ore import _anni_disponibili
+        anno_docenti = request.args.get('anno', anno_corrente)
+        anni_disponibili_docenti = _anni_disponibili()
+        docenti_report = _docenti_per_anno(anno_docenti)
+        saldi_report = {}
+        for d in docenti_report:
+            s = get_saldi_docente(d.id, anno_scol=anno_docenti)
+            lordo_eff   = s['sup_svolte'] - s['perm_svolte'] - s['civ_svolte']
+            netto_eff   = lordo_eff - s['pagamento']
+            lordo_prev  = s['sup_prev'] - s['perm_prev'] - s['civ_prev']
+            saldo_lordo = s['supplenze'] - s['permessi'] - s['civica']
+            saldo_netto = saldo_lordo - s['pagamento']
+            saldi_report[d.id] = {**s,
+                'lordo': saldo_lordo, 'netto': saldo_netto,
+                'netto_eff': netto_eff, 'lordo_eff': lordo_eff,
+                'netto_prev': lordo_prev,
+            }
+        ore_ist_report = {}
+        if ruolo_idx in ('ds', 'dsga', 'segreteria'):
+            for d in docenti_report:
+                ore_ist_report[d.id] = get_ore_ist_docente(d.id, anno=anno_docenti)
+
     return render_template('report/index.html',
         tab=tab,
-        docenti=docenti, saldi=saldi, oggi=date.today(),
+        docenti=docenti_report, saldi=saldi_report, oggi=date.today(),
         costo_ora=COSTO_ORA,
-        ore_ist_idx=ore_ist_idx,
+        ore_ist_idx=ore_ist_report,
         ruolo_utente=ruolo_idx,
-        cruscotto=cruscotto)
+        cruscotto=cruscotto,
+        anno=anno_docenti, anno_corrente=anno_corrente,
+        anni_disponibili=anni_disponibili_docenti)
 
 
 # ── REPORT SINGOLO DOCENTE ───────────────────────────────────
@@ -1262,7 +1304,20 @@ def elimina_prospetto(nome):
 # ── REPORT DIRIGENTE ─────────────────────────────────────────
 @report_bp.route('/report/dirigente')
 def dirigente():
-    docenti = Docente.query.filter_by(attivo=True).all()
+    # Selettore "archivio" (Roberto: "come vedo il report del dirigente
+    # dell'anno precedente?") — stesso pattern già in uso in Banca Ore
+    # (routes/banca_ore.py::_anni_disponibili()), riusato qui invece di
+    # duplicarlo. _docenti_per_anno() al posto del filtro naive
+    # attivo=True: consultando un anno passato vanno inclusi i docenti
+    # usciti nel frattempo ed esclusi quelli non ancora in servizio
+    # allora — stesso principio già applicato altrove in questa sessione.
+    from config_anno import get_anno_corrente
+    from routes.impostazione_anno import _docenti_per_anno
+    from routes.banca_ore import _anni_disponibili
+    anno_corrente = get_anno_corrente()
+    anno = request.args.get('anno', anno_corrente)
+
+    docenti = _docenti_per_anno(anno)
 
     equilibrio = credito = debito = critico = 0
     tot_supplenze = tot_permessi = tot_civica = tot_pagamento = 0
@@ -1271,7 +1326,7 @@ def dirigente():
     crediti_alti   = []  # credito > 8h
 
     for d in docenti:
-        s = get_saldi_docente(d.id)
+        s = get_saldi_docente(d.id, anno_scol=anno)
         lordo = s['supplenze'] - s['permessi'] - s['civica']
         netto = lordo - s['pagamento']
 
@@ -1309,13 +1364,14 @@ def dirigente():
     # (lotti) a debito/credito ancora aperte, ciascuna con la propria
     # scadenza individuale di 3 mesi dalla data di maturazione — non sul
     # saldo complessivo del docente. Indicatore informativo per il
-    # Dirigente, non blocca nessuna operazione.
-    from config_anno import get_anno_corrente
-    anno_corrente_dirig = get_anno_corrente()
+    # Dirigente, non blocca nessuna operazione. Anno selezionato (non
+    # sempre quello corrente): consultando un anno passato, un lotto mai
+    # regolarizzato entro la scadenza resta un'informazione storica
+    # legittima, non solo un indicatore "in tempo reale".
     n_lotti_aperti = 0
     n_lotti_scaduti = 0
     for d in docenti:
-        lotti = _lotti_aperti_docente(d.id, anno_corrente_dirig)
+        lotti = _lotti_aperti_docente(d.id, anno)
         n_lotti_aperti += len(lotti)
         n_lotti_scaduti += sum(1 for l in lotti if l['scaduto'])
     if n_lotti_aperti > 0:
@@ -1329,6 +1385,8 @@ def dirigente():
     costo_ora_dirigente = get_costo_ora()
 
     return render_template('report/dirigente.html',
+        anno = anno, anno_corrente = anno_corrente,
+        anni_disponibili = _anni_disponibili(),
         n_docenti    = len(docenti),
         equilibrio   = equilibrio,
         credito      = credito,

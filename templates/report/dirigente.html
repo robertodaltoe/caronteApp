@@ -34,11 +34,33 @@
         <p style="color:var(--grigio); font-size:.85rem;">
             {{ nome_istituto }} &nbsp;·&nbsp;
             Aggiornato il {{ oggi.strftime('%d/%m/%Y') }}
+            {% if anno != anno_corrente %}
+            <span class="saldo-pill pill-giallo" style="margin-left:8px;">{{ icon('package') }} Archivio {{ anno }}</span>
+            {% endif %}
         </p>
     </div>
-    <button onclick="window.print()"
-            class="btn btn-primary">{{ icon('print') }} Stampa</button>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <div>
+            <label style="font-size:.7rem; color:var(--grigio); display:block;">Anno scolastico</label>
+            <select onchange="location.href='{{ url_for('report.dirigente') }}?anno='+this.value"
+                    style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.84rem;">
+                {% for a in anni_disponibili %}
+                <option value="{{ a }}" {% if a == anno %}selected{% endif %}>
+                    {{ a }}{% if a == anno_corrente %} (corrente){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button onclick="window.print()"
+                class="btn btn-primary">{{ icon('print') }} Stampa</button>
+    </div>
 </div>
+{% if anno != anno_corrente %}
+<div class="card" style="padding:10px 16px; margin-bottom:16px; background:var(--giallo-bg); color:var(--giallo); font-size:.85rem;">
+    <strong>{{ icon('package') }} Stai consultando l'archivio dell'anno {{ anno }}.</strong>
+    <a href="{{ url_for('report.dirigente') }}" style="margin-left:8px;">→︎ Torna all'anno corrente ({{ anno_corrente }})</a>
+</div>
+{% endif %}
 
 <!-- SITUAZIONE COMPLESSIVA -->
 <div class="card" style="margin-bottom:20px; text-align:center; padding:28px;">
