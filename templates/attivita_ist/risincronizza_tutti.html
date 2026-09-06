@@ -43,7 +43,7 @@
             {% for r in righe %}
             <tr style="border-top:1px solid #eef1f4;">
                 <td style="padding:10px 14px;">
-                    <a href="{{ url_for('attivita_ist.risincronizza_partecipanti', id=r.evento.id) }}">
+                    <a href="{{ url_for('attivita_ist.risincronizza_partecipanti', id=r.evento.id, next=url_for('attivita_ist.risincronizza_tutti')) }}">
                         {{ r.evento.tipo_emoji }} {{ r.evento.titolo }}
                     </a>
                 </td>

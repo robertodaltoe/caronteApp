@@ -1385,16 +1385,21 @@ def risincronizza_partecipanti(id):
             evento, da_aggiungere, da_rimuovibili, aggiungi_ids, rimuovi_ids)
         db.session.commit()
         flash(f'Risincronizzato: {n_agg} aggiunti, {n_rim} rimossi.', 'success')
-        # Torna alla pagina di risincronizzazione stessa (mostrerà "Elenco
-        # già allineato" se non resta altro da fare), non a Presenze —
-        # Roberto: dopo aver confermato vuole restare nel flusso di
-        # risincronizzazione, non essere spostato altrove.
+        # Torna alla pagina da cui si è arrivati (es. "Risincronizza
+        # tutti"), se indicata — altrimenti resta sulla pagina di
+        # risincronizzazione stessa (mostrerà "Elenco già allineato" se
+        # non resta altro da fare), mai su Presenze. Stesso pattern
+        # "next" già usato in form()/elimina().
+        next_url = request.form.get('next', '').strip()
+        if next_url.startswith('/') and not next_url.startswith('//'):
+            return redirect(next_url)
         return redirect(url_for('attivita_ist.risincronizza_partecipanti', id=id))
 
     da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(evento)
     return render_template('attivita_ist/risincronizza.html',
         evento=evento, da_aggiungere=da_aggiungere,
-        da_rimuovibili=da_rimuovibili, non_rimovibili=non_rimovibili)
+        da_rimuovibili=da_rimuovibili, non_rimovibili=non_rimovibili,
+        next_url=request.args.get('next', '').strip())
 
 
 @attivita_ist_bp.route('/attivita-ist/risincronizza-tutti', methods=['GET', 'POST'])

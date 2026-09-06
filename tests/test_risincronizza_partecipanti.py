@@ -161,3 +161,51 @@ def test_non_disponibile_per_un_evento_gia_svolto(app, db_session):
         r = c.get(f'/attivita-ist/{ev.id}/risincronizza')
         assert r.status_code == 302
         assert r.headers['Location'].endswith(f'/attivita-ist/{ev.id}/presenze')
+
+
+def test_conferma_torna_a_next_se_arrivato_da_risincronizza_tutti(app, db_session, monkeypatch):
+    """Roberto: 'io devo tornare a questa pagina quando ho
+    risincronizzato un evento entrando da quella pagina
+    .../attivita-ist/risincronizza-tutti' — il link da quella pagina
+    porta ?next=..., e la conferma deve rispettarlo invece di restare
+    sempre sulla pagina del singolo evento."""
+    _registra_blueprint(app)
+    futuro = date.today() + timedelta(days=30)
+
+    uscito = crea_docente('Verdi', attivo=False)
+    ev = AttivitaIst(tipo='collegio', titolo='Collegio', data=futuro, origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=uscito.id, preset=True))
+    db.session.commit()
+
+    import routes.attivita_ist as mod
+    catturato = {}
+    def _finto_render(template_name, **kwargs):
+        catturato['kwargs'] = kwargs
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _finto_render)
+
+    with app.test_client() as c:
+        r = c.get(f'/attivita-ist/{ev.id}/risincronizza?next=/attivita-ist/risincronizza-tutti')
+        assert r.status_code == 200
+        assert catturato['kwargs']['next_url'] == '/attivita-ist/risincronizza-tutti'
+
+        r2 = c.post(f'/attivita-ist/{ev.id}/risincronizza', data={
+            'next': '/attivita-ist/risincronizza-tutti',
+        })
+        assert r2.status_code == 302
+        assert r2.headers['Location'] == '/attivita-ist/risincronizza-tutti'
+
+
+def test_conferma_senza_next_resta_sulla_pagina_del_singolo_evento(app, db_session):
+    _registra_blueprint(app)
+    futuro = date.today() + timedelta(days=30)
+    ev = AttivitaIst(tipo='collegio', titolo='Collegio', data=futuro, origine='manuale')
+    db.session.add(ev)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/attivita-ist/{ev.id}/risincronizza')
+        assert r.status_code == 302
+        assert r.headers['Location'].endswith(f'/attivita-ist/{ev.id}/risincronizza')

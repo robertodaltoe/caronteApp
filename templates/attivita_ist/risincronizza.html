@@ -34,11 +34,12 @@
     {{ icon('check') }} Elenco già allineato: nessuna differenza trovata.
 </div>
 <div style="margin-top:16px;">
-    <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">{{ icon('arrow-left') }} Torna alle presenze</a>
+    <a href="{{ next_url or url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">{{ icon('arrow-left') }} Torna indietro</a>
 </div>
 {% else %}
 
 <form method="post" id="form-risync">
+<input type="hidden" name="next" value="{{ next_url }}">
 {% if da_aggiungere %}
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
     <h3 style="font-size:.9rem; color:var(--verde); margin-bottom:10px;">
@@ -116,7 +117,7 @@
         {{ icon('check') }} Conferma (<span id="tot-agg">{{ da_aggiungere|length }}</span> aggiunti, <span id="tot-rim">{{ da_rimuovibili|length }}</span> rimossi)
     </button>
     {% endif %}
-    <a href="{{ url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">Annulla</a>
+    <a href="{{ next_url or url_for('attivita_ist.presenze', id=evento.id) }}" class="btn btn-primary">Annulla</a>
 </div>
 </form>
 

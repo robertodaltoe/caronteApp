@@ -4,6 +4,28 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 121 — Risincronizza: rispetta "next" quando si arriva da Risincronizza tutti
+
+Seguito immediato dell'addendum 120 (redirect dopo la conferma):
+Roberto — "io devo tornare a questa pagina quando ho risincronizzato
+un evento entrando da quella pagina .../attivita-ist/risincronizza-tutti".
+
+Il redirect fisso "torna sempre alla pagina del singolo evento" non
+andava bene per chi ci arriva da "Risincronizza tutti" (vuole tornare
+lì). Aggiunto lo stesso pattern "next" già usato in form()/elimina():
+il link da `risincronizza_tutti.html` verso ogni evento porta ora
+`?next=/attivita-ist/risincronizza-tutti`; la pagina del singolo
+evento lo passa come campo nascosto nel form (e nei link
+"Annulla"/"Torna indietro"); la conferma redirige lì se presente,
+altrimenti resta sulla pagina del singolo evento come prima.
+
+2 test nuovi in `test_risincronizza_partecipanti.py`. 366/378 test
+rilevanti (12 falliti ambientali, invariati). Verificato dal vivo su
+copia isolata: aperto un evento da Risincronizza tutti (link con
+`?next=` corretto), campo nascosto valorizzato, confermata la
+risincronizzazione → tornato esattamente a `risincronizza-tutti`.
+Integrity check sul DB reale dopo la verifica: ok.
+
 ## Sessione 66 addendum 120 — Chiarito perché Abramini viene sempre proposta "da rimuovere" + redirect dopo conferma
 
 Roberto: "perchè abramini viene proposta come da togliere?" — poi:
