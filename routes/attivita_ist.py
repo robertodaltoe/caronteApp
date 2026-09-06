@@ -155,7 +155,19 @@ def _preset_partecipanti(attivita):
         # Fonte Assegnazioni invece di OrarioDocente (addendum 107): vedi
         # _docenti_da_assegnazioni_per_classe.
         ids = _docenti_da_assegnazioni_per_classe(_anno_scolastico(attivita.data), attivita.classe)
-        risultato = [i for i in ids if i not in esclusi_ids]
+        if tipo == 'scrutinio':
+            # Atto dovuto: un membro del consiglio non più in servizio
+            # (contratto TD "fino a GS" scaduto, uscita, ecc.) resta
+            # comunque nell'elenco — va SOSTITUITO (badge "non in
+            # servizio" + funzione Sostituzioni in presenze()), non
+            # tolto. Se lo si escludesse qui, la risincronizzazione lo
+            # proporrebbe "da rimuovere" e sparirebbe il riferimento a
+            # chi sostituire (segnalato da Roberto sul caso Volpe/May,
+            # entrambi TD_GS: "non va tolto ma sostituito, è importante
+            # che compaia per poterlo sostituire").
+            risultato = list(ids)
+        else:
+            risultato = [i for i in ids if i not in esclusi_ids]
 
     elif tipo in ('dipartimento', 'riunione_materia', 'riunione_referenti') \
             and attivita.id_dipartimento:

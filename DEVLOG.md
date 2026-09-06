@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 123 — Scrutinio: chi non è più in servizio resta in elenco (va sostituito, non tolto)
+
+Seguito del caso Volpe/May (contratto TD_GS): Roberto — "in realtà non
+va tolto ma andrà sostituito quindi è importante che compaia per
+poterlo sostituire idem gli altri indicati come assenti (mi pare May e
+altri)".
+
+Causa: `_preset_partecipanti()` per tipo='scrutinio' filtrava
+`_non_in_servizio_per_data()` esattamente come consiglio_classe/GLO —
+ma lo scrutinio è un atto dovuto con una funzione di sostituzione
+dedicata (`presenze()` mostra già il badge "non in servizio" +
+rimanda a "Sostituzioni" quando serve). Escludere chi non è più in
+servizio dal preset dello scrutinio lo faceva comparire "da rimuovere"
+in ogni risincronizzazione — perdendo proprio il riferimento a chi
+sostituire.
+
+Fix: per tipo=='scrutinio', `_preset_partecipanti()` non filtra più
+per `esclusi_ids` — resta nel preset chiunque sia assegnato alla
+classe via Assegnazioni, indipendentemente dallo stato di servizio.
+consiglio_classe/GLO restano invariati (nessun meccanismo di
+sostituzione per quelli, ha ancora senso escludere chi è uscito da un
+incontro futuro che non farà mai). Il badge "non in servizio" in
+Presenze continua a funzionare come prima (calcolato separatamente).
+
+3 test nuovi (`test_scrutinio_non_esclude_non_in_servizio.py`). 378/390
+test rilevanti (12 falliti ambientali, invariati). Verificato dal vivo
+su copia isolata sui 4 scrutini reali del 30/08/2027 di Volpe: non più
+proposto "da rimuovere", badge "non in servizio" ancora presente per
+la sostituzione. Confermato anche per May (contratto TD_GS,
+condizione identica). Integrity check sul DB reale dopo la verifica:
+ok.
+
 ## Sessione 66 addendum 122 — Disabilita link Piano attività personale + risincronizza ricorda le esclusioni
 
 Tre richieste di Roberto in sequenza, tutte collegate al caso Abramini
