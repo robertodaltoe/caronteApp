@@ -4,6 +4,36 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 120 — Chiarito perché Abramini viene sempre proposta "da rimuovere" + redirect dopo conferma
+
+Roberto: "perchè abramini viene proposta come da togliere?" — poi:
+"quando risincronizzo un evento vorrei tornare alla pagina di
+risincronizzazione non a quella delle presenze".
+
+**Indagine Abramini — non un bug, comportamento previsto ma opaco**:
+Abramini (id 1) è part-time (14h, cattedra incompleta) — per questi
+docenti, dalla Sessione 57, la partecipazione agli eventi non-scrutinio
+(bucket A/B) è governata dal loro Piano attività personale, non dal
+preset automatico "per tutti/per classe/per dipartimento": la loro
+selezione personale sostituisce interamente quella prevista. Il suo
+piano per il 2026-2027 esiste ma è ancora in stato 'bozza' (vuoto,
+nessuna scelta fatta) — finché resta così, `_preset_partecipanti()`
+la esclude da OGNI evento bucket A/B (Collegio, CdC, dipartimento,
+GLO, incontro famiglie...), perché letteralmente non ha ancora scelto
+nulla. Risincronizzando uno qualsiasi di questi eventi la propone
+sempre "da rimuovere", non per un problema di organico/servizio ma
+perché il suo piano personale non è ancora compilato. Gli scrutini
+(bucket None, fuori da questo meccanismo) restano infatti corretti.
+Nessuna modifica al codice: segnalato a Roberto perché compili/faccia
+compilare il piano di Abramini, non un bug da correggere.
+
+**Redirect dopo la conferma**: `risincronizza_partecipanti()` tornava
+sempre a Presenze dopo il POST di conferma — cambiato per tornare alla
+stessa pagina di risincronizzazione (che mostrerà "già allineato" se
+non resta altro), non spostare l'utente altrove dopo aver appena
+confermato lì. 1 test aggiornato. 364/376 test rilevanti (12 falliti
+ambientali, invariati).
+
 ## Sessione 66 addendum 119 — Risincronizza: pulsanti Tutti/Nessuno + smette di riproporre chi è stato tolto a mano
 
 Roberto: "dobbiamo sistemare risincronizza partecipanti. non c'è un

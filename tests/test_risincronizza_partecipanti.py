@@ -55,6 +55,10 @@ def test_propone_in_aggiunta_un_docente_assunto_dopo_la_creazione(app, db_sessio
 
         r2 = c.post(f'/attivita-ist/{ev.id}/risincronizza')
         assert r2.status_code == 302
+        # Roberto: dopo aver confermato la risincronizzazione vuole
+        # restare su quella pagina (che ora mostrerà "già allineato"),
+        # non essere spostato alla pagina Presenze.
+        assert r2.headers['Location'].endswith(f'/attivita-ist/{ev.id}/risincronizza')
 
     ids = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).all()}
     assert bianchi.id in ids
