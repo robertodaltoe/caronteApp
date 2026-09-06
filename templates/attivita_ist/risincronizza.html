@@ -15,9 +15,19 @@
     attuali di organico, e quello congelato quando l'evento è stato
     creato. Solo le righe generate automaticamente vengono proposte in
     rimozione: quelle aggiunte o modificate a mano non vengono mai
-    toccate. Clicca su un nome per escluderlo dalla conferma — partono
-    tutti selezionati. Nulla viene applicato finché non confermi.
+    toccate. Clicca su un nome per escluderlo dalla conferma, oppure usa
+    "Tutti"/"Nessuno" — partono tutti selezionati. Nulla viene applicato
+    finché non confermi.
 </p>
+
+{% if evento.partecipanti_manuali %}
+<div class="card" style="padding:10px 16px; margin-bottom:16px; background:#eef2ff; color:#3730a3; font-size:.82rem; max-width:640px;">
+    {{ icon('warning') }} L'elenco partecipanti di questo evento è stato modificato a mano
+    (una selezione diversa dal preset automatico) — la risincronizzazione non propone
+    più "da aggiungere" per non ripristinare un elenco che hai già personalizzato.
+    Continua però a segnalare chi non è più in servizio.
+</div>
+{% endif %}
 
 {% if not da_aggiungere and not da_rimuovibili and not non_rimovibili %}
 <div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
@@ -37,6 +47,10 @@
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
         Ora previsti dal preset ma non ancora in elenco — probabilmente assunti dopo la creazione dell'evento.
     </p>
+    <div style="margin-bottom:8px;">
+        <button type="button" onclick="selezionaGruppo('agg', true)" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Tutti</button>
+        <button type="button" onclick="selezionaGruppo('agg', false)" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Nessuno</button>
+    </div>
     <input type="hidden" name="aggiungi_selezione_presente" value="1">
     <div style="display:flex; flex-wrap:wrap; gap:6px;">
         {% for d in da_aggiungere %}
@@ -59,6 +73,10 @@
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
         Non più previsti dal preset attuale (usciti/contratto scaduto) e con presenza ancora invariata — sicuri da togliere.
     </p>
+    <div style="margin-bottom:8px;">
+        <button type="button" onclick="selezionaGruppo('rim', true)" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Tutti</button>
+        <button type="button" onclick="selezionaGruppo('rim', false)" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Nessuno</button>
+    </div>
     <input type="hidden" name="rimuovi_selezione_presente" value="1">
     <div style="display:flex; flex-wrap:wrap; gap:6px;">
         {% for d in da_rimuovibili %}
@@ -130,6 +148,14 @@ document.querySelectorAll('.badge-toggle').forEach(label => {
         aggiornaContatori();
     });
 });
+function selezionaGruppo(gruppo, sel) {
+    document.querySelectorAll('.badge-toggle[data-gruppo="' + gruppo + '"]').forEach(label => {
+        const cb = label.querySelector('input[type=checkbox]');
+        cb.checked = sel;
+        label.classList.toggle('deselezionato', !sel);
+    });
+    aggiornaContatori();
+}
 </script>
 {% endif %}
 {% endblock %}

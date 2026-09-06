@@ -222,14 +222,26 @@ def _diff_risincronizzazione(evento):
     aggiungi_partecipante()) non vengono mai proposti in rimozione,
     qualunque cosa dica il preset attuale — restano comunque segnalati
     dal badge "non più in servizio" se è il caso.
+
+    Se evento.partecipanti_manuali è True (l'elenco è stato modificato
+    a mano dal form con una selezione diversa dal preset), "da
+    aggiungere" è sempre vuoto: la risincronizzazione non deve
+    proporre di ripristinare un elenco che l'utente ha già
+    deliberatamente ridotto o personalizzato — vedi
+    routes/attivita_ist.py::form(). "da rimuovibili"/"non_rimovibili"
+    restano invece invariati: quello è un controllo di sicurezza (chi
+    non è più in servizio), non un'opinione sul numero di partecipanti.
     """
     preset_attuale = set(_preset_partecipanti(evento))
     partecipanti = {p.id_docente: p for p in evento.partecipanti}
     presenze = {p.id_docente: p for p in evento.presenze}
 
-    da_aggiungere_ids = preset_attuale - set(partecipanti.keys())
-    da_aggiungere = (Docente.query.filter(Docente.id.in_(da_aggiungere_ids))
-                     .order_by(Docente.cognome).all()) if da_aggiungere_ids else []
+    if evento.partecipanti_manuali:
+        da_aggiungere = []
+    else:
+        da_aggiungere_ids = preset_attuale - set(partecipanti.keys())
+        da_aggiungere = (Docente.query.filter(Docente.id.in_(da_aggiungere_ids))
+                         .order_by(Docente.cognome).all()) if da_aggiungere_ids else []
 
     da_rimuovibili, non_rimovibili = [], []
     for did, part in partecipanti.items():
@@ -1005,6 +1017,19 @@ def form(id=None):
         # (segnalato da Roberto per il corso di formazione UNPLUGGED).
         if not doc_ids and 'partecipanti_form_presente' not in request.form:
             doc_ids = _preset_partecipanti(evento)
+
+        # Marca l'evento come "partecipanti gestiti a mano" se la
+        # checklist è stata inviata esplicitamente con una selezione
+        # diversa da quella che il preset calcolerebbe ora — smette da
+        # qui in poi di proporre "da aggiungere" in risincronizza()
+        # (Roberto: "non è ammissibile che se tolgo tutti o seleziono i
+        # partecipanti il sistema mi chieda di inserirli di nuovo").
+        # Se invece la selezione coincide col preset (l'utente non ha
+        # cambiato nulla), l'evento resta sincronizzabile come prima.
+        if 'partecipanti_form_presente' in request.form:
+            if set(doc_ids) != set(_preset_partecipanti(evento)):
+                evento.partecipanti_manuali = True
+
         for did in doc_ids:
             db.session.add(AttivitaIstPartecipante(
                 id_attivita=evento.id, id_docente=did, preset=True))

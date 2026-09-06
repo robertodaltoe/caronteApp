@@ -4,6 +4,56 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 119 — Risincronizza: pulsanti Tutti/Nessuno + smette di riproporre chi è stato tolto a mano
+
+Roberto: "dobbiamo sistemare risincronizza partecipanti. non c'è un
+tasto di selezione rapida (tutti - nessuno), non è ammissibile che se
+io tolgo tutti o seleziono i partecipanti dall'evento il sistema mi
+chieda di inserire nuovamente tutti."
+
+**Parte 1 — UI**: aggiunti pulsanti "Tutti"/"Nessuno" per ciascun
+gruppo (da aggiungere / da rimuovere) in
+`templates/attivita_ist/risincronizza.html`, stesso stile già usato
+altrove nell'app.
+
+**Parte 2 — la causa vera, più seria**: `_diff_risincronizzazione()`
+propone sempre "da aggiungere" chiunque sia nel preset calcolato ora
+ma non nell'elenco attuale — senza distinguere "non c'è mai stato" da
+"tolto deliberatamente a mano". Se Roberto riduce a mano una riunione
+di dipartimento (es. da 40 a 9 persone) e poi lancia una
+risincronizzazione, il sistema riproponeva sempre di reinserire i 31
+tolti: nessuna memoria dell'intenzione, solo un confronto meccanico
+col preset.
+
+Aggiunta una colonna `AttivitaIst.partecipanti_manuali` (migrazione
+additiva in `app.py::_auto_migrate()`), impostata in `form()` quando
+la checklist partecipanti viene inviata esplicitamente con una
+selezione diversa da quella che `_preset_partecipanti()`
+calcolerebbe in quel momento — cioè quando l'utente ha davvero scelto
+qualcosa di diverso dall'automatico, non quando ha semplicemente
+lasciato la selezione preimpostata. Una volta True,
+`_diff_risincronizzazione()` non propone più "da aggiungere" per
+quell'evento — "da rimuovibili"/"non_rimovibili" restano invece
+invariati: quello resta un controllo di sicurezza (chi non è più in
+servizio), non un'opinione sul numero di partecipanti che il sistema
+si permetterebbe di correggere.
+
+Limite noto: eventi già modificati a mano PRIMA di questo fix non
+hanno il flag impostato retroattivamente (nessun modo di ricostruire
+l'intenzione originale) — verranno marcati automaticamente al primo
+salvataggio successivo tramite il form.
+
+5 test nuovi (`test_risincronizza_partecipanti_manuali.py`). 364/376
+test rilevanti (12 falliti ambientali, invariati). Verificato dal vivo
+su copia isolata: ridotta a mano "Riunione dipartimento LET" da 14 a 2
+persone (una delle quali già non più in servizio) — `partecipanti_manuali`
+impostato a True al salvataggio; la pagina di risincronizzazione
+successiva mostrava il banner "modificato a mano", NESSUNA sezione "da
+aggiungere" (a differenza di prima, che avrebbe riproposto i 12
+rimossi), e correttamente la sola voce "da rimuovere" per il docente
+non più in servizio, con "Tutti"/"Nessuno" funzionanti. DB reale
+confermato intatto (contenuto e integrity_check dopo il test).
+
 ## Sessione 66 addendum 118 — Salvare da Piano delle attività tornava sempre a Elenco eventi
 
 Roberto: "Quando modifico con il tasto edit in piano delle attività e

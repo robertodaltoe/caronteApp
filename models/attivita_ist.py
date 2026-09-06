@@ -65,6 +65,16 @@ class AttivitaIst(db.Model):
     # sovrapposizione per il generatore CdC (Fase 3 Piano Annuale):
     # se richiesta in due eventi, non possono stare nello stesso slot.
     richiede_ds = db.Column(db.Boolean, default=False)
+    # True se l'elenco partecipanti è stato deliberatamente modificato a
+    # mano dal form (selezione diversa da quella che _preset_partecipanti()
+    # calcolerebbe in quel momento) — impostato in routes/attivita_ist.py
+    # ::form(). Una volta True, la risincronizzazione smette di proporre
+    # "da aggiungere" per questo evento (Roberto: "non è ammissibile che
+    # se tolgo tutti o seleziono i partecipanti il sistema mi chieda di
+    # inserirli di nuovo") — continua però a proporre "da rimuovibili"
+    # per chi nel frattempo non è più in servizio, quello resta un
+    # controllo di sicurezza, non un'opinione sul numero di partecipanti.
+    partecipanti_manuali = db.Column(db.Boolean, default=False, nullable=False)
 
     dipartimento  = db.relationship('Dipartimento')
     partecipanti  = db.relationship('AttivitaIstPartecipante',
