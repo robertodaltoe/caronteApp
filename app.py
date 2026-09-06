@@ -554,6 +554,7 @@ def _auto_migrate():
         ('docenti', 'ore_sostegno_aggiuntivo', 'INTEGER', None),
         ('sostituzioni_scrutinio', 'modificato_il', 'DATETIME', None),
         ('attivita_ist', 'partecipanti_manuali', 'BOOLEAN', 0),
+        ('piano_attivita_personale', 'link_disabilitato', 'BOOLEAN', 0),
     ]
 
     with db.engine.connect() as conn:

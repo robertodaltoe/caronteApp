@@ -4,6 +4,59 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 122 — Disabilita link Piano attività personale + risincronizza ricorda le esclusioni
+
+Tre richieste di Roberto in sequenza, tutte collegate al caso Abramini
+dell'addendum 120:
+
+**1. "fai in modo che possa disabilitare un link generato per la
+compilazione del piano individuale delle attività"** — nuovo flag
+`PianoAttivitaPersonale.link_disabilitato` (migrazione additiva),
+pulsanti "Disabilita link"/"Riabilita link" nella pagina staff
+(`piano_personale_lista.html`), route `disabilita_link()`/
+`riabilita_link()`. A differenza di 'blocca' (stato, impedisce solo
+ulteriori modifiche ma il link resta apribile), un link disabilitato
+mostra una pagina dedicata (`piano_personale_disabilitato.html`) e
+rifiuta salva/invia anche se forzati via richiesta diretta. Le scelte
+già fatte non vengono perse: riabilitando, tornano visibili.
+
+**2. Chiarimento — "il senso di disabilitare il link era per annullare
+la bozza creata e farla uscire dall'elenco risincronizzazione"**: il
+pezzo mancante era in `_preset_partecipanti()`, che considerava OGNI
+riga `PianoAttivitaPersonale` dell'anno per l'override "sostituisce il
+preset normale" — senza escludere quelle disabilitate. Aggiunto
+`link_disabilitato=False` al filtro: un piano disabilitato smette di
+nascondere il docente dal preset normale, risolvendo esattamente il
+caso Abramini (bozza mai compilata che la faceva comparire "da
+rimuovere" in ogni evento bucket A/B).
+
+**3. "continuo a non riuscire a far sparire dall'elenco le voci che
+insistono a propormi la sincronizzazione di docenti che non devono
+partecipare... esempio di ATS unplugged dove escludo tutti dalla
+sincronizzazione ma al caricamento successivo continuo a vederli"** —
+bug distinto, più generale: deselezionare i badge "da aggiungere"
+nella pagina di risincronizzazione applicava "nessuna aggiunta" solo
+per quella volta, senza lasciare traccia della scelta — al giro
+successivo `_diff_risincronizzazione()` riproponeva identico. Ora
+`_applica_scelte_risincronizzazione()` marca
+`evento.partecipanti_manuali` quando il risultato finale non coincide
+col preset puro (badge deselezionati = proposta rifiutata) — stesso
+flag dell'addendum 119, generalizzato dal solo form principale anche
+alla conferma di risincronizzazione. Il bulk "Risincronizza tutti"
+(che applica sempre tutto, mai esclusioni) non attiva mai il flag
+inutilmente: il risultato coincide col preset per definizione.
+
+27 test nuovi/estesi (`test_piano_personale_link_disabilitato.py`,
+`test_risincronizza_ricorda_esclusioni.py`, più due aggiunti a
+`test_piano_attivita_personale.py`). 375/387 test rilevanti (12
+falliti ambientali, invariati). Verificato dal vivo su copia isolata:
+riprodotto esattamente il caso Abramini (bozza vuota → esclusa dal
+preset del Collegio; piano disabilitato → torna inclusa, non più tra i
+"da rimuovere"). Nota: sul DB reale il piano di Abramini risultava già
+disabilitato — Roberto lo aveva evidentemente già provato lui stesso
+sull'app live nel frattempo (il server si ricarica da solo quando il
+codice cambia). Integrity check sul DB reale dopo la verifica: ok.
+
 ## Sessione 66 addendum 121 — Risincronizza: rispetta "next" quando si arriva da Risincronizza tutti
 
 Seguito immediato dell'addendum 120 (redirect dopo la conferma):

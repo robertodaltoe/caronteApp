@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piano attività personale — link disattivato</title>
+<style>
+    :root { --blu: #7a1c17; --grigio: #6b7280; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; margin:0;
+           background:#f4f1ee; color:#1f2937; }
+    .wrap { max-width: 520px; margin: 60px auto; padding: 0 16px; text-align: center; }
+    .card { background: white; border-radius: 10px; border: 1px solid #e5eaf0;
+            padding: 28px 24px; }
+    h1 { font-size: 1.1rem; color: var(--blu); margin: 0 0 10px; }
+    p { font-size: .88rem; color: #374151; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>🔒 Link disattivato</h1>
+        <p>
+            Questo link per il piano attività personale
+            {% if docente %}di {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}{% endif %}
+            è stato disattivato dalla segreteria e non è più utilizzabile.
+        </p>
+        <p style="color:var(--grigio);">
+            Se pensi sia un errore, contatta direttamente la segreteria o il collaboratore del DS.
+        </p>
+    </div>
+</div>
+</body>
+</html>

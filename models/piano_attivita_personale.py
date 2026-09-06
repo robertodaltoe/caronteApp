@@ -112,6 +112,14 @@ class PianoAttivitaPersonale(db.Model):
     bloccato_il = db.Column(db.DateTime, nullable=True)
     bloccato_da = db.Column(db.String(80), nullable=True)
     creato_il   = db.Column(db.DateTime, default=datetime.utcnow)
+    # Diverso da 'bloccato' (stato): bloccato impedisce solo ulteriori
+    # modifiche ma il link resta visibile e apribile dal docente.
+    # link_disabilitato invece disattiva il link stesso — nessun accesso
+    # possibile, né in lettura né in scrittura (Roberto: "poter
+    # disabilitare un link generato", es. generato per errore o non più
+    # necessario). Riabilitabile allo stesso modo, senza perdere le
+    # scelte già fatte.
+    link_disabilitato = db.Column(db.Boolean, default=False, nullable=False)
 
     docente = db.relationship('Docente')
     voci    = db.relationship('PianoAttivitaPersonaleVoce', backref='piano',

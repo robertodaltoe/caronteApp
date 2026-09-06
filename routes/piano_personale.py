@@ -140,6 +140,31 @@ def sblocca(id):
     return redirect(url_for('piano_personale.lista', anno=p.anno_scol))
 
 
+@piano_personale_bp.route('/attivita-ist/piano-personale/<int:id>/disabilita-link', methods=['POST'])
+def disabilita_link(id):
+    """Disattiva il link personale — a differenza di 'blocca' (che
+    impedisce solo ulteriori modifiche restando comunque apribile),
+    qui il link smette del tutto di funzionare, in lettura e scrittura
+    (Roberto: "poter disabilitare un link generato" — es. generato per
+    errore, o docente non più tenuto a compilarlo). Le scelte già
+    fatte restano salvate, pronte a riapparire se il link viene
+    riabilitato."""
+    p = PianoAttivitaPersonale.query.get_or_404(id)
+    p.link_disabilitato = True
+    db.session.commit()
+    flash(f'Link di {p.docente.cognome} disattivato.', 'warning')
+    return redirect(url_for('piano_personale.lista', anno=p.anno_scol))
+
+
+@piano_personale_bp.route('/attivita-ist/piano-personale/<int:id>/riabilita-link', methods=['POST'])
+def riabilita_link(id):
+    p = PianoAttivitaPersonale.query.get_or_404(id)
+    p.link_disabilitato = False
+    db.session.commit()
+    flash(f'Link di {p.docente.cognome} riattivato.', 'success')
+    return redirect(url_for('piano_personale.lista', anno=p.anno_scol))
+
+
 # ── PUBBLICO (token, nessun login) ──────────────────────────────────────────
 
 _TIPI_BUCKET_AB = [t for t, info in TIPI_ATTIVITA.items() if info['bucket'] in (BUCKET_A, BUCKET_B)]
@@ -162,6 +187,8 @@ def _eventi_selezionabili(anno_scol):
 @piano_personale_bp.route('/piano-personale/<token>')
 def pubblico(token):
     p = PianoAttivitaPersonale.query.filter_by(token=token).first_or_404()
+    if p.link_disabilitato:
+        return render_template('piano_personale_disabilitato.html', docente=p.docente)
     eventi = _eventi_selezionabili(p.anno_scol)
     quota_a, quota_b = quota_ore_bucket(p.docente, p.anno_scol)
     ore_a, ore_b = p.ore_scelte_bucket()
@@ -191,6 +218,8 @@ def _salva_scelte(p, form):
 @piano_personale_bp.route('/piano-personale/<token>/salva', methods=['POST'])
 def salva(token):
     p = PianoAttivitaPersonale.query.filter_by(token=token).first_or_404()
+    if p.link_disabilitato:
+        return render_template('piano_personale_disabilitato.html', docente=p.docente)
     if p.stato == 'bloccato':
         flash('Il piano è stato confermato dalla segreteria e non è più modificabile — '
               'per una modifica contattaci direttamente.', 'error')
@@ -205,6 +234,8 @@ def salva(token):
 @piano_personale_bp.route('/piano-personale/<token>/invia', methods=['POST'])
 def invia(token):
     p = PianoAttivitaPersonale.query.filter_by(token=token).first_or_404()
+    if p.link_disabilitato:
+        return render_template('piano_personale_disabilitato.html', docente=p.docente)
     if p.stato == 'bloccato':
         return redirect(url_for('piano_personale.pubblico', token=token))
 

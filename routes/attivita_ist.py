@@ -189,8 +189,17 @@ def _preset_partecipanti(attivita):
     if attivita.bucket is not None:
         from models.piano_attivita_personale import PianoAttivitaPersonale
         anno_ev = _anno_scolastico(attivita.data)
+        # Un piano con link_disabilitato non deve più sostituire il
+        # preset normale del docente (Roberto: "il senso di disabilitare
+        # il link era per annullare la bozza creata e farla uscire
+        # dall'elenco risincronizzazione") — una bozza mai compilata
+        # nascondeva altrimenti il docente da OGNI evento bucket A/B,
+        # facendolo comparire "da rimuovere" ovunque in
+        # risincronizzazione senza che ci fosse un problema di servizio
+        # reale (caso Abramini, Sessione 66 addendum 120).
         piani = {p.id_docente: p for p in
-                 PianoAttivitaPersonale.query.filter_by(anno_scol=anno_ev).all()}
+                 PianoAttivitaPersonale.query.filter_by(
+                     anno_scol=anno_ev, link_disabilitato=False).all()}
         if piani:
             selezionati = {did for did, p in piani.items()
                            if attivita.id in p.ids_attivita_scelte and did not in esclusi_ids}
@@ -1338,13 +1347,22 @@ def _applica_scelte_risincronizzazione(evento, da_aggiungere, da_rimuovibili,
     proposti", non "nessuno": la pagina singola invece manda sempre gli
     id selezionati dai badge (anche vuoti se l'utente li ha deselezionati
     tutti). Ritorna (n_aggiunti, n_rimossi).
+
+    Se il risultato finale non coincide col preset puro (badge
+    deselezionati, quindi qualche proposta rifiutata), marca
+    evento.partecipanti_manuali — altrimenti la stessa esclusione
+    verrebbe riproposta identica al giro di risincronizzazione
+    successivo, senza memoria della scelta appena fatta.
     """
     n_agg = n_rim = 0
+    ids_aggiunti_ora = set()
+    ids_rimossi_ora = set()
     for d in da_aggiungere:
         if aggiungi_ids is not None and d.id not in aggiungi_ids:
             continue
         db.session.add(AttivitaIstPartecipante(
             id_attivita=evento.id, id_docente=d.id, preset=True))
+        ids_aggiunti_ora.add(d.id)
         n_agg += 1
     for d in da_rimuovibili:
         if rimuovi_ids is not None and d.id not in rimuovi_ids:
@@ -1353,7 +1371,22 @@ def _applica_scelte_risincronizzazione(evento, da_aggiungere, da_rimuovibili,
             id_attivita=evento.id, id_docente=d.id).delete()
         AttivitaIstPresenza.query.filter_by(
             id_attivita=evento.id, id_docente=d.id).delete()
+        ids_rimossi_ora.add(d.id)
         n_rim += 1
+
+    # Se dopo l'applicazione l'elenco non coincide col preset puro
+    # (perché l'utente ha escluso qualche proposta dai badge), marca
+    # l'evento come gestito a mano — altrimenti la prossima
+    # risincronizzazione riproporrebbe le stesse aggiunte appena
+    # rifiutate, ogni volta (segnalato da Roberto per UNPLUGGED:
+    # escludeva tutti i "da aggiungere" dai badge ma li ritrovava
+    # identici al giro dopo — la deselezione valeva solo per
+    # quell'applicazione, non veniva mai ricordata).
+    ids_prima = {p.id_docente for p in evento.partecipanti}
+    finale = (ids_prima | ids_aggiunti_ora) - ids_rimossi_ora
+    if finale != set(_preset_partecipanti(evento)):
+        evento.partecipanti_manuali = True
+
     return n_agg, n_rim
 
 

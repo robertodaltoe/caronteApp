@@ -178,6 +178,40 @@ def test_docente_a_cattedra_piena_non_influenzato(app, db_session):
         assert d2.id not in preset   # ha un piano ma non ha scelto questo evento
 
 
+def test_piano_disabilitato_non_nasconde_piu_il_docente(app, db_session):
+    """Roberto: 'il senso di disabilitare il link era per annullare la
+    bozza creata e farla uscire dall'elenco risincronizzazione'.
+
+    Caso reale (Abramini, Sessione 66 addendum 120): una bozza mai
+    compilata (nessuna voce scelta) nascondeva il docente da OGNI
+    evento bucket A/B — non per un problema di servizio, solo perché il
+    piano esisteva e non aveva ancora scelte. Disabilitare il link deve
+    far tornare il docente nel preset normale, come se il piano non
+    esistesse."""
+    _crea_tabelle(app)
+    with app.app_context():
+        d = crea_docente('Abramini')
+        d.ore_contratto = 9
+        d.part_time = True
+        d.ore_contratto_pt = 9
+        db.session.commit()
+
+        ev = _crea_evento('collegio', date(2025, 10, 10))
+        from models.piano_attivita_personale import PianoAttivitaPersonale, genera_token
+        p = PianoAttivitaPersonale(id_docente=d.id, anno_scol='2025-2026',
+                                    token=genera_token(), stato='bozza')
+        db.session.add(p)
+        db.session.commit()
+
+        from routes.attivita_ist import _preset_partecipanti
+        assert d.id not in _preset_partecipanti(ev)  # bozza vuota -> esclusa ovunque
+
+        p.link_disabilitato = True
+        db.session.commit()
+
+        assert d.id in _preset_partecipanti(ev)  # disabilitato -> preset normale
+
+
 def test_scrutinio_non_influenzato_dal_piano_personale(app, db_session):
     _crea_tabelle(app)
     with app.app_context():
