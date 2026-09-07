@@ -55,6 +55,9 @@
 {% if docente %}
 <input type="hidden" name="versione" value="{{ docente.modificato_il.isoformat(timespec='microseconds') if docente.modificato_il else '' }}">
 {% endif %}
+{% if next %}
+<input type="hidden" name="next" value="{{ next }}">
+{% endif %}
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1280px;">
 
 {# ══ COLONNA SINISTRA ════════════════════════════════════════════════ #}

@@ -321,7 +321,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                 style="{{ 'background:var(--rosso-bg);' if is_over else ('background:var(--giallo-bg);' if ore_mat_over else ('background:var(--giallo-bg);' if ore_classe_over else '')) }}">
                 <td class="td-doc">
                     {% if a.docente %}
-                    <a href="{{ url_for('docenti.modifica', id=a.docente.id) }}" style="font-weight:600; color:inherit; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">{{ a.docente.cognome }} {{ a.docente.nome }}</a>
+                    <a href="{{ url_for('docenti.modifica', id=a.docente.id, next=request.full_path) }}" style="font-weight:600; color:inherit; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">{{ a.docente.cognome }} {{ a.docente.nome }}</a>
                     {% if a.docente.ore_contratto_pt %}
                     <span class="badge-tipo" style="background:var(--giallo-bg); color:var(--giallo);">PT</span>
                     {% endif %}
@@ -460,7 +460,7 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
             {% for d in blk.docenti_precaricati %}
             <tr style="background:#f8f9ff; opacity:.7;">
                 <td class="td-doc">
-                    <a href="{{ url_for('docenti.modifica', id=d.id) }}" style="font-weight:600; color:#6b7280; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">
+                    <a href="{{ url_for('docenti.modifica', id=d.id, next=request.full_path) }}" style="font-weight:600; color:#6b7280; text-decoration:underline; text-decoration-style:dotted;" title="Apri anagrafica docente">
                         {{ d.cognome }} {{ d.nome }}
                     </a>
                     {% if d.ore_contratto_pt %}

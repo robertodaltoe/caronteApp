@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, flash, request
+from flask import Flask, redirect, url_for, flash, request, render_template
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from models import db
@@ -103,6 +103,30 @@ def create_app(avvio_con_reloader=True):
         if request.path.startswith('/login'):
             return redirect(url_for('auth.login'))
         return redirect(request.referrer or url_for('dashboard.index'))
+
+    @app.errorhandler(404)
+    def _pagina_non_trovata(e):
+        """
+        Pagina 404 con la navbar normale invece di quella grezza di
+        Werkzeug (bianca, senza logo né menu — un vicolo cieco per un
+        link vecchio, un bookmark o un evento nel frattempo eliminato).
+        Audit usabilità Sessione 66: verificato che capita davvero
+        navigando a mano un URL non più valido.
+        """
+        return render_template('errore.html',
+            titolo='Pagina non trovata', icona='🔍',
+            messaggio='L\'indirizzo richiesto non esiste (più). Potrebbe essere '
+                      'un link non più valido o una pagina eliminata nel frattempo.'
+        ), 404
+
+    @app.errorhandler(500)
+    def _errore_interno(e):
+        """Stessa logica del 404: mai la pagina bianca di Werkzeug."""
+        return render_template('errore.html',
+            titolo='Errore imprevisto', icona='⚠️',
+            messaggio='Si è verificato un errore imprevisto. Riprova; se il '
+                      'problema persiste, segnalalo con i dettagli di cosa stavi facendo.'
+        ), 500
 
     @app.after_request
     def _no_cache_login(response):

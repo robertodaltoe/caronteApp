@@ -4,6 +4,76 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 131 — Analisi usabilità + blocco 1 di interventi (5 fix)
+
+Roberto chiede un'analisi approfondita dell'usabilità per vicepreside e
+segreteria, poi un approfondimento su navigabilità/punti di ritorno/
+pagine annidate. Fatta girando l'app su copie isolate del DB reale (mai
+`database.db`, sync automatico disattivato), navigando come utente vero
+nei ruoli collaboratore/segreteria su dati reali, non solo leggendo il
+codice — diversi difetti trovati sono stati confermati con misure
+tecniche dirette (es. `scrollWidth` vs `clientWidth`), non solo a
+occhio. Report completo consegnato a Roberto in chat (criticità su
+select senza ricerca, pulsante suggerimenti invisibile, overflow
+mobile, `report.singolo` mai linkato, `docenti.modifica()` senza
+`next`, 404 grezza, Guida senza link diretti, "Recupero" raggiungibile
+solo da "Attività differite"). Roberto ha approvato un piano a blocchi
+per priorità/sforzo; qui il primo blocco (5 interventi a basso sforzo).
+
+1. **Tooltip sul pulsante "Suggerisci" (⭐)** — [templates/dashboard.html:174](templates/dashboard.html:174):
+   `title`/`aria-label="Suggerisci chi è libero in quest'ora"`. Prima
+   era solo un'icona senza etichetta: il motore di suggerimento
+   sostituti (`/api/suggerimenti`, funzionante e verificato dal vivo)
+   era invisibile a chi non sapesse già che esiste.
+2. **`next` in `docenti.modifica()`** — mancava del tutto (unica route
+   di modifica a non supportarlo, a differenza di assenze/supplenze/
+   indisponibilità/cambi_quadro). "Modifica docente" è raggiungibile
+   anche da Assegnazioni e dalla Ricerca globale: senza `next`, dopo il
+   salvataggio si perdeva sempre il contesto, dirottati sull'elenco
+   completo. Aggiunto lo stesso pattern (`request.form.get('next') or
+   url_for('docenti.lista')`), campo hidden nel form
+   (`templates/docente_form.html`), e `next=request.full_path`/
+   `request.url` nei 3 punti che linkano alla modifica
+   (`templates/ricerca/risultati.html`, `templates/assegnazioni/index.html` ×2).
+3. **Pagina 404/500 personalizzata** — prima era la pagina bianca
+   grezza di Werkzeug (nessun logo, nessun menu, vicolo cieco per un
+   link vecchio o un evento eliminato nel frattempo). Nuovo
+   `templates/errore.html` (estende `base.html`, navbar sempre
+   presente) + `@app.errorhandler(404)`/`(500)`. Bug trovato SUBITO
+   dal collaudo dal vivo (non dai test): `render_template` non era
+   importato a livello di modulo in `app.py` (solo `Flask, redirect,
+   url_for, flash, request`) — il primo tentativo dava un 500 invece
+   del 404 personalizzato. Corretto l'import prima di considerare il
+   fix completo.
+4. **Note auto-generate senza duplicazioni né sintassi Python esposta**
+   — `routes/attivita.py`: "📝 Simulazione Simulazione colloquio
+   orale" (etichetta breve + descrizione che inizia con la stessa
+   parola, concatenate senza controllo) e "classe ['5A LSP']" (lista
+   Python interpolata direttamente in un f-string) comparivano ogni
+   giorno nelle note delle assenze auto-generate da attività fuori
+   aula. Estratta una funzione condivisa `_tipo_e_descrizione()` (evita
+   la ripetizione se la descrizione inizia già come l'etichetta),
+   applicata ai 4 punti che ne soffrivano; `classi_list` ora unito con
+   `', '.join(...)` invece di interpolato come lista.
+5. **`overflow-x:auto` sulle 4 tabelle della Dashboard** — su schermi
+   stretti (tablet/telefono) le tabelle "Registro supplenze"/"Docenti
+   assenti" avevano `table-layout:fixed` con colonne a larghezza fissa
+   che sommate superavano ampiamente 375px, senza un contenitore che le
+   isolasse: la PAGINA INTERA scorreva di lato (verificato:
+   `scrollWidth` 854px contro un `clientWidth` di 375px). Ora le
+   tabelle scorrono solo al proprio interno, il resto della pagina
+   resta fermo (verificato: nessun overflow residuo dopo il fix).
+
+Verifica: nuovi test (`tests/test_docenti_next_redirect.py`,
+`tests/test_attivita_note_auto_generate.py`, 7 test totali) + suite
+completa 410/410. Collaudo dal vivo su copia isolata del DB reale
+(mai `database.db`) per tutti e 5 i punti: pagina 404 con navbar
+completa, dashboard mobile senza scroll orizzontale, round-trip
+completo Ricerca → Modifica docente → Salva → torna ai risultati di
+ricerca con la query intatta, tooltip presente sul pulsante
+suggerimenti. `database.db` reale invariato (md5 identico),
+`PRAGMA integrity_check: ok`.
+
 ## Sessione 66 addendum 130 — Visibilità su un except silenzioso in banca ore
 
 Ultimo punto dell'audit generale (addendum 124): rivisti tutti gli

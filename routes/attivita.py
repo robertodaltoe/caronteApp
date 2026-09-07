@@ -22,6 +22,19 @@ TIPI   = [('gita','✈ Gita istruzione'),
           ('simulazione','📝 Simulazione Esame / Prova per Competenze'),
           ('migrazione_gruppo','🔀 Migrazione Gruppo (classe parzialmente fuori aula)')]
 
+def _tipo_e_descrizione(attivita):
+    """Etichetta breve + descrizione per le note auto-generate, senza
+    ripetere la stessa parola due volte (es. '📝 Simulazione Simulazione
+    colloquio orale' quando la descrizione inizia già come l'etichetta
+    breve — bug visibile ogni giorno nelle note delle assenze fuori aula,
+    audit usabilità Sessione 66)."""
+    descr = (attivita.descrizione or '').strip()
+    parola_tipo = attivita.tipo_label.split(' ', 1)[-1].strip().lower()
+    if descr and descr.lower().startswith(parola_tipo):
+        return descr
+    return f'{attivita.tipo_label} {descr}'.strip()
+
+
 def _date_attivita(att):
     lst, cur = [], att.data_inizio
     while cur <= att.data_fine:
@@ -72,7 +85,7 @@ def genera_effetti(attivita):
                                                    ora_inizio=s.ora,ora_fine=s.ora).first():
                         db.session.add(Assenza(id_docente=doc.id,data=data,
                             ora_inizio=s.ora,ora_fine=s.ora,motivo='progetto',
-                            note_interne=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}] (accompagnatore)',
+                            note_interne=f'Auto — {_tipo_e_descrizione(attivita)} [{attivita.id}] (accompagnatore)',
                             creato_da=_utente))
                         if not Supplenza.query.filter_by(data=data,id_assente=doc.id,
                                                          ora=s.ora,classe=s.classe).first():
@@ -90,7 +103,7 @@ def genera_effetti(attivita):
                             db.session.add(Supplenza(data=data,ora=s.ora,classe=s.classe,
                                 id_assente=doc.id,tipo='recupero',stato='scoperta',
                                 origine='automatica',
-                                note=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}]',
+                                note=f'Auto — {_tipo_e_descrizione(attivita)} [{attivita.id}]',
                                 creato_da=_utente))
                             stats['assenze']+=1
     else:
@@ -128,9 +141,10 @@ def genera_effetti(attivita):
                     if not Assenza.query.filter_by(id_docente=docente.id,data=data,
                                                    ora_inizio=ora,ora_fine=ora).first():
                         mot = 'viaggio' if attivita.tipo=='gita' else 'progetto'
+                        _classi = ', '.join(attivita.classi_list) or '—'
                         db.session.add(Assenza(id_docente=docente.id,data=data,
                             ora_inizio=ora,ora_fine=ora,motivo=mot,
-                            note_interne=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}] (classe {attivita.classi_list} fuori aula)',
+                            note_interne=f'Auto — {_tipo_e_descrizione(attivita)} [{attivita.id}] (classe {_classi} fuori aula)',
                             creato_da=_utente))
                         stats['assenze']+=1
                         slot_ora = next((s for s in slots_g if s.ora==ora and s.tipo_ora=='lezione'),None)
@@ -153,7 +167,7 @@ def genera_effetti(attivita):
                                 db.session.add(Supplenza(data=data,ora=ora,classe=slot_ora.classe,
                                     id_assente=docente.id,tipo='recupero',stato='scoperta',
                                     origine='automatica',
-                                    note=f'Auto — {attivita.tipo_label} {attivita.descrizione or ""} [{attivita.id}]',
+                                    note=f'Auto — {_tipo_e_descrizione(attivita)} [{attivita.id}]',
                                     creato_da=_utente))
 
     # Docenti liberi per classi coinvolte

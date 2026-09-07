@@ -354,7 +354,8 @@ def modifica(id):
         from routes.auth import log as auth_log
         auth_log('modifica_docente', f'{d.nome_completo}')
         flash(f"Docente {d.nome_completo} aggiornato.", 'success')
-        return redirect(url_for('docenti.lista'))
+        next_url = request.form.get('next') or url_for('docenti.lista')
+        return redirect(next_url)
 
     # Colloqui per-anno: stesso pattern del selettore "Materie insegnate"
     # — di default l'anno corrente, valorizzabile da querystring così i
@@ -477,7 +478,8 @@ def modifica(id):
         anno_corrente_incarichi=anno_c,
         incarichi_corrente=incarichi_corrente,
         incarichi_storico=incarichi_storico,
-        piano_personale=piano_personale)
+        piano_personale=piano_personale,
+        next=request.args.get('next', '').strip())
 
 @docenti_bp.route('/docenti/<int:id>/anonimizza', methods=['POST'])
 def anonimizza(id):
