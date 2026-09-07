@@ -589,6 +589,13 @@
         <a href="{{ url_for('sync_conflitti.index') }}" class="btn btn-sm" style="white-space:nowrap;">Rivedi ora</a>
     </div>
     {% endif %}
+    {% if g.utente is defined and backup_fallito_msg %}
+    <div class="flash error">
+        {{ icon('warning') }} Il backup cifrato automatico di oggi NON è riuscito
+        ({{ backup_fallito_msg }}) — nessun backup è stato creato (per sicurezza,
+        non viene mai scritta una copia non cifrata). Verifica appena possibile.
+    </div>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
             <div class="flash {{ cat }}">{{ msg }}</div>

@@ -4,6 +4,38 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 125 — Backup: rimosso il fallback silenzioso in chiaro
+
+Seguito dell'audit generale (addendum 124): `app.py::_backup_automatico()`,
+se `crea_backup_cifrato()` falliva per qualunque motivo, scriveva
+silenziosamente una copia IN CHIARO dell'intero database (dati personali
+dei docenti) in `data/backup/database_<data>.db`, segnalata solo con un
+`print()` a console — nessun avviso visibile, nessuna pulizia automatica
+di quel file una volta creato.
+
+Fix: rimosso del tutto il fallback in chiaro. Ora, se la cifratura
+fallisce, non viene creato nessun backup per quel giorno (meglio nessun
+backup di un backup non cifrato passato inosservato) e viene scritto un
+marker `data/backup/.backup_fallito` con timestamp e messaggio d'errore,
+che pilota un banner rosso visibile in ogni pagina (`templates/base.html`,
+stesso pattern già usato per il banner dei conflitti di sync) finché
+qualcuno non se ne accorge; il marker viene rimosso automaticamente al
+primo backup cifrato riuscito.
+
+Verifica: la logica esatta di `_backup_automatico()` è stata replicata e
+testata in una directory temporanea isolata (`/tmp`, mai `database.db`
+reale) sia nel caso di fallimento (marker creato con il messaggio giusto,
+nessun `.db` in chiaro scritto) sia nel caso di successo successivo
+(marker rimosso, `.enc` creato); il frammento Jinja del banner è stato
+reso con `render_template_string` per verificarne la sintassi. Non è
+stato possibile un collaudo end-to-end via `create_app()` reale perché
+`base_dir` in `app.py` è calcolato da `os.path.dirname(__file__)`, non da
+un `os.path.join` intercettabile con la tecnica usata finora per puntare
+a un DB di test — annotato per una futura sessione se servirà rendere
+`_backup_automatico()` più facilmente testabile end-to-end.
+`pytest`: 390/390 invariati. `database.db` reale: md5 invariato,
+`PRAGMA integrity_check: ok`.
+
 ## Sessione 66 addendum 124 — Audit generale (codice/privacy/guida) + 10 test rotti dal cambio anno scolastico reale
 
 Roberto chiede una "pausa dalla programmazione": un check generale su

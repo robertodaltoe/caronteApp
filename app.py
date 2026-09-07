@@ -2,7 +2,7 @@ from flask import Flask, redirect, url_for, flash, request
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from models import db
-import os, locale, secrets, shutil
+import os, locale, secrets
 
 # WeasyPrint: su macOS assicura che le librerie Homebrew siano trovate
 import sys as _sys
@@ -470,6 +470,19 @@ def create_app(avvio_con_reloader=True):
         except Exception:
             return {'n_conflitti_sync': 0}
 
+    @app.context_processor
+    def _inject_backup_fallito():
+        """Avviso (banner in base.html) se il backup cifrato automatico
+        dell'ultimo avvio è fallito — vedi _backup_automatico()."""
+        try:
+            marker = os.path.join(base_dir, 'data', 'backup', '.backup_fallito')
+            if os.path.exists(marker):
+                with open(marker) as f:
+                    return {'backup_fallito_msg': f.read().strip()}
+        except Exception:
+            pass
+        return {'backup_fallito_msg': None}
+
     # Sync automatico additivo in background (ogni 30s, solo su
     # 'assenze'/'supplenze' — vedi modules/auto_sync.py e DEVLOG Task 46).
     if avvio_con_reloader:
@@ -789,17 +802,30 @@ def _backup_automatico(base_dir):
         f.startswith(f'database_{oggi}') and f.endswith('.db.enc')
         for f in os.listdir(backup_dir)
     )
+    marker_fallito = os.path.join(backup_dir, '.backup_fallito')
     if not gia_fatto:
         from modules.backup_cifrato import crea_backup_cifrato, pulisci_vecchi_backup
         try:
             dest = crea_backup_cifrato(db_path, backup_dir)
             pulisci_vecchi_backup(backup_dir, max_backup=60)
+            # Backup riuscito: rimuovi un eventuale avviso di un fallimento precedente.
+            if os.path.exists(marker_fallito):
+                os.remove(marker_fallito)
         except Exception as e:
-            print(f'Backup cifrato fallito: {e}')
-            # Fallback: backup non cifrato
-            bk_path = os.path.join(backup_dir, f'database_{oggi}.db')
-            if not os.path.exists(bk_path):
-                shutil.copy2(db_path, bk_path)
+            # NIENTE fallback in chiaro: un backup non cifrato del database
+            # (dati personali dei docenti) resterebbe su disco a tempo
+            # indeterminato, senza cifratura, finché qualcuno non se ne
+            # accorge (era già capitato: il vecchio fallback scriveva
+            # silenziosamente database_<data>.db in chiaro). Meglio nessun
+            # backup di oggi con un avviso visibile in bacheca (vedi banner
+            # in templates/base.html) che uno in chiaro passato inosservato.
+            msg = f"{datetime.now().strftime('%d/%m/%Y %H:%M')} — {e}"
+            print(f'[ATTENZIONE] Backup cifrato fallito, nessun backup creato oggi: {e}')
+            try:
+                with open(marker_fallito, 'w') as f:
+                    f.write(msg)
+            except Exception:
+                pass
 
 
 
