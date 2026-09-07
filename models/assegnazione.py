@@ -22,11 +22,11 @@ class AssegnazioneDocente(db.Model):
     anno_scol           = db.Column(db.String(9),  nullable=False)
     id_classe_concorso  = db.Column(db.Integer,
                                     db.ForeignKey('classi_concorso.id'),
-                                    nullable=False)
+                                    nullable=False, index=True)
     # Docente reale o placeholder
     id_docente          = db.Column(db.Integer,
                                     db.ForeignKey('docenti.id'),
-                                    nullable=True)
+                                    nullable=True, index=True)
     nome_placeholder    = db.Column(db.String(80), nullable=True)
     # 'titolare'|'coe_entrata'|'coe_uscita'|'supplente'|'part_time'|'eccedenza'
     tipo                = db.Column(db.String(20), nullable=False,
@@ -70,7 +70,7 @@ class AssegnazioneClasse(db.Model):
     id_assegnazione      = db.Column(db.Integer,
                                      db.ForeignKey('assegnazioni_docenti.id',
                                                    ondelete='CASCADE'),
-                                     nullable=False)
+                                     nullable=False, index=True)
     indirizzo            = db.Column(db.String(10), nullable=False)
     anno_corso           = db.Column(db.Integer,    nullable=False)
     sezione              = db.Column(db.String(2),  nullable=False)
@@ -78,7 +78,7 @@ class AssegnazioneClasse(db.Model):
     # Materia specifica (NULL = ore totali senza distinzione per materia)
     id_materia           = db.Column(db.Integer,
                                      db.ForeignKey('materie.id'),
-                                     nullable=True)
+                                     nullable=True, index=True)
 
     assegnazione = db.relationship('AssegnazioneDocente',
                                    backref=db.backref('classi',

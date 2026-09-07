@@ -366,6 +366,7 @@ def create_app(avvio_con_reloader=True):
         _migra_vincolo_aule()
         _migra_codici_classi_concorso()
         _backfill_anno_scol_banca_ore()
+        _migra_indici_fk_calde()
         _seed_dipartimenti_materie()
         _seed_sospensioni()
         from models.permesso_ruolo import _seed_permessi_ruolo, _migra_split_sezioni_permessi
@@ -772,6 +773,48 @@ def _backfill_anno_scol_banca_ore():
 
         conn.commit()
         print(f"Migrazione: anno_scol assegnato a {len(righe)} movimenti banca ore storici.")
+
+
+# Indici sulle foreign key più "calde" (tabelle che accumulano una riga
+# per anno scolastico e vengono filtrate/joinate di continuo nei report).
+# 'index=True' nei modelli qui sotto vale SOLO per un create_all() su un
+# DB nuovo — non aggiunge l'indice a un DB già esistente, per questo
+# serve applicarlo esplicitamente qui, come le altre migrazioni additive.
+# CREATE INDEX (a differenza di ALTER TABLE ADD COLUMN) non richiede di
+# ricreare la tabella: operazione leggera anche su un DB già popolato.
+_INDICI_FK = [
+    ('assenze', 'id_docente'),
+    ('supplenze', 'id_assente'),
+    ('supplenze', 'id_sostituto'),
+    ('banca_ore', 'id_supplenza'),
+    ('banca_ore', 'anno_scol'),
+    ('assegnazioni_docenti', 'id_classe_concorso'),
+    ('assegnazioni_docenti', 'id_docente'),
+    ('assegnazioni_classi', 'id_assegnazione'),
+    ('assegnazioni_classi', 'id_materia'),
+]
+
+
+def _migra_indici_fk_calde():
+    """Crea gli indici elencati in _INDICI_FK se non esistono già.
+    Idempotente (CREATE INDEX IF NOT EXISTS): sicura da rieseguire a
+    ogni avvio, su qualunque database.db (nuovo o già in uso da anni)."""
+    from sqlalchemy import text
+
+    with db.engine.connect() as conn:
+        for tabella, colonna in _INDICI_FK:
+            t_exists = conn.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=:t"
+            ), {'t': tabella}).fetchone()
+            if not t_exists:
+                continue
+            cols = [row[1] for row in conn.execute(text(f"PRAGMA table_info({tabella})"))]
+            if colonna not in cols:
+                continue
+            nome_indice = f'ix_{tabella}_{colonna}'
+            conn.execute(text(
+                f"CREATE INDEX IF NOT EXISTS {nome_indice} ON {tabella} ({colonna})"))
+        conn.commit()
 
 
 def _pulizia_log(base_dir):

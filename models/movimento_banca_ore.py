@@ -29,7 +29,7 @@ class MovimentoBancaOre(db.Model):
     # supplenza_recupero | supplenza_pagamento | supplenza_completamento
     # supplenza_potenziamento | assenza | permesso | civica | rettifica
     descrizione  = db.Column(db.String(200))
-    id_supplenza = db.Column(db.Integer, db.ForeignKey('supplenze.id'), nullable=True)
+    id_supplenza = db.Column(db.Integer, db.ForeignKey('supplenze.id'), nullable=True, index=True)
     creato_il    = db.Column(db.DateTime, default=datetime.utcnow)
     # Anno scolastico del movimento — calcolato automaticamente dalla
     # colonna 'data' (vedi listener sotto), non serve impostarlo a mano

@@ -8,8 +8,8 @@ class Supplenza(db.Model):
     data             = db.Column(db.Date,    nullable=False, index=True)
     ora              = db.Column(db.Integer, nullable=False)
     classe           = db.Column(db.String(20))
-    id_assente       = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
-    id_sostituto     = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
+    id_assente       = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True, index=True)
+    id_sostituto     = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True, index=True)
     tipo             = db.Column(db.String(20), default='recupero')
     # recupero | pagamento | completamento | potenziamento | disposizione
     stato            = db.Column(db.String(20), default='scoperta')

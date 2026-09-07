@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 127 — Indici sulle FK più calde (assenze, supplenze, banca ore, assegnazioni)
+
+Seguito dell'audit generale (addendum 124): 79 foreign key su 83 nel
+progetto erano senza indice esplicito — su SQLite questo significa
+full-scan su ogni filtro/join. Aggiunti gli indici sulle FK delle
+tabelle che accumulano più righe e vengono interrogate di continuo nei
+report: `assenze.id_docente` (già presente), `supplenze.id_assente`/
+`id_sostituto`, `banca_ore.id_supplenza`/`anno_scol`,
+`assegnazioni_docenti.id_classe_concorso`/`id_docente`,
+`assegnazioni_classi.id_assegnazione`/`id_materia`.
+
+- `index=True` aggiunto ai modelli (`models/supplenza.py`,
+  `models/movimento_banca_ore.py`, `models/assegnazione.py`) — vale
+  però SOLO per un `create_all()` su un DB nuovo, non retroattivo su un
+  DB già esistente.
+- Nuova migrazione additiva `app.py::_migra_indici_fk_calde()`
+  (`CREATE INDEX IF NOT EXISTS`, idempotente), eseguita a ogni avvio
+  come le altre migrazioni "pesanti" — così si applica da sola anche
+  sulle altre macchine di Roberto (ministudio, Mac mini) al prossimo
+  avvio, senza intervento manuale.
+
+Verifica: migrazione provata prima su una copia isolata in `/tmp`
+(indici creati correttamente, seconda esecuzione idempotente senza
+errori). Sul DB reale: backup cifrato
+(`database_20260907_2155_pre_indici_fk_calde.db.enc`) PRIMA di
+applicare, poi `CREATE INDEX` diretto, `PRAGMA integrity_check: ok`, e
+confronto riga per riga (non solo conteggio) di
+assenze/supplenze/banca_ore/assegnazioni_docenti/assegnazioni_classi/
+docenti tra il backup pre-modifica e il DB dopo l'indicizzazione:
+identici in ogni tabella. `pytest`: 399/399 invariati (il DB di test è
+in-memory, creato da zero a ogni test — gli indici ci sono già dal
+`create_all()`, la migrazione esplicita serve solo per il DB reale
+già esistente).
+
 ## Sessione 66 addendum 126 — Test per modules/auto_sync.py (nessuno prima)
 
 Seguito dell'audit generale (addendum 124): il sync automatico
