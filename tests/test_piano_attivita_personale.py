@@ -315,9 +315,13 @@ def test_invia_salva_anche_le_scelte_non_solo_lo_stato(app, db_session, monkeypa
         d.ore_contratto = 9
         d.part_time = True
         d.ore_contratto_pt = 9
-        ev = _crea_evento('collegio', date(2025, 10, 10))
+        # Anno scolastico ampiamente futuro (non quello reale corrente):
+        # la route /invia rifiuta un piano il cui anno_scol è già concluso
+        # (link_scaduto, audit privacy addendum 124) — un anno fisso nel
+        # passato romperebbe questo test non appena il calendario lo supera.
+        ev = _crea_evento('collegio', date(2099, 10, 10))
         from models.piano_attivita_personale import PianoAttivitaPersonale, genera_token
-        p = PianoAttivitaPersonale(id_docente=d.id, anno_scol='2025-2026', token=genera_token())
+        p = PianoAttivitaPersonale(id_docente=d.id, anno_scol='2099-2100', token=genera_token())
         db.session.add(p)
         db.session.commit()
         token, ev_id, pid = p.token, ev.id, p.id

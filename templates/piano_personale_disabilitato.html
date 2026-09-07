@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Piano attività personale — link disattivato</title>
+<title>Piano attività personale — link {{ 'scaduto' if scaduto else 'disattivato' }}</title>
 <style>
     :root { --blu: #7a1c17; --grigio: #6b7280; }
     * { box-sizing: border-box; }
@@ -19,11 +19,15 @@
 <body>
 <div class="wrap">
     <div class="card">
-        <h1>🔒 Link disattivato</h1>
+        <h1>🔒 Link {{ 'scaduto' if scaduto else 'disattivato' }}</h1>
         <p>
             Questo link per il piano attività personale
             {% if docente %}di {{ docente.cognome }}{% if docente.nome %} {{ docente.nome }}{% endif %}{% endif %}
+            {% if scaduto %}
+            si riferisce a un anno scolastico ormai concluso e non è più utilizzabile.
+            {% else %}
             è stato disattivato dalla segreteria e non è più utilizzabile.
+            {% endif %}
         </p>
         <p style="color:var(--grigio);">
             Se pensi sia un errore, contatta direttamente la segreteria o il collaboratore del DS.

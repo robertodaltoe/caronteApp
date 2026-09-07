@@ -104,6 +104,8 @@
                     <span class="badge-stato st-{{ r.piano.stato }}">{{ {'bozza':'Bozza','inviato':'Inviato','bloccato':'Bloccato'}.get(r.piano.stato, r.piano.stato) }}</span>
                     {% if r.piano.link_disabilitato %}
                     <span class="badge-stato" style="background:#f3f4f6;color:#6b7280;">Link disattivato</span>
+                    {% elif r.piano.link_scaduto %}
+                    <span class="badge-stato" style="background:#f3f4f6;color:#6b7280;" title="Anno scolastico concluso: il link non è più utilizzabile dal docente">Link scaduto</span>
                     {% endif %}
                 {% else %}
                     <span class="badge-stato st-nessuno">Nessun link</span>

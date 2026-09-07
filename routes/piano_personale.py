@@ -187,8 +187,9 @@ def _eventi_selezionabili(anno_scol):
 @piano_personale_bp.route('/piano-personale/<token>')
 def pubblico(token):
     p = PianoAttivitaPersonale.query.filter_by(token=token).first_or_404()
-    if p.link_disabilitato:
-        return render_template('piano_personale_disabilitato.html', docente=p.docente)
+    if p.link_disabilitato or p.link_scaduto:
+        return render_template('piano_personale_disabilitato.html', docente=p.docente,
+                                scaduto=p.link_scaduto and not p.link_disabilitato)
     eventi = _eventi_selezionabili(p.anno_scol)
     quota_a, quota_b = quota_ore_bucket(p.docente, p.anno_scol)
     ore_a, ore_b = p.ore_scelte_bucket()
@@ -218,8 +219,9 @@ def _salva_scelte(p, form):
 @piano_personale_bp.route('/piano-personale/<token>/salva', methods=['POST'])
 def salva(token):
     p = PianoAttivitaPersonale.query.filter_by(token=token).first_or_404()
-    if p.link_disabilitato:
-        return render_template('piano_personale_disabilitato.html', docente=p.docente)
+    if p.link_disabilitato or p.link_scaduto:
+        return render_template('piano_personale_disabilitato.html', docente=p.docente,
+                                scaduto=p.link_scaduto and not p.link_disabilitato)
     if p.stato == 'bloccato':
         flash('Il piano è stato confermato dalla segreteria e non è più modificabile — '
               'per una modifica contattaci direttamente.', 'error')
@@ -234,8 +236,9 @@ def salva(token):
 @piano_personale_bp.route('/piano-personale/<token>/invia', methods=['POST'])
 def invia(token):
     p = PianoAttivitaPersonale.query.filter_by(token=token).first_or_404()
-    if p.link_disabilitato:
-        return render_template('piano_personale_disabilitato.html', docente=p.docente)
+    if p.link_disabilitato or p.link_scaduto:
+        return render_template('piano_personale_disabilitato.html', docente=p.docente,
+                                scaduto=p.link_scaduto and not p.link_disabilitato)
     if p.stato == 'bloccato':
         return redirect(url_for('piano_personale.pubblico', token=token))
 

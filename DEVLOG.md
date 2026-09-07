@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 129 — Scadenza automatica del link Piano attività personale
+
+Seguito dell'audit generale (addendum 124, punto privacy): il link
+pubblico del piano attività personale (token robusto,
+`secrets.token_urlsafe(32)`, nessuna scadenza) restava valido a tempo
+indeterminato finché nessuno lo rigenerava esplicitamente da staff.
+
+Aggiunta `PianoAttivitaPersonale.link_scaduto` (property): scade da
+solo il 1° settembre successivo al 31 agosto dell'`anno_scol` del
+piano — lo stesso confine di anno scolastico già usato ovunque nel
+progetto, nessun campo nuovo da gestire. Le tre route pubbliche
+(`pubblico`, `salva`, `invia` in `routes/piano_personale.py`) ora
+controllano `link_disabilitato OR link_scaduto`, mostrando la stessa
+pagina dedicata di prima (`piano_personale_disabilitato.html`, ora con
+un testo diverso per "scaduto" vs "disattivato"); aggiunto un badge
+"Link scaduto" nella lista staff (`piano_personale_lista.html`).
+
+Nel farlo, un test preesistente
+(`test_invia_salva_anche_le_scelte_non_solo_lo_stato`) è scattato
+perché usava lo stesso anno_scol fisso `'2025-2026'` già visto oggi in
+altri file — ormai concluso rispetto alla data reale (07/09/2026):
+sistemato con un anno ampiamente futuro (`'2099-2100'`), stesso
+principio degli altri fix di oggi.
+
+Nuovo `tests/test_piano_personale_link_scaduto.py` (5 test): property
+`link_scaduto` vera/falsa per anno passato/futuro, pagina dedicata al
+posto del piano, salvataggio/invio rifiutati anche forzando il POST.
+
+Verifica: `pytest` 403/403 (399 + 5 nuovi, meno 1 esistente
+aggiornato). Live su copia isolata del DB reale (`/tmp`, mai
+`database.db` reale): piano forzato a un anno scaduto → pagina
+"scaduto" mostrata correttamente. `database.db` reale invariato (md5
+identico), `PRAGMA integrity_check: ok`.
+
 ## Sessione 66 addendum 128 — Guida: sezione sync mancante + FAQ badge COE
 
 Seguito dell'audit generale (addendum 124): la Guida integrata

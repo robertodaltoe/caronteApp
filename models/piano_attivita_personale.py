@@ -121,6 +121,17 @@ class PianoAttivitaPersonale(db.Model):
     # scelte già fatte.
     link_disabilitato = db.Column(db.Boolean, default=False, nullable=False)
 
+    @property
+    def link_scaduto(self):
+        """Il link pubblico smette di funzionare da solo una volta finito
+        l'anno scolastico a cui il piano si riferisce (31 agosto
+        dell'anno_scol) — un link inviato per email non deve restare
+        valido a tempo indeterminato se nessuno lo rigenera esplicitamente
+        (audit privacy: nessuna scadenza automatica era prevista)."""
+        from datetime import date
+        anno_fine = int(self.anno_scol.split('-')[1])
+        return date.today() > date(anno_fine, 8, 31)
+
     docente = db.relationship('Docente')
     voci    = db.relationship('PianoAttivitaPersonaleVoce', backref='piano',
                               cascade='all, delete-orphan', lazy='select')
