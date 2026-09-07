@@ -4,6 +4,29 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 128 — Guida: sezione sync mancante + FAQ badge COE
+
+Seguito dell'audit generale (addendum 124): la Guida integrata
+(`modules/guida_content.py`, 25→27 sezioni) non aveva nessuna sezione
+sulla sincronizzazione multi-postazione, nonostante sia un'area attiva
+e con concetti delicati (conflitti, lapidi) — e la sezione
+"Assegnazioni e aule" non menzionava i badge COE "Cede a"/"Completa"
+(Sessione 65).
+
+Aggiunta la sezione "Sincronizzazione tra postazioni" (slug `sync`):
+spiega il meccanismo automatico in background (30s, solo aggiunta),
+il banner di conflitto in `base.html` e la pagina di revisione
+`/sync/conflitti`, cosa resta fuori (Assegnazioni/Attività fuori aula)
+e la differenza col check-out/check-in manuale di `sync_db.py`. Aggiunta
+una FAQ sui badge COE nella sezione "Assegnazioni e aule".
+
+Verifica: caricamento di `modules.guida_content.SEZIONI` (27 sezioni,
+nessuno slug duplicato, tutti i campi richiesti presenti), poi live su
+una copia isolata del DB (`/tmp`, mai il reale) con `GET /guida/sync`
+e `GET /guida/assegnazioni` — entrambe 200, contenuto atteso presente
+in pagina. `database.db` reale: invariato (stesso md5),
+`PRAGMA integrity_check: ok`. `pytest`: 399/399 invariati.
+
 ## Sessione 66 addendum 127 — Indici sulle FK più calde (assenze, supplenze, banca ore, assegnazioni)
 
 Seguito dell'audit generale (addendum 124): 79 foreign key su 83 nel

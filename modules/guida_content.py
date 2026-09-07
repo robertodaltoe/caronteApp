@@ -903,8 +903,65 @@ SEZIONI = [
              'ogni classe; la "Mappa aule" mostra una vista d\'insieme e permette override '
              'temporanei per singola supplenza.'),
         ],
-        'faq': [],
+        'faq': [
+            ('Cosa significano i badge "Cede a" e "Completa" su una cattedra?',
+             'Compaiono quando la cattedra riguarda il completamento orario esterno (COE) con '
+             'un\'altra scuola. "Cede a" indica che il docente è titolare altrove e questa scuola '
+             'gli cede ore in eccesso per completargli la cattedra qui; "Completa" indica il caso '
+             'opposto — il docente è titolare qui e la sua cattedra si completa con ore in '
+             'un\'altra scuola. Passando sopra il badge compare la spiegazione estesa.'),
+        ],
         'attenzione': None,
+    },
+    {
+        'slug': 'sync',
+        'titolo': 'Sincronizzazione tra postazioni',
+        'icona': '🔄',
+        'riassunto': 'Come si tengono allineati i dati quando si lavora da più computer.',
+        'a_cosa_serve': (
+            'Chi lavora da più postazioni (es. computer personale e computer di segreteria), con '
+            '"database.db" condiviso via Google Drive, ha due meccanismi distinti che lavorano '
+            'insieme: un allineamento automatico in background, silenzioso nella maggior parte dei '
+            'casi, e — solo quando serve — una pagina per decidere a mano un vero conflitto.'
+        ),
+        'passi': [
+            ('Allineamento automatico (non richiede nulla)',
+             'Mentre l\'app è aperta, ogni 30 secondi un processo in background scarica il database '
+             'pubblicato dall\'altra postazione e importa in automatico le righe nuove di Assenze, '
+             'Supplenze, Indisponibilità e Sostituzioni scrutinio — solo aggiunte, non modifica mai '
+             'righe già esistenti in locale. Se ci sono novità (qui o là), ripubblica da solo il '
+             'database aggiornato, così l\'altra postazione le riceve al giro successivo.'),
+            ('Un banner ti avvisa se serve il tuo intervento',
+             'Se la STESSA modifica (stessa assenza, stessa supplenza...) risulta diversa sulle due '
+             'postazioni — un vero conflitto — compare un banner giallo in cima a ogni pagina: '
+             '"N modifiche fatte da un\'altra postazione devono essere confermate prima di essere '
+             'unite ai dati".'),
+            ('Risolvi il conflitto da "Rivedi ora"',
+             'Il pulsante del banner porta a "/sync/conflitti", dove per ogni riga vedi affiancati i '
+             'valori locali e quelli remoti, campo per campo, e scegli quale versione tenere: '
+             '"Tieni la versione locale" oppure "Tieni la versione dall\'altra postazione".'),
+        ],
+        'faq': [
+            ('Se elimino un\'assenza qui, sparisce anche dall\'altra postazione?',
+             'Sì, al giro successivo: l\'eliminazione lascia una traccia interna ("lapide") che '
+             'impedisce alla riga di ricomparire quando l\'altra postazione la scarica ancora '
+             'presente sulla propria copia — senza, l\'eliminazione locale verrebbe silenziosamente '
+             'annullata.'),
+            ('Assegnazioni docenti/classi e Attività fuori aula si sincronizzano allo stesso modo?',
+             'No, restano fuori da questo meccanismo automatico: sono strutture con dati collegati '
+             'tra loro (cattedre, ore, classi) troppo delicate per un\'unione automatica. Per quelle '
+             'un disallineamento tra postazioni va risolto a mano, confrontando le due copie.'),
+            ('Se scelgo "Tieni la versione locale" su un conflitto, poi si ripresenta?',
+             'No, la scelta viene ricordata: se la proposta remota resta la stessa, non ricompare. '
+             'Ricompare come conflitto NUOVO solo se nel frattempo qualcuno modifica di nuovo quella '
+             'stessa riga sull\'altra postazione.'),
+        ],
+        'attenzione': (
+            'Questo meccanismo automatico è diverso dal check-out/check-in manuale di sync_db.py '
+            '(lo script da riga di comando usato per scaricare/pubblicare l\'intero database prima '
+            'e dopo una sessione di lavoro): quello serve a scaricare la versione più recente prima '
+            'di iniziare a lavorare, questo qui è un allineamento continuo mentre l\'app è già aperta.'
+        ),
     },
     {
         'slug': 'permessi',
