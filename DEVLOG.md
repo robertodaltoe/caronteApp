@@ -4,6 +4,32 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 130 — Visibilità su un except silenzioso in banca ore
+
+Ultimo punto dell'audit generale (addendum 124): rivisti tutti gli
+`except Exception` silenziosi segnalati in `modules/auto_sync.py` e
+`modules/assenze_registrazione.py`. La maggior parte, a un esame più
+attento, sono fallback difensivi legittimi e a basso rischio (parsing
+di un orario opzionale che torna `None`, sospensioni/eventi del giorno
+che restano vuoti se la query fallisce, chmod best-effort su
+`modules/backup_cifrato.py` non critico e cross-platform) — lasciati
+com'erano, aggiungere rumore lì non avrebbe aiutato nessuno.
+
+Un solo caso meritava una correzione: in
+`modules/assenze_registrazione.py` (funzione che registra un'assenza),
+se il parsing di `ora_ist_ini`/`ora_ist_fine` per un
+`motivo='permesso_orario'` falliva, l'INTERO movimento di banca ore per
+quel permesso veniva perso silenziosamente (la riga subito sopra aveva
+già escluso apposta il movimento generico, aspettandosi che fosse
+questo blocco a coprirlo) — un docente avrebbe potuto non essere
+addebitato delle ore di permesso senza che nessuno se ne accorgesse.
+Aggiunta una `print()` d'attenzione con i dettagli (docente, data,
+valori non interpretabili) — comportamento invariato, solo visibilità.
+
+Verifica: `pytest` 403/403 invariati (nessun test esercitava questo
+percorso di errore specifico — il caso è raro per costruzione, il form
+valida già gli orari lato client).
+
 ## Sessione 66 addendum 129 — Scadenza automatica del link Piano attività personale
 
 Seguito dell'audit generale (addendum 124, punto privacy): il link

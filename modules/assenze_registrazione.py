@@ -503,8 +503,17 @@ def registra_assenze_form(form):
                         tipo        = 'permesso_ist',
                         descrizione = f'Permesso att.ist. {ora_ist_ini}–{ora_ist_fine_v}',
                     ))
-            except Exception:
-                pass
+            except Exception as e:
+                # Silenzioso finora: un errore qui salta l'intero addebito
+                # in banca ore per questo permesso orario (la riga 482 ha
+                # già escluso il movimento generico proprio perché si
+                # aspettava che fosse questo a coprirlo) — se capita,
+                # il docente non viene addebitato e nessuno se ne accorge.
+                # Segnalato in audit (Sessione 66 addendum 124): almeno
+                # visibile in console finché non emerge un caso reale.
+                print(f'[ATTENZIONE] Movimento banca ore permesso_orario NON creato '
+                      f'per docente #{id_docente} il {data_ins}: '
+                      f'ora_ist_ini={ora_ist_ini!r} ora_ist_fine={ora_ist_fine_v!r} — {e}')
 
         if cat_genera_supplenza(motivo):
             assegnabile = cat_assegnabile(motivo)
