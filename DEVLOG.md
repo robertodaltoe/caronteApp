@@ -4,6 +4,40 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 126 — Test per modules/auto_sync.py (nessuno prima)
+
+Seguito dell'audit generale (addendum 124): il sync automatico
+additivo multi-postazione non aveva NESSUN test dedicato, nonostante 5
+bug distinti già trovati e corretti a mano in collaudo reale (chiave
+logica, tombstone, pubblicazione anche su novità solo locali,
+risoluzione "tieni locale" persistente, conflitti mai risolti in
+automatico — vedi CLAUDE.md Task 46 e DEVLOG Sessione 66 addendum 54).
+
+Aggiunto `tests/test_auto_sync.py` (9 test) che esercita direttamente
+`_merge_additivo()` contro un file SQLite temporaneo con lo stesso
+schema del locale (via `db.metadata.create_all` su un engine
+temporaneo — mai Google Drive, mai `database.db` reale), coprendo:
+- inserimento additivo di una riga nuova dal remoto;
+- 'motivo' escluso dalla chiave logica → variante della stessa
+  assenza va in conflitto, non sommata;
+- lapide locale che impedisce di reintrodurre una riga eliminata qui
+  ma ancora presente sul remoto (il bug più importante del Task 46);
+- lapide remota che elimina una riga ancora presente in locale;
+- una riga più recente della lapide stessa la supera (comportamento
+  intenzionale del fix di Sessione 66 addendum 54 — corretto invertire
+  la lapide solo se il dato è più vecchio, non sempre);
+- `solo_locali` positivo quando l'unica novità è una riga locale non
+  ancora vista dal remoto (il segnale che pilota la ripubblicazione su
+  Drive in `esegui_sync_automatico()`);
+- una risoluzione "tieni locale" non ricrea lo stesso conflitto al
+  giro successivo, ma un valore remoto genuinamente cambiato sì;
+- una riga remota con FK verso un docente inesistente in locale viene
+  saltata, non inserita con una FK rotta.
+
+`pytest`: 399/399 (era 390 + 9 nuovi). Nessuna modifica a
+`database.db` né a Google Drive — solo file SQLite temporanei in `/tmp`
+via fixture pytest.
+
 ## Sessione 66 addendum 125 — Backup: rimosso il fallback silenzioso in chiaro
 
 Seguito dell'audit generale (addendum 124): `app.py::_backup_automatico()`,
