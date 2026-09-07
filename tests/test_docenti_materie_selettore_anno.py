@@ -9,6 +9,13 @@ corrente.
 from models import db
 from models.materia import Dipartimento, Materia, DocenteMateria
 from tests.conftest import crea_docente
+from config_anno import get_anno_corrente
+
+
+def _anno_successivo(anno_scol):
+    """'2026-2027' -> '2027-2028'."""
+    inizio, fine = anno_scol.split('-')
+    return f'{int(inizio) + 1}-{int(fine) + 1}'
 
 
 def test_scheda_docente_mostra_materie_dellanno_selezionato(app, db_session, monkeypatch):
@@ -22,6 +29,13 @@ def test_scheda_docente_mostra_materie_dellanno_selezionato(app, db_session, mon
         return '<html></html>'
     monkeypatch.setattr(mod, 'render_template', _finto_render)
 
+    # Calcolati dall'anno scolastico REALE corrente (non un valore fisso:
+    # get_anno_corrente() cambia ogni settembre, vedi DEVLOG/CLAUDE.md sui
+    # bug ricorrenti di "campo congelato" — qui l'anno futuro serve solo
+    # a essere diverso da quello corrente, qualunque esso sia).
+    anno_corrente = get_anno_corrente()
+    anno_futuro = _anno_successivo(anno_corrente)
+
     dip = Dipartimento(nome='Meccanica', sigla='MEC', ordine=1)
     db.session.add(dip)
     db.session.flush()
@@ -30,20 +44,19 @@ def test_scheda_docente_mostra_materie_dellanno_selezionato(app, db_session, mon
     db.session.flush()
 
     d = crea_docente('Palermo')
-    db.session.add(DocenteMateria(id_docente=d.id, id_materia=mat.id, anno_scol='2026-2027'))
+    db.session.add(DocenteMateria(id_docente=d.id, id_materia=mat.id, anno_scol=anno_futuro))
     db.session.commit()
 
     with app.test_client() as c:
-        # Anno corrente (2025-2026, calcolato da get_anno_corrente()): la
-        # materia assegnata per il 2026-2027 non deve comparire.
+        # Anno corrente: la materia assegnata per l'anno futuro non deve comparire.
         r = c.get(f'/docenti/{d.id}/modifica')
         assert r.status_code == 200
     assert mat.id not in catturato['kwargs']['mat_assegnate']
     assert catturato['kwargs']['anno_sel_materie'] == catturato['kwargs']['anno_corrente_materie']
 
     with app.test_client() as c:
-        r = c.get(f'/docenti/{d.id}/modifica?anno_materie=2026-2027')
+        r = c.get(f'/docenti/{d.id}/modifica?anno_materie={anno_futuro}')
         assert r.status_code == 200
     assert mat.id in catturato['kwargs']['mat_assegnate']
-    assert catturato['kwargs']['anno_sel_materie'] == '2026-2027'
-    assert '2026-2027' in catturato['kwargs']['anni_materie']
+    assert catturato['kwargs']['anno_sel_materie'] == anno_futuro
+    assert anno_futuro in catturato['kwargs']['anni_materie']

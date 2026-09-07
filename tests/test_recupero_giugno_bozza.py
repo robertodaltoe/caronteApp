@@ -11,6 +11,7 @@ Verifica i comportamenti critici:
 - i vincoli orari del docente vengono rispettati
 - elimina solo le lezioni dei corsi di giugno, mai quelle di agosto
 """
+import pytest
 from datetime import date
 from models import db
 from models.docente import Docente
@@ -20,6 +21,16 @@ from models.recupero import (RecuperoDocente, RecuperoGruppo, RecuperoLezione,
 from tests.conftest import crea_docente
 
 ANNO = '2025-2026'
+
+
+@pytest.fixture(autouse=True)
+def _pin_anno(monkeypatch):
+    """La route /recupero/genera-bozza confronta contro routes.recupero_giugno.ANNO
+    (importato da routes.recupero_costanti a import-time da get_anno_corrente())
+    — senza fissarlo qui il test smette di trovare i gruppi non appena l'anno
+    scolastico reale cambia (stesso fix di test_recupero_agosto_bozza.py)."""
+    import routes.recupero_giugno as mod
+    monkeypatch.setattr(mod, 'ANNO', ANNO)
 
 
 def _crea_rec_docente(docente, anno_scol=ANNO):

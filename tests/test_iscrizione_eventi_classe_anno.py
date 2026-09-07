@@ -11,7 +11,7 @@ etichetta (es. "3A LLI") è identica sia per la classe uscente sia per
 quella entrante, e uno scrutinio di fine agosto è "futuro" rispetto a
 una sessione di lavoro di metà mese pur appartenendo all'anno vecchio.
 """
-from datetime import date
+from datetime import date, timedelta
 from models import db
 from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
 from tests.conftest import crea_docente
@@ -73,8 +73,12 @@ def test_senza_anno_scol_si_comporta_come_prima_nessun_filtro(app, db_session):
     d = crea_docente('SenzaFiltro')
     db.session.commit()
 
+    # iscrivi_docente_a_eventi_classe() cerca eventi con data >= oggi: una
+    # data fissa nel passato (era 2026-08-31) smette di essere trovata non
+    # appena il calendario reale la supera — qui basta una data futura
+    # qualsiasi, il test non riguarda l'anno scolastico.
     ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio', classe='2A AFM',
-                      data=date(2026, 8, 31), origine='manuale')
+                      data=date.today() + timedelta(days=60), origine='manuale')
     db.session.add(ev)
     db.session.commit()
 

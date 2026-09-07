@@ -4,6 +4,83 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 124 — Audit generale (codice/privacy/guida) + 10 test rotti dal cambio anno scolastico reale
+
+Roberto chiede una "pausa dalla programmazione": un check generale su
+criticità di codice, rispetto privacy/GDPR, e stato di guida/FAQ/manuali.
+Audit di sola lettura (tre agenti paralleli), poi approfondimento
+diretto e primo giro di fix concordato con Roberto ("mi fido").
+
+**Audit — punti principali** (nessuna modifica al DB reale, solo lettura):
+- Codice: FK quasi tutte prive di indice (79/83), `except Exception`
+  silenziosi in punti sensibili (`backup_cifrato.py`, `auto_sync.py`,
+  `assenze_registrazione.py`), `modules/auto_sync.py` senza test
+  dedicati nonostante la storia di bug già corretti a mano.
+- Privacy: fallback di backup NON cifrato silenzioso se la cifratura
+  fallisce (`app.py::_backup_automatico`, righe ~779-802) — scrive una
+  copia in chiaro del DB, mai ripulita automaticamente. Resto solido
+  (controllo accessi centralizzato, cascade delete, anonimizzazione/
+  export dati già implementati in `routes/docenti.py`).
+- Guida: sistema ben fatto (`templates/guida/`, 25 sezioni) e
+  raggiungibile da navbar, ma manca del tutto una sezione sulla
+  sincronizzazione multi-postazione, e non menziona ancora i badge COE
+  "Cede a"/"Completa" né "risincronizza partecipanti"/"disabilita link".
+
+**10 test rotti (non regressioni — fixture con l'anno scolastico
+congelato)**: `get_anno_corrente()` è passato da 2025-2026 a 2026-2027
+il 1° settembre 2026 (oggi 07/09/2026). Diversi file di test avevano
+`ANNO`/`ANNO_AGO` scritti a mano come stringa fissa ('2025-2026') o
+date assolute nel passato, invece di allinearsi al calcolo reale (già
+in uso altrove nel progetto, es. `test_scrutinio_non_esclude_non_in_
+servizio.py`) o di fissare il valore con `monkeypatch` (pattern già
+presente in `test_recupero_agosto_calendario_dati.py` e
+`test_recupero_bug_ricorrenze.py`, semplicemente non replicato negli
+altri file). Corretti con lo stesso pattern:
+- `tests/test_recupero_agosto_bozza.py`, `test_recupero_giugno_bozza.py`,
+  `test_rientro_bozza.py`: fixture `autouse` che fissa con `monkeypatch`
+  la/le costanti congelate del modulo sotto test (`ANNO_AGO`/`ANNO`),
+  invece di lasciarle libere di andare fuori sincrono col calendario
+  reale.
+- `tests/test_privacy_motivo_assenza.py`: la data fissa dell'assenza di
+  test (2025-10-10) usciva dalla finestra "anno scolastico corrente"
+  (calcolata sempre da `date.today()` in `contesto_form_assenza()`,
+  non dalla data passata come parametro) — sostituita con un 10 ottobre
+  calcolato relativamente all'anno scolastico corrente reale.
+- `tests/test_docenti_materie_selettore_anno.py`,
+  `test_iscrizione_eventi_classe_anno.py`: stesso principio, un anno
+  "futuro"/una data futura calcolati relativamente a `get_anno_corrente()`
+  / `date.today()` invece di valori fissi.
+
+**Scoperta emersa nel sistemare `test_rientro_bozza.py`**: il fix ha
+smascherato che `test_conflitto_con_prova_agosto_stesso_docente` passava
+per il motivo SBAGLIATO — con l'ANNO_AGO disallineato, il gruppo
+"prova agosto" di test non veniva mai trovato, quindi
+`_genera_bozza_rientro()` non aveva nulla da cui rilevare un conflitto e
+il colloquio finiva comunque piazzato nello slot "occupato": l'asserzione
+`coll.data is None` risultava vera per puro caso (nessun piazzamento
+tentato), non perché il conflitto fosse davvero rilevato. Una volta
+allineato l'anno (serviva fissare ANCHE `routes.recupero.ANNO_AGO`, una
+TERZA copia congelata della stessa costante, oltre a `routes.rientro.
+ANNO` — la funzione fa `from routes.recupero import ANNO_AGO` a runtime
+dentro `_genera_bozza_rientro()`), il test esercita davvero il controllo
+di conflitto agosto↔rientro e continua a passare per il motivo giusto.
+Non risulta un bug della logica di produzione: in produzione le tre
+copie congelate di ANNO_AGO vengono tutte calcolate all'avvio
+dell'app, quindi restano allineate fra loro — è un caso di fragilità
+di test mascherata solo nei fixture, non una divergenza osservabile
+in esercizio.
+
+Verifica: `pytest` — 390/390 passati (era 390 totali, 10 falliti prima
+del fix). Nessuna modifica al DB reale né a `database.db`: solo file
+di test e questo devlog.
+
+**Prossimi passi concordati con Roberto** (audit completo, in coda):
+backup fallback non cifrato → da rendere visibile/pulito; test per
+`modules/auto_sync.py`; indici sulle FK più calde (assenza, supplenza,
+movimento_banca_ore, assegnazione_docente); guida sync multi-postazione;
+scadenza token piano attività personale; `except Exception` silenziosi
+mirati.
+
 ## Sessione 66 addendum 123 — Scrutinio: chi non è più in servizio resta in elenco (va sostituito, non tolto)
 
 Seguito del caso Volpe/May (contratto TD_GS): Roberto — "in realtà non

@@ -7,6 +7,7 @@ sono già stati corretti a mano più volte durante lo sviluppo:
 - la modalità "completa bozza" (solo_vuoti=True) non toglie un orario
   già assegnato manualmente
 """
+import pytest
 from datetime import date
 from models import db
 from models.docente import Docente
@@ -16,6 +17,22 @@ from models.rientro import RientroMateriaClasse, RientroCandidato, RientroColloq
 from tests.conftest import crea_docente, crea_periodo
 
 ANNO = '2025-2026'
+
+
+@pytest.fixture(autouse=True)
+def _pin_anno(monkeypatch):
+    """_genera_bozza_rientro() confronta contro DUE costanti congelate a
+    import-time, importate da moduli diversi: routes.rientro.ANNO (per i
+    candidati rientro) e routes.recupero.ANNO_AGO (per il controllo
+    incrociato con le prove di agosto, riletto localmente da
+    routes.rientro tramite `from routes.recupero import ANNO_AGO`) — senza
+    fissare ENTRAMBE, il controllo di conflitto con l'agosto smette di
+    funzionare non appena l'anno scolastico reale cambia (il gruppo agosto
+    di test non viene più trovato, il conflitto passa inosservato)."""
+    import routes.rientro as mod
+    monkeypatch.setattr(mod, 'ANNO', ANNO)
+    import routes.recupero as mod_rec
+    monkeypatch.setattr(mod_rec, 'ANNO_AGO', ANNO)
 
 
 def _crea_candidato(classe, cognome, nome='Test'):

@@ -7,6 +7,7 @@ volte a mano durante lo sviluppo:
 - la modalità "completa bozza" (solo_incompleti=True) non sovrascrive
   i gruppi già pianificati
 """
+import pytest
 from datetime import date
 from models import db
 from models.docente import Docente
@@ -16,6 +17,18 @@ from tests.conftest import crea_docente, crea_periodo
 
 ANNO_AGO = '2025-2026'
 PERIODO_AGO = 'prove_agosto'
+
+
+@pytest.fixture(autouse=True)
+def _pin_anno_ago(monkeypatch):
+    """genera_bozza_agosto() confronta contro modules.recupero_agosto_calendario.ANNO_AGO,
+    congelato a import-time da get_anno_corrente() — senza fissarlo qui, il
+    test smette di trovare i gruppi (creati con l'ANNO_AGO fisso di questo
+    file) non appena l'anno scolastico reale cambia (vedi
+    tests/test_recupero_agosto_calendario_dati.py::_patch_anno_ago, stesso
+    fix già applicato lì)."""
+    import modules.recupero_agosto_calendario as mod
+    monkeypatch.setattr(mod, 'ANNO_AGO', ANNO_AGO)
 
 
 def _crea_rec_docente(docente):

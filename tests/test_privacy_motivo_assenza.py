@@ -26,6 +26,18 @@ from modules.assenze_registrazione import (
 from tests.conftest import crea_docente
 
 
+def _data_in_anno_corrente():
+    """Un 10 ottobre sempre dentro l'anno scolastico corrente (qualunque
+    sia la data reale in cui gira il test) — contesto_form_assenza()
+    confronta gli utilizzi CCNL con date.today(), non con la data passata
+    come riferimento, quindi un'assenza con data fissa "si perde" dalla
+    finestra dell'anno corrente ogni volta che settembre fa scattare il
+    cambio di anno scolastico."""
+    oggi = date.today()
+    anno_inizio = oggi.year if oggi.month >= 9 else oggi.year - 1
+    return date(anno_inizio, 10, 10)
+
+
 def _crea_tabelle_estese(app):
     with app.app_context():
         from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante, AttivitaIstPresenza  # noqa
@@ -98,7 +110,7 @@ def test_utilizzi_ccnl_non_espone_contatori_riservati_a_chi_non_ha_titolo(app, d
     _crea_tabelle_estese(app)
     with app.app_context():
         d = crea_docente('Verdi')
-        db.session.add(Assenza(id_docente=d.id, data=date(2025, 10, 10),
+        db.session.add(Assenza(id_docente=d.id, data=_data_in_anno_corrente(),
                                 ora_inizio=1, ora_fine=2, motivo='lutto'))
         db.session.commit()
 
