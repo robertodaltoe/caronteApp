@@ -1,6 +1,89 @@
 # CaronteApp — Diario di sviluppo
 
 > File di log persistente delle sessioni di sviluppo con Claude.
+
+## Sessione 67 — Nuovo modulo "Progetti FSE/FESR" (Piano Estate e simili), prima fetta
+
+Nuovo capitolo di progetto: Roberto ha un'esigenza amministrativa/
+burocratica per la gestione del Piano Estate (PN "Scuola e competenze"
+2021-2027, FSE+, 9 moduli formativi) — pianificazione calendario,
+gestione documentale (bandi, decreti, incarichi) e supporto al
+monitoraggio finanziario per la rendicontazione finale. Discusso
+insieme l'architettura prima di scrivere codice:
+- **Area isolata**, non mescolata nel Piano delle Attività didattico
+  (Roberto: "non vorrei si mischiasse dentro quello che è l'iter delle
+  attività didattiche propriamente dette... un'area a sé per la
+  segreteria"). Le date dei moduli confluiranno in sola lettura
+  nell'Agenda per il controllo incrociato con gli impegni didattici
+  (non ancora fatto in questa prima fetta).
+- **Modello generico**, non hardcoded su "Piano Estate": deve poter
+  gestire anche altri progetti FSE/FESR futuri con lo stesso iter
+  (Progetto → Moduli → Incarichi → Documenti).
+- Verificata la documentazione reale del progetto di Roberto
+  ("Menti in Movimento", CUP D94D26002650007, codice
+  ESO4.6.A4.A-FSEPNLO-2026-1482, 48.105€, 9 moduli da 30 ore) sia
+  online (avviso ministeriale AOOGABMI prot. 112894 dell'11/05/2026,
+  DM 79/2026) sia sui modelli reali del DS (decreti, avviso interno,
+  lettere di incarico, dichiarazioni) — mai aperti i PDF con le
+  domande personali dei singoli candidati, solo i modelli/template e
+  i documenti ufficiali di progetto, come richiesto.
+- **Scoperta chiave**: il finanziamento NON è a tariffa lorda/netta a
+  scelta come inizialmente ipotizzato, ma a **Unità di Costo Standard
+  (UCS)** — un meccanismo fisso e diverso: 70€/h esperto, 30€/h tutor
+  ("lordo Stato" sia per interni sia per esterni), più un costo di
+  gestione di 5,10€ per ogni ora di presenza effettiva di ciascun
+  partecipante, calcolato da SIF2127 solo sui migliori N iscritti
+  (N = dichiarati in candidatura) — non su tutte le presenze
+  registrate. Nessun costo indiretto forfettario in QUESTO bando
+  (già incorporato nei costi standard), ma tenuto come campo opzionale
+  per bandi futuri "a costi reali" che lo prevedano esplicitamente
+  (richiesta esplicita di Roberto).
+
+**Prima fetta implementata** (CRUD di base, non ancora calendario/
+documenti/integrazione Agenda):
+- `models/progetto_fse.py` — `ProgettoFSE` → `ModuloFSE` → `IncaricoFSE`
+  (+ `SessioneFSE`/`PresenzaFSE`/`DocumentoFSE`, non ancora usati dalle
+  route in questa fetta ma già nel modello dati). `ModuloFSE.
+  costo_gestione_stimato()` replica la logica reale di SIF2127
+  (ordina le presenze per ore decrescenti, riconosce solo le prime N).
+- `routes/progetti_fse.py` — nuovo blueprint `progetti_fse`: elenco/
+  crea/modifica progetto, modulo, incarico; pagina di dettaglio con
+  riepilogo finanziario per modulo e scostamento dal budget.
+- Nuova sezione permessi `progetti_fse` in `models/permesso_ruolo.py`
+  (default: ds/collaboratore/segreteria tutti "modifica" — è un'area
+  amministrativa condivisa, non riservata) e voce di navbar dedicata,
+  fuori dai menu "Attività"/"Impostazioni" per restare isolata come
+  richiesto.
+- Nuove tabelle create automaticamente da `db.create_all()` (tabelle
+  nuove, non colonne aggiunte a tabelle esistenti — non serve una
+  migrazione additiva in `_auto_migrate()`).
+
+**Bug trovato e corretto dal collaudo dal vivo (non dai test)**: la
+pagina di dettaglio andava in errore 500 (intercettato dalla pagina di
+errore personalizzata, Sessione 66 addendum 131 — prova concreta che
+serve) — `TypeError: unsupported operand type(s) for -: 'float' and
+'decimal.Decimal'` calcolando lo scostamento dal budget in Jinja
+(`importo_autorizzato` è un `Numeric`/`Decimal`, `totale_previsto` un
+float Python). Spostato il calcolo in Python (route), con cast
+esplicito a float, e aggiunto un test di regressione che verifica il
+tipo — i test con `render_template` finto (necessari perché l'app di
+test non ha il `template_folder` reale) non lo avrebbero mai preso,
+serviva il collaudo dal vivo con `base.html` vero.
+
+Verifica: `pytest` 416/416 (411 + 5 nuovi). Collaudo end-to-end dal
+vivo su copia isolata del DB reale (redirect verificato con un
+`assert` esplicito prima di avviare il server): creato il progetto
+"Menti in Movimento" con i dati reali, aggiunto il modulo "Let's
+English" (30h, 15 partecipanti, cod. SIF2127 274787), aggiunto un
+incarico esperto (70€/h × 30h = 2100€, calcolato correttamente in
+pagina), verificata la sezione permessi in DB. `database.db` reale
+invariato (md5 identico), `PRAGMA integrity_check: ok`.
+
+**Prossimi passi** (non ancora fatti): calendario/sessioni del modulo
++ integrazione in sola lettura nell'Agenda per il controllo
+sovrapposizioni; generazione documenti (bandi/decreti/incarichi) dai
+modelli reali del DS; registro presenze partecipanti collegato al
+calcolo costi; cruscotto di monitoraggio finanziario complessivo.
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 

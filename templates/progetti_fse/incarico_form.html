@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica incarico' if incarico else 'Nuovo incarico' }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=modulo.id_progetto) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ modulo.progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ 'Modifica incarico' if incarico else 'Nuovo incarico' }} — {{ modulo.titolo }}
+    </h1>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Docente già censito in CaronteApp</label>
+        <select name="id_docente" data-search="1">
+            <option value="">— nessuno / esterno —</option>
+            {% for d in docenti %}
+            <option value="{{ d.id }}" {% if incarico and incarico.id_docente == d.id %}selected{% endif %}>{{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Oppure nome (se persona esterna non censita)</label>
+        <input type="text" name="nome_esterno" value="{{ incarico.nome_esterno if incarico else '' }}">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Ruolo *</label>
+            <select name="ruolo" required>
+                {% for cod, lbl in ruoli %}
+                <option value="{{ cod }}" {% if incarico and incarico.ruolo == cod %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Tipo di rapporto</label>
+            <select name="tipo_rapporto">
+                <option value="">—</option>
+                {% for cod, lbl in tipi_rapporto %}
+                <option value="{{ cod }}" {% if incarico and incarico.tipo_rapporto == cod %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Tariffa oraria (€/h)</label>
+            <input type="text" name="tariffa_oraria" value="{{ incarico.tariffa_oraria if incarico else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Ore previste</label>
+            <input type="text" name="ore_previste" value="{{ incarico.ore_previste if incarico else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Ore rendicontate</label>
+            <input type="text" name="ore_rendicontate" value="{{ incarico.ore_rendicontate if incarico else '' }}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Stato</label>
+        <select name="stato">
+            <option value="candidato" {% if incarico and incarico.stato == 'candidato' %}selected{% endif %}>Candidato</option>
+            <option value="incaricato" {% if not incarico or incarico.stato == 'incaricato' %}selected{% endif %}>Incaricato</option>
+            <option value="rinunciato" {% if incarico and incarico.stato == 'rinunciato' %}selected{% endif %}>Rinunciato</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Note</label>
+        <textarea name="note" rows="3">{{ incarico.note if incarico else '' }}</textarea>
+    </div>
+</div>
+<div style="margin-top:16px; display:flex; gap:10px;">
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+    <a href="{{ url_for('progetti_fse.dettaglio', id=modulo.id_progetto) }}" class="btn" style="background:#e5eaf0; color:var(--blu);">Annulla</a>
+</div>
+</form>
+{% endblock %}

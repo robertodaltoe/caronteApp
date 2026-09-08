@@ -55,6 +55,7 @@ SEZIONI = [
     ('incarichi',              'Assegna incarichi ai docenti'),
     ('assegnazioni',           'Assegnazioni classi'),
     ('aule',                   'Aule per classe'),
+    ('progetti_fse',           'Progetti FSE/FESR'),
 ]
 SEZIONI_LABEL = dict(SEZIONI)
 
@@ -72,6 +73,7 @@ SEZIONI_GRUPPI = [
     ('Docenti e incarichi', ['docenti', 'incarichi', 'tipi_incarico']),
     ('Istituto e calendario', ['calendario', 'istituto']),
     ('Assegnazioni', ['assegnazioni', 'aule']),
+    ('Progetti FSE/FESR', ['progetti_fse']),
 ]
 
 RUOLI_CONFIGURABILI = [
@@ -124,6 +126,7 @@ DEFAULT_MATRICE = {
     'incarichi':               {'ds': 'visualizza', 'collaboratore': 'esclusa',    'segreteria': 'esclusa'},
     'assegnazioni':            {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
     'aule':                    {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
+    'progetti_fse':            {'ds': 'modifica',   'collaboratore': 'modifica',   'segreteria': 'modifica'},
 }
 
 # Sezioni nate da uno scorporo di una sezione più ampia (Sessione 53):
@@ -202,6 +205,7 @@ BLUEPRINT_SEZIONE = {
     'assegnazioni':       'assegnazioni',
     'aule':               'aule',
     'piano_personale':    'piano_personale',
+    'progetti_fse':       'progetti_fse',
 }
 ENDPOINT_SEZIONE = {
     'attivita_ist.dipartimenti':                 'dipartimenti',
@@ -291,7 +295,7 @@ def _migra_split_sezioni_permessi():
     # dal default, come per una sezione mai vista prima da questa
     # installazione ('orario_globale', Sessione 53; 'piano_personale',
     # Sessione 57).
-    for sezione in ('orario_globale', 'piano_personale'):
+    for sezione in ('orario_globale', 'piano_personale', 'progetti_fse'):
         for ruolo, _ in RUOLI_CONFIGURABILI:
             if not PermessoRuolo.query.filter_by(ruolo=ruolo, sezione=sezione).first():
                 db.session.add(PermessoRuolo(ruolo=ruolo, sezione=sezione,

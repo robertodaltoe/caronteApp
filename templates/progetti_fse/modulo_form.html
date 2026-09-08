@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica modulo' if modulo else 'Nuovo modulo' }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ 'Modifica modulo' if modulo else 'Nuovo modulo' }}
+    </h1>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Titolo del modulo *</label>
+        <input type="text" name="titolo" required value="{{ modulo.titolo if modulo else '' }}" placeholder="es. Let's English">
+    </div>
+    <div class="form-group">
+        <label>Tipologia / contenuto del corso</label>
+        <input type="text" name="tipologia" value="{{ modulo.tipologia if modulo else '' }}" placeholder="es. Lingua straniera (inglese)">
+    </div>
+    <div class="form-group">
+        <label>Codice piattaforma (es. SIF2127)</label>
+        <input type="text" name="codice_esterno" value="{{ modulo.codice_esterno if modulo else '' }}">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Ore</label>
+            <input type="number" name="ore" value="{{ modulo.ore if modulo else 30 }}">
+        </div>
+        <div class="form-group">
+            <label>Partecipanti previsti</label>
+            <input type="number" name="n_partecipanti_previsti" value="{{ modulo.n_partecipanti_previsti if modulo else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Minimo partecipanti</label>
+            <input type="number" name="n_partecipanti_minimo" value="{{ modulo.n_partecipanti_minimo if modulo else 9 }}">
+        </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Data inizio</label>
+            <input type="date" name="data_inizio" value="{{ modulo.data_inizio.isoformat() if modulo and modulo.data_inizio else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Data fine</label>
+            <input type="date" name="data_fine" value="{{ modulo.data_fine.isoformat() if modulo and modulo.data_fine else '' }}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Importo autorizzato (€)</label>
+        <input type="text" name="importo_autorizzato" value="{{ modulo.importo_autorizzato if modulo else '' }}">
+    </div>
+    <div class="form-group">
+        <label>Stato</label>
+        <select name="stato">
+            {% for cod, lbl in stati %}
+            <option value="{{ cod }}" {% if modulo and modulo.stato == cod %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Note</label>
+        <textarea name="note" rows="3">{{ modulo.note if modulo else '' }}</textarea>
+    </div>
+</div>
+<div style="margin-top:16px; display:flex; gap:10px;">
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+    <a href="{{ url_for('progetti_fse.dettaglio', id=progetto.id) }}" class="btn" style="background:#e5eaf0; color:var(--blu);">Annulla</a>
+</div>
+</form>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Progetti FSE/FESR{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('layers') }} Progetti FSE/FESR</h1>
+        <p style="font-size:.84rem; color:var(--grigio);">
+            Area amministrativa per i progetti finanziati da fondi strutturali europei
+            (es. Piano Estate — PN "Scuola e competenze" 2021-2027): moduli, incarichi,
+            documenti e stima costi. Separata dal Piano delle Attività didattico.
+        </p>
+    </div>
+    <a href="{{ url_for('progetti_fse.nuovo') }}" class="btn btn-success">
+        {{ icon('plus') }} Nuovo progetto
+    </a>
+</div>
+
+{% if not progetti %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessun progetto ancora registrato.
+</div>
+{% else %}
+<div class="card">
+<div style="overflow-x:auto;">
+<table style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th style="text-align:left; padding:8px;">Titolo</th>
+            <th style="text-align:left; padding:8px;">Codice progetto</th>
+            <th style="text-align:left; padding:8px;">CUP</th>
+            <th style="text-align:center; padding:8px;">Moduli</th>
+            <th style="text-align:right; padding:8px;">Importo autorizzato</th>
+            <th style="text-align:center; padding:8px;">Stato</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in progetti %}
+        <tr style="border-top:1px solid #e5eaf0;">
+            <td style="padding:8px;">
+                <a href="{{ url_for('progetti_fse.dettaglio', id=p.id) }}" style="font-weight:700;">{{ p.titolo }}</a>
+            </td>
+            <td style="padding:8px; font-size:.82rem; color:var(--grigio);">{{ p.codice_progetto or '—' }}</td>
+            <td style="padding:8px; font-size:.82rem; color:var(--grigio);">{{ p.cup or '—' }}</td>
+            <td style="padding:8px; text-align:center;">{{ p.moduli|length }}</td>
+            <td style="padding:8px; text-align:right;">
+                {% if p.importo_autorizzato %}{{ '%.2f'|format(p.importo_autorizzato) }} €{% else %}—{% endif %}
+            </td>
+            <td style="padding:8px; text-align:center;">
+                <span class="badge badge-grigio">{{ stati_label.get(p.stato, p.stato) }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ progetto.titolo }}{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+    <div>
+        <a href="{{ url_for('progetti_fse.index') }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+            {{ icon('arrow-left') }} Progetti FSE/FESR
+        </a>
+        <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ progetto.titolo }}</h1>
+        <div style="font-size:.82rem; color:var(--grigio);">
+            {% if progetto.codice_progetto %}{{ progetto.codice_progetto }} · {% endif %}
+            {% if progetto.cup %}CUP {{ progetto.cup }}{% endif %}
+        </div>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('progetti_fse.modifica', id=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            {{ icon('edit') }} Modifica progetto
+        </a>
+        <a href="{{ url_for('progetti_fse.nuovo_modulo', id_progetto=progetto.id) }}" class="btn btn-success btn-sm">
+            {{ icon('plus') }} Nuovo modulo
+        </a>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;">
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--blu);">{{ progetto.moduli|length }}</div>
+        <div style="font-size:.78rem; color:var(--grigio);">MODULI</div>
+    </div>
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--verde);">
+            {% if progetto.importo_autorizzato %}{{ '%.0f'|format(progetto.importo_autorizzato) }} €{% else %}—{% endif %}
+        </div>
+        <div style="font-size:.78rem; color:var(--grigio);">IMPORTO AUTORIZZATO</div>
+    </div>
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:#1e40af;">{{ '%.0f'|format(totale_previsto) }} €</div>
+        <div style="font-size:.78rem; color:var(--grigio);">STIMA COSTO (formazione + gestione)</div>
+    </div>
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:{% if scostamento > 0 %}var(--rosso){% else %}var(--verde){% endif %};">
+            {% if scostamento > 0 %}+{% endif %}{{ '%.0f'|format(scostamento) }} €
+        </div>
+        <div style="font-size:.78rem; color:var(--grigio);">SCOSTAMENTO DAL BUDGET</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="font-size:.95rem;">{{ icon('list') }} Moduli</h2>
+    {% if not progetto.moduli %}
+    <p style="color:var(--grigio); text-align:center; padding:24px;">Nessun modulo ancora registrato.</p>
+    {% else %}
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:8px;">Titolo</th>
+                <th style="text-align:center; padding:8px;">Ore</th>
+                <th style="text-align:center; padding:8px;">Partecipanti</th>
+                <th style="text-align:left; padding:8px;">Incarichi</th>
+                <th style="text-align:right; padding:8px;">Importo autorizzato</th>
+                <th style="text-align:right; padding:8px;">Stima costo</th>
+                <th style="text-align:center; padding:8px;">Stato</th>
+                <th style="text-align:center; padding:8px;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in riepilogo_moduli %}
+            {% set m = r.modulo %}
+            <tr style="border-top:1px solid #e5eaf0;">
+                <td style="padding:8px;">
+                    <strong>{{ m.titolo }}</strong>
+                    {% if m.codice_esterno %}<div style="font-size:.75rem; color:var(--grigio);">Cod. {{ m.codice_esterno }}</div>{% endif %}
+                </td>
+                <td style="padding:8px; text-align:center;">{{ m.ore }}</td>
+                <td style="padding:8px; text-align:center;">
+                    {{ m.n_partecipanti_previsti or '—' }}
+                    {% if m.n_partecipanti_minimo %}<span style="color:var(--grigio); font-size:.75rem;">(min. {{ m.n_partecipanti_minimo }})</span>{% endif %}
+                </td>
+                <td style="padding:8px;">
+                    {% for inc in m.incarichi %}
+                    <div style="font-size:.8rem;">{{ inc.nome_completo }} — {{ inc.ruolo }}</div>
+                    {% else %}
+                    <span style="color:var(--grigio);">—</span>
+                    {% endfor %}
+                    <a href="{{ url_for('progetti_fse.nuovo_incarico', id_modulo=m.id) }}" style="font-size:.75rem;">+ aggiungi</a>
+                </td>
+                <td style="padding:8px; text-align:right;">
+                    {% if m.importo_autorizzato %}{{ '%.2f'|format(m.importo_autorizzato) }} €{% else %}—{% endif %}
+                </td>
+                <td style="padding:8px; text-align:right;">
+                    {% if r.costo_stimato %}{{ '%.2f'|format(r.costo_stimato) }} €{% else %}—{% endif %}
+                </td>
+                <td style="padding:8px; text-align:center;">
+                    <span class="badge badge-grigio">{{ m.stato }}</span>
+                </td>
+                <td style="padding:8px; text-align:center; white-space:nowrap;">
+                    <a href="{{ url_for('progetti_fse.modifica_modulo', id=m.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">{{ icon('edit') }}</a>
+                    <form method="post" action="{{ url_for('progetti_fse.elimina_modulo', id=m.id) }}" style="display:inline;"
+                          onsubmit="return confirm('Eliminare il modulo {{ m.titolo }}?')">
+                        <button type="submit" class="btn btn-danger btn-sm">{{ icon('close') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+{% if progetto.note_ammissibilita %}
+<div class="card" style="margin-top:16px;">
+    <h2 style="font-size:.9rem;">Note su spese ammissibili/non ammissibili</h2>
+    <p style="font-size:.85rem; color:var(--grigio); white-space:pre-wrap;">{{ progetto.note_ammissibilita }}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica progetto' if progetto else 'Nuovo progetto' }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.index') }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Progetti FSE/FESR
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ 'Modifica progetto' if progetto else 'Nuovo progetto' }}
+    </h1>
+</div>
+
+<form method="post">
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px;">
+    <div class="card">
+        <h2 style="font-size:.95rem;">Dati generali</h2>
+        <div class="form-group">
+            <label>Titolo del progetto *</label>
+            <input type="text" name="titolo" required value="{{ progetto.titolo if progetto else '' }}" placeholder='es. "Menti in Movimento"'>
+        </div>
+        <div class="form-group">
+            <label>Programma</label>
+            <input type="text" name="programma" value="{{ progetto.programma if progetto else '' }}" placeholder='es. PN "Scuola e competenze" 2021-2027'>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label>Fondo</label>
+                <input type="text" name="fondo" value="{{ progetto.fondo if progetto else '' }}" placeholder="FSE+ / FESR">
+            </div>
+            <div class="form-group">
+                <label>Anno scolastico</label>
+                <input type="text" name="anno_scol" value="{{ progetto.anno_scol if progetto else '' }}" placeholder="2026-2027">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label>Obiettivo specifico</label>
+                <input type="text" name="obiettivo_specifico" value="{{ progetto.obiettivo_specifico if progetto else '' }}" placeholder="ESO4.6">
+            </div>
+            <div class="form-group">
+                <label>Azione</label>
+                <input type="text" name="azione" value="{{ progetto.azione if progetto else '' }}" placeholder="ESO4.6.A4.A">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label>Codice progetto</label>
+                <input type="text" name="codice_progetto" value="{{ progetto.codice_progetto if progetto else '' }}" placeholder="ESO4.6.A4.A-FSEPNLO-2026-1482">
+            </div>
+            <div class="form-group">
+                <label>CUP</label>
+                <input type="text" name="cup" value="{{ progetto.cup if progetto else '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Stato</label>
+            <select name="stato">
+                {% for cod, lbl in stati %}
+                <option value="{{ cod }}" {% if progetto and progetto.stato == cod %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Riferimento avviso ministeriale</label>
+            <input type="text" name="riferimento_avviso" value="{{ progetto.riferimento_avviso if progetto else '' }}" placeholder="Avviso prot. n. 112894 dell'11/05/2026 (D.M. 79/2026)">
+        </div>
+        <div class="form-group">
+            <label>Riferimento avviso interno di selezione</label>
+            <input type="text" name="riferimento_bando_interno" value="{{ progetto.riferimento_bando_interno if progetto else '' }}">
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size:.95rem;">Modello di costo</h2>
+        <div class="form-group">
+            <label>Tipo di costo</label>
+            <select name="tipo_costo" id="tipo_costo">
+                {% for cod, lbl in tipi_costo %}
+                <option value="{{ cod }}" {% if progetto and progetto.tipo_costo == cod or (not progetto and cod == 'ucs') %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label>Importo autorizzato progetto (€)</label>
+                <input type="text" name="importo_autorizzato" value="{{ progetto.importo_autorizzato if progetto else '' }}">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label>Tariffa oraria esperto (€/h)</label>
+                <input type="text" name="tariffa_esperto" value="{{ progetto.tariffa_esperto if progetto else '' }}" placeholder="70.00">
+            </div>
+            <div class="form-group">
+                <label>Tariffa oraria tutor (€/h)</label>
+                <input type="text" name="tariffa_tutor" value="{{ progetto.tariffa_tutor if progetto else '' }}" placeholder="30.00">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Costo di gestione per ora/partecipante (€)</label>
+            <input type="text" name="costo_gestione_ora_partecipante" value="{{ progetto.costo_gestione_ora_partecipante if progetto else '' }}" placeholder="5.10">
+        </div>
+        <div style="border-top:1px solid #e5eaf0; margin:14px 0; padding-top:14px;">
+            <div style="font-size:.82rem; color:var(--grigio); margin-bottom:8px;">
+                Costi indiretti — solo se il bando li prevede esplicitamente
+                (i progetti a costi standard come Piano Estate di norma NON li prevedono:
+                sono già incorporati nelle tariffe sopra).
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group">
+                    <label>Percentuale forfettaria (%)</label>
+                    <input type="text" name="percentuale_costi_indiretti" value="{{ progetto.percentuale_costi_indiretti if progetto else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Oppure importo fisso (€)</label>
+                    <input type="text" name="importo_costi_indiretti_fisso" value="{{ progetto.importo_costi_indiretti_fisso if progetto else '' }}">
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Note su spese ammissibili/non ammissibili</label>
+            <textarea name="note_ammissibilita" rows="4">{{ progetto.note_ammissibilita if progetto else '' }}</textarea>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top:20px; display:flex; gap:10px;">
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+    <a href="{{ url_for('progetti_fse.index') }}" class="btn" style="background:#e5eaf0; color:var(--blu);">Annulla</a>
+</div>
+</form>
+{% endblock %}

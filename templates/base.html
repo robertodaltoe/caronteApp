@@ -574,6 +574,11 @@
     {% endif %}
     <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">{{ icon('monitor') }}</span> Display</a>
 
+    {% if puo_vedere('progetti_fse') %}
+    <a href="{{ url_for('progetti_fse.index') }}" title="Area amministrativa isolata per i progetti finanziati da fondi strutturali europei (es. Piano Estate)">
+        <span class="nav-ic">{{ icon('layers') }}</span> Progetti FSE/FESR</a>
+    {% endif %}
+
     <a href="{{ url_for('impostazioni.index') }}"><span class="nav-ic">{{ icon('gear') }}</span> Impostazioni</a>
     <a href="{{ url_for('guida.index') }}"><span class="nav-ic">{{ icon('help') }}</span> Guida</a>
 
