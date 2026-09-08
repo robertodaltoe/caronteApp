@@ -2,6 +2,86 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 67 addendum 3 — Generazione documenti (bando, decreto, incarichi)
+
+Seguito diretto della fetta "Progetti FSE/FESR": generazione da modello
+dei quattro documenti richiesti da Roberto ("generazione di bandi,
+decreti di nomina e incarichi"), con attenzione esplicita a separare
+con precisione contenuto fisso e parti variabili, come richiesto
+("presta molta attenzione alla preparazione di tutti i modelli, sono
+la parte che può creare problemi a livello di verifica di correttezza
+della procedura").
+
+**Analisi preliminare**: letti per intero (via `textutil`/`pdftotext`,
+mai i PDF con le domande personali dei singoli candidati nella
+sottocartella "AVVISO PIANO ESTATE") i modelli reali del DS nella
+cartella `Drive PIANO ESTATE 2026/`: avviso di selezione interna,
+decreto di nomina, lettera di incarico (facsimile con placeholder,
+sicuro da riprodurre integralmente), contratto di lavoro autonomo.
+Individuate ~20 premesse normative generiche identiche in tutti e
+quattro i documenti (R.D. 2440/1923, D.Lgs 165/2001, regolamenti UE sui
+fondi strutturali, ecc.) — comuni a qualunque progetto FSE+/FESR con
+questa modalità di reclutamento, non solo a Piano Estate — separate
+dalle premesse specifiche del singolo progetto (nota di autorizzazione,
+decreto di assunzione al bilancio, delibera del CdI di adesione), che
+cambiano da bando a bando e restano quindi testo libero.
+
+**Implementato**:
+- `templates/progetti_fse/documenti/_premesse_normative.html` — le
+  premesse normative generiche, fisse, condivise dai 4 modelli via
+  `{% include %}`.
+- 4 template HTML stampabili (stesso pattern WeasyPrint già in uso per
+  i decreti esistenti, es. `routes/docenti.py::esporta_dati`):
+  `avviso_selezione.html` (elenca automaticamente tutti i moduli del
+  progetto con le tariffe), `decreto_nomina.html` (tabella incarichi
+  selezionabili), `lettera_incarico.html` (personale interno/altra
+  scuola), `contratto_autonomo.html` (esterni, con dati anagrafici).
+- `modules/dati_istituto.py` — nuovo modulo con le costanti
+  dell'istituto (denominazione, C.F., indirizzo, DS in carica...): dati
+  che cambiano raramente e non dipendono dal singolo progetto, quindi
+  non vanno ripetuti/ridigitati per ogni ProgettoFSE.
+- **Collegamento automatico fra documenti successivi**: quando un
+  documento generato viene protocollato (route `modifica_documento`,
+  già prevista dal modello `DocumentoFSE` della prima fetta), il suo
+  protocollo/data restano registrati e vengono riletti per comporre la
+  frase "prot. n. X del gg/mm/aaaa" nei documenti successivi dello
+  stesso progetto (il decreto cita l'avviso, il contratto cita il
+  decreto) — evita di ridigitare a mano gli estremi e il rischio di
+  errori di trascrizione nei riferimenti incrociati fra atti, che è
+  esattamente il tipo di errore su cui Roberto ha chiesto attenzione.
+  Se il documento di riferimento non è ancora stato protocollato, la
+  citazione resta assente piuttosto che scrivere "prot. n. None".
+- Nuovi campi: `ProgettoFSE.premesse_specifiche` (testo libero, una
+  premessa per riga); `IncaricoFSE.luogo_nascita/data_nascita/
+  codice_fiscale/indirizzo_residenza` (richiesti solo per il contratto
+  di lavoro autonomo, non per la lettera di incarico al personale
+  interno) — migrazioni additive in `_auto_migrate()`.
+- Link di generazione aggiunti nel dettaglio progetto (pulsante
+  "Documenti") e per singolo incarico (icona nella riga, che punta a
+  lettera di incarico o contratto a seconda di `tipo_rapporto`).
+
+**Verifica**: `pytest` 430/430 (19 nel file dei progetti FSE, 8 nuovi
+per la generazione documenti). Collaudo end-to-end dal vivo su copia
+isolata del DB reale: creato un progetto/modulo/due incarichi di prova
+(un interno e un "lavoratore autonomo" con dati anagrafici fittizi, MAI
+dati reali), generati tutti e 4 i PDF via richieste HTTP dirette (con
+token CSRF autentico prelevato dalla pagina, per riprodurre esattamente
+il comportamento reale del browser — la sessione senza JavaScript del
+client HTTP grezzo non è un caso equivalente all'uso reale, servita a
+isolare un problema del proprio script di verifica prima di dichiarare
+"fatto"). Verificato nel PDF finale: tariffe e importi corretti
+(2100€/900€ esperto/tutor su 30 ore), citazione automatica del
+protocollo dell'avviso nel decreto e nella lettera dopo la
+protocollazione, dati anagrafici del contratto correttamente in
+tabella. Un refuso trovato solo dal PDF reale (virgolette doppie
+annidate nella denominazione dell'istituto, `"I.I.S. "Leonardo da
+Vinci""`) e corretto — non lo avrebbe mostrato nessun test unitario,
+serviva leggere l'output finale. `database.db` reale invariato dopo il
+collaudo (md5 identico, `PRAGMA integrity_check: ok`).
+
+**Prossimi passi** (non ancora fatti): cruscotto di monitoraggio
+finanziario complessivo multi-progetto.
+
 ## Sessione 67 — Nuovo modulo "Progetti FSE/FESR" (Piano Estate e simili), prima fetta
 
 Nuovo capitolo di progetto: Roberto ha un'esigenza amministrativa/

@@ -8,14 +8,18 @@ stesso iter). Volutamente separata dal Piano delle Attività didattico
 confluiscono in sola lettura nell'Agenda per il controllo incrociato
 con gli impegni didattici dei docenti incaricati.
 """
+import io
 from datetime import datetime, date
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file
 from models import db
 from models.progetto_fse import (
     ProgettoFSE, ModuloFSE, IncaricoFSE, SessioneFSE, PresenzaFSE, DocumentoFSE,
-    STATI_PROGETTO, STATI_MODULO, RUOLI_INCARICO, TIPI_RAPPORTO, TIPI_COSTO,
+    STATI_PROGETTO, STATI_MODULO, RUOLI_INCARICO, RUOLI_INCARICO_LABEL,
+    TIPI_RAPPORTO, TIPI_COSTO, STATI_DOCUMENTO,
+    TIPI_DOCUMENTO_GENERABILI, TIPI_DOCUMENTO_GENERABILI_LABEL,
 )
 from models.docente import Docente
+from modules import dati_istituto
 
 progetti_fse_bp = Blueprint('progetti_fse', __name__)
 
@@ -65,6 +69,7 @@ def nuovo():
             riferimento_avviso=request.form.get('riferimento_avviso', '').strip() or None,
             riferimento_bando_interno=request.form.get('riferimento_bando_interno', '').strip() or None,
             note_ammissibilita=request.form.get('note_ammissibilita', '').strip() or None,
+            premesse_specifiche=request.form.get('premesse_specifiche', '').strip() or None,
             creato_da=_utente(),
         )
         db.session.add(p)
@@ -99,6 +104,7 @@ def modifica(id):
         p.riferimento_avviso = request.form.get('riferimento_avviso', '').strip() or None
         p.riferimento_bando_interno = request.form.get('riferimento_bando_interno', '').strip() or None
         p.note_ammissibilita = request.form.get('note_ammissibilita', '').strip() or None
+        p.premesse_specifiche = request.form.get('premesse_specifiche', '').strip() or None
         db.session.commit()
         flash('Progetto aggiornato.', 'success')
         return redirect(url_for('progetti_fse.dettaglio', id=p.id))
@@ -222,6 +228,10 @@ def nuovo_incarico(id_modulo):
             ore_rendicontate=_decimal(request.form, 'ore_rendicontate'),
             stato=request.form.get('stato', 'incaricato'),
             note=request.form.get('note', '').strip() or None,
+            luogo_nascita=request.form.get('luogo_nascita', '').strip() or None,
+            data_nascita=_data(request.form, 'data_nascita'),
+            codice_fiscale=request.form.get('codice_fiscale', '').strip().upper() or None,
+            indirizzo_residenza=request.form.get('indirizzo_residenza', '').strip() or None,
         )
         db.session.add(inc)
         db.session.commit()
@@ -247,6 +257,10 @@ def modifica_incarico(id):
         inc.ore_rendicontate = _decimal(request.form, 'ore_rendicontate')
         inc.stato = request.form.get('stato', inc.stato)
         inc.note = request.form.get('note', '').strip() or None
+        inc.luogo_nascita = request.form.get('luogo_nascita', '').strip() or None
+        inc.data_nascita = _data(request.form, 'data_nascita')
+        inc.codice_fiscale = request.form.get('codice_fiscale', '').strip().upper() or None
+        inc.indirizzo_residenza = request.form.get('indirizzo_residenza', '').strip() or None
         db.session.commit()
         flash('Incarico aggiornato.', 'success')
         return redirect(url_for('progetti_fse.dettaglio', id=inc.modulo.id_progetto))
@@ -350,3 +364,242 @@ def elimina_presenza(id):
     db.session.commit()
     flash(f'{nome} rimosso dal registro presenze.', 'warning')
     return redirect(url_for('progetti_fse.presenze_modulo', id_modulo=id_modulo))
+
+
+# ── GENERAZIONE DOCUMENTI ────────────────────────────────────────────
+# I quattro modelli coprono il ciclo bandi -> nomina -> incarico
+# richiesto: avviso di selezione interna, decreto di nomina, lettera di
+# incarico (personale interno/altra scuola) e contratto di lavoro
+# autonomo (esterni). Le circa 20 premesse normative generiche comuni a
+# qualunque progetto FSE+/FESR sono fisse nel template
+# (_premesse_normative.html); tutto il resto (dati progetto, moduli,
+# incarichi, riferimenti a protocolli di documenti già generati) è
+# variabile e viene passato dalla route.
+#
+# Il collegamento fra documenti successivi (es. il decreto di nomina
+# cita il protocollo dell'avviso di selezione; il contratto cita quello
+# del decreto) è automatico: quando un documento generato viene
+# protocollato (route modifica_documento), il suo protocollo/data resta
+# registrato sul DocumentoFSE e viene riletto per comporre la frase
+# "prot. n. X del Y" nei documenti successivi dello stesso progetto —
+# evitare di ridigitare a mano gli estremi riduce il rischio di errori
+# di trascrizione nei riferimenti incrociati fra atti.
+def _riferimento_documento(progetto, tipo):
+    """Cerca l'ultimo DocumentoFSE protocollato di un certo tipo per il
+    progetto e ne compone la stringa "prot. n. X del gg/mm/aaaa" da
+    citare nei documenti successivi. None se non ancora protocollato."""
+    doc = (DocumentoFSE.query
+           .filter_by(id_progetto=progetto.id, tipo=tipo)
+           .filter(DocumentoFSE.protocollo.isnot(None))
+           .order_by(DocumentoFSE.data_documento.desc().nullslast(), DocumentoFSE.id.desc())
+           .first())
+    if not doc:
+        return None
+    if doc.data_documento:
+        return f'prot. n. {doc.protocollo} del {doc.data_documento.strftime("%d/%m/%Y")}'
+    return f'prot. n. {doc.protocollo}'
+
+
+def _rendi_pdf_o_html(html_content, nome_file):
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=False,
+            download_name=f'{nome_file}.pdf',
+        )
+    except (ImportError, OSError):
+        # ImportError: WeasyPrint non installato. OSError: WeasyPrint è
+        # installato ma non trova le librerie di sistema (pango/cairo/
+        # gdk-pixbuf) — stesso caso pratico già documentato per la
+        # sandbox Linux (vedi CLAUDE.md), non un bug: fallback HTML con
+        # CSS di stampa, stampabile comunque dal browser.
+        return html_content
+
+
+@progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti')
+def documenti_progetto(id_progetto):
+    p = ProgettoFSE.query.get_or_404(id_progetto)
+    documenti = sorted(p.documenti, key=lambda d: d.creato_il, reverse=True)
+    return render_template('progetti_fse/documenti_index.html', progetto=p,
+        documenti=documenti, tipi_label=TIPI_DOCUMENTO_GENERABILI_LABEL,
+        stati_label=dict(STATI_DOCUMENTO))
+
+
+@progetti_fse_bp.route('/progetti-fse/documenti/<int:id>/modifica', methods=['GET', 'POST'])
+def modifica_documento(id):
+    doc = DocumentoFSE.query.get_or_404(id)
+    if request.method == 'POST':
+        doc.protocollo = request.form.get('protocollo', '').strip() or None
+        doc.data_documento = _data(request.form, 'data_documento')
+        doc.stato = request.form.get('stato', doc.stato)
+        doc.note = request.form.get('note', '').strip() or None
+        db.session.commit()
+        flash('Documento aggiornato.', 'success')
+        return redirect(url_for('progetti_fse.documenti_progetto', id_progetto=doc.id_progetto))
+
+    return render_template('progetti_fse/documento_form.html', documento=doc,
+        stati=STATI_DOCUMENTO, tipi_label=TIPI_DOCUMENTO_GENERABILI_LABEL)
+
+
+@progetti_fse_bp.route('/progetti-fse/documenti/<int:id>/elimina', methods=['POST'])
+def elimina_documento(id):
+    doc = DocumentoFSE.query.get_or_404(id)
+    id_progetto = doc.id_progetto
+    db.session.delete(doc)
+    db.session.commit()
+    flash('Documento eliminato dall\'elenco (il file eventualmente scaricato non viene toccato).', 'warning')
+    return redirect(url_for('progetti_fse.documenti_progetto', id_progetto=id_progetto))
+
+
+@progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/avviso-selezione', methods=['GET', 'POST'])
+def genera_avviso_selezione(id_progetto):
+    p = ProgettoFSE.query.get_or_404(id_progetto)
+    requisito_esperto_default = (
+        "Il requisito di accesso per il conferimento dell'incarico di Docente Esperto è la Laurea "
+        "magistrale o Vecchio Ordinamento o specialistica oppure l'abilitazione all'insegnamento, nelle "
+        "materie afferenti le tematiche e/o le attività oggetto del percorso per il quale ci si candida."
+    )
+    requisito_tutor_default = (
+        "Il requisito di accesso per il conferimento dell'incarico di Docente Tutor è il diploma di scuola "
+        "secondaria superiore oppure l'abilitazione all'insegnamento."
+    )
+    vincoli_default = (
+        "I moduli saranno attivati entro l'anno scolastico in corso e conclusi entro il termine previsto "
+        "dall'Autorità di gestione. I moduli potranno non essere attivati qualora non si raggiunga il "
+        "numero minimo di partecipanti previsto e saranno revocati qualora il numero di frequentanti non "
+        "consenta il raggiungimento del target."
+    )
+    if request.method == 'POST':
+        html_content = render_template('progetti_fse/documenti/avviso_selezione.html',
+            progetto=p, data_generazione=date.today(),
+            scadenza_data=_data(request.form, 'scadenza_data'),
+            scadenza_ora=request.form.get('scadenza_ora', '').strip() or '____',
+            requisiti_esperto=request.form.get('requisiti_esperto', '').strip() or requisito_esperto_default,
+            requisiti_tutor=request.form.get('requisiti_tutor', '').strip() or requisito_tutor_default,
+            vincoli_attivazione=request.form.get('vincoli_attivazione', '').strip() or vincoli_default,
+            istituto=dati_istituto.DENOMINAZIONE, comune=dati_istituto.COMUNE,
+            peo=dati_istituto.PEO, sito_web=dati_istituto.SITO_WEB,
+            ds_titolo=dati_istituto.DS_TITOLO, ds_nome=dati_istituto.DS_NOME_COGNOME,
+            regolamento_incarichi=dati_istituto.REGOLAMENTO_INCARICHI_INDIVIDUALI,
+        )
+        doc = DocumentoFSE(id_progetto=p.id, tipo='avviso_selezione', fase='selezione',
+            titolo=f'Avviso di selezione — {p.titolo}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Avviso di selezione generato. Ricorda di registrare protocollo e data dopo la '
+              'protocollazione.', 'success')
+        return _rendi_pdf_o_html(html_content, f'avviso_selezione_{p.id}')
+
+    return render_template('progetti_fse/documenti/genera_avviso.html', progetto=p,
+        requisito_esperto_default=requisito_esperto_default,
+        requisito_tutor_default=requisito_tutor_default,
+        vincoli_default=vincoli_default)
+
+
+@progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/decreto-nomina', methods=['GET', 'POST'])
+def genera_decreto_nomina(id_progetto):
+    p = ProgettoFSE.query.get_or_404(id_progetto)
+    incarichi_disponibili = [i for m in p.moduli for i in m.incarichi if i.stato == 'incaricato']
+
+    if request.method == 'POST':
+        ids_scelti = {int(v) for v in request.form.getlist('id_incarico')}
+        incarichi = [i for i in incarichi_disponibili if i.id in ids_scelti]
+        if not incarichi:
+            flash('Seleziona almeno un incarico da nominare.', 'error')
+            return redirect(url_for('progetti_fse.genera_decreto_nomina', id_progetto=p.id))
+
+        riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
+        html_content = render_template('progetti_fse/documenti/decreto_nomina.html',
+            progetto=p, data_generazione=date.today(), incarichi=incarichi,
+            ruoli_label=RUOLI_INCARICO_LABEL, riferimento_bando=riferimento_bando,
+            note_aggiuntive=request.form.get('note_aggiuntive', '').strip() or None,
+            sito_web=dati_istituto.SITO_WEB,
+            ds_titolo=dati_istituto.DS_TITOLO, ds_nome=dati_istituto.DS_NOME_COGNOME,
+        )
+        doc = DocumentoFSE(id_progetto=p.id, tipo='decreto_nomina', fase='nomina',
+            titolo=f'Decreto di nomina — {p.titolo}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Decreto di nomina generato. Ricorda di registrare protocollo e data dopo la '
+              'protocollazione.', 'success')
+        return _rendi_pdf_o_html(html_content, f'decreto_nomina_{p.id}')
+
+    return render_template('progetti_fse/documenti/genera_decreto.html', progetto=p,
+        incarichi_disponibili=incarichi_disponibili, ruoli_label=RUOLI_INCARICO_LABEL)
+
+
+@progetti_fse_bp.route('/progetti-fse/incarichi/<int:id_incarico>/documenti/lettera-incarico', methods=['GET', 'POST'])
+def genera_lettera_incarico(id_incarico):
+    inc = IncaricoFSE.query.get_or_404(id_incarico)
+    p = inc.modulo.progetto
+
+    if request.method == 'POST':
+        riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
+        riferimento_decreto = _riferimento_documento(p, 'decreto_nomina')
+        riferimento_graduatoria = request.form.get('riferimento_graduatoria', '').strip() or None
+        html_content = render_template('progetti_fse/documenti/lettera_incarico.html',
+            progetto=p, incarico=inc, data_generazione=date.today(),
+            ruoli_label=RUOLI_INCARICO_LABEL, istituto=dati_istituto.DENOMINAZIONE,
+            comune=dati_istituto.COMUNE, sito_web=dati_istituto.SITO_WEB,
+            riferimento_bando=riferimento_bando, riferimento_decreto=riferimento_decreto,
+            riferimento_graduatoria=riferimento_graduatoria,
+            ds_titolo=dati_istituto.DS_TITOLO, ds_nome=dati_istituto.DS_NOME_COGNOME,
+        )
+        doc = DocumentoFSE(id_progetto=p.id, id_modulo=inc.id_modulo, id_incarico=inc.id,
+            tipo='lettera_incarico', fase='incarico',
+            titolo=f'Lettera di incarico — {inc.nome_completo}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Lettera di incarico generata. Ricorda di registrare protocollo e data dopo la '
+              'protocollazione.', 'success')
+        return _rendi_pdf_o_html(html_content, f'lettera_incarico_{inc.id}')
+
+    return render_template('progetti_fse/documenti/genera_incarico.html', incarico=inc,
+        tipo_documento='lettera_incarico',
+        riferimento_graduatoria_default='')
+
+
+@progetti_fse_bp.route('/progetti-fse/incarichi/<int:id_incarico>/documenti/contratto-autonomo', methods=['GET', 'POST'])
+def genera_contratto_autonomo(id_incarico):
+    inc = IncaricoFSE.query.get_or_404(id_incarico)
+    p = inc.modulo.progetto
+
+    if request.method == 'POST':
+        riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
+        riferimento_decreto = _riferimento_documento(p, 'decreto_nomina')
+        riferimento_graduatoria = request.form.get('riferimento_graduatoria', '').strip() or None
+        html_content = render_template('progetti_fse/documenti/contratto_autonomo.html',
+            progetto=p, incarico=inc, data_generazione=date.today(),
+            ruoli_label=RUOLI_INCARICO_LABEL, istituto=dati_istituto.DENOMINAZIONE,
+            comune=dati_istituto.COMUNE, provincia=dati_istituto.PROVINCIA,
+            istituto_cf=dati_istituto.CODICE_FISCALE, istituto_indirizzo=dati_istituto.INDIRIZZO,
+            istituto_cuf=dati_istituto.CODICE_UNIVOCO_FATTURAZIONE,
+            foro_competente=dati_istituto.FORO_COMPETENTE,
+            riferimento_bando=riferimento_bando, riferimento_decreto=riferimento_decreto,
+            riferimento_graduatoria=riferimento_graduatoria,
+            ds_titolo=dati_istituto.DS_TITOLO, ds_nome=dati_istituto.DS_NOME_COGNOME,
+        )
+        doc = DocumentoFSE(id_progetto=p.id, id_modulo=inc.id_modulo, id_incarico=inc.id,
+            tipo='contratto_autonomo', fase='incarico',
+            titolo=f'Contratto di lavoro autonomo — {inc.nome_completo}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Contratto di lavoro autonomo generato. Ricorda di registrare protocollo e data dopo '
+              'la protocollazione.', 'success')
+        return _rendi_pdf_o_html(html_content, f'contratto_autonomo_{inc.id}')
+
+    if not inc.codice_fiscale or not inc.luogo_nascita or not inc.indirizzo_residenza:
+        flash('Attenzione: mancano alcuni dati anagrafici dell\'incaricato (luogo/data di nascita, '
+              'codice fiscale, indirizzo di residenza). Il contratto verrà generato con i campi mancanti '
+              'vuoti: completali dalla scheda incarico prima di inviarlo.', 'error')
+
+    return render_template('progetti_fse/documenti/genera_incarico.html', incarico=inc,
+        tipo_documento='contratto_autonomo',
+        riferimento_graduatoria_default='')

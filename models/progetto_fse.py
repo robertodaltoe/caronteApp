@@ -69,8 +69,20 @@ STATI_INCARICO = [
 STATI_DOCUMENTO = [
     ('bozza',    'Bozza'),
     ('pronto',   'Pronto'),
+    ('protocollato', 'Protocollato'),
     ('caricato', 'Caricato su SIF2127'),
 ]
+
+# Tipi di documento generabili da modello (vedi routes/progetti_fse.py e
+# templates/progetti_fse/documenti/) — fisso perché lega ogni tipo a un
+# template HTML specifico, non ai dati del singolo progetto.
+TIPI_DOCUMENTO_GENERABILI = [
+    ('avviso_selezione',   'Avviso di selezione interna (bando)'),
+    ('decreto_nomina',     'Decreto di nomina esperti/tutor'),
+    ('lettera_incarico',   'Lettera di incarico (personale interno/altra scuola)'),
+    ('contratto_autonomo', 'Contratto di lavoro autonomo (esterni)'),
+]
+TIPI_DOCUMENTO_GENERABILI_LABEL = dict(TIPI_DOCUMENTO_GENERABILI)
 
 
 class ProgettoFSE(db.Model):
@@ -101,6 +113,14 @@ class ProgettoFSE(db.Model):
     riferimento_avviso        = db.Column(db.String(300))  # estremi avviso ministeriale
     riferimento_bando_interno = db.Column(db.String(300))
     note_ammissibilita        = db.Column(db.Text)  # spese ammissibili/non ammissibili (testo libero)
+    # Premesse amministrative specifiche del progetto (nota di autorizzazione,
+    # decreto di assunzione al bilancio, delibera del CdI di adesione, ecc.):
+    # una riga per ciascun "VISTO/VISTA/PRESO ATTO..." — testo libero perché la
+    # formulazione esatta cambia da bando a bando; le premesse normative
+    # generiche (R.D. 2440/1923, D.Lgs 165/2001, regolamenti UE sui fondi
+    # strutturali...) sono invece fisse nel template dei documenti generati,
+    # essendo comuni a qualunque progetto FSE+/FESR.
+    premesse_specifiche       = db.Column(db.Text)
 
     creato_il = db.Column(db.DateTime, default=datetime.utcnow)
     creato_da = db.Column(db.String(80))
@@ -183,6 +203,14 @@ class IncaricoFSE(db.Model):
     stato            = db.Column(db.String(30), default='incaricato')
     note             = db.Column(db.Text)
 
+    # Dati anagrafici necessari solo per generare il contratto di lavoro
+    # autonomo (esterni/lavoratori autonomi) — non richiesti per il
+    # personale interno, che riceve una lettera di incarico.
+    luogo_nascita        = db.Column(db.String(120))
+    data_nascita         = db.Column(db.Date)
+    codice_fiscale       = db.Column(db.String(16))
+    indirizzo_residenza  = db.Column(db.String(200))
+
     docente = db.relationship('Docente')
 
     @property
@@ -202,6 +230,15 @@ class IncaricoFSE(db.Model):
         if self.tariffa_oraria is None or self.ore_rendicontate is None:
             return None
         return round(float(self.tariffa_oraria) * float(self.ore_rendicontate), 2)
+
+    @property
+    def tipo_rapporto_label(self):
+        etichette = {
+            'dipendente_interno':     'dipendente in servizio presso questa Amministrazione scolastica',
+            'collaborazione_plurima': 'dipendente in servizio presso altra Istituzione scolastica (collaborazione plurima)',
+            'lavoro_autonomo':        'soggetto privato esterno persona fisica (lavoratore autonomo)',
+        }
+        return etichette.get(self.tipo_rapporto, TIPI_RAPPORTO_LABEL.get(self.tipo_rapporto, '—'))
 
 
 class SessioneFSE(db.Model):

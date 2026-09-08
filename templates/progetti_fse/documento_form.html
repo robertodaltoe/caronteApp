@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Documento — {{ documento.titolo }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=documento.id_progetto) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ documento.titolo }}</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">{{ tipi_label.get(documento.tipo, documento.tipo) }}</p>
+</div>
+
+<div class="card" style="max-width:520px;">
+    <form method="post">
+        <div class="form-group">
+            <label>Protocollo</label>
+            <input type="text" name="protocollo" value="{{ documento.protocollo or '' }}"
+                   placeholder="es. 10640">
+        </div>
+        <div class="form-group">
+            <label>Data documento</label>
+            <input type="date" name="data_documento" value="{{ documento.data_documento.isoformat() if documento.data_documento else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Stato</label>
+            <select name="stato">
+                {% for v, lbl in stati %}
+                <option value="{{ v }}" {% if documento.stato == v %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Note</label>
+            <textarea name="note" rows="3">{{ documento.note or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+    </form>
+</div>
+
+<p style="font-size:.78rem; color:var(--grigio); max-width:520px; margin-top:12px;">
+    Una volta registrati protocollo e data, questo documento verrà citato automaticamente nei
+    riferimenti incrociati ("VISTO l'Avviso di selezione prot. n. ... del ...") dei documenti
+    successivi dello stesso progetto.
+</p>
+{% endblock %}

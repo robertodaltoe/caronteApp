@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Documenti — {{ progetto.titolo }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} Documenti</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        Bandi, decreti e incarichi generati da modello. Le premesse normative generiche sono fisse;
+        dopo la protocollazione registra qui protocollo e data: verranno ripresi automaticamente nei
+        riferimenti incrociati dei documenti successivi (es. il decreto cita il protocollo dell'avviso).
+    </p>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+    <h2 style="font-size:.9rem;">{{ icon('plus') }} Genera nuovo documento</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <a href="{{ url_for('progetti_fse.genera_avviso_selezione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Avviso di selezione (bando)
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_decreto_nomina', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Decreto di nomina
+        </a>
+    </div>
+    <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
+        Lettera di incarico e contratto di lavoro autonomo si generano dalla scheda del singolo
+        incarico, nel dettaglio del modulo.
+    </p>
+</div>
+
+<div class="card">
+    <h2 style="font-size:.9rem;">{{ icon('list') }} Documenti generati</h2>
+    {% if not documenti %}
+    <p style="color:var(--grigio); text-align:center; padding:24px;">Nessun documento generato finora.</p>
+    {% else %}
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:8px;">Documento</th>
+                <th style="text-align:left; padding:8px;">Tipo</th>
+                <th style="text-align:left; padding:8px;">Protocollo</th>
+                <th style="text-align:center; padding:8px;">Stato</th>
+                <th style="text-align:center; padding:8px;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in documenti %}
+            <tr style="border-top:1px solid #e5eaf0;">
+                <td style="padding:8px;">{{ d.titolo }}</td>
+                <td style="padding:8px; font-size:.78rem; color:var(--grigio);">{{ tipi_label.get(d.tipo, d.tipo) }}</td>
+                <td style="padding:8px;">
+                    {% if d.protocollo %}{{ d.protocollo }}{% if d.data_documento %} del {{ d.data_documento.strftime('%d/%m/%Y') }}{% endif %}
+                    {% else %}<span style="color:var(--grigio); font-style:italic;">non ancora protocollato</span>{% endif %}
+                </td>
+                <td style="padding:8px; text-align:center;"><span class="badge badge-grigio">{{ stati_label.get(d.stato, d.stato) }}</span></td>
+                <td style="padding:8px; text-align:center; white-space:nowrap;">
+                    <a href="{{ url_for('progetti_fse.modifica_documento', id=d.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">{{ icon('edit') }}</a>
+                    <form method="post" action="{{ url_for('progetti_fse.elimina_documento', id=d.id) }}" style="display:inline;"
+                          onsubmit="return confirm('Rimuovere questo documento dall\'elenco?')">
+                        <button type="submit" class="btn btn-danger btn-sm">{{ icon('close') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

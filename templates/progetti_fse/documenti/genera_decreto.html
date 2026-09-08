@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera decreto di nomina{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} Genera decreto di nomina</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        {{ progetto.titolo }} — seleziona gli incarichi da nominare in questo decreto (solo quelli in
+        stato "Incaricato" compaiono qui sotto).
+    </p>
+</div>
+
+{% if not incarichi_disponibili %}
+<p class="card" style="color:var(--grigio); text-align:center; padding:24px;">
+    Nessun incarico in stato "Incaricato" trovato. Aggiungi gli incarichi dalla scheda dei singoli
+    moduli prima di generare il decreto.
+</p>
+{% else %}
+<form method="post">
+<div class="card" style="max-width:760px;">
+    <table style="width:100%; border-collapse:collapse; font-size:.86rem; margin-bottom:14px;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:6px;"></th>
+                <th style="text-align:left; padding:6px;">Modulo</th>
+                <th style="text-align:left; padding:6px;">Figura</th>
+                <th style="text-align:left; padding:6px;">Incaricato</th>
+                <th style="text-align:right; padding:6px;">Compenso</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inc in incarichi_disponibili %}
+            <tr style="border-top:1px solid #e5eaf0;">
+                <td style="padding:6px;"><input type="checkbox" name="id_incarico" value="{{ inc.id }}" checked></td>
+                <td style="padding:6px;">{{ inc.modulo.titolo }}</td>
+                <td style="padding:6px;">{{ ruoli_label.get(inc.ruolo, inc.ruolo) }}</td>
+                <td style="padding:6px;">{{ inc.nome_completo }}</td>
+                <td style="padding:6px; text-align:right;">{{ '€%.2f'|format(inc.costo_previsto) if inc.costo_previsto is not none else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="form-group">
+        <label>Note aggiuntive (rinunce, sostituzioni, ecc. — una per riga, comparirà come premessa "VISTA/VISTO...")</label>
+        <textarea name="note_aggiuntive" rows="3" placeholder="es. VISTA la rinuncia del docente ... ad assumere l'incarico ..., acquisita al prot. n. ... del ...;"></textarea>
+    </div>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endif %}
+{% endblock %}

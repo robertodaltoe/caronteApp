@@ -597,6 +597,11 @@ def _auto_migrate():
         ('sostituzioni_scrutinio', 'modificato_il', 'DATETIME', None),
         ('attivita_ist', 'partecipanti_manuali', 'BOOLEAN', 0),
         ('piano_attivita_personale', 'link_disabilitato', 'BOOLEAN', 0),
+        ('progetti_fse',  'premesse_specifiche', 'TEXT',         None),
+        ('incarichi_fse', 'luogo_nascita',       'VARCHAR(120)', None),
+        ('incarichi_fse', 'data_nascita',        'DATE',         None),
+        ('incarichi_fse', 'codice_fiscale',      'VARCHAR(16)',  None),
+        ('incarichi_fse', 'indirizzo_residenza', 'VARCHAR(200)', None),
     ]
 
     with db.engine.connect() as conn:

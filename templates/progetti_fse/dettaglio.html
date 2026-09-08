@@ -15,6 +15,9 @@
         </div>
     </div>
     <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            {{ icon('print') }} Documenti
+        </a>
         <a href="{{ url_for('progetti_fse.modifica', id=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
             {{ icon('edit') }} Modifica progetto
         </a>
@@ -81,7 +84,14 @@
                 </td>
                 <td style="padding:8px;">
                     {% for inc in m.incarichi %}
-                    <div style="font-size:.8rem;">{{ inc.nome_completo }} — {{ inc.ruolo }}</div>
+                    <div style="font-size:.8rem;">
+                        {{ inc.nome_completo }} — {{ inc.ruolo }}
+                        {% if inc.tipo_rapporto == 'lavoro_autonomo' %}
+                        <a href="{{ url_for('progetti_fse.genera_contratto_autonomo', id_incarico=inc.id) }}" title="Genera contratto di lavoro autonomo" style="font-size:.72rem;">{{ icon('print') }}</a>
+                        {% else %}
+                        <a href="{{ url_for('progetti_fse.genera_lettera_incarico', id_incarico=inc.id) }}" title="Genera lettera di incarico" style="font-size:.72rem;">{{ icon('print') }}</a>
+                        {% endif %}
+                    </div>
                     {% else %}
                     <span style="color:var(--grigio);">—</span>
                     {% endfor %}

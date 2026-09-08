@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera avviso di selezione{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} Genera avviso di selezione</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        {{ progetto.titolo }} — l'avviso elenca automaticamente tutti i moduli del progetto con le
+        relative tariffe. Verifica i campi sotto prima di generare il PDF.
+    </p>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Scadenza presentazione istanze — data</label>
+        <input type="date" name="scadenza_data">
+    </div>
+    <div class="form-group">
+        <label>Scadenza presentazione istanze — ora (es. "8.00")</label>
+        <input type="text" name="scadenza_ora" placeholder="8.00">
+    </div>
+    <div class="form-group">
+        <label>Requisito di accesso — Docente Esperto</label>
+        <textarea name="requisiti_esperto" rows="3">{{ requisito_esperto_default }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>Requisito di accesso — Docente Tutor</label>
+        <textarea name="requisiti_tutor" rows="2">{{ requisito_tutor_default }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>Vincoli di attivazione moduli</label>
+        <textarea name="vincoli_attivazione" rows="3">{{ vincoli_default }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

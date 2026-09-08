@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Contratto di lavoro autonomo — {{ incarico.nome_completo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="oggetto">
+<b>Oggetto:</b> Contratto di lavoro autonomo — Selezione interna per {{ progetto.riferimento_avviso or '' }}
+</div>
+<div class="estremi">
+CUP: {{ progetto.cup or '—' }}<br>
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}
+</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="atto" style="font-size:12px;">CONTRATTO DI LAVORO AUTONOMO PER L'ATTIVITÀ DI DOCENZA<br>
+IN QUALITÀ DI {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|upper }}</div>
+
+<p>TRA</p>
+<p>L'Istituto Scolastico "{{ istituto }}", C.F. {{ istituto_cf }}, con sede a {{ comune }} ({{ provincia }}),
+{{ istituto_indirizzo }}, in persona del legale rappresentante, il Dirigente Scolastico, {{ ds_titolo }}
+{{ ds_nome }} (di seguito, l'"Istituto scolastico"),</p>
+<p>E</p>
+<p>{{ incarico.nome_completo }} (di seguito, l'"Incaricato"),</p>
+<p>(di seguito, entrambe individualmente indicate come la "Parte" e, congiuntamente, come le "Parti").</p>
+
+<p>PREMESSO CHE</p>
+{% if riferimento_bando %}
+<p>&bull; con Avviso di selezione {{ riferimento_bando }} è stata autorizzata ed espletata la procedura di
+selezione pubblica per la figura in oggetto;</p>
+{% endif %}
+{% if riferimento_graduatoria %}
+<p>&bull; con {{ riferimento_graduatoria }} è stata approvata la graduatoria definitiva per la selezione
+della figura in oggetto e che avverso la stessa non sono pervenuti ricorsi;</p>
+{% endif %}
+<p>&bull; la candidatura presentata da {{ incarico.nome_completo }} è stata ritenuta congrua
+dall'Amministrazione scolastica rispetto all'esecuzione dell'incarico in oggetto;</p>
+{% if riferimento_decreto %}
+<p>&bull; con decreto di nomina {{ riferimento_decreto }} è stato autorizzato il conferimento dell'incarico
+in oggetto per un importo contrattuale complessivo delle prestazioni pari a
+{{ '€%.2f'|format(incarico.costo_previsto) if incarico.costo_previsto is not none else '—' }}
+omnicomprensivo.</p>
+{% endif %}
+<p>Tutto ciò premesso, si conviene e si stipula quanto segue.</p>
+
+<h2 class="articolo">ART. 1 - PREMESSE</h2>
+<p>Le premesse e i documenti richiamati nel presente documento (di seguito, il "Contratto") formano parte
+integrante e sostanziale dello stesso.</p>
+
+<h2 class="articolo">ART. 2 - SOGGETTO INCARICATO</h2>
+<p>Con la sottoscrizione del presente contratto, l'Amministrazione scolastica conferisce l'incarico per
+l'attività di "{{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower }}":</p>
+<table class="griglia-titoli">
+    <tr><td style="width:220px;">Cognome e Nome</td><td>{{ incarico.nome_completo }}</td></tr>
+    <tr><td>Luogo e data di nascita</td><td>{{ incarico.luogo_nascita or '—' }}{% if incarico.data_nascita %}, {{ incarico.data_nascita.strftime('%d/%m/%Y') }}{% endif %}</td></tr>
+    <tr><td>Codice Fiscale</td><td>{{ incarico.codice_fiscale or '—' }}</td></tr>
+    <tr><td>Luogo e indirizzo di residenza</td><td>{{ incarico.indirizzo_residenza or '—' }}</td></tr>
+    <tr><td>Qualifica</td><td>{{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|upper }}</td></tr>
+</table>
+<p>secondo quanto di seguito specificato:</p>
+<table class="tabella-incarichi">
+    <tr><th>Descrizione attività oggetto dell'incarico</th><th>Figura richiesta</th>
+        <th class="num">Compenso orario</th><th class="num">Monte ore previsto</th>
+        <th class="num">Compenso omnicomprensivo</th></tr>
+    <tr>
+        <td>{{ incarico.modulo.titolo }} (modulo {{ incarico.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|upper }}</td>
+        <td class="num">{{ '€%.2f/h'|format(incarico.tariffa_oraria) if incarico.tariffa_oraria is not none else '—' }}</td>
+        <td class="num">{{ incarico.ore_previste or '—' }}</td>
+        <td class="num">{{ '€%.2f'|format(incarico.costo_previsto) if incarico.costo_previsto is not none else '—' }}</td>
+    </tr>
+</table>
+
+<h2 class="articolo">ART. 3 - SEDE DELL'INCARICO</h2>
+<p>Sede dell'incarico è la sede dell'Istituto "{{ istituto }}", sita in {{ comune }}.</p>
+
+<h2 class="articolo">ART. 4 - COMPITI, DURATA E COMPENSO</h2>
+<p>Oggetto dell'incarico individuale è lo svolgimento dell'attività di {{ incarico.modulo.titolo }} (modulo
+{{ incarico.modulo.codice_esterno or '—' }}), da svolgersi secondo quanto previsto dagli articoli 2222 e
+seguenti del Codice Civile, nei documenti relativi alla procedura di selezione e, in particolare,
+nell'Avviso di selezione al quale si rinvia. Data la particolare natura delle prestazioni, non saranno
+previste clausole di rinnovo automatico dell'incarico, pena la nullità della clausola stessa. L'Istituzione
+scolastica può eccezionalmente prorogare l'incarico per motivate esigenze e fino al completamento delle
+attività previste, senza che ciò costituisca nuovo incarico né dia luogo ad un nuovo contratto.</p>
+<p>Per l'espletamento dell'incarico è previsto un compenso complessivo, onnicomprensivo, di
+{{ '€%.2f'|format(incarico.costo_previsto) if incarico.costo_previsto is not none else '—' }}, calcolato
+sulla base del numero di ore previste e del compenso orario indicati nella tabella di cui all'art. 2. La
+misura del compenso è lordo Stato, comprensiva degli oneri previdenziali e fiscali a carico
+dell'Amministrazione Scolastica secondo la normativa vigente. Nulla è dovuto a titolo di rimborso spese per
+viaggi e trasferimenti ed il compenso non dà luogo ad alcun trattamento di fine rapporto.</p>
+<p>Il compenso effettivo sarà determinato sulla base delle ore effettivamente svolte e rendicontate mediante
+timesheet da produrre all'Istituzione Scolastica per la verifica e l'approvazione. Trattandosi di incarico
+conferito nell'ambito di un progetto finanziato, il pagamento del compenso è subordinato al raggiungimento
+dei target e delle milestone di progetto: il relativo mancato raggiungimento dà luogo alla decadenza del
+finanziamento e, in tal caso, alcun compenso sarà corrisposto. L'Amministrazione scolastica provvederà a
+corrispondere il compenso sulla base dell'effettiva erogazione dei fondi; nessuna responsabilità per
+eventuali ritardi indipendenti dalla propria volontà potrà esserle attribuita. L'incaricato si impegna ad
+espletare l'incarico personalmente ed in forma autonoma, senza alcun vincolo di subordinazione.</p>
+<p>Il compenso sarà corrisposto previa presentazione di regolare documento fiscale (fattura elettronica o
+altra documentazione equivalente), secondo il regime fiscale adottato dall'incaricato. La fattura dovrà
+essere intestata all'Istituto "{{ istituto }}" di {{ comune }}, C.F. {{ istituto_cf }}, e contenere
+obbligatoriamente, se presente, il CUP {{ progetto.cup or '' }} ed il Codice Progetto
+{{ progetto.codice_progetto or '' }}. Per le fatture elettroniche, il codice univoco di fatturazione di
+questa Scuola è {{ istituto_cuf }}. L'Istituto provvederà alla liquidazione entro 30 giorni dal ricevimento
+della fattura, previa positiva verifica di conformità delle prestazioni eseguite.</p>
+
+<h2 class="articolo">ART. 5 - OBBLIGHI A CARICO DELL'INCARICATO</h2>
+<p>L'incaricato si impegna ad adempiere secondo buona fede, diligenza e a regola d'arte alle obbligazioni
+assunte; ad osservare le direttive operative dell'Istituto; a comunicare tempestivamente ogni evento che
+possa interferire sull'esecuzione dell'incarico; a rispondere direttamente dei danni a persone o cose
+provocati nell'esecuzione dell'incarico; ad osservare il Codice di comportamento e gli obblighi di
+riservatezza previsti dalla normativa vigente; a consegnare, ove richiesto, idonea documentazione a comprova
+di quanto dichiarato in fase di selezione.</p>
+
+<h2 class="articolo">ART. 6 - VERIFICHE E CONTROLLI, ART. 7 - RESPONSABILITÀ VERSO TERZI</h2>
+<p>L'Istituto si riserva di accertare l'esatto adempimento delle attività svolte, mediante richiesta di
+valutazioni e/o relazioni scritte, anche in itinere, e non assume alcuna responsabilità nei confronti di
+terzi per danni cagionati dall'incaricato in relazione allo svolgimento del presente incarico.</p>
+
+<h2 class="articolo">ART. 8 - REVOCA DELL'INCARICO</h2>
+<p>L'Istituto può revocare il presente incarico in caso di inadempimento delle prestazioni e degli obblighi
+previsti dalla legge e dai documenti relativi alla procedura in oggetto, con conseguente scioglimento con
+effetto immediato di qualsiasi accordo contrattuale, ai sensi dell'art. 1456 del Codice civile, mediante
+contestazione scritta trasmessa a mezzo PEC.</p>
+
+<h2 class="articolo">ART. 9 - RINUNCIA E SURROGA NELL'INCARICO</h2>
+<p>In caso di rinuncia alla nomina, da presentarsi entro 7 giorni dalla comunicazione di avvenuta selezione,
+l'Istituto procederà alla surroga nell'incarico utilizzando la graduatoria definitiva, secondo l'ordine di
+scorrimento e di preferenza indicato nell'Avviso di selezione.</p>
+
+<h2 class="articolo">ART. 10 - DIVIETO DI CESSIONE DELLE PRESTAZIONI OGGETTO DELL'INCARICO</h2>
+<p>È fatto divieto all'incaricato di cedere, sotto qualsiasi forma, in tutto o in parte, le prestazioni
+oggetto dell'incarico conferito, sotto pena di revoca dello stesso.</p>
+
+<h2 class="articolo">ART. 11 - INCOMPATIBILITÀ</h2>
+<p>L'Incaricato, posto a conoscenza degli artt. 75 e 76 del D.P.R. 28/12/2000 n. 445 e successive
+modificazioni, dichiara di non trovarsi in nessuna delle situazioni di incompatibilità o di inconferibilità
+previste dalla normativa nazionale ed europea rispetto al conferimento dell'incarico in oggetto.</p>
+
+<h2 class="articolo">ART. 12 - LEGGE APPLICABILE</h2>
+<p>Il presente Contratto è regolato dalla legge italiana. L'eventuale invalidità o inefficacia di una delle
+clausole sarà limitata alla sola clausola invalida e non comporterà l'invalidità del Contratto nella sua
+interezza. Ogni modifica dovrà essere stabilita dalle Parti di comune accordo e documentata per iscritto.</p>
+
+<h2 class="articolo">ART. 13 - FORO COMPETENTE</h2>
+<p>Per qualunque controversia inerente alla validità, interpretazione, esecuzione e risoluzione del presente
+Contratto, sarà esclusivamente competente il Foro di {{ foro_competente }}, con esclusione di qualunque
+altro Foro eventualmente concorrente.</p>
+
+<h2 class="articolo">ART. 14 - TRATTAMENTO DEI DATI PERSONALI E TUTELA DELLA RISERVATEZZA</h2>
+<p>L'Incaricato e l'Istituto Scolastico si impegnano a trattare i dati personali di tutti i soggetti
+coinvolti nella presente procedura secondo quanto disposto dal Regolamento UE 679/2016 e dal D. Lgs.
+196/2003 e ss.mm.ii. Tali dati potranno essere utilizzati esclusivamente per finalità strettamente connesse
+all'esecuzione del presente Contratto.</p>
+
+<p>Letto, confermato e sottoscritto.</p>
+<p>Ai sensi dell'art. 1341 del Codice Civile l'interessato dichiara di aver letto e di approvare
+espressamente le clausole riportate negli articoli 4, 5, 6, 7, 8, 9, 12, 13, mediante sottoscrizione.</p>
+
+<div class="firma">Per accettazione, l'Incaricato {{ incarico.nome_completo }}</div>
+<div class="firma" style="margin-top:24px;">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione. Verificare i dati anagrafici dell'incaricato prima
+dell'invio.</div>
+
+</body>
+</html>

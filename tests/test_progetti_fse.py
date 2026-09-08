@@ -11,7 +11,9 @@ legato a un singolo bando). Copre:
 """
 from datetime import date
 from models import db
-from models.progetto_fse import ProgettoFSE, ModuloFSE, IncaricoFSE, PresenzaFSE, SessioneFSE
+from models.progetto_fse import (
+    ProgettoFSE, ModuloFSE, IncaricoFSE, PresenzaFSE, SessioneFSE, DocumentoFSE,
+)
 from tests.conftest import crea_docente
 
 
@@ -360,3 +362,187 @@ def test_elimina_presenza(app, db_session, monkeypatch):
         assert r.status_code == 200
 
     assert PresenzaFSE.query.get(id_pres) is None
+
+
+# ── Generazione documenti (bandi, decreti, incarichi) ────────────────
+# Le premesse normative generiche sono fisse nei template HTML (non
+# testate qui, sono contenuto statico); questi test coprono invece la
+# parte a rischio di errore: che ogni documento generato registri un
+# DocumentoFSE tracciabile e che il collegamento fra documenti
+# successivi (decreto -> cita l'avviso; contratto -> cita il decreto)
+# recuperi davvero il protocollo giusto una volta che l'utente lo
+# registra, cosa che non si può verificare leggendo solo il codice.
+
+def test_genera_avviso_selezione_crea_documento_tracciato(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/avviso-selezione', data={
+            'scadenza_data': '2026-07-20', 'scadenza_ora': '8.00',
+        })
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='avviso_selezione').first()
+    assert doc is not None
+    assert doc.protocollo is None  # non ancora protocollato: da registrare a mano dopo la firma
+
+
+def test_riferimento_documento_none_se_non_ancora_protocollato(app, db_session):
+    """Finché un documento non è stato protocollato (protocollo NULL),
+    non deve essere citabile nei documenti successivi -- altrimenti si
+    rischierebbe di scrivere 'prot. n. None' in un atto ufficiale."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _riferimento_documento
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='avviso_selezione', titolo='Avviso'))
+    db.session.commit()
+
+    assert _riferimento_documento(p, 'avviso_selezione') is None
+
+
+def test_riferimento_documento_compone_prot_e_data_dopo_protocollazione(app, db_session):
+    """Dopo che l'utente registra protocollo e data (via
+    modifica_documento), il riferimento incrociato deve poterli
+    recuperare per comporli nei documenti successivi dello stesso
+    progetto (es. il decreto di nomina cita l'avviso di selezione)."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _riferimento_documento
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    doc = DocumentoFSE(id_progetto=p.id, tipo='avviso_selezione', titolo='Avviso',
+                        protocollo='10640', data_documento=date(2026, 7, 6))
+    db.session.add(doc)
+    db.session.commit()
+
+    assert _riferimento_documento(p, 'avviso_selezione') == 'prot. n. 10640 del 06/07/2026'
+    # Un tipo diverso, non ancora generato/protocollato, resta None.
+    assert _riferimento_documento(p, 'decreto_nomina') is None
+
+
+def test_genera_decreto_nomina_include_solo_incarichi_confermati_e_cita_avviso(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    # Un avviso già protocollato: il decreto deve poterlo citare.
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='avviso_selezione', titolo='Avviso',
+                                 protocollo='10640', data_documento=date(2026, 7, 6)))
+    m = ModuloFSE(id_progetto=p.id, titolo="Let's English", ore=30, n_partecipanti_previsti=15)
+    db.session.add(m)
+    db.session.flush()
+    inc_ok = IncaricoFSE(id_modulo=m.id, nome_esterno='Esperto Confermato', ruolo='esperto',
+                          tariffa_oraria=70, ore_previste=30, stato='incaricato')
+    inc_candidato = IncaricoFSE(id_modulo=m.id, nome_esterno='Candidato Non Ancora Nominato',
+                                 ruolo='tutor', tariffa_oraria=30, ore_previste=30, stato='candidato')
+    db.session.add_all([inc_ok, inc_candidato])
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/{p.id}/documenti/decreto-nomina')
+        assert r.status_code == 200
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/decreto-nomina',
+                    data={'id_incarico': [str(inc_ok.id)]})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='decreto_nomina').first()
+    assert doc is not None
+
+
+def test_genera_lettera_incarico_registra_id_incarico(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Padel 1', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, nome_esterno='Docente Interno', ruolo='tutor',
+                       tipo_rapporto='dipendente_interno', tariffa_oraria=30, ore_previste=30,
+                       stato='incaricato')
+    db.session.add(inc)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/incarichi/{inc.id}/documenti/lettera-incarico')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/incarichi/{inc.id}/documenti/lettera-incarico', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_incarico=inc.id, tipo='lettera_incarico').first()
+    assert doc is not None
+    assert doc.id_progetto == p.id
+    assert doc.id_modulo == m.id
+
+
+def test_genera_contratto_autonomo_registra_dati_incarico(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Padel 1', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, nome_esterno='Libero Professionista', ruolo='esperto',
+                       tipo_rapporto='lavoro_autonomo', tariffa_oraria=70, ore_previste=30,
+                       stato='incaricato')
+    db.session.add(inc)
+    db.session.commit()
+
+    with app.test_client() as c:
+        # GET senza dati anagrafici: deve comunque rispondere (con un
+        # avviso a schermo, non un errore) -- generare comunque il
+        # documento è utile per predisporlo mentre si raccolgono i dati.
+        r = c.get(f'/progetti-fse/incarichi/{inc.id}/documenti/contratto-autonomo')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/incarichi/{inc.id}/documenti/contratto-autonomo', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_incarico=inc.id, tipo='contratto_autonomo').first()
+    assert doc is not None
+
+
+def test_modifica_documento_registra_protocollo(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    doc = DocumentoFSE(id_progetto=p.id, tipo='avviso_selezione', titolo='Avviso')
+    db.session.add(doc)
+    db.session.commit()
+    id_doc = doc.id
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/documenti/{id_doc}/modifica', data={
+            'protocollo': '10640', 'data_documento': '2026-07-06', 'stato': 'protocollato',
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+    aggiornato = DocumentoFSE.query.get(id_doc)
+    assert aggiornato.protocollo == '10640'
+    assert aggiornato.data_documento == date(2026, 7, 6)
+    assert aggiornato.stato == 'protocollato'
+
+
+def test_documenti_progetto_index_reachable(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/{p.id}/documenti')
+        assert r.status_code == 200

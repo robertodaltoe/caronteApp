@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Lettera di incarico — {{ incarico.nome_completo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div style="margin: 10px 0;">Al {{ ruoli_label.get(incarico.ruolo, incarico.ruolo) }}<br>{{ incarico.nome_completo }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> Lettera di incarico in qualità di {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower }}
+per il corso "{{ incarico.modulo.titolo }}" (modulo n. {{ incarico.modulo.codice_esterno or '—' }}) —
+{{ progetto.riferimento_avviso or '' }}
+</div>
+<div class="estremi">
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
+CUP: {{ progetto.cup or '—' }}
+</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+
+{% if riferimento_bando %}
+<p>VISTO e richiamato in preambolo l'Avviso di selezione {{ riferimento_bando }} che fissa i criteri, le
+modalità di presentazione ed i termini di scadenza delle istanze pervenute per l'incarico in oggetto;</p>
+{% endif %}
+{% if riferimento_graduatoria %}
+<p>VISTA la graduatoria definitiva {{ riferimento_graduatoria }};</p>
+{% endif %}
+<p>VISTO l'art. 53, comma 7, del D. Lgs. n. 165/2001, secondo il quale i dipendenti pubblici non possono
+svolgere incarichi retribuiti che non siano stati conferiti o previamente autorizzati dall'amministrazione
+di appartenenza;</p>
+<p>RILEVATO che il soggetto selezionato per l'incarico in oggetto è {{ incarico.tipo_rapporto_label }};</p>
+<p>RITENUTO che questa Istituzione scolastica ha provveduto prioritariamente ad individuare la figura
+richiesta, anche attraverso ricognizione del personale interno alla stessa Istituzione;</p>
+<p>RILEVATA la necessità di provvedere al conferimento dell'incarico in oggetto, al fine di garantire la
+realizzazione delle attività didattico-formative di cui all'oggetto;</p>
+{% if riferimento_decreto %}
+<p>VISTO il decreto di conferimento incarichi {{ riferimento_decreto }};</p>
+{% endif %}
+
+<p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
+
+<div class="atto">NOMINA</div>
+
+<p>{{ incarico.nome_completo }} in qualità di {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower }} per
+il corso "{{ incarico.modulo.titolo }}" (modulo n. {{ incarico.modulo.codice_esterno or '—' }}), secondo
+quanto di seguito indicato:</p>
+
+<table class="tabella-incarichi">
+    <tr><th>Descrizione attività</th><th>Figura richiesta</th><th class="num">Compenso orario</th>
+        <th class="num">Monte ore previsto</th><th class="num">Compenso omnicomprensivo</th></tr>
+    <tr>
+        <td>{{ incarico.modulo.titolo }} (modulo {{ incarico.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|upper }}</td>
+        <td class="num">{{ '€%.2f/h'|format(incarico.tariffa_oraria) if incarico.tariffa_oraria is not none else '—' }}</td>
+        <td class="num">{{ incarico.ore_previste or '—' }}</td>
+        <td class="num">{{ '€%.2f'|format(incarico.costo_previsto) if incarico.costo_previsto is not none else '—' }}</td>
+    </tr>
+</table>
+
+<h2 class="articolo">ART. 1 - SEDE DELL'INCARICO</h2>
+<p>Sede dell'incarico è la sede dell'Istituto "{{ istituto }}", sita in {{ comune }}.</p>
+
+<h2 class="articolo">ART. 2 - COMPITI, DURATA E COMPENSO</h2>
+<p>L'importo orario indicato è Lordo Stato, onnicomprensivo di tutte le ritenute previdenziali e fiscali a
+carico dell'Istituto e dell'incaricato, nonché di ogni altro onere fiscale, previdenziale ed assistenziale
+che dovesse intervenire per effetto di nuove disposizioni normative. I compensi saranno corrisposti a
+saldo, sulla base dell'effettiva erogazione dei fondi e della disponibilità degli accreditamenti disposti
+dagli Enti deputati; nessuna responsabilità per eventuali ritardi indipendenti dalla volontà dell'Istituto
+potrà essere attribuita alla medesima. Nulla è dovuto a titolo di rimborso spese per viaggi e trasferimenti.
+Il compenso erogato con il presente incarico non dà luogo ad alcun trattamento di fine rapporto.</p>
+<p>L'incarico sarà espletato secondo il calendario predisposto dall'Istituto e, in ogni caso, fuori
+dall'orario di servizio dell'incaricato. La durata dell'incarico decorre dall'atto di nomina fino al termine
+della realizzazione dell'intervento. La prestazione dovrà essere svolta personalmente dal soggetto
+individuato e dovrà risultare da timesheet o altra modalità rendicontativa. Per le attività richieste si
+rimanda all'art. 6 dell'avviso di selezione del personale{% if riferimento_bando %} {{ riferimento_bando }}{% endif %}.</p>
+
+<h2 class="articolo">ART. 3 - OBBLIGHI A CARICO DELL'INCARICATO</h2>
+<p>L'incaricato si impegna ad adempiere secondo buona fede, diligenza e a regola d'arte alle obbligazioni
+assunte; ad osservare le direttive operative dell'Istituto; ad eseguire tutte le attività accessorie
+necessarie alla corretta esecuzione dell'incarico; a comunicare tempestivamente ogni evento che possa
+interferire sull'esecuzione dell'incarico; a rispondere direttamente dei danni a persone o cose provocati
+nell'esecuzione dell'incarico; ad osservare il Codice di comportamento e gli obblighi di riservatezza
+previsti dalla normativa vigente.</p>
+
+<h2 class="articolo">ART. 4 - VERIFICHE E CONTROLLI DELLE PRESTAZIONI IN CORSO D'OPERA</h2>
+<p>L'Istituto si riserva di accertare l'esatto adempimento delle attività svolte dall'incaricato, mediante
+richiesta di valutazioni e/o relazioni scritte, anche in itinere.</p>
+
+<h2 class="articolo">ART. 5 - RESPONSABILITÀ VERSO TERZI</h2>
+<p>L'Istituto scolastico non assume alcuna responsabilità nei confronti di terzi per impegni presi e/o
+danni, a cose o persone, cagionati dall'incaricato in relazione allo svolgimento del presente incarico.</p>
+
+<h2 class="articolo">ART. 6 - REVOCA DELL'INCARICO</h2>
+<p>L'Istituto può revocare il presente incarico in caso di inadempimento alle prestazioni e degli obblighi
+previsti dalla legge e dai documenti relativi alla procedura in oggetto; in tal caso si intenderà sciolto
+con effetto immediato qualsiasi accordo contrattuale sottoscritto, ai sensi dell'art. 1456 del Codice
+civile, mediante contestazione scritta trasmessa a mezzo PEC.</p>
+
+<h2 class="articolo">ART. 7 - RINUNCIA E SURROGA NELL'INCARICO</h2>
+<p>In caso di rinuncia alla nomina, da presentarsi entro 7 giorni dalla comunicazione di avvenuta selezione,
+l'Istituto procederà alla surroga nell'incarico secondo le modalità indicate nell'Avviso di selezione in
+oggetto.</p>
+
+<h2 class="articolo">ART. 8 - DIVIETO DI CESSIONE DELLE PRESTAZIONI OGGETTO DELL'INCARICO</h2>
+<p>È fatto divieto all'incaricato di cedere, sotto qualsiasi forma, in tutto o in parte, le prestazioni
+oggetto dell'incarico conferito, sotto pena di revoca dello stesso.</p>
+
+<h2 class="articolo">ART. 9 - INCOMPATIBILITÀ</h2>
+<p>L'Incaricato, posto a conoscenza degli artt. 75 e 76 del D.P.R. 28/12/2000 n. 445 e successive
+modificazioni inerenti alla perdita di benefici e delle sanzioni previste per le dichiarazioni mendaci,
+dichiara di non trovarsi in nessuna delle situazioni di incompatibilità o di inconferibilità previste dalla
+normativa nazionale ed europea rispetto al conferimento dell'incarico in oggetto.</p>
+
+<h2 class="articolo">ART. 10 - RESPONSABILE DEL PROCEDIMENTO</h2>
+<p>Ai sensi dell'art. 5 della Legge 241/90, il Responsabile del procedimento è il Dirigente Scolastico,
+{{ ds_titolo }} {{ ds_nome }}.</p>
+
+<h2 class="articolo">ART. 11 - TRATTAMENTO DEI DATI PERSONALI</h2>
+<p>Con riferimento al Regolamento Europeo 679/2016 e al D. Lgs. n. 196/2003 e ss.mm.ii., i dati richiesti
+saranno trattati esclusivamente per le finalità del presente procedimento. L'informativa estesa è
+disponibile sul sito web dell'Istituzione Scolastica: {{ sito_web }}</p>
+
+<p>La presente nomina vale quale autorizzazione all'espletamento dell'incarico.</p>
+<p>Letto, confermato e sottoscritto.</p>
+
+<div class="firma">Per accettazione, l'Incaricato {{ incarico.nome_completo }}</div>
+<div class="firma" style="margin-top:24px;">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

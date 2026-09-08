@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Decreto di nomina — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Decreto per conferimento incarichi ad esperti e
+tutor per la realizzazione degli interventi del progetto{% if riferimento_bando %} — {{ riferimento_bando }}{% endif %}
+</div>
+<div class="estremi">
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
+CUP: {{ progetto.cup or '—' }}
+</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+
+{% if progetto.premesse_specifiche %}
+{% for riga in progetto.premesse_specifiche.split('\n') if riga.strip() %}
+<p>{{ riga.strip() }}</p>
+{% endfor %}
+{% endif %}
+
+{% if riferimento_bando %}
+<p>VISTO e richiamato in preambolo l'Avviso di selezione {{ riferimento_bando }} che fissa i criteri, le
+modalità di presentazione ed i termini di scadenza delle istanze pervenute per l'incarico in oggetto;</p>
+{% endif %}
+
+{% if note_aggiuntive %}
+{% for riga in note_aggiuntive.split('\n') if riga.strip() %}
+<p>{{ riga.strip() }}</p>
+{% endfor %}
+{% endif %}
+
+<p>RILEVATA la necessità di provvedere al conferimento degli incarichi in oggetto, al fine di garantire la
+realizzazione delle attività didattico-formative previste dal progetto;</p>
+<p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
+
+<div class="atto">DECRETA</div>
+
+<h2 class="articolo">Art. 1 - Affidamento incarico</h2>
+<p>Vengono affidati i seguenti incarichi:</p>
+
+<table class="tabella-incarichi">
+    <tr>
+        <th>Modulo</th><th>Corso</th><th>Figura</th><th>Incaricato</th>
+        <th class="num">Ore</th><th class="num">Compenso previsto omnicomprensivo</th>
+    </tr>
+    {% for inc in incarichi %}
+    <tr>
+        <td>{{ inc.modulo.codice_esterno or '—' }}</td>
+        <td>{{ inc.modulo.titolo }}</td>
+        <td>{{ ruoli_label.get(inc.ruolo, inc.ruolo)|upper }}</td>
+        <td>{{ inc.nome_completo }}</td>
+        <td class="num">{{ inc.ore_previste or '—' }}</td>
+        <td class="num">{{ '€%.2f'|format(inc.costo_previsto) if inc.costo_previsto is not none else '—' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2 class="articolo">Art. 2 - Orario di servizio</h2>
+<p>L'incarico affidato è da svolgere in orario aggiuntivo all'orario di servizio, a partire dalla data della
+nomina. L'incarico conferito ha efficacia esclusivamente in costanza di servizio e avrà decadenza immediata
+in conseguenza di una qualsiasi causa che dovesse intervenire ad interrompere la qualifica di "personale
+interno alla scuola". In caso di decadenza verranno riconosciute e pagate le sole ore effettivamente svolte
+e giustificate da regolare timesheet.</p>
+
+<h2 class="articolo">Art. 3 - Compiti</h2>
+<p>I compiti da svolgere sono quelli richiamati nell'avviso di selezione.</p>
+
+<h2 class="articolo">Art. 4 - Compenso</h2>
+<p>La misura del compenso è stabilita per un totale omnicomprensivo come indicato nella tabella sopra
+riportata, tenuto conto in ogni caso delle ore effettivamente svolte e rendicontate dal soggetto
+incaricato.</p>
+
+<h2 class="articolo">Art. 5 - Nomina</h2>
+<p>Al presente decreto seguirà lettera di incarico/contratto di lavoro autonomo. Il presente Decreto di
+nomina sarà pubblicato sul sito web dell'Istituzione Scolastica {{ sito_web }} per la massima diffusione,
+nelle sezioni Albo online e Amministrazione Trasparente.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

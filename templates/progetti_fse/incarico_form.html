@@ -73,6 +73,34 @@
         <textarea name="note" rows="3">{{ incarico.note if incarico else '' }}</textarea>
     </div>
 </div>
+
+<div class="card" style="max-width:640px; margin-top:16px;">
+    <h2 style="font-size:.9rem;">Dati anagrafici (solo per contratto di lavoro autonomo)</h2>
+    <p style="font-size:.78rem; color:var(--grigio); margin-top:-4px;">
+        Necessari solo se il tipo di rapporto è "Lavoro autonomo (esterno)", per generare il contratto.
+        Non richiesti per il personale interno (lettera di incarico).
+    </p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Luogo di nascita</label>
+            <input type="text" name="luogo_nascita" value="{{ incarico.luogo_nascita if incarico else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Data di nascita</label>
+            <input type="date" name="data_nascita" value="{{ incarico.data_nascita.isoformat() if incarico and incarico.data_nascita else '' }}">
+        </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Codice fiscale</label>
+            <input type="text" name="codice_fiscale" maxlength="16" value="{{ incarico.codice_fiscale if incarico else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Indirizzo di residenza</label>
+            <input type="text" name="indirizzo_residenza" value="{{ incarico.indirizzo_residenza if incarico else '' }}">
+        </div>
+    </div>
+</div>
 <div style="margin-top:16px; display:flex; gap:10px;">
     <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
     <a href="{{ url_for('progetti_fse.dettaglio', id=modulo.id_progetto) }}" class="btn" style="background:#e5eaf0; color:var(--blu);">Annulla</a>

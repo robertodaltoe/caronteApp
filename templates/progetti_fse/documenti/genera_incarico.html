@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera {{ 'contratto' if tipo_documento == 'contratto_autonomo' else 'lettera di incarico' }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=incarico.modulo.id_progetto) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ incarico.modulo.progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ icon('print') }} Genera {{ 'contratto di lavoro autonomo' if tipo_documento == 'contratto_autonomo' else 'lettera di incarico' }}
+    </h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        {{ incarico.nome_completo }} — {{ incarico.modulo.titolo }}
+    </p>
+</div>
+
+{% if tipo_documento == 'contratto_autonomo' %}
+<div class="card" style="max-width:640px; margin-bottom:14px; background:#fff7ed;">
+    <p style="font-size:.82rem; margin:0;">
+        Il contratto richiede i dati anagrafici dell'incaricato (luogo/data di nascita, codice fiscale,
+        indirizzo di residenza). Se mancano, modificali prima dalla
+        <a href="{{ url_for('progetti_fse.modifica_incarico', id=incarico.id) }}">scheda dell'incarico</a>.
+    </p>
+</div>
+{% endif %}
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Riferimento graduatoria definitiva (es. "pubblicata con prot. n. 11746 del 13.08.2026")</label>
+        <input type="text" name="riferimento_graduatoria" value="{{ riferimento_graduatoria_default }}">
+    </div>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

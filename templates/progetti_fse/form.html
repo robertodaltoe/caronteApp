@@ -123,6 +123,17 @@
             <label>Note su spese ammissibili/non ammissibili</label>
             <textarea name="note_ammissibilita" rows="4">{{ progetto.note_ammissibilita if progetto else '' }}</textarea>
         </div>
+        <div class="form-group">
+            <label>Premesse amministrative specifiche del progetto (una per riga)</label>
+            <p style="font-size:.75rem; color:var(--grigio); margin:-2px 0 4px;">
+                Usate nei documenti generati (avviso, decreto): nota di autorizzazione, decreto di
+                assunzione al bilancio, delibera del Consiglio d'Istituto di adesione, ecc. Le premesse
+                normative generiche (R.D. 2440/1923, D.Lgs 165/2001, regolamenti UE sui fondi
+                strutturali...) sono già fisse nei documenti e non vanno ripetute qui.
+            </p>
+            <textarea name="premesse_specifiche" rows="5"
+                placeholder="VISTO il documento autorizzativo, nota di autorizzazione prot. n. ... del ..., che consente l'attuazione del progetto ...;&#10;VISTO il decreto prot. n. ... di formale assunzione al Programma Annuale del finanziamento citato;&#10;VISTA la delibera n. ... del Consiglio di Istituto di adesione al progetto;">{{ progetto.premesse_specifiche if progetto else '' }}</textarea>
+        </div>
     </div>
 </div>
 

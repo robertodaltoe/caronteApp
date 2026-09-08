@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Avviso di selezione — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> Avviso di Selezione interna, aperta anche a dipendenti di altra scuola e persone fisiche,
+per il reclutamento delle figure professionali necessarie alla realizzazione degli interventi del progetto
+{% if progetto.riferimento_avviso %}{{ progetto.riferimento_avviso }}{% endif %}
+</div>
+<div class="estremi">
+CUP: {{ progetto.cup or '—' }}<br>
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}
+</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+
+{% if progetto.premesse_specifiche %}
+{% for riga in progetto.premesse_specifiche.split('\n') if riga.strip() %}
+<p>{{ riga.strip() }}</p>
+{% endfor %}
+{% endif %}
+
+<p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
+
+<div class="atto">EMANA</div>
+
+<p>il seguente Avviso pubblico per la selezione interna, aperta anche a dipendenti di altra scuola, di altra
+P.A. e persone fisiche, mediante procedura comparativa di titoli, delle figure professionali per lo
+svolgimento delle attività di seguito specificate:</p>
+
+<table class="tabella-incarichi">
+    <tr>
+        <th>Modulo</th><th>Titolo del corso</th><th class="num">Ore</th>
+        <th class="num">Partecipanti min.</th><th>Figure richieste</th>
+        <th class="num">Compenso orario</th><th class="num">Compenso complessivo</th>
+    </tr>
+    {% for m in progetto.moduli %}
+    <tr>
+        <td>{{ m.codice_esterno or '—' }}</td>
+        <td>{{ m.titolo }}{% if m.tipologia %}<br><span style="color:#666;">{{ m.tipologia }}</span>{% endif %}</td>
+        <td class="num">{{ m.ore }}</td>
+        <td class="num">{{ m.n_partecipanti_minimo or '—' }}</td>
+        <td>
+            N. 1 ESPERTO<br>N. 1 TUTOR
+            {% for inc in m.incarichi if inc.ruolo == 'figura_aggiuntiva' %}<br>N. 1 FIGURA AGGIUNTIVA{% endfor %}
+        </td>
+        <td class="num">
+            {% if progetto.tariffa_esperto %}€{{ '%.2f'|format(progetto.tariffa_esperto) }}/h{% endif %}<br>
+            {% if progetto.tariffa_tutor %}€{{ '%.2f'|format(progetto.tariffa_tutor) }}/h{% endif %}
+        </td>
+        <td class="num">
+            {% if progetto.tariffa_esperto and progetto.tariffa_tutor %}
+            €{{ '%.2f'|format(progetto.tariffa_esperto * m.ore + progetto.tariffa_tutor * m.ore) }}
+            {% else %}—{% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<p>La misura del compenso è stabilita per un totale complessivo come indicato nella tabella sopra riportata,
+tenuto conto in ogni caso delle ore effettivamente svolte e rendicontate dal soggetto incaricato. In caso di
+incarico conferito a dipendente di questa o di altra Istituzione scolastica, la misura del compenso è lordo
+Stato, comprensiva di ritenuta d'acconto, Irpef, IVA, imposta di bollo e di ogni altro onere fiscale,
+previdenziale ed assistenziale. In caso di incarico conferito a soggetto privato esterno persona fisica
+(lavoratore autonomo), la misura del compenso è parimenti lordo Stato e sarà corrisposta previa presentazione
+di regolare documento fiscale, secondo il regime fiscale adottato dal soggetto incaricato.</p>
+
+<h2 class="articolo">ART. 1 - SEDE DELL'INCARICO</h2>
+<p>Sede dell'incarico è la sede dell'Istituto "{{ istituto }}", sita in {{ comune }}.</p>
+
+<h2 class="articolo">ART. 2 - PRESENTAZIONE DELLE ISTANZE DI PARTECIPAZIONE</h2>
+<p>Gli interessati potranno far pervenire la propria domanda di partecipazione alla selezione in oggetto
+mediante presentazione di un'istanza redatta secondo i seguenti modelli: Allegato A) istanza di
+partecipazione debitamente datata e sottoscritta, corredata da curriculum vitae in formato europeo datato e
+sottoscritto e da copia di un documento d'identità in corso di validità del candidato; Allegato B) scheda di
+autovalutazione dei titoli, debitamente datata e sottoscritta; Allegato C) dichiarazioni di insussistenza
+cause incompatibilità e di assenza di conflitto di interessi.</p>
+<p>Tutta la documentazione dovrà essere consegnata in busta chiusa con la dicitura "Contiene istanza per
+selezione {{ progetto.titolo }} - Nome corso per il quale ci si candida", entro le ore {{ scadenza_ora }}
+del {{ scadenza_data.strftime('%d/%m/%Y') if scadenza_data else '___________' }}, brevi manu, presso
+l'ufficio di segreteria di questa Istituzione Scolastica, o tramite PEO all'indirizzo ({{ peo }}) o mediante
+raccomandata. Per le domande pervenute a mezzo raccomandata fa fede la data indicata dal timbro postale.</p>
+<p>Configureranno cause tassative di esclusione: la presentazione del curriculum vitae non in formato
+europeo; la presentazione del curriculum vitae non contenente le dichiarazioni relative agli artt. 46 e 47
+del D.P.R. n. 445/00; l'omissione anche di una sola firma sulla documentazione; la presentazione di un
+Documento di identità scaduto o illeggibile; la dichiarazione di requisiti di ammissione mancanti o non
+veritieri.</p>
+
+<h2 class="articolo">ART. 3 - SOGGETTI AMMESSI A PARTECIPARE E CRITERI GENERALI DI SELEZIONE</h2>
+<p>Sono ammessi a partecipare alla presente selezione: i dipendenti in servizio presso questa
+Amministrazione scolastica; i dipendenti in servizio presso altre Istituzioni scolastiche (cd.
+collaborazioni plurime); i soggetti privati esterni persone fisiche.</p>
+<p>Ai fini della selezione e della redazione delle relative graduatorie, l'Amministrazione conferirà gli
+incarichi secondo l'ordine di scorrimento della graduatoria, seguendo il seguente ordine di preferenza:
+prioritariamente a favore dei candidati dipendenti in servizio presso questa Amministrazione scolastica; in
+subordine a favore dei candidati dipendenti presso altra Amministrazione scolastica; in via ulteriormente
+subordinata a favore dei soggetti privati esterni persone fisiche.</p>
+<p>L'attribuzione dell'incarico avverrà con lettera di incarico sottoscritta per accettazione dal soggetto
+selezionato, in caso di incarico conferito a dipendente di questa o di altra Istituzione scolastica; con
+contratto di lavoro autonomo ex art. 2222 e ss. del Codice civile, in caso di conferimento dell'incarico a
+favore di soggetto privato esterno persona fisica (lavoratore autonomo).</p>
+<p>A parità di punteggio, sarà data la preferenza ai candidati nell'ordine che segue: maggiore consistenza
+dei titoli formativi in relazione all'ambito di intervento; precedenti esperienze presso Amministrazioni
+Scolastiche con valutazione finale positiva; candidato anagraficamente più giovane.</p>
+<p>L'esito della selezione sarà comunicato ai candidati attraverso la pubblicazione della graduatoria
+all'albo on-line della scuola, con valore di notifica. Avverso la graduatoria provvisoria sarà possibile
+esperire reclamo entro 7 giorni dalla sua pubblicazione; decorso tale termine ed esaminati eventuali
+reclami, la graduatoria diverrà definitiva. Avverso la graduatoria definitiva è ammesso Ricorso al TAR o,
+in alternativa, ricorso straordinario al Capo dello Stato nelle forme e nei termini previsti dalla Legge.</p>
+
+<h2 class="articolo">ART. 4 - REQUISITO DI ACCESSO</h2>
+<p>{{ requisiti_esperto }}</p>
+<p>{{ requisiti_tutor }}</p>
+
+<h2 class="articolo">ART. 5 - CRITERI DI VALUTAZIONE</h2>
+<p>La selezione delle candidature pervenute nei termini verrà effettuata direttamente dal Dirigente
+Scolastico, in qualità di Responsabile del Procedimento, ovvero da una Commissione esaminatrice
+appositamente costituita, attraverso la comparazione dei curricula pervenuti, in funzione dei seguenti
+criteri di valutazione:</p>
+
+<p style="font-weight:700;">CRITERI DI VALUTAZIONE PER DOCENTE ESPERTO (max 100 punti)</p>
+<table class="griglia-titoli">
+    <tr><th>Titolo valutabile</th><th>Punteggio</th></tr>
+    <tr><td>Dottorato di ricerca afferente al profilo richiesto</td><td>10 punti</td></tr>
+    <tr><td>Master / Specializzazione / Perfezionamento coerenti con il profilo richiesto</td><td>2 punti per titolo, max 10 punti</td></tr>
+    <tr><td>Esperienze lavorative e collaborazioni documentate coerenti con il profilo richiesto</td><td>2 punti per esperienza, max 10 punti</td></tr>
+    <tr><td>Esperienze documentate di docenza in progetti PNRR, PON, POR, PNSD o in corsi universitari su tematiche coerenti</td><td>2 punti per esperienza, max 20 punti</td></tr>
+    <tr><td>Esperienze documentate di docenza extrascolastica in istituzioni scolastiche su tematiche coerenti</td><td>2 punti per esperienza, max 10 punti</td></tr>
+    <tr><td>Partecipazione a Corsi di Formazione di almeno 25 ore su tematiche coerenti</td><td>1 punto per corso, max 10 punti</td></tr>
+    <tr><td>Attività di formatore inerente ad attività progettuali coerenti con il profilo richiesto</td><td>1 punto per attività, max 10 punti</td></tr>
+    <tr><td>Pubblicazione di monografie e/o articoli su riviste scientifiche coerenti con il profilo richiesto</td><td>1 punto per pubblicazione, max 10 punti</td></tr>
+    <tr><td>Certificazioni informatiche (ECDL, Microsoft, Cisco, EIPASS, etc.)</td><td>1 punto per certificazione, max 5 punti</td></tr>
+    <tr><td>Certificazioni linguistiche documentate livello B1 o superiore</td><td>1 punto per certificazione, max 5 punti</td></tr>
+</table>
+
+<p style="font-weight:700;">CRITERI DI VALUTAZIONE PER DOCENTE TUTOR (max 100 punti)</p>
+<table class="griglia-titoli">
+    <tr><th>Titolo valutabile</th><th>Punteggio</th></tr>
+    <tr><td>Laurea triennale, V.O., specialistica o magistrale afferente al profilo richiesto</td><td>da 2 a 6 punti in base al voto di laurea</td></tr>
+    <tr><td>Dottorato / Master / Specializzazione / Perfezionamento coerenti con il profilo richiesto</td><td>2 punti per titolo, max 10 punti</td></tr>
+    <tr><td>Esperienze lavorative e collaborazioni documentate coerenti con il profilo richiesto</td><td>2 punti per esperienza, max 10 punti</td></tr>
+    <tr><td>Esperienze documentate di docenza in progetti PNRR, PON, POR, PNSD o in corsi universitari su tematiche coerenti</td><td>2 punti per esperienza, max 20 punti</td></tr>
+    <tr><td>Esperienze documentate di docenza extrascolastica in istituzioni scolastiche su tematiche coerenti</td><td>2 punti per esperienza, max 10 punti</td></tr>
+    <tr><td>Partecipazione a Corsi di Formazione di almeno 25 ore su tematiche coerenti</td><td>1 punto per corso, max 10 punti</td></tr>
+    <tr><td>Attività di formatore inerente ad attività progettuali coerenti con il profilo richiesto</td><td>1 punto per attività, max 10 punti</td></tr>
+    <tr><td>Certificazioni informatiche (ECDL, Microsoft, Cisco, EIPASS, etc.)</td><td>1 punto per certificazione, max 5 punti</td></tr>
+    <tr><td>Certificazioni linguistiche documentate livello B1 o superiore</td><td>1 punto per certificazione, max 5 punti</td></tr>
+    <tr><td>Esperienza di tutor PCTO / coordinatore di classe / coordinatore di dipartimento / funzione strumentale per l'orientamento e/o il contrasto alla dispersione scolastica</td><td>1 punto per esperienza, max 10 punti</td></tr>
+</table>
+
+<h2 class="articolo">ART. 6 - COMPITI, DURATA E COMPENSO PER L'INCARICO</h2>
+<p>Il Docente Esperto programma e gestisce le attività dei percorsi, rileva i fabbisogni formativi, cura la
+co-progettazione e la documentazione degli interventi, tiene gli incontri formativi secondo il calendario
+stabilito, cura il monitoraggio e la relazione finale. Il Docente Tutor supporta il Docente Esperto,
+registra le presenze dei corsisti, ne monitora la frequenza, cura la relazione periodica al Dirigente
+Scolastico e la documentazione di ciascun percorso. Il compenso orario onnicomprensivo per ciascuna figura
+è quello indicato in tabella, corrisposto sulla base delle ore effettivamente svolte e rendicontate, fermo
+restando il raggiungimento dei target e delle milestone di progetto: il relativo mancato raggiungimento dà
+luogo alla decadenza del finanziamento e, in tal caso, alcun compenso sarà corrisposto.</p>
+<p>{{ vincoli_attivazione }}</p>
+
+<h2 class="articolo">ART. 7 - OBBLIGHI A CARICO DELL'INCARICATO</h2>
+<p>L'incaricato si impegna ad adempiere secondo buona fede, diligenza e a regola d'arte alle obbligazioni
+assunte; ad osservare le direttive operative dell'Istituto; a comunicare tempestivamente ogni evento che
+possa interferire sull'esecuzione dell'incarico; a rispondere direttamente dei danni a persone o cose
+provocati nell'esecuzione dell'incarico; ad osservare il Codice di comportamento e gli obblighi di
+riservatezza previsti dalla normativa vigente.</p>
+
+<h2 class="articolo">ART. 8 - VERIFICHE E CONTROLLI, ART. 9 - REVOCA, ART. 10 - RESPONSABILITÀ VERSO TERZI</h2>
+<p>L'Istituto si riserva di accertare l'esatto adempimento delle attività mediante richiesta di valutazioni
+e/o relazioni scritte, anche in itinere. L'incarico può essere revocato in caso di inadempimento delle
+prestazioni e degli obblighi previsti dalla legge e dai documenti relativi alla procedura, con
+contestazione scritta trasmessa a mezzo PEC; in tal caso si intenderà sciolto con effetto immediato
+qualsiasi accordo contrattuale sottoscritto, ai sensi dell'art. 1456 del Codice civile. L'Istituto non
+assume responsabilità nei confronti di terzi per danni cagionati dall'incaricato in relazione allo
+svolgimento del presente incarico.</p>
+
+<h2 class="articolo">ART. 11 - RINUNCIA E SURROGA, ART. 12 - DIVIETO DI CESSIONE DELLE PRESTAZIONI</h2>
+<p>In caso di rinuncia alla nomina, da presentarsi entro 7 giorni dalla comunicazione di avvenuta selezione,
+l'Istituto procederà alla surroga nell'incarico secondo l'ordine di scorrimento della graduatoria. È fatto
+divieto al soggetto selezionato di cedere, in tutto o in parte, le prestazioni oggetto dell'incarico,
+sotto pena di revoca.</p>
+
+<h2 class="articolo">ART. 13 - RESPONSABILE DEL PROCEDIMENTO</h2>
+<p>Ai sensi dell'art. 5 della Legge 241/90, il Responsabile del Procedimento è il Dirigente Scolastico,
+{{ ds_titolo }} {{ ds_nome }}.</p>
+
+<h2 class="articolo">ART. 14 - INFORMATIVA TRATTAMENTO DATI PERSONALI</h2>
+<p>Con riferimento al Regolamento Europeo 679/2016 e al D. Lgs. n. 196/2003 e ss.mm.ii., i dati richiesti
+saranno trattati esclusivamente per le finalità del presente procedimento, nell'assoluto rispetto delle
+disposizioni vigenti in tema di privacy. L'informativa estesa è disponibile sul sito web dell'Istituzione
+Scolastica: {{ sito_web }}</p>
+<p>Il presente Avviso sarà pubblicato nelle sezioni Albo online e Amministrazione trasparente del sito web
+dell'Istituzione Scolastica.</p>
+<p>In allegato: Allegato A) Domanda di partecipazione; Allegato B) Scheda di autovalutazione dei titoli;
+Allegato C) Dichiarazioni di insussistenza cause incompatibilità e assenza conflitto di interessi.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare e integrare (allegati A/B/C) prima della protocollazione.</div>
+
+</body>
+</html>
