@@ -284,3 +284,79 @@ def test_calendario_modulo_aggiunge_ed_elimina_sessioni(app, db_session, monkeyp
         assert r.status_code == 200
 
     assert SessioneFSE.query.filter_by(id_modulo=m.id).count() == 0
+
+
+# ── Registro presenze ─────────────────────────────────────────────────
+
+def test_aggiungi_e_modifica_ore_presenza_via_route(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Il club del libro', ore=30, n_partecipanti_previsti=15)
+    db.session.add(m)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/moduli/{m.id}/presenze', data={
+            'cognome': 'rossi', 'nome': 'mario', 'codice_fiscale': 'rssmra01a01h163k',
+            'ore_presenza': '10',
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+    presenza = PresenzaFSE.query.filter_by(id_modulo=m.id).first()
+    assert presenza is not None
+    assert presenza.cognome == 'ROSSI'  # normalizzato in maiuscolo, come l'anagrafica docenti
+    assert presenza.codice_fiscale == 'RSSMRA01A01H163K'
+    assert float(presenza.ore_presenza) == 10
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/presenze/{presenza.id}/modifica-ore',
+                   data={'ore_presenza': '22'}, follow_redirects=True)
+        assert r.status_code == 200
+
+    db.session.refresh(presenza)
+    assert float(presenza.ore_presenza) == 22
+
+
+def test_frequenza_percentuale_e_soglia_attestato_75_per_cento(app, db_session):
+    """L'attestato finale (generato da SIF2127) richiede almeno il 75%
+    delle ore del modulo -- verificato sulla lettera di autorizzazione
+    reale del progetto."""
+    _crea_tabelle(app)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='La corda che unisce', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    sotto_soglia = PresenzaFSE(id_modulo=m.id, cognome='Verdi', nome='Anna', ore_presenza=20)  # 66.7%
+    sopra_soglia = PresenzaFSE(id_modulo=m.id, cognome='Neri', nome='Luca', ore_presenza=23)   # 76.7%
+    db.session.add_all([sotto_soglia, sopra_soglia])
+    db.session.commit()
+
+    assert sotto_soglia.frequenza_percentuale(m.ore) < 75
+    assert sopra_soglia.frequenza_percentuale(m.ore) >= 75
+
+
+def test_elimina_presenza(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Padel 1', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    pres = PresenzaFSE(id_modulo=m.id, cognome='Gialli', nome='Sara', ore_presenza=5)
+    db.session.add(pres)
+    db.session.commit()
+    id_pres = pres.id
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/presenze/{id_pres}/elimina', follow_redirects=True)
+        assert r.status_code == 200
+
+    assert PresenzaFSE.query.get(id_pres) is None

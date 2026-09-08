@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Presenze — {{ modulo.titolo }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=modulo.id_progetto) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ modulo.progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ icon('list') }} Registro presenze — {{ modulo.titolo }}
+    </h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        Ore di presenza cumulative per partecipante (non per singola sessione) — stessa
+        logica di SIF2127: conta il totale delle ore, non i giorni di presenza.
+        L'attestato finale richiede almeno il 75% delle {{ modulo.ore }} ore del modulo.
+    </p>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px;">
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--blu);">{{ partecipanti|length }}</div>
+        <div style="font-size:.78rem; color:var(--grigio);">PARTECIPANTI REGISTRATI</div>
+    </div>
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--blu);">{{ modulo.n_partecipanti_previsti or '—' }}</div>
+        <div style="font-size:.78rem; color:var(--grigio);">DICHIARATI IN CANDIDATURA (N)</div>
+    </div>
+    <div class="card" style="text-align:center; padding:16px;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--verde);">
+            {% set stima = modulo.costo_gestione_stimato() %}
+            {% if stima is not none %}{{ '%.2f'|format(stima) }} €{% else %}—{% endif %}
+        </div>
+        <div style="font-size:.78rem; color:var(--grigio);">COSTO DI GESTIONE STIMATO (migliori N)</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="font-size:.9rem;">Partecipanti</h2>
+    {% if not partecipanti %}
+    <p style="color:var(--grigio); text-align:center; padding:24px;">Nessun partecipante ancora registrato.</p>
+    {% else %}
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:8px;">Cognome</th>
+                <th style="text-align:left; padding:8px;">Nome</th>
+                <th style="text-align:left; padding:8px;">Codice fiscale</th>
+                <th style="text-align:center; padding:8px;">Ore presenza</th>
+                <th style="text-align:center; padding:8px;">Frequenza</th>
+                <th style="text-align:center; padding:8px;">Attestato</th>
+                <th style="text-align:center; padding:8px;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in partecipanti %}
+            {% set freq = p.frequenza_percentuale(modulo.ore) %}
+            <tr style="border-top:1px solid #e5eaf0;">
+                <td style="padding:8px;"><strong>{{ p.cognome }}</strong></td>
+                <td style="padding:8px;">{{ p.nome }}</td>
+                <td style="padding:8px; font-size:.78rem; color:var(--grigio);">{{ p.codice_fiscale or '—' }}</td>
+                <td style="padding:8px; text-align:center;">
+                    <form method="post" action="{{ url_for('progetti_fse.modifica_ore_presenza', id=p.id) }}"
+                          style="display:inline-flex; gap:4px; align-items:center;">
+                        <input type="text" name="ore_presenza" value="{{ p.ore_presenza }}"
+                               style="width:60px; padding:3px 6px; border:1px solid #d1d5db; border-radius:5px; text-align:center;">
+                        <button type="submit" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">{{ icon('check') }}</button>
+                    </form>
+                </td>
+                <td style="padding:8px; text-align:center;">
+                    <span style="color:{% if freq >= 75 %}var(--verde){% else %}var(--rosso){% endif %}; font-weight:700;">{{ freq }}%</span>
+                </td>
+                <td style="padding:8px; text-align:center;">
+                    {% if freq >= 75 %}
+                    <span class="badge badge-verde" title="Almeno il 75% delle ore: attestato generabile">{{ icon('check') }}</span>
+                    {% else %}
+                    <span style="color:var(--grigio); font-size:.75rem;">no</span>
+                    {% endif %}
+                </td>
+                <td style="padding:8px; text-align:center;">
+                    <form method="post" action="{{ url_for('progetti_fse.elimina_presenza', id=p.id) }}"
+                          onsubmit="return confirm('Rimuovere {{ p.cognome }} {{ p.nome }} dal registro?')">
+                        <button type="submit" class="btn btn-danger btn-sm">{{ icon('close') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card" style="max-width:480px; margin-top:16px;">
+    <h2 style="font-size:.9rem;">Aggiungi partecipante</h2>
+    <form method="post">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+                <label>Cognome *</label>
+                <input type="text" name="cognome" required>
+            </div>
+            <div class="form-group">
+                <label>Nome *</label>
+                <input type="text" name="nome" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Codice fiscale</label>
+            <input type="text" name="codice_fiscale" maxlength="16">
+        </div>
+        <div class="form-group">
+            <label>Ore di presenza (se già note)</label>
+            <input type="text" name="ore_presenza" value="0">
+        </div>
+        <button type="submit" class="btn btn-success">{{ icon('plus') }} Aggiungi</button>
+    </form>
+</div>
+{% endblock %}

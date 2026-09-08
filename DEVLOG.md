@@ -80,9 +80,35 @@ pagina), verificata la sezione permessi in DB. `database.db` reale
 invariato (md5 identico), `PRAGMA integrity_check: ok`.
 
 **Prossimi passi** (non ancora fatti): generazione documenti (bandi/
-decreti/incarichi) dai modelli reali del DS; registro presenze
-partecipanti collegato al calcolo costi; cruscotto di monitoraggio
-finanziario complessivo.
+decreti/incarichi) dai modelli reali del DS; cruscotto di monitoraggio
+finanziario complessivo multi-progetto.
+
+## Sessione 67 addendum 2 — Registro presenze partecipanti collegato al calcolo costi
+
+Seguito diretto: registro presenze per modulo — un contatore
+CUMULATIVO di ore per partecipante (non una riga per sessione), la
+stessa logica di SIF2127 verificata sulla lettera di autorizzazione
+reale: "ha assoluta rilevanza il numero totale delle ore registrate
+dal singolo partecipante e non il numero totale delle presenze
+giornaliere".
+
+- `progetti_fse.presenze_modulo` (lista + aggiungi partecipante),
+  `modifica_ore_presenza` (aggiornamento rapido inline), `elimina_presenza`.
+- La pagina mostra, oltre all'elenco, il costo di gestione stimato in
+  tempo reale (`ModuloFSE.costo_gestione_stimato()`, già nel modello
+  dalla prima fetta) e — per ciascun partecipante — la frequenza % sul
+  totale ore del modulo con soglia del 75% per l'attestato (anche
+  questa dalla lettera di autorizzazione).
+
+Verifica: 4 nuovi test (aggiunta/modifica ore, soglia 75%, eliminazione)
+— `pytest` 422/422 (419 + 3, +1 già presente). Collaudo dal vivo su
+copia isolata: creati 3 partecipanti con 30/20/10 ore su un modulo con
+2 partecipanti dichiarati in candidatura — il costo di gestione
+stimato mostrato in pagina è **255,00 €** = (30+20)×5,10€, cioè
+considera correttamente solo i due migliori (Rossi e Bianchi),
+escludendo Verdi (10h) pur essendo elencato — esattamente il
+comportamento di SIF2127 descritto nella lettera di autorizzazione.
+`database.db` reale invariato (md5 identico), `PRAGMA integrity_check: ok`.
 
 ## Sessione 67 addendum 1 — Calendario moduli + integrazione Agenda (sola lettura)
 

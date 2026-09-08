@@ -303,3 +303,50 @@ def elimina_sessione(id):
     db.session.commit()
     flash('Sessione eliminata.', 'warning')
     return redirect(url_for('progetti_fse.calendario_modulo', id_modulo=id_modulo))
+
+
+# ── REGISTRO PRESENZE ─────────────────────────────────────────────────
+# Un'unica riga per partecipante con il monte ore CUMULATIVO di presenza
+# (non una riga per sessione): è la stessa logica di SIF2127 — "ha
+# assoluta rilevanza il numero totale delle ore registrate dal singolo
+# partecipante e non il numero totale delle presenze giornaliere"
+# (lettera di autorizzazione del progetto reale) — quindi il registro
+# tiene un contatore che cresce man mano, non un dettaglio per data.
+@progetti_fse_bp.route('/progetti-fse/moduli/<int:id_modulo>/presenze', methods=['GET', 'POST'])
+def presenze_modulo(id_modulo):
+    m = ModuloFSE.query.get_or_404(id_modulo)
+    if request.method == 'POST':
+        p = PresenzaFSE(
+            id_modulo=m.id,
+            cognome=request.form['cognome'].strip().upper(),
+            nome=request.form['nome'].strip().title(),
+            codice_fiscale=request.form.get('codice_fiscale', '').strip().upper() or None,
+            ore_presenza=_decimal(request.form, 'ore_presenza') or 0,
+        )
+        db.session.add(p)
+        db.session.commit()
+        flash(f'{p.cognome} {p.nome} aggiunto al registro presenze.', 'success')
+        return redirect(url_for('progetti_fse.presenze_modulo', id_modulo=m.id))
+
+    partecipanti = sorted(m.presenze, key=lambda p: p.cognome)
+    return render_template('progetti_fse/presenze_modulo.html', modulo=m,
+        partecipanti=partecipanti)
+
+
+@progetti_fse_bp.route('/progetti-fse/presenze/<int:id>/modifica-ore', methods=['POST'])
+def modifica_ore_presenza(id):
+    p = PresenzaFSE.query.get_or_404(id)
+    p.ore_presenza = _decimal(request.form, 'ore_presenza') or 0
+    db.session.commit()
+    return redirect(url_for('progetti_fse.presenze_modulo', id_modulo=p.id_modulo))
+
+
+@progetti_fse_bp.route('/progetti-fse/presenze/<int:id>/elimina', methods=['POST'])
+def elimina_presenza(id):
+    p = PresenzaFSE.query.get_or_404(id)
+    id_modulo = p.id_modulo
+    nome = f'{p.cognome} {p.nome}'
+    db.session.delete(p)
+    db.session.commit()
+    flash(f'{nome} rimosso dal registro presenze.', 'warning')
+    return redirect(url_for('progetti_fse.presenze_modulo', id_modulo=id_modulo))
