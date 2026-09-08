@@ -33,10 +33,18 @@
         <a href="{{ url_for('guida.index') }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">{{ icon('arrow-left') }} Guida</a>
         <h1 style="font-size:1.4rem; color:var(--blu); margin-top:2px;">{{ sez.icona }} {{ sez.titolo }}</h1>
     </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    {% if sez.endpoint %}
+    <a href="{{ url_for(sez.endpoint) }}" class="btn btn-sm btn-primary"
+       style="text-decoration:none; white-space:nowrap;">
+        {{ icon('external') }} Vai alla pagina
+    </a>
+    {% endif %}
     <a href="{{ url_for('guida.sezione_pdf', slug=sez.slug) }}" class="btn btn-sm"
        style="background:#16a34a; color:white; text-decoration:none; white-space:nowrap;">
         {{ icon('download') }} Scarica PDF
     </a>
+    </div>
 </div>
 
 <div style="display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start;">
@@ -94,6 +102,14 @@
                 <div class="faq-risposta">{{ risposta }}</div>
             </div>
             {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if sez.endpoint %}
+        <div style="text-align:center; margin-top:8px;">
+            <a href="{{ url_for(sez.endpoint) }}" class="btn btn-primary" style="text-decoration:none;">
+                {{ icon('external') }} Vai alla pagina «{{ sez.titolo }}»
+            </a>
         </div>
         {% endif %}
     </div>

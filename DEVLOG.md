@@ -4,6 +4,74 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 132 — Usabilità blocco 2 (select con ricerca, legenda, link Guida)
+
+Seguito diretto dell'addendum 131 (piano a blocchi approvato da
+Roberto). Secondo blocco, impatto medio/alto:
+
+1. **Select con ricerca per i campi Docente** — nuovo
+   `static/js/select_ricerca.js` (vanilla, nessuna libreria esterna,
+   coerente con lo stile del progetto): trasforma un `<select>` con
+   `data-search="1"` in un campo "scrivi e filtra" senza toccare il
+   markup del form — il `<select>` originale resta l'unico campo
+   davvero inviato (solo `hidden`), un input+menu personalizzati lo
+   pilotano e ogni scelta genera un evento `change` nativo così tutta
+   la logica `onchange`/`addEventListener` già esistente (es.
+   `aggiornaOrarioDocente()` in `assenza_form.html`) continua a
+   funzionare senza modifiche. Applicato ai 6 punti a più alto
+   traffico: `assenza_form.html` (#sel-docente), `modifica_assenza.html`,
+   `supplenza_form.html` (id_assente/id_sostituto),
+   `modifica_supplenza.html` (id_assente/id_sostituto), e il select
+   inline "Sostituto" per riga scoperta in `dashboard.html`. CSS in
+   `templates/base.html`. Bug trovato e corretto durante il collaudo
+   dal vivo (non dai test): il testo delle `<option>` multilinea in
+   Jinja portava con sé newline/indentazione grezzi nel campo di
+   ricerca — corretto normalizzando gli spazi (`testoOpzione()`).
+2. **Legenda persistente per le abbreviazioni supplenza** (R/C/P/D/SO)
+   sopra "Registro supplenze" in dashboard, invece di esistere solo
+   dentro le tendine di modifica; aggiunta anche l'etichetta completa
+   nel `title` di ogni badge cliccabile.
+3. **Link "Vai alla pagina" in fondo (e in cima) a ogni sezione della
+   Guida** — `modules/guida_content.py`: aggiunto un campo `endpoint`
+   a tutte le 27 sezioni (mappa slug→endpoint Flask verificata una per
+   una), `templates/guida/sezione.html` lo usa con `url_for(sez.endpoint)`.
+   Chiude il loop "leggo come si fa" → "vado a farlo" senza dover
+   richiudere la guida e ritrovare la voce nel menu da soli.
+4. **Tooltip su "Attività differite"** in navbar
+   ("Recuperi di giugno/agosto, rientro dall'estero, esami
+   integrativi") — chiarisce cosa contiene un'etichetta altrimenti
+   astratta, senza restrutturare il menu.
+
+**Incidente durante la verifica (trasparenza totale, come da regola
+1)**: per controllare a mano la mappa slug→endpoint ho lanciato uno
+script Python con `create_app()` SENZA reindirizzare il path del
+database — ha girato per un istante contro `database.db` reale invece
+che su una copia. Accorto subito dall'md5 cambiato. Verificato riga
+per riga (non solo il conteggio): tutte le tabelle di business
+(assenze, supplenze, banca_ore, assegnazioni_docenti,
+assegnazioni_classi, docenti) identiche al backup cifrato precedente;
+l'unica differenza reale era una riga in più in `log_accessi`, un
+login autentico di 'dsga' delle 19:28 — non generato dallo script (
+l'unico punto che scrive `'login'` nei log è `routes/auth.py:145`,
+mai chiamato) — quasi certamente Roberto stesso con l'app vera aperta
+altrove. Anche creato un backup cifrato automatico di oggi (effetto
+collaterale innocuo). `PRAGMA integrity_check: ok`. Segnalato
+esplicitamente a Roberto in chat prima di proseguire, con la sua
+conferma. Aggiunto `tests/test_guida_endpoint_link.py` — registra
+tutti i blueprint coinvolti e verifica con `url_for()` che ogni
+endpoint della Guida sia risolvibile, così in futuro questa mappa si
+verifica da un test, mai più con `create_app()` diretto senza redirect.
+
+Verifica: `pytest` 411/411 (410 + 1 nuovo). Collaudo dal vivo su copia
+isolata (redirect verificato con un `assert` esplicito nello script
+prima di avviare il server, per non ripetere l'incidente): selezione
+di un docente tramite ricerca nel form assenze → salvataggio reale →
+comparso correttamente in dashboard ("TRAMONTANA — malattia");
+sostituto-select inline funzionante nelle righe "scoperta"; link Guida
+verificati su due sezioni diverse (recupero, permessi); tooltip
+presente sul menu. `database.db` reale: invariato in questo giro
+(md5 identico prima/dopo), `PRAGMA integrity_check: ok`.
+
 ## Sessione 66 addendum 131 — Analisi usabilità + blocco 1 di interventi (5 fix)
 
 Roberto chiede un'analisi approfondita dell'usabilità per vicepreside e

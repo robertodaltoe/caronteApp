@@ -392,6 +392,33 @@
             width: auto; padding: 0; border: none; border-radius: 0; background: transparent;
         }
 
+        /* SELECT CON RICERCA (static/js/select_ricerca.js) — potenzia i
+           <select> con molte opzioni (es. i docenti) con un campo di
+           ricerca "scrivi e filtra", senza toccare il markup del form:
+           il <select> originale resta nascosto ma è ancora lui l'unico
+           campo davvero inviato. */
+        .sel-ricerca-wrap { position: relative; }
+        .sel-ricerca-input {
+            width: 100%; padding: 9px 12px; border: 1px solid #d1d5db;
+            border-radius: 6px; font-family: var(--font); font-size: .92rem;
+            background: white; color: #1e2939; box-sizing: border-box;
+        }
+        .sel-ricerca-input:focus {
+            outline: none; border-color: var(--blu-med); box-shadow: 0 0 0 3px rgba(45,95,138,.15);
+        }
+        .sel-ricerca-menu {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 40;
+            background: white; border: 1px solid #d1d5db; border-radius: 6px;
+            margin-top: 4px; max-height: 260px; overflow-y: auto;
+            box-shadow: 0 6px 16px rgba(0,0,0,.12);
+        }
+        .sel-ricerca-item {
+            padding: 7px 12px; font-size: .88rem; cursor: pointer; color: #1e2939;
+        }
+        .sel-ricerca-item:hover { background: var(--blu-light); }
+        .sel-ricerca-item.selezionato { font-weight: 700; background: #f3f4f6; }
+        .sel-ricerca-vuoto { padding: 8px 12px; font-size: .85rem; color: var(--grigio); font-style: italic; }
+
         /* STATS */
         .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
         .stat-box {
@@ -517,7 +544,7 @@
             <a href="{{ url_for('attivita_ist.piano_annuale') }}"><span class="nav-ic">{{ icon('list') }}</span> Piano delle attività</a>
             {% endif %}
             {% if puo_vedere('attivita_differite') %}
-            <a href="{{ url_for('att_differite.index') }}"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
+            <a href="{{ url_for('att_differite.index') }}" title="Recuperi di giugno/agosto, rientro dall'estero, esami integrativi"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
             {% endif %}
             {% if puo_vedere('piano_personale') %}
             <a href="{{ url_for('piano_personale.lista') }}"><span class="nav-ic">{{ icon('person') }}</span> Piano attività personale</a>
@@ -693,6 +720,8 @@
     window.addEventListener('resize', aggiornaOverflowNav);
 })();
 </script>
+
+<script src="{{ url_for('static', filename='js/select_ricerca.js') }}"></script>
 
 {% block extra_script %}{% endblock %}
 <style>

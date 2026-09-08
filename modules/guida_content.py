@@ -16,6 +16,7 @@ toccare le route o i template — vengono generati automaticamente.
 SEZIONI = [
     {
         'slug': 'dashboard',
+        'endpoint': 'dashboard.index',
         'titolo': 'Dashboard',
         'icona': '⌂',
         'riassunto': 'La situazione di un giorno: chi è assente, chi copre, chi manca ancora.',
@@ -59,6 +60,7 @@ SEZIONI = [
     },
     {
         'slug': 'assenze',
+        'endpoint': 'assenze.nuova',
         'titolo': 'Assenze',
         'icona': '✎',
         'riassunto': 'Registrare l\'assenza di un docente e generare automaticamente le coperture.',
@@ -112,6 +114,7 @@ SEZIONI = [
     },
     {
         'slug': 'supplenze',
+        'endpoint': 'supplenze.nuova',
         'titolo': 'Supplenze',
         'icona': '⇄',
         'riassunto': 'Chi copre quale classe, ora per ora — assegnazione manuale o automatica.',
@@ -155,6 +158,7 @@ SEZIONI = [
     },
     {
         'slug': 'indisponibilita',
+        'endpoint': 'indisponibilita.nuova',
         'titolo': 'Indisponibilità',
         'icona': '🚫',
         'riassunto': 'Segnalare quando un docente non può essere usato per una supplenza (ma è comunque a scuola).',
@@ -201,6 +205,7 @@ SEZIONI = [
     },
     {
         'slug': 'agenda',
+        'endpoint': 'agenda.index',
         'titolo': 'Agenda',
         'icona': '📅',
         'riassunto': 'La vista d\'insieme sui prossimi giorni: cosa è già programmato.',
@@ -233,6 +238,7 @@ SEZIONI = [
     },
     {
         'slug': 'cambi-quadro',
+        'endpoint': 'cambi.lista',
         'titolo': 'Cambi quadro',
         'icona': '↻',
         'riassunto': 'Scambi di ore tra docenti, ferie concordate, sorveglianze — al di fuori delle normali assenze.',
@@ -273,6 +279,7 @@ SEZIONI = [
     },
     {
         'slug': 'attivita-fuori-aula',
+        'endpoint': 'attivita.lista',
         'titolo': 'Attività fuori aula',
         'icona': '🧭',
         'riassunto': 'Viaggi d\'istruzione, uscite didattiche, gite — con i docenti accompagnatori.',
@@ -307,6 +314,7 @@ SEZIONI = [
     },
     {
         'slug': 'attivita-istituzionali',
+        'endpoint': 'attivita_ist.lista',
         'titolo': 'Attività istituzionali',
         'icona': '🏫',
         'riassunto': 'Scrutini, collegi docenti, consigli di classe — presenze e sostituzioni.',
@@ -369,6 +377,7 @@ SEZIONI = [
     },
     {
         'slug': 'piano-annuale-attivita',
+        'endpoint': 'attivita_ist.piano_annuale',
         'titolo': 'Piano Annuale attività',
         'icona': '📅',
         'riassunto': 'Formazione obbligatoria, vista mensile, riepilogo ore, generatore Consigli di classe.',
@@ -436,6 +445,7 @@ SEZIONI = [
     },
     {
         'slug': 'attivita-differite',
+        'endpoint': 'att_differite.index',
         'titolo': 'Attività differite',
         'icona': '⏱',
         'riassunto': 'Ore di lezione da recuperare in un momento diverso da quello previsto in orario.',
@@ -456,6 +466,7 @@ SEZIONI = [
     },
     {
         'slug': 'dipartimenti',
+        'endpoint': 'attivita_ist.dipartimenti',
         'titolo': 'Dipartimenti e materie',
         'icona': '📚',
         'riassunto': 'L\'organizzazione dei dipartimenti disciplinari e le materie che li compongono.',
@@ -478,6 +489,7 @@ SEZIONI = [
     },
     {
         'slug': 'piano-personale',
+        'endpoint': 'piano_personale.lista',
         'titolo': 'Piano attività personale',
         'icona': '📋',
         'riassunto': 'I docenti a cattedra non completa (e gli IRC) scelgono i propri impegni collegiali dal Piano ufficiale.',
@@ -536,6 +548,7 @@ SEZIONI = [
     },
     {
         'slug': 'banca-ore',
+        'endpoint': 'banca_ore.index',
         'titolo': 'Banca ore',
         'icona': '⏲',
         'riassunto': 'Il saldo ore di ogni docente: supplenze svolte, permessi da recuperare, pagamenti.',
@@ -568,6 +581,7 @@ SEZIONI = [
     },
     {
         'slug': 'report',
+        'endpoint': 'report.index',
         'titolo': 'Report',
         'icona': '📊',
         'riassunto': 'Prospetti riepilogativi per il Dirigente e per la segreteria, anche in PDF/Excel.',
@@ -593,6 +607,7 @@ SEZIONI = [
     },
     {
         'slug': 'orario',
+        'endpoint': 'sync.index',
         'titolo': 'Orario',
         'icona': '▦',
         'riassunto': 'L\'orario settimanale di ogni docente — di sostegno e generale.',
@@ -615,6 +630,7 @@ SEZIONI = [
     },
     {
         'slug': 'recupero',
+        'endpoint': 'recupero.index',
         'titolo': 'Recupero (corsi di giugno e agosto)',
         'icona': '📖',
         'riassunto': 'Organizzazione dei corsi di recupero estivi: gruppi, calendario, disponibilità docenti.',
@@ -651,6 +667,7 @@ SEZIONI = [
     },
     {
         'slug': 'rientro',
+        'endpoint': 'rientro.index',
         'titolo': 'Rientro dall\'estero',
         'icona': '✈',
         'riassunto': 'Organizzazione dei colloqui di verifica per gli studenti di rientro da un periodo all\'estero.',
@@ -675,6 +692,7 @@ SEZIONI = [
     },
     {
         'slug': 'esami-integrativi',
+        'endpoint': 'esami_integrativi.index',
         'titolo': 'Esami integrativi',
         'icona': '📝',
         'riassunto': 'Organizzazione degli esami integrativi/idoneità: candidati e calendario.',
@@ -695,6 +713,7 @@ SEZIONI = [
     },
     {
         'slug': 'docenti',
+        'endpoint': 'docenti.lista',
         'titolo': 'Docenti',
         'icona': '👤',
         'riassunto': 'L\'anagrafica di tutti i docenti: contratto, contatti, classe di concorso.',
@@ -752,6 +771,7 @@ SEZIONI = [
     },
     {
         'slug': 'organico',
+        'endpoint': 'impostazione_anno.index',
         'titolo': 'Impostazione anno / Organico',
         'icona': '🗂',
         'riassunto': 'Il percorso guidato in più passi per preparare un nuovo anno scolastico.',
@@ -790,6 +810,7 @@ SEZIONI = [
     },
     {
         'slug': 'cambio-anno',
+        'endpoint': 'cambio_anno.index',
         'titolo': 'Cambio anno scolastico',
         'icona': '↺',
         'riassunto': 'L\'operazione, riservata, che rende operativo il nuovo anno scolastico preparato.',
@@ -819,6 +840,7 @@ SEZIONI = [
     },
     {
         'slug': 'calendario',
+        'endpoint': 'impostazioni.sospensioni',
         'titolo': 'Calendario scolastico',
         'icona': '📆',
         'riassunto': 'Sospensioni delle lezioni, festività, e i periodi usati da recupero/rientro/esami.',
@@ -841,6 +863,7 @@ SEZIONI = [
     },
     {
         'slug': 'istituto',
+        'endpoint': 'impostazioni.dati_istituto',
         'titolo': 'Istituto',
         'icona': '🏛',
         'riassunto': 'Dati anagrafici dell\'istituto, parametri economici, backup del database.',
@@ -864,6 +887,7 @@ SEZIONI = [
     },
     {
         'slug': 'incarichi',
+        'endpoint': 'incarichi.index',
         'titolo': 'Incarichi',
         'icona': '⭐',
         'riassunto': 'Assegnare incarichi ai docenti (funzioni strumentali, referenti...) e i loro tipi.',
@@ -884,6 +908,7 @@ SEZIONI = [
     },
     {
         'slug': 'assegnazioni',
+        'endpoint': 'assegnazioni.index',
         'titolo': 'Assegnazioni e aule',
         'icona': '🚪',
         'riassunto': 'Quale docente insegna in quale classe (cattedre) e quale aula usa ogni classe.',
@@ -915,6 +940,7 @@ SEZIONI = [
     },
     {
         'slug': 'sync',
+        'endpoint': 'sync_conflitti.index',
         'titolo': 'Sincronizzazione tra postazioni',
         'icona': '🔄',
         'riassunto': 'Come si tengono allineati i dati quando si lavora da più computer.',
@@ -965,6 +991,7 @@ SEZIONI = [
     },
     {
         'slug': 'permessi',
+        'endpoint': 'impostazioni.permessi',
         'titolo': 'Permessi per ruolo',
         'icona': '🔑',
         'riassunto': 'La pagina, riservata al DS, che decide cosa può vedere e fare ogni ruolo.',

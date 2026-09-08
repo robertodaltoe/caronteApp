@@ -7,6 +7,9 @@
 .assegna-inline { display:flex; flex-direction:column; gap:4px; align-items:stretch; }
 .assegna-inline select { padding:4px 6px; border:1px solid #d1d5db; border-radius:5px;
     font-family:var(--font); font-size:.78rem; width:100%; }
+.assegna-inline .sel-ricerca-input { padding:4px 6px; border:1px solid #d1d5db; border-radius:5px;
+    font-family:var(--font); font-size:.78rem; }
+.assegna-inline .sel-ricerca-menu { font-size:.82rem; }
 .assegna-inline .btn-row { display:flex; gap:4px; }
 .tag-auto { display:inline-block; font-size:.7rem; background:var(--bronzo-bg); color:var(--bronzo);
     border-radius:4px; padding:1px 6px; font-weight:600; margin-left:4px; }
@@ -128,6 +131,10 @@
 <div class="card">
     <h2>{{ icon('list') }} Registro supplenze</h2>
     {% if supplenze %}
+    <div style="font-size:.76rem; color:var(--grigio); margin:-4px 0 10px; line-height:1.6;">
+        <strong>R</strong> Recupero · <strong>€</strong> Pagamento · <strong>SO</strong> Scambio ore ·
+        <strong>C</strong> Completamento · <strong>P</strong> Potenziamento · <strong>N/D</strong> Disposizione
+    </div>
     <div style="overflow-x:auto;">
     <table style="table-layout:fixed; width:100%;">
         <thead>
@@ -155,7 +162,7 @@
                     <input type="hidden" name="versione" value="{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}">
                     <div class="assegna-inline">
                         <select name="id_sostituto" id="sel-sost-{{ s.id }}" required
-                                style="width:100%; max-width:160px;">
+                                style="width:100%; max-width:160px;" data-search="1">
                             <option value="">— sostituto —</option>
                             {% for d in docenti %}
                             <option value="{{ d.id }}">{{ d.cognome }}</option>
@@ -199,8 +206,11 @@
                     {% set lbl = {'recupero':'R','pagamento':'€',
                         'completamento':'C','potenziamento':'P',
                         'disposizione':'N/D','scambio':'SO'} %}
+                    {% set lbl_full = {'recupero':'Recupero','pagamento':'Pagamento',
+                        'completamento':'Completamento','potenziamento':'Potenziamento',
+                        'disposizione':'Disposizione','scambio':'Scambio ore'} %}
                     <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}"
-                          style="cursor:pointer;" title="Click per cambiare tipo"
+                          style="cursor:pointer;" title="{{ lbl_full.get(s.tipo, s.tipo) }} — clicca per cambiare tipo"
                           onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this, '{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}')">
                         {{ lbl.get(s.tipo, s.tipo)|upper }} {{ icon('edit') }}
                     </span>
@@ -212,8 +222,11 @@
                     {% set lbl = {'recupero':'R','pagamento':'€',
                         'completamento':'C','potenziamento':'P',
                         'disposizione':'N/D','scambio':'SO'} %}
+                    {% set lbl_full = {'recupero':'Recupero','pagamento':'Pagamento',
+                        'completamento':'Completamento','potenziamento':'Potenziamento',
+                        'disposizione':'Disposizione','scambio':'Scambio ore'} %}
                     <span class="badge {{ tb.get(s.tipo,'badge-grigio') }}"
-                          style="cursor:pointer;" title="Click per cambiare tipo"
+                          style="cursor:pointer;" title="{{ lbl_full.get(s.tipo, s.tipo) }} — clicca per cambiare tipo"
                           onclick="apriCambiaTipo({{ s.id }}, '{{ s.tipo }}', this, '{{ s.modificato_il.isoformat(timespec='microseconds') if s.modificato_il else '' }}')">
                         {{ lbl.get(s.tipo, s.tipo)|upper }} {{ icon('edit') }}
                     </span>

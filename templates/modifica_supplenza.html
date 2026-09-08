@@ -45,7 +45,7 @@
 
     <div class="form-group">
         <label>Docente assente</label>
-        <select name="id_assente">
+        <select name="id_assente" data-search="1">
             <option value="">— nessuno —</option>
             {% for d in docenti %}
             <option value="{{ d.id }}"
@@ -58,7 +58,7 @@
 
     <div class="form-group">
         <label>Sostituto</label>
-        <select name="id_sostituto">
+        <select name="id_sostituto" data-search="1">
             <option value="">— nessuno (scoperta) —</option>
             {% for d in docenti %}
             <option value="{{ d.id }}"

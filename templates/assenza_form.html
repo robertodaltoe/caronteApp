@@ -47,7 +47,7 @@
     <!-- DOCENTE -->
     <div class="form-group">
         <label>Docente *</label>
-        <select name="id_docente" id="sel-docente" required onchange="aggiornaOrarioDocente()">
+        <select name="id_docente" id="sel-docente" required onchange="aggiornaOrarioDocente()" data-search="1">
             <option value="">— seleziona —</option>
             {% for d in docenti %}
             <option value="{{ d.id }}" data-contratto="{{ d.tipo_contratto or '' }}"

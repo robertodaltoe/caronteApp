@@ -13,7 +13,7 @@
 
     <div class="form-group">
         <label>Docente *</label>
-        <select name="id_docente" required>
+        <select name="id_docente" required data-search="1">
             {% for d in docenti %}
             <option value="{{ d.id }}"
                 {% if d.id == assenza.id_docente %}selected{% endif %}>
