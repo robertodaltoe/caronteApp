@@ -4,6 +4,46 @@
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
+## Sessione 66 addendum 133 — Rimosso report.singolo, codice morto mai raggiungibile
+
+Chiude l'ultimo punto dell'audit usabilità (addendum 131, punto 10),
+deciso insieme a Roberto dopo un confronto diretto dei due
+implementazioni. `routes/report.py::singolo()` (`/report/docente/<id>`,
+template `report/singolo.html`) e `routes/banca_ore.py::singolo()`
+(`/banca-ore/docente/<id>`) facevano la stessa cosa — un report
+completo per un singolo docente (saldi, storico settimanale, orario,
+ore CCNL, supplenze) — ma solo la seconda era linkata da qualche parte
+(il pulsante "Dettaglio" in Report → Report Docenti,
+`templates/report/index.html:321`, punta a `banca_ore.singolo`).
+
+Confrontato riga per riga `templates/report/singolo.html` vs
+`templates/banca_ore/singolo.html`: la seconda contiene TUTTO quello
+che c'è nella prima, più il selettore di anno scolastico (con banner
+"Archivio — dati storici" per gli anni passati), `ore_max_effettive_
+per_anno()` invece del semplice `ore_contratto` (corretto per
+part-time), il pulsante XLSX, e le supplenze filtrate per l'anno
+selezionato (la versione vecchia le mostrava sempre tutte, di ogni
+anno, mescolate). Confermato anche dal docstring stesso di
+`routes/banca_ore.py`: riusa deliberatamente la logica di calcolo di
+report.py invece di duplicarla, lasciando lì solo l'export PDF/XLSX
+(`report.singolo_pdf`/`singolo_xlsx`, quelli restano, sono ancora
+usati e non c'entrano con questa duplicazione).
+
+Rimossi `routes/report.py::singolo()` (la funzione, non gli export
+PDF/XLSX) e `templates/report/singolo.html`. Verificato con grep che
+nessun template/route/test referenzi ancora `report.singolo` o
+quel file — pulito.
+
+Verifica: `pytest` 411/411 invariati. Live su copia isolata (redirect
+verificato con un `assert` esplicito prima di avviare il server, come
+da lezione imparata nell'addendum 132): la vecchia route
+`/report/docente/1` ora risponde con la pagina 404 personalizzata
+(navbar, non un errore grezzo — coerenza diretta col fix
+dell'addendum 131), il pulsante "Dettaglio" punta correttamente a
+`/banca-ore/docente/<id>` e la pagina carica, i link XLSX/PDF restano
+intatti sulle route storiche. `database.db` reale invariato (md5
+identico), `PRAGMA integrity_check: ok`.
+
 ## Sessione 66 addendum 132 — Usabilità blocco 2 (select con ricerca, legenda, link Guida)
 
 Seguito diretto dell'addendum 131 (piano a blocchi approvato da
