@@ -265,3 +265,41 @@ def elimina_incarico(id):
     db.session.commit()
     flash(f'Incarico di {nome} eliminato.', 'warning')
     return redirect(url_for('progetti_fse.dettaglio', id=id_progetto))
+
+
+# ── CALENDARIO / SESSIONI ─────────────────────────────────────────────
+@progetti_fse_bp.route('/progetti-fse/moduli/<int:id_modulo>/calendario', methods=['GET', 'POST'])
+def calendario_modulo(id_modulo):
+    m = ModuloFSE.query.get_or_404(id_modulo)
+    if request.method == 'POST':
+        s = SessioneFSE(
+            id_modulo=m.id,
+            data=_data(request.form, 'data'),
+            ora_inizio=request.form.get('ora_inizio', '').strip() or None,
+            ora_fine=request.form.get('ora_fine', '').strip() or None,
+            note=request.form.get('note', '').strip() or None,
+        )
+        db.session.add(s)
+        db.session.commit()
+        flash('Sessione aggiunta al calendario.', 'success')
+        return redirect(url_for('progetti_fse.calendario_modulo', id_modulo=m.id))
+
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+    conflitti_modulo = [c for c in trova_conflitti_progetti_fse()
+                         if c['modulo'].id == m.id]
+    conflitti_per_sessione = {}
+    for c in conflitti_modulo:
+        conflitti_per_sessione.setdefault(c['sessione'].id, []).append(c)
+
+    return render_template('progetti_fse/calendario_modulo.html', modulo=m,
+        conflitti_per_sessione=conflitti_per_sessione)
+
+
+@progetti_fse_bp.route('/progetti-fse/sessioni/<int:id>/elimina', methods=['POST'])
+def elimina_sessione(id):
+    s = SessioneFSE.query.get_or_404(id)
+    id_modulo = s.id_modulo
+    db.session.delete(s)
+    db.session.commit()
+    flash('Sessione eliminata.', 'warning')
+    return redirect(url_for('progetti_fse.calendario_modulo', id_modulo=id_modulo))

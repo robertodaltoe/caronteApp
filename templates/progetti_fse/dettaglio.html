@@ -97,6 +97,7 @@
                     <span class="badge badge-grigio">{{ m.stato }}</span>
                 </td>
                 <td style="padding:8px; text-align:center; white-space:nowrap;">
+                    <a href="{{ url_for('progetti_fse.calendario_modulo', id_modulo=m.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);" title="Calendario">{{ icon('list') }}</a>
                     <a href="{{ url_for('progetti_fse.modifica_modulo', id=m.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">{{ icon('edit') }}</a>
                     <form method="post" action="{{ url_for('progetti_fse.elimina_modulo', id=m.id) }}" style="display:inline;"
                           onsubmit="return confirm('Eliminare il modulo {{ m.titolo }}?')">

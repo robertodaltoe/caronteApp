@@ -110,12 +110,29 @@ def index():
                     .order_by(ScambioOre.data_cessione, ScambioOre.ora_cessione)
                     .all())
 
+    # Sessioni future dei Progetti FSE/FESR (es. Piano Estate) — SOLA
+    # CONSULTAZIONE: l'area è volutamente isolata dal Piano delle
+    # Attività didattico (richiesta esplicita di Roberto), qui compare
+    # solo per il controllo incrociato con gli impegni didattici, non è
+    # gestibile da questa pagina (si modifica da Progetti FSE/FESR).
+    from models.progetto_fse import SessioneFSE
+    sessioni_fse_future = (SessioneFSE.query
+                           .filter(SessioneFSE.data >= oggi)
+                           .order_by(SessioneFSE.data, SessioneFSE.ora_inizio)
+                           .all())
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+    conflitti_fse_per_sessione = {}
+    for c in trova_conflitti_progetti_fse(data_da=oggi):
+        conflitti_fse_per_sessione.setdefault(c['sessione'].id, []).append(c)
+
     return render_template('agenda.html',
         oggi=oggi,
         indisp_accorpate=indisp_accorpate,
         assenze_future=assenze_future,
         supplenze_future=supplenze_future,
         cambi_futuri=cambi_futuri,
+        sessioni_fse_future=sessioni_fse_future,
+        conflitti_fse_per_sessione=conflitti_fse_per_sessione,
         ore_a_label=_ore_a_label,
     )
 

@@ -255,4 +255,55 @@
 </div>
 {% endif %}
 
+<!-- PROGETTI FSE/FESR — SOLA CONSULTAZIONE (area amministrativa isolata,
+     si gestisce da Progetti FSE/FESR — qui solo per il controllo
+     incrociato con gli impegni didattici) -->
+{% if sessioni_fse_future %}
+<div class="card agenda-section">
+    <h2>{{ icon('layers') }} Progetti FSE/FESR — sessioni future ({{ sessioni_fse_future|length }} voci)</h2>
+    <p style="font-size:.78rem; color:var(--grigio); margin-top:-6px;">
+        Sola consultazione — si gestiscono da
+        <a href="{{ url_for('progetti_fse.index') }}">Progetti FSE/FESR</a>.
+    </p>
+    <div style="overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:120px;">Data</th>
+                <th style="width:100px;text-align:center;">Ora</th>
+                <th>Progetto / modulo</th>
+                <th>Incaricati</th>
+                <th style="width:160px;">Conflitti</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sessioni_fse_future %}
+        <tr>
+            <td style="font-size:.88rem; white-space:nowrap;">{{ s.data.strftime('%a %d/%m/%Y') }}</td>
+            <td style="text-align:center;">
+                {% if s.ora_inizio and s.ora_fine %}{{ s.ora_inizio }}–{{ s.ora_fine }}{% else %}—{% endif %}
+            </td>
+            <td style="font-size:.88rem;">
+                <span class="badge badge-grigio">Progetto</span> {{ s.modulo.progetto.titolo }} — {{ s.modulo.titolo }}
+            </td>
+            <td style="font-size:.82rem; color:var(--grigio);">
+                {% for inc in s.modulo.incarichi %}{{ inc.nome_completo }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+            </td>
+            <td>
+                {% if conflitti_fse_per_sessione.get(s.id) %}
+                <span class="badge badge-rosso" title="Un docente incaricato è atteso anche a un'attività istituzionale nello stesso orario">
+                    {{ icon('warning') }} {{ conflitti_fse_per_sessione[s.id]|length }} conflitto{{ 'i' if conflitti_fse_per_sessione[s.id]|length != 1 else '' }}
+                </span>
+                {% else %}
+                <span style="color:var(--grigio); font-size:.8rem;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

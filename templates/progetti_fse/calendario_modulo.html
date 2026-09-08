@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Calendario — {{ modulo.titolo }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=modulo.id_progetto) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ modulo.progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ icon('layers') }} Calendario — {{ modulo.titolo }}
+    </h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        Le sessioni qui inserite compaiono in sola lettura nell'Agenda, per il controllo
+        incrociato con gli impegni didattici dei docenti incaricati.
+    </p>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start;">
+    <div class="card">
+        <h2 style="font-size:.9rem;">Sessioni</h2>
+        {% if not modulo.sessioni %}
+        <p style="color:var(--grigio); text-align:center; padding:24px;">Nessuna sessione ancora registrata.</p>
+        {% else %}
+        <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:8px;">Data</th>
+                    <th style="text-align:center; padding:8px;">Ora</th>
+                    <th style="text-align:left; padding:8px;">Note</th>
+                    <th style="text-align:left; padding:8px;">Conflitti</th>
+                    <th style="text-align:center; padding:8px;">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in modulo.sessioni %}
+                <tr style="border-top:1px solid #e5eaf0;">
+                    <td style="padding:8px;">{{ s.data.strftime('%a %d/%m/%Y') }}</td>
+                    <td style="padding:8px; text-align:center;">
+                        {% if s.ora_inizio and s.ora_fine %}{{ s.ora_inizio }}–{{ s.ora_fine }}{% else %}—{% endif %}
+                    </td>
+                    <td style="padding:8px; color:var(--grigio);">{{ s.note or '—' }}</td>
+                    <td style="padding:8px;">
+                        {% if conflitti_per_sessione.get(s.id) %}
+                        <span class="badge badge-rosso" title="Un docente incaricato è atteso anche a un'attività istituzionale nello stesso orario">
+                            {{ icon('warning') }} {{ conflitti_per_sessione[s.id]|length }}
+                        </span>
+                        {% for c in conflitti_per_sessione[s.id] %}
+                        <div style="font-size:.75rem; color:var(--rosso);">
+                            {{ c.docente.cognome if c.docente else '?' }} — {{ c.evento.titolo }} ({{ c.evento.ora_inizio }}–{{ c.evento.ora_fine }})
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <span style="color:var(--grigio);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:8px; text-align:center;">
+                        <form method="post" action="{{ url_for('progetti_fse.elimina_sessione', id=s.id) }}"
+                              onsubmit="return confirm('Eliminare questa sessione?')">
+                            <button type="submit" class="btn btn-danger btn-sm">{{ icon('close') }}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 style="font-size:.9rem;">Aggiungi sessione</h2>
+        <form method="post">
+            <div class="form-group">
+                <label>Data *</label>
+                <input type="date" name="data" required>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="form-group">
+                    <label>Ora inizio</label>
+                    <input type="time" name="ora_inizio">
+                </div>
+                <div class="form-group">
+                    <label>Ora fine</label>
+                    <input type="time" name="ora_fine">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Note</label>
+                <input type="text" name="note">
+            </div>
+            <button type="submit" class="btn btn-success">{{ icon('plus') }} Aggiungi</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

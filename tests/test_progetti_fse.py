@@ -11,7 +11,7 @@ legato a un singolo bando). Copre:
 """
 from datetime import date
 from models import db
-from models.progetto_fse import ProgettoFSE, ModuloFSE, IncaricoFSE, PresenzaFSE
+from models.progetto_fse import ProgettoFSE, ModuloFSE, IncaricoFSE, PresenzaFSE, SessioneFSE
 from tests.conftest import crea_docente
 
 
@@ -180,3 +180,107 @@ def test_dettaglio_progetto_mostra_stima_costo_complessiva(app, db_session, monk
     # tempo di importazione, solo quando la riga viene davvero eseguita).
     assert isinstance(kwargs['scostamento'], float)
     assert kwargs['scostamento'] == 70 * 30 - 48105.0
+
+
+# ── Sovrapposizioni con il Piano delle Attività didattico ────────────
+# Richiesta esplicita di Roberto: l'area è isolata (non condivide
+# tabelle col Piano delle Attività), ma le date dei moduli devono poter
+# essere incrociate con gli impegni istituzionali per accorgersi se un
+# docente incaricato è atteso anche a una riunione nello stesso orario.
+
+def _crea_tabelle_con_attivita_ist(app):
+    with app.app_context():
+        from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante  # noqa
+        db.create_all()
+
+
+def test_trova_conflitto_tra_sessione_fse_e_attivita_istituzionale(app, db_session):
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+
+    _crea_tabelle_con_attivita_ist(app)
+    d = crea_docente('Fontana')
+    db.session.commit()
+
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo="Let's English", ore=30)
+    db.session.add(m)
+    db.session.flush()
+    db.session.add(IncaricoFSE(id_modulo=m.id, id_docente=d.id, ruolo='esperto'))
+    db.session.add(SessioneFSE(id_modulo=m.id, data=date(2027, 8, 30),
+                                ora_inizio='09:00', ora_fine='11:00'))
+    db.session.commit()
+
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio 3A LSU', classe='3A LSU',
+                      data=date(2027, 8, 30), ora_inizio='10:00', ora_fine='12:00',
+                      origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id))
+    db.session.commit()
+
+    conflitti = trova_conflitti_progetti_fse()
+    assert len(conflitti) == 1
+    assert conflitti[0]['docente'].id == d.id
+    assert conflitti[0]['evento'].id == ev.id
+
+
+def test_nessun_conflitto_se_gli_orari_non_si_sovrappongono(app, db_session):
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+
+    _crea_tabelle_con_attivita_ist(app)
+    d = crea_docente('Bianchi')
+    db.session.commit()
+
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Padel 1', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    db.session.add(IncaricoFSE(id_modulo=m.id, id_docente=d.id, ruolo='tutor'))
+    db.session.add(SessioneFSE(id_modulo=m.id, data=date(2027, 8, 30),
+                                ora_inizio='09:00', ora_fine='11:00'))
+    db.session.commit()
+
+    # Stesso giorno, stesso docente, ma orario successivo senza sovrapposizione.
+    ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio', classe='1A CAT',
+                      data=date(2027, 8, 30), ora_inizio='11:00', ora_fine='12:00',
+                      origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id))
+    db.session.commit()
+
+    assert trova_conflitti_progetti_fse() == []
+
+
+def test_calendario_modulo_aggiunge_ed_elimina_sessioni(app, db_session, monkeypatch):
+    _crea_tabelle_con_attivita_ist(app)
+    _registra_blueprint(app, monkeypatch)
+
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Padel 2', ore=30)
+    db.session.add(m)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/moduli/{m.id}/calendario', data={
+            'data': '2027-08-30', 'ora_inizio': '09:00', 'ora_fine': '11:00',
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+    sess = SessioneFSE.query.filter_by(id_modulo=m.id).first()
+    assert sess is not None
+    assert sess.data == date(2027, 8, 30)
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/sessioni/{sess.id}/elimina', follow_redirects=True)
+        assert r.status_code == 200
+
+    assert SessioneFSE.query.filter_by(id_modulo=m.id).count() == 0

@@ -79,11 +79,50 @@ incarico esperto (70€/h × 30h = 2100€, calcolato correttamente in
 pagina), verificata la sezione permessi in DB. `database.db` reale
 invariato (md5 identico), `PRAGMA integrity_check: ok`.
 
-**Prossimi passi** (non ancora fatti): calendario/sessioni del modulo
-+ integrazione in sola lettura nell'Agenda per il controllo
-sovrapposizioni; generazione documenti (bandi/decreti/incarichi) dai
-modelli reali del DS; registro presenze partecipanti collegato al
-calcolo costi; cruscotto di monitoraggio finanziario complessivo.
+**Prossimi passi** (non ancora fatti): generazione documenti (bandi/
+decreti/incarichi) dai modelli reali del DS; registro presenze
+partecipanti collegato al calcolo costi; cruscotto di monitoraggio
+finanziario complessivo.
+
+## Sessione 67 addendum 1 — Calendario moduli + integrazione Agenda (sola lettura)
+
+Seguito diretto: calendario delle sessioni per modulo + comparsa in
+sola lettura nell'Agenda didattica, per il controllo incrociato con
+gli impegni istituzionali (richiesta esplicita di Roberto — "le
+informazioni si vedono integrate nell'agenda dell'app per una
+consultazione incrociata con gli impegni didattici", pur restando
+un'area amministrativa isolata che non condivide tabelle col Piano
+delle Attività).
+
+- `models/progetto_fse.py::SessioneFSE` (già nel modello dati della
+  prima fetta, non ancora usato) ora gestito da nuove route:
+  `progetti_fse.calendario_modulo` (lista + form aggiunta sessioni per
+  modulo) e `progetti_fse.elimina_sessione`.
+- `modules/conflitti_progetti_fse.py::trova_conflitti_progetti_fse()`
+  — stesso schema di `modules/verifica_orario_riunioni.py` (già
+  esistente per Attivita_ist/OrarioDocente), ma confronta le sessioni
+  FSE con `AttivitaIst` (non con l'orario ordinario: le attività FSE
+  si svolgono per bando in orario extracurricolare, un conflitto con
+  una lezione normale non è il caso realistico da segnalare) — stesso
+  docente, stesso giorno, orari sovrapposti.
+- `routes/agenda.py` — nuova sezione "Progetti FSE/FESR — sessioni
+  future", sola consultazione (badge "PROGETTO", link "si gestiscono
+  da Progetti FSE/FESR"), con badge rosso "N conflitti" quando
+  rilevati; stessa funzione di conflitto usata nella pagina calendario
+  del singolo modulo, per vedere i conflitti anche da lì senza dover
+  passare dall'Agenda.
+
+Verifica: 3 nuovi test (`trova_conflitti_progetti_fse` rileva/non
+rileva correttamente in base alla sovrapposizione oraria; CRUD
+calendario via route) — `pytest` 419/419 (416 + 3 nuovi). Collaudo dal
+vivo su copia isolata del DB reale (redirect verificato con `assert`
+esplicito): creato un incarico con un docente reale (Abramini, id 1)
+già partecipante a un vero Collegio Docenti del 10/09/2026 (09:00–
+11:00), aggiunta una sessione del modulo sovrapposta (09:30–10:30) —
+il conflitto compare correttamente sia nella pagina calendario del
+modulo sia nella sezione dedicata dell'Agenda, con il nome del
+docente e il titolo/orario dell'evento istituzionale in conflitto.
+`database.db` reale invariato (md5 identico), `PRAGMA integrity_check: ok`.
 > Va aggiornato alla fine di ogni sessione, aggiungendo una nuova voce
 > in cima (ordine cronologico inverso). Non cancellare le voci precedenti.
 
