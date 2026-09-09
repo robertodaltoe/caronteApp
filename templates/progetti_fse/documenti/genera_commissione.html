@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera {{ 'verbale' if tipo_documento == 'verbale_commissione' else 'nomina commissione' }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">
+        {{ icon('print') }} {{ 'Genera verbale commissione' if tipo_documento == 'verbale_commissione' else 'Genera nomina e convocazione commissione' }}
+    </h1>
+    <p style="font-size:.82rem; color:var(--grigio);">{{ progetto.titolo }}</p>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Presidente</label>
+        <input type="text" name="presidente" placeholder="es. Dirigente Scolastico ...">
+    </div>
+    <div class="form-group">
+        <label>Componente</label>
+        <input type="text" name="componente">
+    </div>
+    <div class="form-group">
+        <label>Segretario verbalizzante</label>
+        <input type="text" name="segretario">
+    </div>
+    {% if tipo_documento == 'verbale_commissione' %}
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Data seduta</label>
+            <input type="date" name="data_seduta">
+        </div>
+        <div class="form-group">
+            <label>Ora inizio</label>
+            <input type="text" name="ora_inizio" placeholder="9.30">
+        </div>
+        <div class="form-group">
+            <label>Ora fine</label>
+            <input type="text" name="ora_fine" placeholder="11.45">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Note sull'esame delle candidature (facoltativo)</label>
+        <textarea name="note_esame" rows="3" placeholder="es. candidatura pervenuta fuori termine di ..., acquisita al prot. ... del ...;"></textarea>
+    </div>
+    <p style="font-size:.78rem; color:var(--grigio);">
+        L'esito riportato nel verbale sarà quello già registrato negli incarichi del progetto (stato
+        "Incaricato"). Punteggi e graduatorie per categoria non sono gestiti da CaronteApp: vanno integrati
+        manualmente.
+    </p>
+    {% else %}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Data convocazione</label>
+            <input type="date" name="data_convocazione">
+        </div>
+        <div class="form-group">
+            <label>Ora convocazione</label>
+            <input type="text" name="ora_convocazione" placeholder="9.30">
+        </div>
+    </div>
+    {% endif %}
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    {% include 'progetti_fse/documenti/_scelta_formato.html' %}
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

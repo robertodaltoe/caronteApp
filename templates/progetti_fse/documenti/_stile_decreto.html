@@ -1,6 +1,24 @@
 <style>
-    @page { size: A4; margin: 2.4cm 2cm; }
+    /* Intestazione (logo MIM + Istituto) SOLO in prima pagina, banner
+       PN "Scuola e competenze"/UE in fondo a OGNI pagina: entrambi sono
+       "running element" CSS (GCPM), estratti dal flusso del documento e
+       piazzati nel margine di pagina da @page — la @page normale li
+       ripete su ogni pagina, @page :first sovrascrive solo il margine
+       superiore per la sola prima pagina. */
+    @page {
+        size: A4;
+        margin: 2.4cm 2cm 4.6cm 2cm;
+        @bottom-center { content: element(footerue); }
+    }
+    @page :first {
+        margin-top: 7.6cm;
+        @top-center { content: element(intestazione); }
+    }
     body { font-family: "Times New Roman", Georgia, serif; font-size: 11px; color: #1a1a1a; line-height: 1.5; }
+    .intestazione-istituto { position: running(intestazione); }
+    .intestazione-istituto img { width: 17cm; height: auto; display: block; }
+    .footer-ue { position: running(footerue); }
+    .footer-ue img { width: 12cm; height: auto; display: block; margin: 0 auto; }
     .protocollo { text-align: left; font-size: 10px; }
     .data-luogo { text-align: right; font-size: 10px; margin-top: -14px; margin-bottom: 10px; }
     .oggetto { font-size: 10.5px; margin: 14px 0 4px; text-align: justify; }

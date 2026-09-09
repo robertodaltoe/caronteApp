@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Decreto Direzione e Coordinamento — {{ incarico.nome_completo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> Decreto di assunzione incarico Direzione e Coordinamento a titolo oneroso nella gestione del
+progetto — {{ progetto.riferimento_avviso or '' }}
+</div>
+<div class="estremi">
+CUP: {{ progetto.cup or '—' }}<br>
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}
+</div>
+
+<div class="qualifica">IL DIRIGENTE SCOLASTICO</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+{% include 'progetti_fse/documenti/_premesse_finanziamento.html' %}
+
+<p>VISTO che ai sensi dell'art. 45 del D.I. 129/2018, l'istituzione scolastica può stipulare contratti di
+prestazione d'opera con esperti per particolari attività ed insegnamenti, al fine di garantire
+l'arricchimento dell'offerta formativa, nonché la realizzazione di specifici programmi di ricerca e di
+sperimentazione;</p>
+<p>VISTA la delibera del Consiglio di Istituto in merito all'incarico di Direzione e Coordinamento del
+progetto di cui all'oggetto{% if delibera_incarico_dc %} — {{ delibera_incarico_dc }}{% endif %};</p>
+{% if data_richiesta_usr %}
+<p>VISTA la richiesta di autorizzazione inviata all'Ufficio Scolastico Regionale competente in data
+{{ data_richiesta_usr.strftime('%d/%m/%Y') }} attraverso la relativa piattaforma;</p>
+{% endif %}
+{% if riferimento_nota_usr %}
+<p>VISTA la nota {{ riferimento_nota_usr }} dell'Ufficio Scolastico Regionale competente con la quale si
+concede formale autorizzazione per lo svolgimento di attività aggiuntive di direzione e coordinamento, a
+titolo oneroso, all'interno dei progetti in oggetto;</p>
+{% endif %}
+
+<div class="atto">DECRETA</div>
+
+<h2 class="articolo">Art. 1</h2>
+<p>Di assumere, avendone le competenze necessarie, l'incarico di direzione e coordinamento del progetto in
+oggetto, conferendolo a {{ incarico.nome_completo }}.</p>
+
+<h2 class="articolo">Art. 2</h2>
+<p>Di quantificare la retribuzione per l'incarico in misura congrua a quanto disposto nella matrice
+acquisti/spese generali alla voce "spese di gestione", ovverosia
+{{ '€%.2f'|format(incarico.costo_previsto) if incarico.costo_previsto is not none else '—' }},
+corrispondenti a n. {{ incarico.ore_previste or '—' }} ore di impegno, retribuite ai sensi della lettera
+autorizzativa citata in {{ '€%.2f/h'|format(incarico.tariffa_oraria) if incarico.tariffa_oraria is not none else '—' }}
+lordo dipendente.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

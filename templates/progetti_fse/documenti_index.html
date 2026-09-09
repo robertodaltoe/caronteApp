@@ -18,16 +18,32 @@
 <div class="card" style="margin-bottom:16px;">
     <h2 style="font-size:.9rem;">{{ icon('plus') }} Genera nuovo documento</h2>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <a href="{{ url_for('progetti_fse.genera_nomina_commissione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Nomina commissione
+        </a>
         <a href="{{ url_for('progetti_fse.genera_avviso_selezione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
             Avviso di selezione (bando)
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_verbale_commissione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Verbale commissione
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_pubblicazione_graduatoria', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Pubblicazione graduatoria
         </a>
         <a href="{{ url_for('progetti_fse.genera_decreto_nomina', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
             Decreto di nomina
         </a>
+        <a href="{{ url_for('progetti_fse.genera_decreto_assunzione_bilancio', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Decreto assunzione al bilancio
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_dichiarazione_insussistenza', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Dichiarazione insussistenza conflitto interessi
+        </a>
     </div>
     <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
-        Lettera di incarico e contratto di lavoro autonomo si generano dalla scheda del singolo
-        incarico, nel dettaglio del modulo.
+        Lettera di incarico, contratto di lavoro autonomo e decreto Direzione e Coordinamento si generano
+        dalla scheda del singolo incarico; la dichiarazione di avvio si genera dalla scheda del singolo
+        modulo — entrambe nel dettaglio del progetto.
     </p>
 </div>
 

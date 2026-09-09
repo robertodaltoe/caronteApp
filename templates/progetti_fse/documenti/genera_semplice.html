@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ titolo_pagina }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} {{ titolo_pagina }}</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">{{ progetto.titolo }}</p>
+</div>
+
+{% if avviso_dati_mancanti %}
+<div class="card" style="max-width:640px; margin-bottom:14px; background:#fff7ed;">
+    <p style="font-size:.82rem; margin:0;">{{ avviso_dati_mancanti }}</p>
+</div>
+{% endif %}
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <p style="font-size:.82rem; color:var(--grigio);">
+        Questo documento si genera dai dati già presenti nella scheda progetto. Verifica che siano
+        aggiornati prima di generare il PDF.
+    </p>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    {% include 'progetti_fse/documenti/_scelta_formato.html' %}
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

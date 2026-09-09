@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Dichiarazione avvio modulo — {{ modulo.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+<div style="margin:8px 0;">All'Albo d'Istituto / Sito web</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Dichiarazione avvio modulo
+</div>
+<div class="estremi">
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
+CUP: {{ progetto.cup or '—' }}<br>
+Dichiarazione avvio modulo {{ modulo.codice_esterno or '' }}
+</div>
+
+<table class="griglia-titoli">
+    <tr><th>Codice progetto</th><th>Titolo progetto</th><th>Importo</th><th>Stato del progetto</th></tr>
+    <tr>
+        <td>{{ progetto.codice_progetto or '—' }}</td>
+        <td>{{ progetto.titolo }}</td>
+        <td>{{ '€%.2f'|format(progetto.importo_autorizzato) if progetto.importo_autorizzato is not none else '—' }}</td>
+        <td>{{ progetto.stato|upper }}</td>
+    </tr>
+</table>
+
+<p style="font-weight:700; margin-top:14px;">RIEPILOGO MODULO AVVIATO</p>
+<table class="griglia-titoli">
+    <tr><th>Modulo</th><th>Tipologia modulo</th><th>Titolo del modulo</th><th>Importo</th></tr>
+    <tr>
+        <td>{{ modulo.codice_esterno or '—' }}</td>
+        <td>{{ modulo.tipologia or '—' }}</td>
+        <td>{{ modulo.titolo }}</td>
+        <td>{{ '€%.2f'|format(modulo.importo_autorizzato) if modulo.importo_autorizzato is not none else '—' }}</td>
+    </tr>
+</table>
+
+<p style="margin-top:14px;">Il sottoscritto, nel ruolo di Dirigente Scolastico dell'Istituto {{ istituto }} di
+{{ comune }}, codice meccanografico SOIS00600D, indirizzo {{ istituto_indirizzo }} {{ comune }},</p>
+
+<div class="atto">DICHIARA</div>
+
+<p>Che sono state effettuate le opportune operazioni utili all'avvio del modulo in oggetto. Si dichiara
+altresì che i dati trasmessi rappresentano fedelmente le caratteristiche del Modulo e si conferma la loro
+validità.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

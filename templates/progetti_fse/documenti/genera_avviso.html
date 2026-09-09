@@ -40,6 +40,7 @@
         <label>Nota interna (facoltativa, non compare nel documento)</label>
         <input type="text" name="note_documento">
     </div>
+    {% include 'progetti_fse/documenti/_scelta_formato.html' %}
     <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
 </div>
 </form>

@@ -546,3 +546,208 @@ def test_documenti_progetto_index_reachable(app, db_session, monkeypatch):
     with app.test_client() as c:
         r = c.get(f'/progetti-fse/{p.id}/documenti')
         assert r.status_code == 200
+
+
+# ── Generazione documenti aggiuntivi (commissione, graduatoria, bilancio,
+# direzione e coordinamento, dichiarazioni) ──────────────────────────
+# Stesso principio dei quattro documenti principali: contenuto fisso
+# nel template, dati variabili dal progetto/modulo/incarico, e verifica
+# che ogni generazione registri un DocumentoFSE tracciabile.
+
+def _progetto_con_incarico_confermato(**kw_progetto):
+    p = _progetto_ucs(**kw_progetto)
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo="Let's English", codice_esterno='274787',
+                  ore=30, n_partecipanti_previsti=15)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, nome_esterno='Esperto Confermato', ruolo='esperto',
+                       tariffa_oraria=70, ore_previste=30, stato='incaricato')
+    db.session.add(inc)
+    db.session.commit()
+    return p, m, inc
+
+
+def test_genera_nomina_commissione_crea_documento(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p, m, inc = _progetto_con_incarico_confermato()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/{p.id}/documenti/nomina-commissione')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/{p.id}/documenti/nomina-commissione', data={
+            'presidente': 'Il Dirigente Scolastico', 'componente': 'Un Componente',
+            'segretario': 'Un Segretario', 'data_convocazione': '2026-07-21',
+            'ora_convocazione': '9.30',
+        })
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='nomina_commissione').first()
+    assert doc is not None
+
+
+def test_genera_verbale_commissione_include_solo_incaricati(app, db_session, monkeypatch):
+    """L'esito riportato nel verbale deve limitarsi agli incarichi
+    esperto/tutor/figura aggiuntiva assegnati -- non un candidato ancora
+    da valutare, e non l'incarico di Direzione e Coordinamento (quello
+    non passa dalla procedura comparativa della commissione, ha un
+    proprio decreto dedicato: mescolarlo nell'esito della selezione
+    sarebbe un errore di contenuto, non solo di forma)."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p, m, inc = _progetto_con_incarico_confermato()
+    candidato = IncaricoFSE(id_modulo=m.id, nome_esterno='Ancora Candidato', ruolo='tutor',
+                             tariffa_oraria=30, ore_previste=30, stato='candidato')
+    direzione_coordinamento = IncaricoFSE(id_modulo=m.id, nome_esterno='Il Dirigente Scolastico',
+                                           ruolo='project_manager', tariffa_oraria=25, ore_previste=100,
+                                           stato='incaricato')
+    db.session.add_all([candidato, direzione_coordinamento])
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    orig = mod.render_template
+    def _capture(nome, **k):
+        if nome == 'progetti_fse/documenti/verbale_commissione.html':
+            catturato.update(k)
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _capture)
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/verbale-commissione', data={
+            'presidente': 'Il DS', 'data_seduta': '2026-07-21',
+            'ora_inizio': '9.30', 'ora_fine': '11.45',
+        })
+        assert r.status_code == 200
+
+    incarichi_passati = catturato['incarichi']
+    assert [i.id for i in incarichi_passati] == [inc.id]  # non include il "candidato"
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='verbale_commissione').first()
+    assert doc is not None
+
+
+def test_genera_pubblicazione_graduatoria_crea_documento(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p, m, inc = _progetto_con_incarico_confermato()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/{p.id}/documenti/pubblicazione-graduatoria')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/{p.id}/documenti/pubblicazione-graduatoria',
+                    data={'tipo_graduatoria': 'definitiva'})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='pubblicazione_graduatoria').first()
+    assert doc is not None
+    assert 'definitiva' in doc.titolo
+
+
+def test_genera_decreto_assunzione_bilancio_crea_documento(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs(capitolo_entrata='2.1.1 (Finanziamenti UE)', capitolo_spesa='P.2.11 (Progetti)')
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/{p.id}/documenti/decreto-assunzione-bilancio')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/{p.id}/documenti/decreto-assunzione-bilancio', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='decreto_assunzione_bilancio').first()
+    assert doc is not None
+
+
+def test_genera_decreto_assunzione_bilancio_avvisa_se_capitoli_mancanti(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/{p.id}/documenti/decreto-assunzione-bilancio')
+        assert r.status_code == 200
+
+
+def test_genera_dichiarazione_insussistenza_crea_documento(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/dichiarazione-insussistenza', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='dichiarazione_insussistenza').first()
+    assert doc is not None
+
+
+def test_genera_dichiarazione_avvio_modulo_crea_documento(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p, m, inc = _progetto_con_incarico_confermato()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/moduli/{m.id}/documenti/dichiarazione-avvio')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/moduli/{m.id}/documenti/dichiarazione-avvio', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_modulo=m.id, tipo='dichiarazione_avvio_modulo').first()
+    assert doc is not None
+    assert doc.id_progetto == p.id
+
+
+def test_genera_decreto_direzione_coordinamento_crea_documento(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Direzione e coordinamento', ore=100)
+    db.session.add(m)
+    db.session.flush()
+    inc_pm = IncaricoFSE(id_modulo=m.id, nome_esterno='Il Dirigente Scolastico', ruolo='project_manager',
+                          tariffa_oraria=25, ore_previste=100, stato='incaricato')
+    db.session.add(inc_pm)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get(f'/progetti-fse/incarichi/{inc_pm.id}/documenti/decreto-direzione-coordinamento')
+        assert r.status_code == 200
+        r = c.post(f'/progetti-fse/incarichi/{inc_pm.id}/documenti/decreto-direzione-coordinamento', data={
+            'delibera_incarico_dc': 'n. 100 del 01.01.2026',
+        })
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_incarico=inc_pm.id, tipo='decreto_direzione_coordinamento').first()
+    assert doc is not None
+
+
+def test_genera_documento_in_formato_docx(app, db_session, monkeypatch):
+    """La scelta 'formato=docx' deve restituire un file Word (non un
+    PDF): verificato sul content-type e sull'estensione del nome file,
+    non solo sullo status code -- un bug che restituisse comunque un
+    PDF con un nome .docx sbagliato passerebbe altrimenti inosservato."""
+    _crea_tabelle(app)
+    _registra_blueprint(app)
+    import routes.progetti_fse as mod
+    monkeypatch.setattr(mod, 'render_template',
+        lambda *a, **k: '<html><body><p>Contenuto di prova</p></body></html>')
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/dichiarazione-insussistenza',
+                    data={'formato': 'docx'})
+        assert r.status_code == 200
+        assert r.mimetype == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        assert '.docx' in r.headers.get('Content-Disposition', '')

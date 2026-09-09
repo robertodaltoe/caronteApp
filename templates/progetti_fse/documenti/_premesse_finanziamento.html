@@ -1,0 +1,22 @@
+{# Le quattro premesse seguenti ricorrono IDENTICHE, parola per parola,
+   in avviso di selezione e decreto di nomina reali (confrontati
+   direttamente) -- il testo è quindi fisso, solo gli estremi (prot./
+   data/importo) sono presi dai campi del progetto. Ciascuna compare
+   solo se i suoi estremi sono stati compilati. #}
+{% if progetto.prot_nota_autorizzazione %}
+<p>VISTO il documento autorizzativo, nota di autorizzazione prot. n. {{ progetto.prot_nota_autorizzazione }}{% if progetto.data_nota_autorizzazione %} del {{ progetto.data_nota_autorizzazione.strftime('%d/%m/%Y') }}{% endif %}, che consente l'attuazione del progetto {{ progetto.codice_progetto or '' }} dal titolo "{{ progetto.titolo }}" per un importo pari a {{ '€%.2f'|format(progetto.importo_autorizzato) if progetto.importo_autorizzato is not none else '' }};</p>
+{% endif %}
+{% if progetto.prot_decreto_assunzione_bilancio %}
+<p>VISTO il decreto prot. n. {{ progetto.prot_decreto_assunzione_bilancio }}{% if progetto.data_decreto_assunzione_bilancio %} del {{ progetto.data_decreto_assunzione_bilancio.strftime('%d/%m/%Y') }}{% endif %} di formale assunzione al Programma Annuale{% if progetto.anno_esercizio_finanziario %} E.F. {{ progetto.anno_esercizio_finanziario }}{% endif %} del finanziamento citato;</p>
+{% endif %}
+{% if progetto.prot_azione_disseminazione %}
+<p>VISTA la propria azione di disseminazione, comunicazione, sensibilizzazione e pubblicizzazione del progetto, prot. {{ progetto.prot_azione_disseminazione }}{% if progetto.data_azione_disseminazione %} del {{ progetto.data_azione_disseminazione.strftime('%d/%m/%Y') }}{% endif %};</p>
+{% endif %}
+{% if progetto.riferimento_delibera_adesione_cdi %}
+<p>VISTA la delibera {{ progetto.riferimento_delibera_adesione_cdi }} del Consiglio di Istituto di adesione al progetto;</p>
+{% endif %}
+{% if progetto.premesse_specifiche %}
+{% for riga in progetto.premesse_specifiche.split('\n') if riga.strip() %}
+<p>{{ riga.strip() }}</p>
+{% endfor %}
+{% endif %}

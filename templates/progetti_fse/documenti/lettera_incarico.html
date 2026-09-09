@@ -7,6 +7,9 @@
 </head>
 <body>
 
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
 <div class="protocollo">Protocollo come da segnatura</div>
 <div style="margin: 10px 0;">Al {{ ruoli_label.get(incarico.ruolo, incarico.ruolo) }}<br>{{ incarico.nome_completo }}</div>
 
@@ -138,6 +141,7 @@ sostituisce il documento cartaceo e la firma autografa.</div>
 
 <div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
 bozza da verificare prima della protocollazione.</div>
+
 
 </body>
 </html>

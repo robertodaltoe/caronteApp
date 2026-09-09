@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera decreto Direzione e Coordinamento{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.dettaglio', id=incarico.modulo.id_progetto) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} {{ incarico.modulo.progetto.titolo }}
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} Genera decreto Direzione e Coordinamento</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">{{ incarico.nome_completo }}</p>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Delibera del Consiglio di Istituto sull'incarico (facoltativo)</label>
+        <input type="text" name="delibera_incarico_dc" placeholder="es. n. ... del ...">
+    </div>
+    <div class="form-group">
+        <label>Data richiesta di autorizzazione all'USR (facoltativo)</label>
+        <input type="date" name="data_richiesta_usr">
+    </div>
+    <div class="form-group">
+        <label>Nota di autorizzazione dell'USR (facoltativo)</label>
+        <input type="text" name="riferimento_nota_usr" placeholder="es. prot. n. 11410 dell'USR Lombardia del 30.07.2026">
+    </div>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    {% include 'progetti_fse/documenti/_scelta_formato.html' %}
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

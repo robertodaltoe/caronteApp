@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Verbale commissione — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Verbale della Commissione di valutazione
+istanze{% if riferimento_bando %} — {{ riferimento_bando }}{% endif %}
+</div>
+<div class="estremi">
+CUP: {{ progetto.cup or '—' }}<br>
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}
+</div>
+
+<p>Il giorno {{ data_seduta.strftime('%d/%m/%Y') if data_seduta else '___________' }} alle ore
+{{ ora_inizio or '____' }}{% if riferimento_nomina %}, giusta convocazione di cui a {{ riferimento_nomina }}{% endif %},
+si riunisce nei locali della presidenza la Commissione di valutazione, così costituita:</p>
+<table class="griglia-titoli">
+    <tr><th>Ruolo</th><th>Nominativo</th></tr>
+    <tr><td>Presidente</td><td>{{ presidente or '—' }}</td></tr>
+    <tr><td>Componente</td><td>{{ componente or '—' }}</td></tr>
+    <tr><td>Segretario verbalizzante</td><td>{{ segretario or '—' }}</td></tr>
+</table>
+
+<p>I componenti individuati hanno depositato agli atti dichiarazione di insussistenza di cause di
+incompatibilità o ostative allo svolgimento dell'incarico in oggetto.</p>
+<p>La Commissione dà avvio ai lavori secondo il seguente ordine del giorno: esame delle candidature
+pervenute sulla base dei criteri e dei punteggi definiti nell'avviso di selezione; redazione della
+graduatoria degli aspiranti.</p>
+
+{% if note_esame %}
+<p>{{ note_esame }}</p>
+{% endif %}
+
+<p>Esaminata la documentazione presentata dai candidati, la Commissione individua per ciascun modulo i
+seguenti nominativi quale esito della valutazione comparativa:</p>
+
+<table class="tabella-incarichi">
+    <tr><th>Modulo</th><th>Figura</th><th>Incaricato</th></tr>
+    {% for inc in incarichi %}
+    <tr>
+        <td>{{ inc.modulo.titolo }} ({{ inc.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(inc.ruolo, inc.ruolo)|upper }}</td>
+        <td>{{ inc.nome_completo }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<p style="font-size:9px; color:#777;">Nota: il presente verbale riporta l'esito finale della valutazione
+comparativa registrato in CaronteApp. Il dettaglio dei punteggi attribuiti a ciascun candidato e le
+eventuali graduatorie per categoria (personale interno / altre amministrazioni / esterni), non gestiti da
+questo modulo, vanno allegati o integrati manualmente prima della protocollazione.</p>
+
+<p>La Commissione trasmette il presente verbale al Dirigente Scolastico per gli adempimenti connessi alla
+pubblicità legale.</p>
+<p>La seduta è tolta alle ore {{ ora_fine or '____' }}.</p>
+
+<p>I commissari:</p>
+<p>{{ presidente or '—' }} (Presidente)<br>
+{{ componente or '—' }} (Componente)<br>
+{{ segretario or '—' }} (Segretario)</p>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare e integrare (punteggi/graduatorie per categoria) prima della protocollazione.</div>
+
+</body>
+</html>

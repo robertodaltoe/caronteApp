@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Nomina commissione — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Nomina e individuazione commissione di
+valutazione istanze per la selezione del personale{% if riferimento_bando %} — {{ riferimento_bando }}{% endif %}
+</div>
+<div class="estremi">
+CUP: {{ progetto.cup or '—' }}<br>
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}
+</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+{% include 'progetti_fse/documenti/_premesse_finanziamento.html' %}
+
+{% if riferimento_bando %}
+<p>CONSIDERATO il decorso dei termini previsti per l'Avviso di selezione {{ riferimento_bando }} e la
+presentazione delle candidature ad esso riferite;</p>
+{% endif %}
+<p>RITENUTO di dover nominare come componenti della Commissione le persone indicate nel presente atto, in
+quanto in possesso dei necessari requisiti;</p>
+<p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
+
+<div class="atto">DESIGNA LE SS.LL.</div>
+
+<p>quali componenti della Commissione di valutazione con i compiti di esaminare le candidature pervenute
+sulla base dei criteri e dei punteggi definiti nell'avviso di selezione, e di redigere la relativa
+graduatoria.</p>
+
+<p>La Commissione è così costituita:</p>
+<table class="griglia-titoli">
+    <tr><th>Ruolo</th><th>Nominativo</th></tr>
+    <tr><td>Presidente</td><td>{{ presidente or '—' }}</td></tr>
+    <tr><td>Componente</td><td>{{ componente or '—' }}</td></tr>
+    <tr><td>Segretario verbalizzante</td><td>{{ segretario or '—' }}</td></tr>
+</table>
+
+<p>La Commissione è convocata presso l'ufficio di presidenza per il giorno
+{{ data_convocazione.strftime('%d/%m/%Y') if data_convocazione else '___________' }}
+alle ore {{ ora_convocazione or '____' }}.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

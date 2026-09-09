@@ -77,10 +77,17 @@ STATI_DOCUMENTO = [
 # templates/progetti_fse/documenti/) — fisso perché lega ogni tipo a un
 # template HTML specifico, non ai dati del singolo progetto.
 TIPI_DOCUMENTO_GENERABILI = [
-    ('avviso_selezione',   'Avviso di selezione interna (bando)'),
-    ('decreto_nomina',     'Decreto di nomina esperti/tutor'),
-    ('lettera_incarico',   'Lettera di incarico (personale interno/altra scuola)'),
-    ('contratto_autonomo', 'Contratto di lavoro autonomo (esterni)'),
+    ('nomina_commissione',            'Nomina e convocazione commissione di valutazione'),
+    ('avviso_selezione',              'Avviso di selezione interna (bando)'),
+    ('verbale_commissione',           'Verbale della commissione di valutazione'),
+    ('pubblicazione_graduatoria',     'Pubblicazione graduatoria'),
+    ('decreto_nomina',                'Decreto di nomina esperti/tutor'),
+    ('lettera_incarico',              'Lettera di incarico (personale interno/altra scuola)'),
+    ('contratto_autonomo',            'Contratto di lavoro autonomo (esterni)'),
+    ('decreto_assunzione_bilancio',   'Decreto di assunzione al bilancio'),
+    ('decreto_direzione_coordinamento', 'Decreto incarico Direzione e Coordinamento (Project Manager)'),
+    ('dichiarazione_avvio_modulo',    'Dichiarazione di avvio modulo'),
+    ('dichiarazione_insussistenza',   'Dichiarazione DS insussistenza conflitto di interessi'),
 ]
 TIPI_DOCUMENTO_GENERABILI_LABEL = dict(TIPI_DOCUMENTO_GENERABILI)
 
@@ -113,13 +120,39 @@ class ProgettoFSE(db.Model):
     riferimento_avviso        = db.Column(db.String(300))  # estremi avviso ministeriale
     riferimento_bando_interno = db.Column(db.String(300))
     note_ammissibilita        = db.Column(db.Text)  # spese ammissibili/non ammissibili (testo libero)
-    # Premesse amministrative specifiche del progetto (nota di autorizzazione,
-    # decreto di assunzione al bilancio, delibera del CdI di adesione, ecc.):
-    # una riga per ciascun "VISTO/VISTA/PRESO ATTO..." — testo libero perché la
-    # formulazione esatta cambia da bando a bando; le premesse normative
-    # generiche (R.D. 2440/1923, D.Lgs 165/2001, regolamenti UE sui fondi
-    # strutturali...) sono invece fisse nel template dei documenti generati,
-    # essendo comuni a qualunque progetto FSE+/FESR.
+
+    # Premesse amministrative specifiche del progetto: confrontando i
+    # modelli reali del DS (avviso di selezione e decreto di nomina di
+    # "Menti in Movimento"), le quattro frasi seguenti ricorrono
+    # IDENTICHE parola per parola in entrambi i documenti — cambiano
+    # solo gli estremi (protocollo/data/importo). Il testo delle frasi è
+    # quindi fisso nel template del documento generato; qui si
+    # registrano SOLO i dati pienamente variabili, una volta per
+    # progetto, invece di farli ridigitare per intero ad ogni
+    # generazione. Tutti opzionali: una frase compare nel documento solo
+    # se i suoi estremi sono stati compilati.
+    prot_nota_autorizzazione       = db.Column(db.String(60))   # "VISTO il documento autorizzativo, nota di autorizzazione prot. n. ..."
+    data_nota_autorizzazione       = db.Column(db.Date)
+    prot_decreto_assunzione_bilancio = db.Column(db.String(60))  # "VISTO il decreto ... di formale assunzione al Programma Annuale ..."
+    data_decreto_assunzione_bilancio = db.Column(db.Date)
+    anno_esercizio_finanziario     = db.Column(db.String(9))    # es. '2026' — anno del Programma Annuale citato
+    prot_azione_disseminazione     = db.Column(db.String(60))   # "VISTA la propria azione di disseminazione ..."
+    data_azione_disseminazione     = db.Column(db.Date)
+    # La delibera del CdI di adesione ha una struttura a due estremi
+    # (numero+data della delibera, protocollo+data della trascrizione)
+    # troppo composita per due soli campi puliti: resta una citazione
+    # atomica in un unico campo, con lo stesso trattamento già usato per
+    # riferimento_avviso/riferimento_bando_interno.
+    riferimento_delibera_adesione_cdi = db.Column(db.String(200))  # es. "n. 191 del 18.05.2026, prot. 8311 del 29.05.2026"
+
+    # Capitoli di bilancio dove viene iscritto il finanziamento — usati
+    # solo dal decreto di assunzione al bilancio.
+    capitolo_entrata = db.Column(db.String(300))
+    capitolo_spesa    = db.Column(db.String(300))
+
+    # Premesse ulteriori non coperte dalle quattro frasi standard sopra
+    # (bandi con formulazioni atipiche) — usarlo solo in casi non
+    # standard: la via principale resta compilare i campi strutturati.
     premesse_specifiche       = db.Column(db.Text)
 
     creato_il = db.Column(db.DateTime, default=datetime.utcnow)

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera pubblicazione graduatoria{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} Genera pubblicazione graduatoria</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">{{ progetto.titolo }}</p>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Tipo di graduatoria</label>
+        <select name="tipo_graduatoria">
+            <option value="provvisoria">Provvisoria</option>
+            <option value="definitiva">Definitiva</option>
+        </select>
+    </div>
+    <p style="font-size:.78rem; color:var(--grigio);">
+        L'elenco pubblicato è quello degli incarichi già registrati in stato "Incaricato". I punteggi
+        individuali non sono gestiti da CaronteApp.
+    </p>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    {% include 'progetti_fse/documenti/_scelta_formato.html' %}
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

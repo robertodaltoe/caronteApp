@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Pubblicazione graduatoria — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Pubblicazione graduatoria
+{{ tipo_graduatoria or 'provvisoria' }}{% if riferimento_bando %} — {{ riferimento_bando }}{% endif %}
+</div>
+<div class="estremi">
+CUP: {{ progetto.cup or '—' }}<br>
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}
+</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% if riferimento_verbale %}
+<p>VISTO il verbale della Commissione di valutazione {{ riferimento_verbale }};</p>
+{% endif %}
+<p>VISTI gli atti d'ufficio relativi alla procedura di selezione in oggetto;</p>
+
+<div class="atto">RENDE PUBBLICA</div>
+
+<p>la {{ tipo_graduatoria or 'provvisoria' }} graduatoria degli aspiranti selezionati per il conferimento
+degli incarichi di cui al presente progetto:</p>
+
+<table class="tabella-incarichi">
+    <tr><th>Modulo</th><th>Figura</th><th>Nominativo</th></tr>
+    {% for inc in incarichi %}
+    <tr>
+        <td>{{ inc.modulo.titolo }} ({{ inc.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(inc.ruolo, inc.ruolo)|upper }}</td>
+        <td>{{ inc.nome_completo }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% if tipo_graduatoria == 'provvisoria' %}
+<p>Avverso la presente graduatoria provvisoria è possibile presentare reclamo entro 7 giorni dalla data di
+pubblicazione. Decorso tale termine ed esaminati gli eventuali reclami, la graduatoria diverrà definitiva.</p>
+{% else %}
+<p>Avverso la presente graduatoria definitiva è ammesso Ricorso al TAR o, in alternativa, ricorso
+straordinario al Capo dello Stato nelle forme e nei termini previsti dalla Legge.</p>
+{% endif %}
+<p>La pubblicazione all'Albo online dell'Istituto ha valore di notifica agli interessati.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione. Non riporta i punteggi individuali, non gestiti da questo
+modulo: integrare manualmente se richiesti dal bando.</div>
+
+</body>
+</html>

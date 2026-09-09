@@ -123,17 +123,113 @@
             <label>Note su spese ammissibili/non ammissibili</label>
             <textarea name="note_ammissibilita" rows="4">{{ progetto.note_ammissibilita if progetto else '' }}</textarea>
         </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <h2 style="font-size:.95rem;">Premesse amministrative specifiche</h2>
+    <p style="font-size:.78rem; color:var(--grigio); margin-top:-4px;">
+        Confrontando i modelli reali (avviso e decreto), queste quattro frasi ricorrono
+        <strong>identiche</strong> in entrambi i documenti — cambiano solo gli estremi qui sotto.
+        Il testo della frase è già pronto nei documenti generati: compila solo i dati mancanti.
+        Le premesse normative generiche (R.D. 2440/1923, D.Lgs 165/2001, regolamenti UE sui fondi
+        strutturali...) sono fisse e non richiedono nulla.
+    </p>
+
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
         <div class="form-group">
-            <label>Premesse amministrative specifiche del progetto (una per riga)</label>
-            <p style="font-size:.75rem; color:var(--grigio); margin:-2px 0 4px;">
-                Usate nei documenti generati (avviso, decreto): nota di autorizzazione, decreto di
-                assunzione al bilancio, delibera del Consiglio d'Istituto di adesione, ecc. Le premesse
-                normative generiche (R.D. 2440/1923, D.Lgs 165/2001, regolamenti UE sui fondi
-                strutturali...) sono già fisse nei documenti e non vanno ripetute qui.
-            </p>
-            <textarea name="premesse_specifiche" rows="5"
-                placeholder="VISTO il documento autorizzativo, nota di autorizzazione prot. n. ... del ..., che consente l'attuazione del progetto ...;&#10;VISTO il decreto prot. n. ... di formale assunzione al Programma Annuale del finanziamento citato;&#10;VISTA la delibera n. ... del Consiglio di Istituto di adesione al progetto;">{{ progetto.premesse_specifiche if progetto else '' }}</textarea>
+            <label>Nota di autorizzazione — protocollo</label>
+            <input type="text" name="prot_nota_autorizzazione" placeholder="es. 52990"
+                   value="{{ progetto.prot_nota_autorizzazione if progetto else '' }}">
         </div>
+        <div class="form-group">
+            <label>data</label>
+            <input type="date" name="data_nota_autorizzazione"
+                   value="{{ progetto.data_nota_autorizzazione.isoformat() if progetto and progetto.data_nota_autorizzazione else '' }}">
+        </div>
+    </div>
+    <p style="font-size:.72rem; color:var(--grigio); margin:-6px 0 10px;">
+        "VISTO il documento autorizzativo, nota di autorizzazione prot. n. ... del ..., che consente
+        l'attuazione del progetto [codice] dal titolo [titolo] per un importo pari a [importo autorizzato];"
+    </p>
+
+    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Decreto di assunzione al bilancio — protocollo</label>
+            <input type="text" name="prot_decreto_assunzione_bilancio" placeholder="es. 10490"
+                   value="{{ progetto.prot_decreto_assunzione_bilancio if progetto else '' }}">
+        </div>
+        <div class="form-group">
+            <label>data</label>
+            <input type="date" name="data_decreto_assunzione_bilancio"
+                   value="{{ progetto.data_decreto_assunzione_bilancio.isoformat() if progetto and progetto.data_decreto_assunzione_bilancio else '' }}">
+        </div>
+        <div class="form-group">
+            <label>anno E.F.</label>
+            <input type="text" name="anno_esercizio_finanziario" placeholder="es. 2026"
+                   value="{{ progetto.anno_esercizio_finanziario if progetto else '' }}">
+        </div>
+    </div>
+    <p style="font-size:.72rem; color:var(--grigio); margin:-6px 0 10px;">
+        "VISTO il decreto prot. n. ... del ... di formale assunzione al Programma Annuale E.F. ... del
+        finanziamento citato;"
+    </p>
+
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Azione di disseminazione/pubblicizzazione — protocollo</label>
+            <input type="text" name="prot_azione_disseminazione" placeholder="es. 10092"
+                   value="{{ progetto.prot_azione_disseminazione if progetto else '' }}">
+        </div>
+        <div class="form-group">
+            <label>data</label>
+            <input type="date" name="data_azione_disseminazione"
+                   value="{{ progetto.data_azione_disseminazione.isoformat() if progetto and progetto.data_azione_disseminazione else '' }}">
+        </div>
+    </div>
+    <p style="font-size:.72rem; color:var(--grigio); margin:-6px 0 10px;">
+        "VISTA la propria azione di disseminazione, comunicazione, sensibilizzazione e pubblicizzazione
+        del progetto, prot. ... del ...;"
+    </p>
+
+    <div class="form-group">
+        <label>Delibera del Consiglio di Istituto di adesione al progetto</label>
+        <input type="text" name="riferimento_delibera_adesione_cdi"
+               placeholder="es. n. 191 del 18.05.2026 prot. 8311 del 29.05.2026"
+               value="{{ progetto.riferimento_delibera_adesione_cdi if progetto else '' }}">
+    </div>
+    <p style="font-size:.72rem; color:var(--grigio); margin:-6px 0 10px;">
+        "VISTA la delibera [...] del Consiglio di Istituto di adesione al progetto;" — qui va l'intera
+        citazione (numero, data, eventuale protocollo di trascrizione) perché la struttura cambia da
+        delibera a delibera.
+    </p>
+
+    <div class="form-group">
+        <label>Altre premesse non standard (una per riga, casi non coperti sopra)</label>
+        <textarea name="premesse_specifiche" rows="3"
+            placeholder="Da usare solo per premesse specifiche del bando non riconducibili alle quattro frasi standard qui sopra.">{{ progetto.premesse_specifiche if progetto else '' }}</textarea>
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <h2 style="font-size:.95rem;">Capitoli di bilancio</h2>
+    <p style="font-size:.78rem; color:var(--grigio); margin-top:-4px;">Usati solo dal decreto di assunzione al bilancio.</p>
+    <div class="form-group">
+        <label>Capitolo ENTRATE</label>
+        <textarea name="capitolo_entrata" rows="2"
+            placeholder="es. 2.1.1 (Finanziamenti dall'Unione Europea...)">{{ progetto.capitolo_entrata if progetto else '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>Capitolo SPESE</label>
+        <textarea name="capitolo_spesa" rows="2"
+            placeholder="es. P.2.11 (Progetti - Progetti in ambito...)">{{ progetto.capitolo_spesa if progetto else '' }}</textarea>
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <h2 style="font-size:.95rem;">Note su spese ammissibili/non ammissibili</h2>
+    <div class="form-group">
+        <textarea name="note_ammissibilita" rows="4">{{ progetto.note_ammissibilita if progetto else '' }}</textarea>
     </div>
 </div>
 

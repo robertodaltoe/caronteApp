@@ -602,6 +602,16 @@ def _auto_migrate():
         ('incarichi_fse', 'data_nascita',        'DATE',         None),
         ('incarichi_fse', 'codice_fiscale',      'VARCHAR(16)',  None),
         ('incarichi_fse', 'indirizzo_residenza', 'VARCHAR(200)', None),
+        ('progetti_fse',  'prot_nota_autorizzazione',         'VARCHAR(60)',  None),
+        ('progetti_fse',  'data_nota_autorizzazione',         'DATE',         None),
+        ('progetti_fse',  'prot_decreto_assunzione_bilancio', 'VARCHAR(60)',  None),
+        ('progetti_fse',  'data_decreto_assunzione_bilancio', 'DATE',         None),
+        ('progetti_fse',  'anno_esercizio_finanziario',       'VARCHAR(9)',   None),
+        ('progetti_fse',  'prot_azione_disseminazione',       'VARCHAR(60)',  None),
+        ('progetti_fse',  'data_azione_disseminazione',       'DATE',         None),
+        ('progetti_fse',  'riferimento_delibera_adesione_cdi', 'VARCHAR(200)', None),
+        ('progetti_fse',  'capitolo_entrata', 'VARCHAR(300)', None),
+        ('progetti_fse',  'capitolo_spesa',   'VARCHAR(300)', None),
     ]
 
     with db.engine.connect() as conn:

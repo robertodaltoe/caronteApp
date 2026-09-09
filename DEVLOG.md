@@ -2,6 +2,109 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 67 addendum 4 — Tutti i documenti, intestazione istituzionale, formato Word
+
+Seguito diretto dell'addendum precedente, in risposta a osservazioni puntuali di Roberto:
+
+**"Non erano 9 i modelli?"** — corretto: l'addendum 3 copriva solo il
+nucleo bando→nomina→incarico richiesto esplicitamente. Aggiunti i 7
+modelli restanti trovati nella cartella Drive: nomina e convocazione
+commissione, verbale commissione, pubblicazione graduatoria, decreto
+di assunzione al bilancio, decreto Direzione e Coordinamento (Project
+Manager — riusa `IncaricoFSE` con `ruolo='project_manager'`, già
+presente nel modello), dichiarazione di avvio modulo, dichiarazione DS
+di insussistenza conflitto di interessi. Il verbale e la
+pubblicazione graduatoria sono volutamente semplificati: riportano
+l'esito finale già tracciato in CaronteApp (`IncaricoFSE.stato ==
+'incaricato''`) ma NON i punteggi individuali né le tre graduatorie per
+categoria (interna/altre amministrazioni/esterni) viste nel verbale
+reale — quel dettaglio non è modellato e va integrato a mano; il PDF
+lo segnala esplicitamente in nota. **Bug trovato durante il collaudo
+di questa fetta**: l'elenco degli "incarichi confermati" usato da
+decreto di nomina/verbale/graduatoria inizialmente includeva anche
+l'incarico di Direzione e Coordinamento, che però non passa dalla
+procedura comparativa della commissione — un errore di *contenuto*
+(mescolare un dato semanticamente diverso), non di forma. Corretto
+escludendo `ruolo == 'project_manager'` da quell'elenco, con test di
+regressione dedicato.
+
+**"L'avviso di selezione lo vedo come html illeggibile"** — non era un
+bug della route (che genera correttamente un PDF con
+`mimetype='application/pdf'`): era un file di verifica che avevo
+salvato con estensione `.html` mentre il contenuto erano già byte PDF
+grezzi — un errore mio nel nominare il file di collaudo, non
+nell'applicazione. Verificato di nuovo con l'estensione corretta.
+
+**Intestazione istituzionale e banner PN/UE** — Roberto ha condiviso
+l'immagine dell'intestazione (loghi MIM + Istituto, già trovata
+identica nei `media/` dei `.docx` originali durante l'analisi
+preliminare) chiedendo esplicitamente: intestazione SOLO in prima
+pagina, banner "Coesione Italia/UE/MIM" in fondo a OGNI pagina. Non
+ottenibile mettendo semplicemente due `<img>` nel documento (si
+sposterebbero col contenuto): implementato con i "running element" CSS
+di WeasyPrint (`position: running()` + `@page { @bottom-center {
+content: element(...) } }`, con `@page :first` per il solo margine
+superiore della prima pagina) — meccanismo già usato da stampa
+professionale per header/footer ripetuti, non documentato altrove
+nell'app. **Bug non ovvio trovato in collaudo**: il footer non
+compariva su NESSUNA pagina tranne l'ultima. Causa: l'elemento con
+`position: running()` va "visto" dal motore di impaginazione fin dalla
+prima pagina per essere ripetuto in avanti — l'avevo messo in fondo al
+`<body>` (dove appare *solo* nell'ultima pagina fisica), non in cima.
+Isolato con una sequenza di test minimi via una route di debug
+temporanea (necessaria perché l'import di WeasyPrint si è dimostrato
+intermittente in questa sessione se lanciato da script standalone, ma
+sempre affidabile all'interno del processo Flask reale — non
+approfondito oltre, irrilevante per l'uso normale). Risolto spostando
+l'include del footer accanto a quello dell'intestazione, in cima al
+`<body>`. Le due immagini (60→77KB e 12KB dopo compressione JPEG da
+PNG originali) sono incorporate come base64 in `modules/dati_istituto.py`,
+stesso pattern già in uso per i font in `modules/pdf_fonts.py`
+(WeasyPrint qui è chiamato senza `base_url`, un file statico
+referenziato via URL relativo non si risolverebbe).
+
+**Premesse specifiche del progetto, ridotte ai soli dati variabili** —
+confrontando avviso e decreto reali, individuate 4 frasi "VISTO/VISTA"
+che ricorrono IDENTICHE in entrambi i documenti (nota di autorizzazione,
+decreto di assunzione al bilancio, azione di disseminazione, delibera
+di adesione del CdI): il testo è ora fisso in un partial condiviso
+(`_premesse_finanziamento.html`), e la scheda progetto chiede solo i
+dati realmente variabili (protocollo, data, importo) invece di un'unica
+casella di testo libero dove ridigitare la frase intera ogni volta —
+esattamente la richiesta di Roberto ("limita la parte da inserire ai
+dati pienamente variabili"). Resta un campo di testo libero residuale
+per premesse atipiche non riconducibili alle quattro frasi standard.
+
+**Formato Word, a scelta** — ogni documento generabile ora espone un
+selettore PDF/Word nel form di generazione. Il file Word non è una
+conversione HTML→DOCX generica (nessuna libreria di terze parti
+verificabile riga per riga per quello): `modules/genera_docx_fse.py`
+riconosce il sottoinsieme di markup usato nei nostri template
+(div con classi note, p, h2, table, img, b, br) e lo ricostruisce con
+`python-docx`, inclusi intestazione solo-prima-pagina e footer
+ripetuto usando gli header/footer di sezione nativi di Word (stesso
+comportamento del PDF, ottenuto con lo strumento nativo del formato
+invece che tentando di replicare i "running element" CSS). Nuove
+dipendenze in `requirements.txt`: `python-docx`, `lxml` (già presente
+transitivamente ma non dicharata esplicitamente prima).
+
+Verifica: `pytest` 441/441 (30 nel file dei progetti FSE + 2 dedicati
+al convertitore DOCX, che renderizzano un template reale con un
+Environment Jinja2 puntato sulla cartella `templates/` vera, non
+mockato, e rileggono il `.docx` prodotto con `python-docx` per
+verificare testo, tabelle e presenza delle immagini in header/footer).
+Collaudo dal vivo end-to-end su copia isolata del DB reale: creato un
+secondo progetto di prova con dati fittizi (nessun nome reale di
+persone), generati tutti gli 11 tipi di documento come PDF via
+richieste HTTP dirette con token CSRF autentico, più un file .docx
+dell'avviso di selezione riletto e verificato con `python-docx`
+(intestazione/footer presenti, 3 tabelle correttamente estratte).
+`database.db` reale invariato dopo il collaudo, `PRAGMA
+integrity_check: ok`.
+
+**Prossimi passi**: cruscotto di monitoraggio finanziario complessivo
+multi-progetto (unico punto ancora aperto dalla richiesta iniziale).
+
 ## Sessione 67 addendum 3 — Generazione documenti (bando, decreto, incarichi)
 
 Seguito diretto della fetta "Progetti FSE/FESR": generazione da modello

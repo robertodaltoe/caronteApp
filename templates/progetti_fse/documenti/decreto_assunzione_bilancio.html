@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Decreto di assunzione al bilancio — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> Decreto di assunzione al bilancio degli impegni organizzativi e finanziari connessi
+all'{{ progetto.riferimento_avviso or 'Avviso Pubblico' }}
+</div>
+<div class="estremi">
+Codice progetto: {{ progetto.codice_progetto or '—' }} dal titolo "{{ progetto.titolo }}"<br>
+CUP: {{ progetto.cup or '—' }}<br>
+{% if progetto.anno_scol %}Annualità: {{ progetto.anno_scol }}{% endif %}
+</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+{% include 'progetti_fse/documenti/_premesse_finanziamento.html' %}
+
+<p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
+
+<div class="atto">DECRETA</div>
+
+<p>L'iscrizione a bilancio{% if progetto.anno_esercizio_finanziario %} E.F. {{ progetto.anno_esercizio_finanziario }}{% endif %}
+degli impegni organizzativi e finanziari connessi al Progetto: {{ progetto.codice_progetto or '' }} dal
+titolo "{{ progetto.titolo }}" per un importo assegnato di
+{{ '€%.2f'|format(progetto.importo_autorizzato) if progetto.importo_autorizzato is not none else '—' }}.</p>
+
+<p>Il predetto finanziamento sarà iscritto in bilancio:</p>
+{% if progetto.capitolo_entrata %}
+<p>&bull; ENTRATE — {{ progetto.capitolo_entrata }};</p>
+{% endif %}
+{% if progetto.capitolo_spesa %}
+<p>&bull; SPESE — {{ progetto.capitolo_spesa }};</p>
+{% endif %}
+<p>&bull; di autorizzare il Direttore dei Servizi Generali e Amministrativi, ai sensi dell'art. 5 comma 5
+del Decreto Interministeriale 28 agosto 2018, n. 129, a predisporre nel Programma Annuale la scheda
+illustrativa finanziaria relativa al progetto, ed i correlati atti e scritture contabili, nella quale sono
+indicati l'arco temporale di riferimento, la fonte di finanziamento e il dettaglio delle spese distinte per
+natura, e ad approntare i correlati atti e le scritture contabili, compresi quelli di accertamento dei
+fondi e di impegni di spesa;</p>
+<p>&bull; di trasmettere il presente provvedimento al Consiglio d'Istituto, ai sensi dell'art. 10, comma 5,
+del Decreto Interministeriale 28 agosto 2018, n. 129.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

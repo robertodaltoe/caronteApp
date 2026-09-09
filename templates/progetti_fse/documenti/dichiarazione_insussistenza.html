@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Dichiarazione insussistenza conflitto interessi — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Dichiarazione di insussistenza di cause di
+incompatibilità e assenza di conflitto di interessi per l'incarico al Dirigente Scolastico di Responsabile
+Unico del Procedimento del progetto e delle attività didattico-formative rientranti nell'ambito delle
+Azioni di cui all'Avviso pubblico
+</div>
+<div class="estremi">
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
+CUP: {{ progetto.cup or '—' }}
+</div>
+
+<p>Il {{ ds_titolo }} {{ ds_nome }}, in servizio presso questo Istituto in qualità di Dirigente Scolastico,
+in relazione all'incarico di cui in oggetto,</p>
+
+<p style="text-align:center; font-weight:700;">CONSAPEVOLE</p>
+
+<p>della responsabilità penale in cui incorre chi sottoscrive dichiarazioni mendaci o forma, esibisce, si
+avvale di atti falsi ovvero non più rispondenti a verità e delle relative sanzioni penali di cui all'art.
+76 del D.P.R. 445/2000, nonché delle conseguenze amministrative e di decadenza dei benefici eventualmente
+conseguenti al provvedimento emanato, nonché consapevole delle responsabilità, ai sensi degli articoli 46 e
+47 del D.P.R. 28 dicembre 2000, n. 445,</p>
+
+<div class="atto">DICHIARA</div>
+
+<p>&bull; di non trovarsi in nessuna delle condizioni di incompatibilità o inconferibilità dell'incarico,
+ai sensi di quanto previsto dal D.Lgs. n. 39/2013 e dall'art. 53 del D.Lgs. n. 165/2001;</p>
+<p>&bull; di non trovarsi in situazioni di conflitto di interessi, anche potenziale, ai sensi dell'art. 53,
+comma 14, del D.Lgs n. 165/2001, che possano interferire con l'esercizio dell'incarico;</p>
+<p>&bull; di non trovarsi in nessuna delle eventuali condizioni di incompatibilità o inconferibilità
+dell'incarico specificatamente previste per l'attuazione delle azioni e delle iniziative rientranti
+nell'ambito del Progetto di cui all'Avviso pubblico indicato in oggetto;</p>
+<p>&bull; che, ai sensi del combinato disposto degli artt. 2 e 7 del D.P.R. 16 aprile 2013 n. 62,
+l'esercizio dell'incarico non coinvolge, direttamente o indirettamente, interessi finanziari, economici o
+altri interessi personali propri o di parenti, affini entro il secondo grado, del coniuge o di conviventi,
+oppure di persone con le quali abbia rapporti di frequentazione abituale, né interessi di soggetti od
+organizzazioni con cui egli o il coniuge abbia causa pendente o grave inimicizia o rapporti di credito o
+debito significativi, né interessi di soggetti od organizzazioni di cui sia tutore, curatore, procuratore o
+agente, titolare effettivo, ovvero di enti, associazioni anche non riconosciute, comitati, società o
+stabilimenti di cui sia amministratore, gerente o dirigente;</p>
+<p>&bull; di aver preso piena cognizione del D.M. 26 aprile 2022, n. 105, recante il Codice di
+Comportamento dei dipendenti del Ministero dell'Istruzione e del Merito;</p>
+<p>&bull; di impegnarsi a comunicare tempestivamente all'Istituzione scolastica conferente eventuali
+variazioni che dovessero intervenire nel corso dello svolgimento dell'incarico in oggetto;</p>
+<p>&bull; di impegnarsi altresì a comunicare all'Istituzione scolastica qualsiasi altra circostanza
+sopravvenuta di carattere ostativo rispetto all'espletamento dell'incarico in oggetto;</p>
+<p>&bull; di essere stato informato, ai sensi dell'art. 13 del Regolamento (UE) 2016/679 e del D. Lgs. 30
+giugno 2003, n. 196, circa il trattamento dei dati personali raccolti, che saranno trattati esclusivamente
+per le finalità per le quali la presente dichiarazione viene resa.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

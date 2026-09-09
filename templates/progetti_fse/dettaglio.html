@@ -86,7 +86,9 @@
                     {% for inc in m.incarichi %}
                     <div style="font-size:.8rem;">
                         {{ inc.nome_completo }} — {{ inc.ruolo }}
-                        {% if inc.tipo_rapporto == 'lavoro_autonomo' %}
+                        {% if inc.ruolo == 'project_manager' %}
+                        <a href="{{ url_for('progetti_fse.genera_decreto_direzione_coordinamento', id_incarico=inc.id) }}" title="Genera decreto Direzione e Coordinamento" style="font-size:.72rem;">{{ icon('print') }}</a>
+                        {% elif inc.tipo_rapporto == 'lavoro_autonomo' %}
                         <a href="{{ url_for('progetti_fse.genera_contratto_autonomo', id_incarico=inc.id) }}" title="Genera contratto di lavoro autonomo" style="font-size:.72rem;">{{ icon('print') }}</a>
                         {% else %}
                         <a href="{{ url_for('progetti_fse.genera_lettera_incarico', id_incarico=inc.id) }}" title="Genera lettera di incarico" style="font-size:.72rem;">{{ icon('print') }}</a>
@@ -96,6 +98,7 @@
                     <span style="color:var(--grigio);">—</span>
                     {% endfor %}
                     <a href="{{ url_for('progetti_fse.nuovo_incarico', id_modulo=m.id) }}" style="font-size:.75rem;">+ aggiungi</a>
+                    <br><a href="{{ url_for('progetti_fse.genera_dichiarazione_avvio_modulo', id_modulo=m.id) }}" style="font-size:.72rem;">{{ icon('print') }} dichiarazione avvio</a>
                 </td>
                 <td style="padding:8px; text-align:right;">
                     {% if m.importo_autorizzato %}{{ '%.2f'|format(m.importo_autorizzato) }} €{% else %}—{% endif %}

@@ -7,6 +7,9 @@
 </head>
 <body>
 
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
 <div class="protocollo">Protocollo come da segnatura</div>
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 
@@ -24,12 +27,7 @@ Codice progetto: {{ progetto.codice_progetto or '—' }}
 <div class="qualifica">il Dirigente Scolastico</div>
 
 {% include 'progetti_fse/documenti/_premesse_normative.html' %}
-
-{% if progetto.premesse_specifiche %}
-{% for riga in progetto.premesse_specifiche.split('\n') if riga.strip() %}
-<p>{{ riga.strip() }}</p>
-{% endfor %}
-{% endif %}
+{% include 'progetti_fse/documenti/_premesse_finanziamento.html' %}
 
 <p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
 
@@ -212,6 +210,7 @@ sostituisce il documento cartaceo e la firma autografa.</div>
 
 <div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
 bozza da verificare e integrare (allegati A/B/C) prima della protocollazione.</div>
+
 
 </body>
 </html>
