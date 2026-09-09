@@ -12,9 +12,14 @@
             documenti e stima costi. Separata dal Piano delle Attività didattico.
         </p>
     </div>
-    <a href="{{ url_for('progetti_fse.nuovo') }}" class="btn btn-success">
-        {{ icon('plus') }} Nuovo progetto
-    </a>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('progetti_fse.cruscotto') }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            {{ icon('chart') }} Cruscotto finanziario
+        </a>
+        <a href="{{ url_for('progetti_fse.nuovo') }}" class="btn btn-success">
+            {{ icon('plus') }} Nuovo progetto
+        </a>
+    </div>
 </div>
 
 {% if not progetti %}

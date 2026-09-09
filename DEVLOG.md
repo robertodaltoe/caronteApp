@@ -2,6 +2,45 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 67 addendum 5 — Cruscotto finanziario multi-progetto
+
+Ultimo punto rimasto aperto dalla richiesta iniziale del capitolo
+"Progetti FSE/FESR": vista aggregata su tutti i progetti (non solo il
+singolo, già coperto dalla pagina di dettaglio).
+
+- `routes/progetti_fse.py::_riepilogo_progetto(p)` — la logica di
+  calcolo costo/scostamento per progetto, prima scritta solo dentro
+  `dettaglio()`, è stata fattorizzata in una funzione a sé e riusata
+  sia da `dettaglio()` sia dal nuovo `cruscotto()`, invece di
+  duplicarla: è lo stesso calcolo con il cast esplicito a float già
+  corretto una volta per un bug reale (Sessione 67, `TypeError` tra
+  `Decimal` e float) — copiarlo una seconda volta avrebbe potuto
+  ripetere lo stesso errore.
+- Nuova route `/progetti-fse/cruscotto` e template
+  `templates/progetti_fse/cruscotto.html`: card di riepilogo (numero
+  progetti, totale autorizzato, stima costo complessiva, scostamento
+  aggregato — vera somma su tutti i progetti, non solo affiancamento),
+  conteggio progetti per stato, e una tabella per progetto con
+  scostamento colorato (rosso se sopra budget, verde altrimenti) e
+  stato della documentazione (quanti documenti già protocollati sul
+  totale generato) con link diretto ai documenti del progetto.
+- Link "Cruscotto finanziario" aggiunto nell'elenco progetti.
+
+Verifica: `pytest` 443/443 (+2, uno sui totali aggregati su due
+progetti con importi/stime diverse per verificare che sia una somma
+vera e non un valore di un solo progetto, uno sulla pagina raggiungibile
+senza progetti). Collaudo dal vivo su copia isolata: creati due
+progetti di prova con un solo modulo/incarico sul primo, verificato che
+il cruscotto sommi correttamente autorizzato (48.105+20.000=68.105€),
+stima costo (2.100€, dal solo progetto con l'incarico) e scostamento
+aggregato (-66.005€), con la riga di totale in fondo alla tabella
+coerente. `database.db` reale invariato.
+
+Con questo si chiude il capitolo "Progetti FSE/FESR" come inizialmente
+richiesto: pianificazione calendario, gestione documentale completa
+(11 tipi di documento, PDF o Word, con intestazione istituzionale) e
+monitoraggio finanziario, sia per singolo progetto sia aggregato.
+
 ## Sessione 67 addendum 4 — Tutti i documenti, intestazione istituzionale, formato Word
 
 Seguito diretto dell'addendum precedente, in risposta a osservazioni puntuali di Roberto:

@@ -751,3 +751,57 @@ def test_genera_documento_in_formato_docx(app, db_session, monkeypatch):
         assert r.status_code == 200
         assert r.mimetype == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         assert '.docx' in r.headers.get('Content-Disposition', '')
+
+
+# ── Cruscotto finanziario multi-progetto ─────────────────────────────
+
+def test_cruscotto_aggrega_piu_progetti(app, db_session, monkeypatch):
+    """Il cruscotto deve sommare autorizzato/stima/scostamento di TUTTI
+    i progetti, non solo mostrarli affiancati -- il totale è un dato che
+    Roberto legge a colpo d'occhio, quindi deve essere davvero la somma
+    e non, per esempio, il valore di un solo progetto per un bug di
+    inizializzazione dell'accumulatore."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+
+    p1 = _progetto_ucs(titolo='Progetto Uno', importo_autorizzato=10000)
+    db.session.add(p1)
+    db.session.flush()
+    m1 = ModuloFSE(id_progetto=p1.id, titolo='Modulo A', ore=30)
+    db.session.add(m1)
+    db.session.flush()
+    db.session.add(IncaricoFSE(id_modulo=m1.id, nome_esterno='Esperto 1', ruolo='esperto',
+                                tariffa_oraria=70, ore_previste=30))
+
+    p2 = _progetto_ucs(titolo='Progetto Due', cup='CUP2', importo_autorizzato=5000)
+    db.session.add(p2)
+    db.session.flush()
+    m2 = ModuloFSE(id_progetto=p2.id, titolo='Modulo B', ore=30)
+    db.session.add(m2)
+    db.session.flush()
+    db.session.add(IncaricoFSE(id_modulo=m2.id, nome_esterno='Esperto 2', ruolo='esperto',
+                                tariffa_oraria=70, ore_previste=30))
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    monkeypatch.setattr(mod, 'render_template', lambda nome, **k: catturato.update(kwargs=k) or '<html></html>')
+
+    with app.test_client() as c:
+        r = c.get('/progetti-fse/cruscotto')
+        assert r.status_code == 200
+
+    kwargs = catturato['kwargs']
+    assert len(kwargs['righe']) == 2
+    # 70*30 = 2100 di stima costo per ciascun progetto -> 4200 totale.
+    assert kwargs['totale_stimato'] == 2100 * 2
+    assert kwargs['totale_autorizzato'] == 10000 + 5000
+    assert kwargs['totale_scostamento'] == (2100 * 2) - (10000 + 5000)
+
+
+def test_cruscotto_reachable_senza_progetti(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    with app.test_client() as c:
+        r = c.get('/progetti-fse/cruscotto')
+        assert r.status_code == 200

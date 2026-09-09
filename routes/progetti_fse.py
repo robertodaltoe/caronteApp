@@ -133,9 +133,14 @@ def modifica(id):
         stati=STATI_PROGETTO, tipi_costo=TIPI_COSTO)
 
 
-@progetti_fse_bp.route('/progetti-fse/<int:id>')
-def dettaglio(id):
-    p = ProgettoFSE.query.get_or_404(id)
+def _riepilogo_progetto(p):
+    """Riepilogo finanziario di un progetto: costo stimato per modulo
+    (formazione + gestione) e scostamento dal budget autorizzato.
+    Fattorizzato fuori da dettaglio() per essere riusato anche dal
+    cruscotto multi-progetto, invece di duplicare la logica di calcolo
+    (e il cast esplicito a float, già una fonte di bug reale — vedi
+    DEVLOG Sessione 67: 'importo_autorizzato' è un Numeric/Decimal e non
+    si può sottrarre direttamente da un float senza un TypeError)."""
     riepilogo_moduli = []
     totale_previsto = 0.0
     for m in p.moduli:
@@ -150,13 +155,53 @@ def dettaglio(id):
             'costo_gestione': costo_gestione,
             'costo_stimato': costo_stimato,
         })
-    # float esplicito: importo_autorizzato è un Numeric (Decimal) e non si
-    # può sottrarre direttamente da un float senza un TypeError.
-    scostamento = totale_previsto - float(p.importo_autorizzato or 0)
+    importo_autorizzato = float(p.importo_autorizzato or 0)
+    scostamento = totale_previsto - importo_autorizzato
+    return {
+        'progetto': p,
+        'riepilogo_moduli': riepilogo_moduli,
+        'totale_previsto': totale_previsto,
+        'importo_autorizzato': importo_autorizzato,
+        'scostamento': scostamento,
+    }
 
+
+@progetti_fse_bp.route('/progetti-fse/<int:id>')
+def dettaglio(id):
+    p = ProgettoFSE.query.get_or_404(id)
+    r = _riepilogo_progetto(p)
     return render_template('progetti_fse/dettaglio.html', progetto=p,
-        riepilogo_moduli=riepilogo_moduli, totale_previsto=totale_previsto,
-        scostamento=scostamento)
+        riepilogo_moduli=r['riepilogo_moduli'], totale_previsto=r['totale_previsto'],
+        scostamento=r['scostamento'])
+
+
+@progetti_fse_bp.route('/progetti-fse/cruscotto')
+def cruscotto():
+    progetti = ProgettoFSE.query.order_by(ProgettoFSE.creato_il.desc()).all()
+    righe = [_riepilogo_progetto(p) for p in progetti]
+
+    totale_autorizzato = sum(r['importo_autorizzato'] for r in righe)
+    totale_stimato = sum(r['totale_previsto'] for r in righe)
+    totale_scostamento = totale_stimato - totale_autorizzato
+
+    conteggio_stati = {}
+    for p in progetti:
+        conteggio_stati[p.stato] = conteggio_stati.get(p.stato, 0) + 1
+
+    # Documenti protocollati vs in bozza, per progetto: segnala a colpo
+    # d'occhio quali progetti hanno ancora atti da formalizzare.
+    documenti_per_progetto = {}
+    for r in righe:
+        docs = r['progetto'].documenti
+        documenti_per_progetto[r['progetto'].id] = {
+            'totale': len(docs),
+            'protocollati': sum(1 for d in docs if d.protocollo),
+        }
+
+    return render_template('progetti_fse/cruscotto.html',
+        righe=righe, totale_autorizzato=totale_autorizzato, totale_stimato=totale_stimato,
+        totale_scostamento=totale_scostamento, conteggio_stati=conteggio_stati,
+        stati_label=dict(STATI_PROGETTO), documenti_per_progetto=documenti_per_progetto)
 
 
 @progetti_fse_bp.route('/progetti-fse/<int:id>/elimina', methods=['POST'])
