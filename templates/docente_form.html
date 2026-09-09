@@ -379,6 +379,13 @@
 <div style="display:flex; flex-direction:column; gap:14px;">
 
     {# ── 4. Materie insegnate ─────────────────────────────────────── #}
+    {# Solo per un docente già esistente: l'assegnazione delle materie
+       avviene dalla scheda "Modifica" dopo la creazione (vedi il flash
+       "Ora assegna la sua classe di concorso e le materie" in
+       routes/docenti.py::nuovo) — per un docente nuovo docente.id non
+       esiste ancora, e la select sotto lo referenziava senza guardia,
+       causando un 500 su /docenti/nuovo. #}
+    {% if docente %}
     {% set materie_anno_corrente = (anno_sel_materie == anno_corrente_materie) %}
     <div class="card" style="padding:16px 18px;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
@@ -440,6 +447,12 @@
             {% endif %}
         </div>
     </div>
+    {% else %}
+    <div class="card" style="padding:16px 18px; color:var(--grigio); font-size:.82rem;">
+        {{ icon('layers') }} Le materie insegnate si assegnano dopo aver creato il docente, dalla sua
+        scheda.
+    </div>
+    {% endif %}
 
     {# ── 4b. Incarichi ────────────────────────────────────────────── #}
     {% if docente %}

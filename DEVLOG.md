@@ -2,6 +2,41 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 68 — Fix: /docenti/nuovo dava errore 500
+
+Segnalato da Roberto in produzione ("guarda cosa succede qui, mi dà un
+errore"), riprodotto subito su copia isolata del DB reale. Bug
+preesistente, non introdotto in questa sessione — solo mai incontrato
+prima perché il codice al momento del crash non era mai stato
+esercitato in produzione con `docente=None` fino ad ora.
+
+**Causa**: `templates/docente_form.html`, nella card "Materie
+insegnate", faceva `url_for('docenti.modifica', id=docente.id)` senza
+controllare prima che `docente` non fosse `None` — il caso della
+scheda "Nuovo docente". La card gemella "Colloqui" poco più sotto nello
+stesso file ha invece la guardia `{% if docente %}` corretta: non un
+pattern da inventare, solo dimenticato in un punto.
+
+**Fix**: l'intera card "Materie insegnate" ora è dentro `{% if docente
+%}...{% else %}`, con un messaggio placeholder ("le materie si
+assegnano dopo aver creato il docente, dalla sua scheda") coerente con
+il flash già mostrato da `routes/docenti.py::nuovo()` dopo la
+creazione.
+
+**Nuovo test di regressione** (`tests/test_docente_nuovo_render.py`):
+a differenza dei test esistenti su questo template, che mockano
+`render_template` e quindi non avrebbero mai potuto scoprire un errore
+di *rendering* del template stesso, questo usa l'app reale
+(`app.py::create_app()`) puntata su una copia temporanea del database
+per renderizzare `/docenti/nuovo` per davvero e verificare che non vada
+in errore — più un secondo test che verifica che la correzione non
+abbia fatto sparire la card anche per un docente esistente, dove serve.
+
+Verifica: `pytest` 445/445. Riprodotto live su copia isolata del DB
+reale prima della correzione (500 confermato con traceback completo),
+poi verificato che sia `/docenti/nuovo` sia `/docenti/<id>/modifica`
+rispondano 200 dopo il fix. `database.db` reale mai toccato.
+
 ## Sessione 67 addendum 5 — Cruscotto finanziario multi-progetto
 
 Ultimo punto rimasto aperto dalla richiesta iniziale del capitolo
