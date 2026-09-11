@@ -2,6 +2,77 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 68 addendum 1 — Importatore orario: supporto al formato "orizzontale"
+
+Roberto ha condiviso un file di orario provvisorio in un formato diverso
+da quello su cui `modules/parser_orario.py` era scritto (un file
+"Table 1" pieno di celle unite irregolari, poi analizzato a fondo in
+questa stessa sessione — vedi [[feedback_no_conversione_automatica_orario_pdf_export]]
+in memoria: dopo due tentativi falliti di conversione automatica, ci
+si e' fermati). Invece di continuare a inseguire quel formato
+irregolare, Roberto ha chiesto di ragionare su come migliorare
+l'importatore stesso, e ha fornito un secondo file, pulito e regolare
+("ORARIO DOCENTI SETTIMANA 1B_teachers_time_horizontal.xlsx") — la
+stessa esportazione del software di orario, ma per un periodo diverso.
+
+**Differenze dal formato storico** (foglio sempre chiamato
+'7_ORARIO DEFINITIVO_teachers_ti', colonna A con le etichette
+CLASSE/MATERIE/COMPRESENZA):
+- il foglio si chiama "<periodo>_teachers_ti" (suffisso fisso, nome
+  variabile secondo l'export);
+- niente colonna di etichette: il cognome del docente e la classe
+  stanno sulla stessa riga, la materia sulla riga sotto;
+- i giorni sono abbreviati (LUN/MAR/...) invece che per esteso
+  (Lunedì/Martedì/...);
+- le compresenze si riconoscono da una nota testuale
+  "COGNOME1, COGNOME2" al posto della classe, ma — verificato sui casi
+  reali MAY/STRAMBINI e MAY/FUMAGALLI — il blocco di ciascun docente
+  resta autosufficiente: classe e materia vere sono comunque le due
+  righe successive dello STESSO blocco, non serve andare a leggere il
+  blocco dell'altro docente (a differenza di quanto temuto nei
+  tentativi falliti sul file "Table 1").
+
+**Modifiche a `modules/parser_orario.py`** (nessuna riscrittura, solo
+aggiunta di un secondo percorso di lettura):
+- `_trova_foglio_orario()` — cerca prima il nome storico esatto, poi
+  qualunque foglio che termini per `_teachers_ti`.
+- `build_col_map()` — **bug corretto**: il confronto giorno cercava solo
+  `nome_esteso in etichetta` (funzionava per "Lunedì" ma falliva
+  silenziosamente per "LUN", visto che "lunedì" non è contenuto in
+  "lun" — è il contrario). Ora controlla entrambi i versi.
+- `_e_formato_a_tag()` — riconosce da solo quale dei due formati ha
+  davanti (presenza di 'CLASSE' in colonna A), cosi'
+  `applica_importazione()` non deve sapere nulla del formato.
+- `_parse_formato_orizzontale()` — nuovo percorso di lettura per il
+  formato senza etichette: per ciascuna colonna raccoglie le righe non
+  vuote del blocco del docente nell'ordine in cui compaiono (di norma
+  2, tre per chi ha compresenze) invece di assumere un numero fisso di
+  righe.
+
+**Verifica**: `pytest` 452/452 (+7 nuovi in `tests/test_parser_orario.py`,
+prima file senza alcuna copertura — workbook costruiti in memoria con
+openpyxl, non i file reali di Roberto che restano fuori dal
+repository). Collaudo dal vivo con `applica_importazione()` vera su
+copia isolata del database reale: 706 ore importate da "ORARIO
+SETTIMANA 1B_teachers_ti", **0 nuovi docenti creati** (tutti i cognomi
+del file hanno trovato una corrispondenza tra i docenti già censiti,
+segno che il riconoscimento funziona bene), solo 3 cognomi non
+riconosciuti (`ALESSI` — non censito, `AGRO'` — nel database è
+`AGRÒ` con l'accento, `VALENA S` — nel database ci sono sia `VALENA
+Piero` sia `VALENA Sara`, serve un alias per disambiguare): casi da
+risolvere con la tabella `AliasDocente` già esistente
+(`/sincronizzazione`), non un problema del parser. `database.db`
+reale invariato dopo il collaudo, `PRAGMA integrity_check: ok`.
+
+**Non affrontato**: nel formato orizzontale, la nota di compresenza
+genera uno slot solo per il docente proprietario del blocco, non
+automaticamente anche per il collega nominato (a differenza del
+formato a tag, dove la riga COMPRESENZA lo fa esplicitamente) — nei
+file reali visti finora non e' un problema, perché ogni docente in
+compresenza ha comunque il proprio blocco completo di classe/materia;
+da rivedere se un giorno comparisse un caso reale in cui non fosse
+cosi'.
+
 ## Sessione 68 — Fix: /docenti/nuovo dava errore 500
 
 Segnalato da Roberto in produzione ("guarda cosa succede qui, mi dà un

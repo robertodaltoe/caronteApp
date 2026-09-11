@@ -2,11 +2,35 @@
 modules/parser_orario.py
 Logica di parsing e importazione orario.
 Usata sia da import_orario.py che dalla route /sincronizzazione.
+
+Il software di orario usato dalla scuola esporta due varianti dello
+stesso foglio "a griglia" (giorni in colonna, un blocco di righe per
+docente):
+
+1. Formato "a tag" (il primo mai visto, foglio chiamato esattamente
+   '7_ORARIO DEFINITIVO_teachers_ti'): colonna A marca ogni riga con
+   CLASSE/MATERIE/COMPRESENZA, il cognome del docente sta in colonna B
+   sulla riga CLASSE.
+2. Formato "orizzontale" (visto per la prima volta il 2026-09-11, es.
+   "ORARIO SETTIMANA 1B_teachers_ti"): niente colonna A di servizio, il
+   cognome sta nella prima colonna prima delle ore, e classe/materia
+   sono semplicemente la riga del nome e quella subito sotto -- senza
+   etichette. Le compresenze (due docenti sulla stessa ora) si
+   riconoscono da una nota testuale "COGNOME1, COGNOME2" al posto della
+   classe, con classe/materia comunque presenti su quella stessa riga
+   del docente (non serve incrociare le righe dell'altro docente: ogni
+   blocco e' autosufficiente, verificato sui casi reali MAY/STRAMBINI e
+   MAY/FUMAGALLI in "ORARIO SETTIMANA 1B_teachers_ti").
+
+parse_file() riconosce da solo quale dei due formati ha davanti e
+restituisce sempre la stessa struttura, cosi' applica_importazione()
+non deve sapere quale dei due e' stato usato.
 """
 import re, datetime, os, json
 from openpyxl import load_workbook
 
 SHEET_ORARIO  = '7_ORARIO DEFINITIVO_teachers_ti'
+SUFFISSO_FOGLIO_ORARIO = '_teachers_ti'
 SHEET_DOCENTI = 'Docenti'
 GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
 LIBERO = {'---', '-x-', '', 'none'}
@@ -23,9 +47,16 @@ def is_classe(s):
 def build_col_map(ws):
     giorno_map = {}
     for c in range(1, ws.max_column + 1):
-        v = clean(ws.cell(2, c).value)
+        v = clean(ws.cell(2, c).value).lower()
+        if not v:
+            continue
         for i, g in enumerate(GIORNI):
-            if g.lower() in v.lower():
+            gl = g.lower()
+            # Il nome del giorno in riga 2 puo' essere per esteso
+            # ("Lunedì", il formato "a tag") o abbreviato ("LUN", il
+            # formato "orizzontale" del 2026-09-11): un controllo nei due
+            # sensi copre entrambi senza dover sapere quale dei due e'.
+            if gl in v or v in gl:
                 giorno_map[c] = i
                 break
     col_map = {}
@@ -46,9 +77,159 @@ def build_col_map(ws):
     return col_map
 
 
+def _trova_foglio_orario(wb):
+    """Il foglio orario si chiama sempre '<qualcosa>_teachers_ti' --
+    esattamente '7_ORARIO DEFINITIVO_teachers_ti' nel primo export mai
+    visto, ma il software lo rinomina secondo il periodo esportato (es.
+    'ORARIO SETTIMANA 1B_teachers_ti'). Si prova prima il nome esatto
+    storico, poi si cerca per suffisso invece di richiedere sempre lo
+    stesso nome letterale."""
+    if SHEET_ORARIO in wb.sheetnames:
+        return wb[SHEET_ORARIO]
+    for nome in wb.sheetnames:
+        if nome.endswith(SUFFISSO_FOGLIO_ORARIO):
+            return wb[nome]
+    raise KeyError(
+        f"Nessun foglio orario trovato (cercato '{SHEET_ORARIO}' o un foglio "
+        f"che termina per '{SUFFISSO_FOGLIO_ORARIO}'). Fogli presenti: {wb.sheetnames}"
+    )
+
+
+def _e_formato_a_tag(ws, val):
+    """Il formato 'a tag' ha la colonna A che marca ogni riga con
+    CLASSE/MATERIE/COMPRESENZA; il formato 'orizzontale' non ha quella
+    colonna di servizio. Basta cercare almeno un 'CLASSE' in colonna A."""
+    for r in range(4, ws.max_row + 1):
+        if clean(val(r, 1)).upper() == 'CLASSE':
+            return True
+    return False
+
+
+def _classifica_classe(cs):
+    if is_classe(cs):
+        return 'lezione'
+    if 'POTENZ' in cs.upper():
+        return 'potenziamento'
+    if 'DISPOS' in cs.upper():
+        return 'disposizione'
+    return 'altro'
+
+
+def _sembra_nota_compresenza(testo):
+    """Testo tipo 'STRAMBINI, MAY': due cognomi separati da virgola,
+    nessuna cifra -- non e' una classe, e' solo l'annotazione di chi
+    altro e' presente allo stesso'ora (vedi il modulo docstring)."""
+    t = testo.strip()
+    if not t or is_classe(t):
+        return False
+    return ',' in t and not any(ch.isdigit() for ch in t)
+
+
+def _parse_formato_a_tag(ws, val, col_map):
+    slots = []
+    docente_corrente = None
+
+    for r in range(4, ws.max_row + 1):
+        tipo_riga = clean(val(r, 1)).upper()
+        if tipo_riga not in ('CLASSE', 'MATERIE', 'COMPRESENZA'):
+            continue
+
+        if tipo_riga == 'CLASSE':
+            nd = clean(val(r, 2)).upper()
+            if nd:
+                docente_corrente = nd
+            if not docente_corrente:
+                continue
+            riga_mat = r + 1
+            for c, (giorno, ora) in col_map.items():
+                cs = clean(val(r, c))
+                ms = clean(val(riga_mat, c))
+                if is_libero(cs):
+                    continue
+                slots.append({'cognome_file': docente_corrente,
+                               'giorno': giorno, 'ora': ora,
+                               'classe': cs, 'materia': ms,
+                               'tipo_ora': _classifica_classe(cs)})
+
+        elif tipo_riga == 'COMPRESENZA' and docente_corrente:
+            riga_ref = None
+            for rr in range(r - 1, 3, -1):
+                if clean(val(rr, 1)).upper() == 'CLASSE':
+                    riga_ref = rr
+                    break
+            for c, (giorno, ora) in col_map.items():
+                cs = clean(val(r, c))
+                if is_libero(cs) or '|' not in cs:
+                    continue
+                cognomi = [x.strip().upper() for x in cs.split('|')]
+                cr = clean(val(riga_ref, c)) if riga_ref else ''
+                mc = clean(val(riga_ref + 1, c)) if riga_ref else ''
+                for cog in cognomi:
+                    slots.append({'cognome_file': cog, 'giorno': giorno,
+                                  'ora': ora, 'classe': cr, 'materia': mc,
+                                  'tipo_ora': 'compresenza'})
+    return slots
+
+
+def _parse_formato_orizzontale(ws, val, col_map):
+    """Un blocco per docente: la riga del cognome porta gia' la classe
+    (o e' vuota/'---'), la riga sotto la materia. Le compresenze
+    aggiungono una terza riga (la nota "COGNOME1, COGNOME2" sostituisce
+    la classe su quella singola colonna, classe/materia restano sulle
+    due righe successive) -- gestito leggendo, per ciascuna colonna, le
+    righe non vuote del blocco nell'ordine in cui compaiono invece di
+    assumere sempre esattamente due righe fisse."""
+    prima_colonna_orario = min(col_map.keys()) if col_map else ws.max_column + 1
+
+    def colonna_nome(r):
+        for c in range(1, prima_colonna_orario):
+            v = clean(val(r, c))
+            if v:
+                return v
+        return ''
+
+    blocchi = []
+    riga_inizio = None
+    cognome = None
+    for r in range(4, ws.max_row + 2):
+        nome = colonna_nome(r) if r <= ws.max_row else None
+        if nome:
+            if riga_inizio is not None:
+                blocchi.append((riga_inizio, r - 1, cognome))
+            riga_inizio, cognome = r, nome.upper()
+    if riga_inizio is not None:
+        blocchi.append((riga_inizio, ws.max_row, cognome))
+
+    slots = []
+    for r_inizio, r_fine, cognome in blocchi:
+        for c, (giorno, ora) in col_map.items():
+            righe = [clean(val(rr, c)) for rr in range(r_inizio, r_fine + 1)]
+            righe = [x for x in righe if x]
+            if not righe or righe[0] == '---':
+                continue
+            if _sembra_nota_compresenza(righe[0]):
+                # riga[0] e' solo l'annotazione di compresenza: classe e
+                # materia sono le righe successive del blocco, non serve
+                # andare a leggere il blocco dell'altro docente.
+                classe = righe[1] if len(righe) > 1 else ''
+                materia = righe[2] if len(righe) > 2 else ''
+                if not classe or classe == '---':
+                    continue
+                slots.append({'cognome_file': cognome, 'giorno': giorno,
+                               'ora': ora, 'classe': classe, 'materia': materia,
+                               'tipo_ora': 'compresenza'})
+                continue
+            classe = righe[0]
+            materia = righe[1] if len(righe) > 1 else ''
+            slots.append({'cognome_file': cognome, 'giorno': giorno,
+                           'ora': ora, 'classe': classe, 'materia': materia,
+                           'tipo_ora': _classifica_classe(classe)})
+    return slots
+
+
 def parse_file(excel_path):
     wb = load_workbook(excel_path, data_only=True)
-    ws_or = wb[SHEET_ORARIO]
+    ws_or = _trova_foglio_orario(wb)
 
     merged = {}
     for merge in ws_or.merged_cells.ranges:
@@ -79,55 +260,10 @@ def parse_file(excel_path):
                 'attivo':        attivo_s in ('SÌ','SI','S','1','TRUE'),
             })
 
-    slots = []
-    docente_corrente = None
-
-    for r in range(4, ws_or.max_row + 1):
-        tipo_riga = clean(val(r, 1)).upper()
-        if tipo_riga not in ('CLASSE', 'MATERIE', 'COMPRESENZA'):
-            continue
-
-        if tipo_riga == 'CLASSE':
-            nd = clean(val(r, 2)).upper()
-            if nd:
-                docente_corrente = nd
-            if not docente_corrente:
-                continue
-            riga_mat = r + 1
-            for c, (giorno, ora) in col_map.items():
-                cs = clean(val(r, c))
-                ms = clean(val(riga_mat, c))
-                if is_libero(cs):
-                    continue
-                if is_classe(cs):
-                    tipo = 'lezione'
-                elif 'POTENZ' in cs.upper():
-                    tipo = 'potenziamento'
-                elif 'DISPOS' in cs.upper():
-                    tipo = 'disposizione'
-                else:
-                    tipo = 'altro'
-                slots.append({'cognome_file': docente_corrente,
-                               'giorno': giorno, 'ora': ora,
-                               'classe': cs, 'materia': ms, 'tipo_ora': tipo})
-
-        elif tipo_riga == 'COMPRESENZA' and docente_corrente:
-            riga_ref = None
-            for rr in range(r - 1, 3, -1):
-                if clean(val(rr, 1)).upper() == 'CLASSE':
-                    riga_ref = rr
-                    break
-            for c, (giorno, ora) in col_map.items():
-                cs = clean(val(r, c))
-                if is_libero(cs) or '|' not in cs:
-                    continue
-                cognomi = [x.strip().upper() for x in cs.split('|')]
-                cr = clean(val(riga_ref, c)) if riga_ref else ''
-                mc = clean(val(riga_ref + 1, c)) if riga_ref else ''
-                for cog in cognomi:
-                    slots.append({'cognome_file': cog, 'giorno': giorno,
-                                  'ora': ora, 'classe': cr, 'materia': mc,
-                                  'tipo_ora': 'compresenza'})
+    if _e_formato_a_tag(ws_or, val):
+        slots = _parse_formato_a_tag(ws_or, val, col_map)
+    else:
+        slots = _parse_formato_orizzontale(ws_or, val, col_map)
 
     return {'docenti_anagrafica': anagrafica, 'slots': slots}
 
