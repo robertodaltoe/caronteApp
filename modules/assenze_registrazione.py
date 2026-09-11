@@ -323,6 +323,36 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
     return count
 
 
+def rigenera_supplenze_mancanti(data_da=None):
+    """Da chiamare dopo ogni import di un nuovo orario (routes/sincronizzazione.py):
+    le assenze registrate PRIMA dell'import sono state incrociate con
+    l'OrarioDocente di allora, quindi una lezione comparsa solo nel nuovo
+    orario non ha mai generato la sua supplenza scoperta — e un import
+    dell'orario non tocca mai la tabella supplenze. Ripete la generazione
+    per le assenze da 'data_da' in poi: _genera_supplenze() è già
+    idempotente (salta gli slot che hanno già una supplenza, vedi sopra),
+    quindi qui si limita ad aggiungere quelle mancanti.
+
+    Ritorna il numero di supplenze aggiunte.
+    """
+    if data_da is None:
+        data_da = date.today()
+
+    count = 0
+    assenze = Assenza.query.filter(Assenza.data >= data_da).all()
+    for a in assenze:
+        if not cat_genera_supplenza(a.motivo):
+            continue
+        assegnabile = False if a.classe_libera else cat_assegnabile(a.motivo)
+        count += _genera_supplenze(
+            a.id_docente, a.data, a.ora_inizio, a.ora_fine,
+            assegnabile, note_display='',
+        )
+    if count:
+        db.session.commit()
+    return count
+
+
 def _gestisci_scambio_orario(form, id_docente, note):
     """
     Motivo 'scambio_orario': crea ScambioOrario + ScambioSlot per ogni riga

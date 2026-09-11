@@ -133,8 +133,16 @@ def importa():
         flash(f'Errore durante l\'importazione: {e}', 'error')
         return redirect(url_for('sync.index'))
 
+    from datetime import date
+    from modules.assenze_registrazione import rigenera_supplenze_mancanti
+    supplenze_rigenerate = rigenera_supplenze_mancanti(data_da=date.today())
+
     msg = (f'Orario aggiornato: {stats["slot_totali"]} slot, '
            f'{stats["docenti_nuovi"]} docenti nuovi.')
+    if supplenze_rigenerate:
+        msg += (f' {supplenze_rigenerate} supplenz{"a" if supplenze_rigenerate == 1 else "e"} '
+                f'da assegnare generat{"a" if supplenze_rigenerate == 1 else "e"} per assenze '
+                f'già registrate che risultano ora coperte dal nuovo orario.')
 
     if stats['non_riconosciuti']:
         nr = ', '.join(stats['non_riconosciuti'])

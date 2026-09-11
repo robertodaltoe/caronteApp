@@ -2,6 +2,46 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 — Fix: assenze registrate prima di un import orario non generavano supplenza
+
+Roberto ha segnalato un caso concreto dopo aver importato in produzione il
+nuovo orario provvisorio (Sessione 68 addendum 1): "Santagata che è assente
+il 14 settembre ma è anche in orario in 5arim non mi compare nelle
+supplenze da assegnare".
+
+**Causa**: `registra_assenze_form()` (modules/assenze_registrazione.py)
+incrocia l'Assenza con `OrarioDocente` UNA SOLA VOLTA, al momento della
+registrazione (`_genera_supplenze()`, riga ~518). L'assenza di Santagata
+era stata registrata il 09/09, quando l'orario in `OrarioDocente` per
+quella lezione non esisteva ancora (o era diverso). Il nuovo orario è
+stato importato dopo (`applica_importazione()` in modules/parser_orario.py,
+chiamata da routes/sincronizzazione.py), sovrascrivendo `OrarioDocente`
+ma senza mai ricalcolare le supplenze delle assenze già registrate — lo
+stesso pattern di "dato congelato alla creazione, mai più aggiornato"
+già visto con `id_cc_default`/`ANNO_SCOL_CORRENTE` (vedi CLAUDE.md).
+
+**Fix**: nuova funzione `rigenera_supplenze_mancanti(data_da)` in
+modules/assenze_registrazione.py, che ripercorre tutte le Assenza da
+`data_da` in poi con un motivo che genera supplenza e richiama
+`_genera_supplenze()` — già idempotente (salta gli slot che hanno già
+una supplenza), quindi aggiunge solo quelle mancanti. Richiamata da
+routes/sincronizzazione.py::importa() subito dopo ogni
+`applica_importazione()` riuscito, con `data_da=date.today()` (non ha
+senso rigenerare supplenze per il passato), e il numero di supplenze
+aggiunte viene riportato nel messaggio flash.
+
+**Verifica**: 4 nuovi test in tests/test_rigenera_supplenze_mancanti.py
+(riproduce esattamente il caso Santagata, idempotenza, motivi che non
+generano supplenza, filtro data_da) — suite completa 456/456. Verificato
+anche live: copia isolata di database.db, `create_app()` reale,
+`rigenera_supplenze_mancanti(data_da=date(2026,9,1))` ha generato
+esattamente 27 supplenze "scoperta" mancanti (Santagata, Palermo,
+Strambini — tutte per assenze già registrate prima dell'import
+dell'orario di Sessione 68 addendum 1), senza toccare nessuna supplenza
+preesistente di maggio/giugno. Applicato poi anche al database.db reale
+(backup cifrato `database_20260911_1245_pre_rigenera_supplenze_mancanti.db.enc`
+prima, `PRAGMA integrity_check` = ok dopo).
+
 ## Sessione 68 addendum 1 — Importatore orario: supporto al formato "orizzontale"
 
 Roberto ha condiviso un file di orario provvisorio in un formato diverso
