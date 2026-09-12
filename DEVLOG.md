@@ -2,6 +2,53 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 1 — Fix: eliminare un docente con cattedra assegnata dava errore
+
+Roberto ha provato a eliminare dall'anagrafica un docente inserito per
+errore (Margarita Raoul, non prenderà servizio) e ha ricevuto la pagina
+di errore imprevisto.
+
+**Causa**: `routes/docenti.py::elimina()` cancellava esplicitamente solo
+`ColloquiEccezione` e `OrarioDocente` prima di eliminare il `Docente`, e
+segnalava solo banca ore/assenze/supplenze collegate. Non considerava
+`AssegnazioneDocente` (la cattedra): SQLAlchemy, eliminando il docente,
+mette a NULL il campo `id_docente` di quella riga — ma senza
+`nome_placeholder` valorizzato questo viola il vincolo
+`ck_assegnazione_docente_o_placeholder` (un'assegnazione deve avere
+sempre o un docente reale o un placeholder, mai nessuno dei due) →
+`IntegrityError` non gestito.
+
+`docenti.id` è referenziata da 25 modelli diversi — l'eliminazione
+definitiva di un docente con storico reale è un'operazione strutturalmente
+delicata, quindi prima di scrivere il fix è stato chiesto a Roberto il
+motivo dell'eliminazione (per scegliere fra "Elimina" ed "Anonimizza",
+già esistente per i casi con storico vero da conservare — GDPR art.17).
+Risposta: anagrafica inserita per errore, ma la cattedra assegnata deve
+restare come slot, senza comparire più in anagrafica.
+
+**Fix** in `elimina()`:
+- Ogni `AssegnazioneDocente` del docente diventa un placeholder
+  (`nome_placeholder` = nome del docente, `id_docente = None`) invece di
+  essere cancellata o lasciata rompere il vincolo.
+- Le supplenze in cui il docente compariva come sostituto restano
+  (storico dell'evento), ma `id_sostituto` viene scollegato.
+- `DocenteMateria`, `DocenteClasseConcorso`, `AttivitaIstPartecipante`
+  (preset/elenchi senza senso senza l'anagrafica) vengono cancellati,
+  come già faceva la funzione per `OrarioDocente`/`ColloquiEccezione`.
+- Aggiunto anche il conteggio delle cattedre (`AssegnazioneDocente`) tra
+  i dati collegati mostrati nell'avviso di conferma prima della
+  eliminazione forzata.
+
+**Verifica**: 4 nuovi test in `tests/test_docenti_elimina.py` (cattedra
+diventa placeholder, supplenza-sostituto scollegata non cancellata,
+partecipazioni a riunioni rimosse, caso senza dati collegati invariato)
+— suite 460/460. Verificato anche live su copia isolata di
+`database.db` (riprodotto l'errore originale prima del fix, poi
+verificato che sparisce), poi applicato al database reale (backup
+cifrato `database_20260912_1452_pre_elimina_docente_margarita.db.enc`
+prima, `PRAGMA integrity_check` = ok dopo): Margarita Raoul eliminato,
+cattedra #38 sopravvive come placeholder "MARGARITA Raoul Sandro".
+
 ## Sessione 69 — Fix: assenze registrate prima di un import orario non generavano supplenza
 
 Roberto ha segnalato un caso concreto dopo aver importato in produzione il

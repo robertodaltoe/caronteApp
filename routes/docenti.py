@@ -519,6 +519,10 @@ def elimina(id):
     from models.movimento_banca_ore import MovimentoBancaOre
     from models.assenza import Assenza
     from models.supplenza import Supplenza
+    from models.assegnazione import AssegnazioneDocente
+    from models.materia import DocenteMateria
+    from models.classe_concorso import DocenteClasseConcorso
+    from models.attivita_ist import AttivitaIstPartecipante
 
     d = Docente.query.get_or_404(id)
     nome = d.cognome
@@ -528,21 +532,46 @@ def elimina(id):
     n_sup = Supplenza.query.filter(
         db.or_(Supplenza.id_assente==id, Supplenza.id_sostituto==id)
     ).count()
+    n_asg = AssegnazioneDocente.query.filter_by(id_docente=id).count()
     forza = request.form.get('forza') == '1'
-    if (n_bk > 0 or n_as > 0 or n_sup > 0) and not forza:
+    if (n_bk > 0 or n_as > 0 or n_sup > 0 or n_asg > 0) and not forza:
         flash(
             f'⚠︎ {nome} ha dati collegati (banca ore: {n_bk}, assenze: {n_as}, '
-            f'supplenze: {n_sup}). Conferma l\'eliminazione definitiva.',
+            f'supplenze: {n_sup}, cattedre assegnate: {n_asg}). Conferma l\'eliminazione definitiva.',
             'warning'
         )
         return redirect(url_for('docenti.lista') + f'?conferma_elimina={id}')
+
+    # Le cattedre assegnate a questo docente (AssegnazioneDocente) non
+    # vengono cancellate: lo slot va tenuto (Roberto: "ho bisogno che
+    # resti il placeholder sul quale lo avevo assegnato"), solo scollegato
+    # da questa anagrafica — altrimenti SQLAlchemy metterebbe id_docente a
+    # NULL sulla riga senza impostare nome_placeholder, violando il vincolo
+    # ck_assegnazione_docente_o_placeholder (una assegnazione deve avere
+    # sempre o un docente reale o un placeholder, mai nessuno dei due).
+    for asg in AssegnazioneDocente.query.filter_by(id_docente=id).all():
+        asg.nome_placeholder = f'{d.cognome} {d.nome}'.strip()
+        asg.id_docente = None
+
+    # Un'eventuale supplenza in cui questo docente compare come sostituto
+    # resta (è storico dell'evento), ma il riferimento al sostituto va
+    # scollegato: altrimenti punterebbe a un docente non più in anagrafica.
+    for s in Supplenza.query.filter_by(id_sostituto=id).all():
+        s.id_sostituto = None
+
+    # Elenchi/preset che non hanno senso senza l'anagrafica collegata.
     ColloquiEccezione.query.filter_by(id_docente=id).delete()
     OrarioDocente.query.filter_by(id_docente=id).delete()
+    DocenteMateria.query.filter_by(id_docente=id).delete()
+    DocenteClasseConcorso.query.filter_by(id_docente=id).delete()
+    AttivitaIstPartecipante.query.filter_by(id_docente=id).delete()
+
     db.session.delete(d)
     db.session.commit()
     from routes.auth import log as auth_log
     auth_log('elimina_docente',
-        f'{nome} (banca_ore:{n_bk} assenze:{n_as} supplenze:{n_sup} forzato:{forza})')
+        f'{nome} (banca_ore:{n_bk} assenze:{n_as} supplenze:{n_sup} '
+        f'cattedre:{n_asg} forzato:{forza})')
     flash(f'Docente {nome} eliminato definitivamente.', 'success')
     return redirect(url_for('docenti.lista'))
 
