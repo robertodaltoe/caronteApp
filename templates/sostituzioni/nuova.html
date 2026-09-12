@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Nuova sostituzione{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('sostituzioni.index') }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Sostituzioni
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">Nuova sostituzione</h1>
+</div>
+
+{% if not titolare %}
+<div class="card" style="max-width:500px;">
+    <p style="font-size:.85rem; color:var(--grigio);">Nessun docente titolare selezionato.</p>
+    <a href="{{ url_for('sostituzioni.index') }}" class="btn">{{ icon('arrow-left') }} Torna indietro</a>
+</div>
+{% else %}
+
+<form method="post" action="{{ url_for('sostituzioni.avvia') }}">
+<input type="hidden" name="id_titolare" value="{{ titolare.id }}">
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px;">
+
+    <div class="card">
+        <h2 style="font-size:.95rem;">Chi esce e chi entra</h2>
+        <div class="form-group">
+            <label>Docente titolare</label>
+            <input type="text" value="{{ titolare.cognome }} {{ titolare.nome }}" disabled>
+        </div>
+        <div class="form-group">
+            <label>Docente sostituto *</label>
+            <select name="id_sostituto" required>
+                <option value="">-- seleziona --</option>
+                {% for d in docenti if d.id != titolare.id %}
+                <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
+                {% endfor %}
+            </select>
+            <p style="font-size:.78rem; color:var(--grigio); margin-top:4px;">
+                Se il sostituto non ha ancora un'anagrafica in CaronteApp,
+                <a href="{{ url_for('docenti.nuovo') }}" target="_blank">crearla prima qui</a>
+                (si apre in una scheda nuova), poi ricaricare questa pagina.
+            </p>
+        </div>
+        <div class="form-group">
+            <label>Tipo di sostituzione *</label>
+            <div style="display:flex; gap:16px; font-size:.85rem;">
+                <label style="font-weight:400;"><input type="radio" name="tipo" value="temporanea" checked onchange="document.getElementById('campo-data-fine').style.display='block'"> Temporanea (tornerà)</label>
+                <label style="font-weight:400;"><input type="radio" name="tipo" value="definitiva" onchange="document.getElementById('campo-data-fine').style.display='none'"> Definitiva (resto dell'anno)</label>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label>Data inizio *</label>
+                <input type="date" name="data_inizio" required value="{{ oggi.isoformat() }}">
+            </div>
+            <div class="form-group" id="campo-data-fine">
+                <label>Data fine (rientro previsto)</label>
+                <input type="date" name="data_fine">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Motivo dell'assenza del titolare</label>
+            <select name="motivo">
+                {% for m in motivi %}
+                <option value="{{ m }}">{{ motivi_label.get(m, m) }}</option>
+                {% endfor %}
+            </select>
+            <p style="font-size:.78rem; color:var(--grigio); margin-top:4px;">
+                Ignorato per una sostituzione definitiva: non è un'assenza, è un cambio di incarico.
+            </p>
+        </div>
+        <div class="form-group">
+            <label>Note</label>
+            <textarea name="note" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size:.95rem;">Classi coinvolte</h2>
+        {% if not classi_titolare %}
+        <p style="font-size:.85rem; color:var(--grigio);">
+            {{ titolare.cognome }} non ha ore di orario attualmente importate.
+        </p>
+        {% else %}
+        <p style="font-size:.8rem; color:var(--grigio); margin-bottom:8px;">
+            Deseleziona le classi che NON fanno parte di questa sostituzione
+            (di norma restano tutte selezionate).
+        </p>
+        {% for c in classi_titolare %}
+        <label style="display:block; font-weight:400; font-size:.85rem; padding:4px 0;">
+            <input type="checkbox" name="classi" value="{{ c }}" checked> {{ c }}
+        </label>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+</div>
+
+<div style="margin-top:20px;">
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Avvia sostituzione</button>
+</div>
+</form>
+
+{% endif %}
+{% endblock %}

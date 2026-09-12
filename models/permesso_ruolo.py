@@ -56,6 +56,7 @@ SEZIONI = [
     ('assegnazioni',           'Assegnazioni classi'),
     ('aule',                   'Aule per classe'),
     ('progetti_fse',           'Progetti FSE/FESR'),
+    ('sostituzioni',           'Sostituzione docenti (temporanea/definitiva)'),
 ]
 SEZIONI_LABEL = dict(SEZIONI)
 
@@ -72,7 +73,7 @@ SEZIONI_GRUPPI = [
     ('Anno scolastico e organico', ['organico', 'dashboard_anno', 'cambio_anno']),
     ('Docenti e incarichi', ['docenti', 'incarichi', 'tipi_incarico']),
     ('Istituto e calendario', ['calendario', 'istituto']),
-    ('Assegnazioni', ['assegnazioni', 'aule']),
+    ('Assegnazioni', ['assegnazioni', 'aule', 'sostituzioni']),
     ('Progetti FSE/FESR', ['progetti_fse']),
 ]
 
@@ -127,6 +128,7 @@ DEFAULT_MATRICE = {
     'assegnazioni':            {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
     'aule':                    {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
     'progetti_fse':            {'ds': 'modifica',   'collaboratore': 'modifica',   'segreteria': 'modifica'},
+    'sostituzioni':            {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'esclusa'},
 }
 
 # Sezioni nate da uno scorporo di una sezione più ampia (Sessione 53):
@@ -149,6 +151,7 @@ SPLIT_DA = {
     'dashboard_anno':        'organico',
     'tipi_incarico':         'istituto',
     'aule':                  'assegnazioni',
+    'sostituzioni':          'assegnazioni',
 }
 
 
@@ -206,6 +209,7 @@ BLUEPRINT_SEZIONE = {
     'aule':               'aule',
     'piano_personale':    'piano_personale',
     'progetti_fse':       'progetti_fse',
+    'sostituzioni':       'sostituzioni',
 }
 ENDPOINT_SEZIONE = {
     'attivita_ist.dipartimenti':                 'dipartimenti',

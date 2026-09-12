@@ -574,6 +574,11 @@
     {% endif %}
     <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">{{ icon('monitor') }}</span> Display</a>
 
+    {% if puo_vedere('sostituzioni') %}
+    <a href="{{ url_for('sostituzioni.index') }}" title="Sostituire un docente titolare (temporaneamente o per il resto dell'anno) con un altro docente">
+        <span class="nav-ic">{{ icon('refresh') }}</span> Sostituzioni</a>
+    {% endif %}
+
     {% if puo_vedere('progetti_fse') %}
     <a href="{{ url_for('progetti_fse.index') }}" title="Area amministrativa isolata per i progetti finanziati da fondi strutturali europei (es. Piano Estate)">
         <span class="nav-ic">{{ icon('layers') }}</span> Progetti FSE/FESR</a>

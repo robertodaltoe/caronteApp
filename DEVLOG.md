@@ -2,6 +2,96 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 2 — Nuovo: Sostituzione docente (temporanea/definitiva)
+
+Roberto ha chiesto come procedere, con gli strumenti esistenti, quando
+un docente titolare esce a meta' anno (malattia lunga, trasferimento,
+cambio classe) e arriva un altro docente mai stato in anagrafica.
+Risposta iniziale (intreccio manuale di 4-5 pagine: anagrafica, assenza,
+supplenze una per una, nomina cattedra) giudicata insoddisfacente da
+Roberto ("non mi convince... anche i punti 4 e 5 sono deboli") — ha
+chiesto un flusso ripensato da zero.
+
+Prima di scrivere codice, verificato esplicitamente (su richiesta di
+Roberto) come il disegno proposto avrebbe interagito con il resto
+dell'app, trovando due errori nella prima bozza:
+1. **Copiare l'orario del titolare al sostituto era sbagliato** —
+   `modules/compresenze.py::get_compresenze()` cerca chiunque abbia una
+   riga di OrarioDocente per un dato giorno/ora/classe: una copia
+   avrebbe creato una compresenza fantasma (due docenti "presenti"),
+   rompendo sia i suggerimenti di supplenza sia `ha_compagno_presente`
+   usata da `_genera_supplenze`. Corretto: l'orario va sempre SPOSTATO,
+   mai copiato.
+2. **La modalita' temporanea lasciava fuori le riunioni istituzionali**
+   — il Generatore CdC (`modules/generatore_cdc.py::docenti_reali_per_classe`)
+   convoca dalla cattedra (AssegnazioneDocente), non dall'orario:
+   serviva uno scambio esplicito dei partecipanti per gli eventi nella
+   finestra della sostituzione.
+3. **Le supplenze pre-assegnate dovevano comunque passare dal movimento
+   di banca ore** — `routes/supplenze.py::assegna()` non si limita a
+   segnare il sostituto, registra anche il credito banca ore per il
+   tipo 'recupero'; generare le supplenze gia' assegnate senza
+   riprodurre questo passaggio le avrebbe rese silenziosamente "gratis"
+   per il sostituto.
+
+**Nuovo modulo `modules/sostituzione_docente.py`** (+ modelli in
+`models/sostituzione_docente.py`: `SostituzioneDocente`,
+`SostituzioneOrarioSlot` per tracciare le righe di orario spostate,
+`SostituzioneEventoSwap` per i partecipanti scambiati), due modalita':
+
+- **Temporanea**: genera prima l'assenza del titolare + le supplenze
+  scoperte (lette dal SUO orario, ancora intatto a quel punto) — le
+  supplenze nascono gia' assegnate al sostituto grazie al nuovo
+  parametro `id_sostituto_preset` di `_genera_supplenze()` (che ora
+  chiama anche `routes/supplenze.py::_registra_movimento` per il
+  credito banca ore, esattamente come un'assegnazione manuale). Poi
+  sposta l'orario delle classi scelte al sostituto, e scambia i
+  partecipanti dei Consigli di classe/scrutini futuri nella finestra
+  della sostituzione. "Termina sostituzione" rimette tutto a posto sul
+  titolare (orario + partecipanti agli eventi ancora futuri) quando
+  rientra — non tocca le assenze/supplenze gia' generate, restano
+  storico.
+- **Definitiva**: nessuna assenza (non e' un'assenza, e' un cambio di
+  incarico) — sposta per sempre l'orario, trasferisce TUTTA la cattedra
+  (AssegnazioneDocente) del titolare al sostituto riusando le stesse
+  funzioni gia' scritte per nominare un placeholder
+  (`_sync_docente_materie`, `iscrivi_docente_a_eventi_classe`), e
+  scambia i partecipanti di tutti i Consigli di classe/scrutini futuri
+  (senza limite di data).
+
+**Attenzione tecnica emersa durante l'implementazione**: in questo
+database "classe" ha due formati indipendenti — quello del file orario
+importato (`OrarioDocente.classe`, es. "5ARIM", senza spazio) e quello
+costruito in app per le Assegnazioni (`AssegnazioneClasse.label_classe`
+/ `AttivitaIst.classe`, es. "5A RIM", con spazio). Sono usati per due
+scopi diversi nel modulo (spostamento orario vs. cattedra/riunioni) e
+MAI confrontati come stringhe fra loro — un primo tentativo lo faceva
+e non avrebbe mai trovato corrispondenze.
+
+**Route/UI minime**: nuovo blueprint `routes/sostituzioni.py`
+(`/sostituzioni`, `/sostituzioni/nuova`, `/sostituzioni/avvia`,
+`/sostituzioni/<id>/termina`), voce di navbar, nuova sezione permessi
+'sostituzioni' (eredita il livello attualmente configurato per
+'assegnazioni', via lo stesso meccanismo di `_migra_split_sezioni_permessi`
+usato in Sessione 53 — altrimenti su un database gia' popolato come
+quello di Roberto la sezione nuova sarebbe partita "esclusa" per tutti,
+bloccando l'accesso appena distribuito).
+
+**Verifica**: 9 nuovi test in `tests/test_sostituzione_docente.py`
+(spostamento orario, generazione assenze/supplenze pre-assegnate con
+credito banca ore, scambio/ripristino partecipanti CdC, trasferimento
+cattedra, errori di validazione) — suite 469/469. Verificato anche live
+end-to-end su copia isolata di `database.db` attraverso le vere route
+HTTP (avvio e termine di una sostituzione temporanea su Santagata/Novelli,
+poi scartata: mai toccato il database.db reale).
+
+**Limiti noti (documentati nel modulo, non sviste)**: 'temporanea'
+richiede una data di fine anche provvisoria (nessuna azione "estendi"
+ancora); 'definitiva' sposta sempre l'intera cattedra, niente
+spacchettamento parziale; se per il titolare esistono gia' supplenze
+'scoperta' generate PRIMA di avviare la sostituzione, non vengono
+riassegnate automaticamente al sostituto (va fatto a mano, come oggi).
+
 ## Sessione 69 addendum 1 — Fix: eliminare un docente con cattedra assegnata dava errore
 
 Roberto ha provato a eliminare dall'anagrafica un docente inserito per

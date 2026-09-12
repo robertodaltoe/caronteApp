@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Sostituzioni{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('refresh') }} Sostituzioni</h1>
+        <p style="font-size:.84rem; color:var(--grigio);">
+            Sostituire un docente titolare con un altro, temporaneamente (es. malattia
+            lunga, con rientro previsto) o per il resto dell'anno (es. trasferimento,
+            cambio classe) -- orario, assenze/supplenze e cattedra vengono aggiornati
+            in un solo passaggio.
+        </p>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+    <h2 style="font-size:.95rem; margin-bottom:10px;">Avvia una nuova sostituzione</h2>
+    <form method="get" action="{{ url_for('sostituzioni.nuova') }}" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+        <div class="form-group" style="margin:0; min-width:260px;">
+            <label>Docente titolare (chi esce)</label>
+            <select name="id_titolare" required>
+                <option value="">-- seleziona --</option>
+                {% for d in docenti %}
+                <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">{{ icon('plus') }} Continua</button>
+    </form>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+    <h2 style="font-size:.95rem; margin-bottom:10px;">Sostituzioni attive</h2>
+    {% if not attive %}
+    <p style="color:var(--grigio); font-size:.85rem;">Nessuna sostituzione attiva al momento.</p>
+    {% else %}
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:8px;">Titolare</th>
+                <th style="text-align:left; padding:8px;">Sostituto</th>
+                <th style="text-align:center; padding:8px;">Tipo</th>
+                <th style="text-align:center; padding:8px;">Periodo</th>
+                <th style="text-align:left; padding:8px;">Note</th>
+                <th style="padding:8px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in attive %}
+            <tr style="border-top:1px solid #e5eaf0;">
+                <td style="padding:8px;">{{ s.titolare.cognome }} {{ s.titolare.nome }}</td>
+                <td style="padding:8px;">{{ s.sostituto.cognome }} {{ s.sostituto.nome }}</td>
+                <td style="padding:8px; text-align:center;">
+                    <span class="badge {{ 'badge-giallo' if s.tipo == 'temporanea' else 'badge-viola' }}">
+                        {{ 'Temporanea' if s.tipo == 'temporanea' else 'Definitiva' }}
+                    </span>
+                </td>
+                <td style="padding:8px; text-align:center; font-size:.82rem;">
+                    {{ s.data_inizio.strftime('%d/%m/%Y') }}{% if s.data_fine %} – {{ s.data_fine.strftime('%d/%m/%Y') }}{% endif %}
+                </td>
+                <td style="padding:8px; font-size:.82rem; color:var(--grigio);">{{ s.note or '—' }}</td>
+                <td style="padding:8px; text-align:right;">
+                    {% if s.tipo == 'temporanea' %}
+                    <form method="post" action="{{ url_for('sostituzioni.termina', id=s.id) }}"
+                          onsubmit="return confirm('Concludere la sostituzione e rimettere l\'orario su ' + '{{ s.titolare.cognome }}' + '?');">
+                        <button type="submit" class="btn btn-sm">{{ icon('check') }} Termina (rientro)</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 style="font-size:.95rem; margin-bottom:10px;">Concluse di recente</h2>
+    {% if not concluse %}
+    <p style="color:var(--grigio); font-size:.85rem;">Nessuna.</p>
+    {% else %}
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse;">
+        <tbody>
+            {% for s in concluse %}
+            <tr style="border-top:1px solid #e5eaf0;">
+                <td style="padding:8px;">{{ s.titolare.cognome }} → {{ s.sostituto.cognome }}</td>
+                <td style="padding:8px; text-align:center;">
+                    <span class="badge {{ 'badge-giallo' if s.tipo == 'temporanea' else 'badge-viola' }}">
+                        {{ 'Temporanea' if s.tipo == 'temporanea' else 'Definitiva' }}
+                    </span>
+                </td>
+                <td style="padding:8px; text-align:center; font-size:.82rem; color:var(--grigio);">
+                    {{ s.data_inizio.strftime('%d/%m/%Y') }}{% if s.data_fine %} – {{ s.data_fine.strftime('%d/%m/%Y') }}{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

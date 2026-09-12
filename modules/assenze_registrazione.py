@@ -204,8 +204,20 @@ def _sync_presenza_ist_parziale(id_docente, data, ora_perm_ini,
 
 
 def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
-                       assegnabile, note_display, ore_singole=None):
-    """ore_singole: lista di ore specifiche (non consecutive); None = usa range."""
+                       assegnabile, note_display, ore_singole=None,
+                       id_sostituto_preset=None):
+    """ore_singole: lista di ore specifiche (non consecutive); None = usa range.
+
+    id_sostituto_preset: se valorizzato (e la supplenza e' assegnabile), la
+    supplenza generata viene creata gia' assegnata a questo docente invece
+    che 'scoperta' -- usato da modules/sostituzione_docente.py quando il
+    sostituto di una sostituzione temporanea e' gia' noto in anticipo, per
+    non dover assegnare a mano ogni singola supplenza generata giorno per
+    giorno. Passa anche dal movimento di banca ore (_registra_movimento di
+    routes/supplenze.py), esattamente come farebbe un'assegnazione manuale
+    da routes/supplenze.py::assegna -- altrimenti il sostituto non riceverebbe
+    credito per le ore coperte.
+    """
     if is_sospensione(data):
         return 0
     giorno_num = GIORNI_SETTIMANA.get(data.weekday())
@@ -303,13 +315,15 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
 
         from flask import g as _g
         _utente = _g.utente.username if getattr(_g, 'utente', None) else None
+        preassegnata = bool(id_sostituto_preset) and assegnabile
         s = Supplenza(
             data         = data,
             ora          = slot.ora,
             classe       = slot.classe,
             id_assente   = id_docente,
+            id_sostituto = id_sostituto_preset if preassegnata else None,
             tipo         = 'recupero',
-            stato        = stato,
+            stato        = 'assegnata' if preassegnata else stato,
             origine      = 'automatica',
             note_display = note_display or (
                 'NON ASSEGNABILE' if not assegnabile else ''
@@ -319,6 +333,11 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
         )
         db.session.add(s)
         count += 1
+
+        if preassegnata:
+            db.session.flush()
+            from routes.supplenze import _registra_movimento
+            _registra_movimento(id_sostituto_preset, data, 'recupero', s.id)
 
     return count
 
