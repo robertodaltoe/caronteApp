@@ -179,6 +179,9 @@ def avvia_sostituzione(id_titolare, id_sostituto, tipo, data_inizio,
         n_cattedre = _trasferisci_cattedra(id_titolare, id_sostituto)
 
     db.session.commit()
+    if n_assenze or n_supplenze:
+        from modules.auto_sync import pubblica_su_drive_se_possibile
+        pubblica_su_drive_se_possibile()
     return {
         'sostituzione': sost,
         'n_slot_orario': len(slots),
@@ -326,6 +329,9 @@ def termina_sostituzione(id_sostituzione, creato_da=None):
     sost.concluso_il = _datetime_now()
     sost.concluso_da = creato_da
     db.session.commit()
+
+    from modules.auto_sync import pubblica_su_drive_se_possibile
+    pubblica_su_drive_se_possibile()
 
     from modules.compresenze import invalida_cache
     invalida_cache()

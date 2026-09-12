@@ -3,7 +3,7 @@ Revisione dei conflitti rilevati dal sync automatico additivo
 (modules/auto_sync.py). Vedi anche il banner in templates/base.html.
 """
 import json
-from flask import Blueprint, render_template, redirect, url_for, flash, request, g, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, g
 from sqlalchemy import text
 from datetime import datetime
 from models import db
@@ -116,14 +116,13 @@ def risolvi(id):
     db.session.commit()
 
     # Ripubblica subito su Drive la decisione presa, altrimenti l'altra
-    # postazione resterebbe con la sua versione divergente e lo stesso
-    # conflitto ricomparirebbe ad ogni giro del sync automatico.
-    try:
-        from sync_db import carica
-        db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-        carica(db_path)
-    except Exception as e:
-        current_app.logger.warning(f"[sync_conflitti] pubblicazione su Drive fallita: {e}")
+    # postazione (o la stessa, se la copia Drive era solo rimasta
+    # indietro rispetto a una modifica fatta qui — vedi
+    # modules/auto_sync.py::pubblica_su_drive_se_possibile) resterebbe
+    # con la sua versione divergente e lo stesso conflitto
+    # ricomparirebbe ad ogni giro del sync automatico.
+    from modules.auto_sync import pubblica_su_drive_se_possibile
+    pubblica_su_drive_se_possibile()
 
     flash('Conflitto risolto: ' +
           ('tenuta la versione da Drive.' if scelta == 'remoto'

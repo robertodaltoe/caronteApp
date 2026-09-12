@@ -2,6 +2,65 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 5 — Fix: falso conflitto di sync su modifiche allo stesso dispositivo
+
+Seguito diretto della segnalazione precedente (banner "2 modifiche
+fatte da un'altra postazione" con Roberto sicuro di non avere nessun
+altro dispositivo collegato). Analizzati i 2 conflitti reali in
+`sync_conflitti` (sola lettura, mai toccato il database reale): erano
+le supplenze di Palermo del 15/09 — create "scoperta" l'11/09,
+pubblicate su Drive in quello stato, poi assegnate da Roberto stesso
+la sera del 12/09. Nessun'altra postazione coinvolta.
+
+**Causa reale**: `modules/auto_sync.py::esegui_sync_automatico()`
+ripubblica il database locale su Drive SOLO se ha inserito righe nuove
+dal remoto o trova righe locali "solo locali" (chiave assente su
+Drive) — una modifica IN-PLACE a una riga già esistente e già
+pubblicata (assegnare un sostituto, cambiare un motivo, ecc.) non
+rientra in nessuno dei due casi: la copia su Drive resta ferma alla
+versione vecchia finché non arriva un giro che inserisce/trova
+qualcos'altro di nuovo. Al giro successivo, il confronto locale-vs-
+remoto trova quella riga diversa e — per design, mai un conflitto vero
+si risolve da solo — la mette in coda per la revisione umana. Con un
+solo dispositivo, ogni modifica a una riga già sincronizzata prima o
+poi genera questo falso avviso.
+
+Già esisteva la soluzione giusta in un solo punto:
+`routes/sync_conflitti.py::risolvi()` ripubblica su Drive subito dopo
+aver risolto un conflitto, proprio per questo motivo — ma solo lì, non
+nelle normali route di modifica.
+
+**Fix**: nuova `modules/auto_sync.py::pubblica_su_drive_se_possibile()`
+(stessa logica già in uso in `risolvi()`, centralizzata: fallisce solo
+in log se Drive non è raggiungibile, non blocca mai il salvataggio),
+richiamata subito dopo il commit in ogni route che modifica una riga
+già esistente di assenze/supplenze/indisponibilità:
+`routes/assenze.py` (modifica, elimina, elimina_multiple),
+`routes/supplenze.py` (assegna, annulla, cambia_tipo, modifica),
+`routes/indisponibilita.py` (modifica) — e nel nuovo modulo
+`modules/sostituzione_docente.py` (avvia_sostituzione, termina_sostituzione,
+che possono generare/modificare più righe in un colpo solo).
+`routes/sync_conflitti.py::risolvi()` ora riusa la stessa funzione
+condivisa invece di duplicarne la logica. Non tocca in nessun modo la
+logica di rilevamento conflitti: un vero conflitto tra due postazioni
+resta esattamente come prima, mai risolto in automatico.
+
+Corretto anche un bug di battitura nel banner stesso (Roberto): il
+plurale italiano di "modifica"/"fatta"/"unita" veniva costruito
+aggiungendo una "e" invece di cambiare la desinenza finale
+("modificae", "fattae", "unitae" invece di "modifiche", "fatte",
+"unite").
+
+**Verifica**: 5 nuovi test in tests/test_pubblica_su_drive_dopo_modifica.py
+(ogni route interessata chiama la funzione dopo il salvataggio;
+fallimento silenzioso se Drive non risponde) — suite 475/475.
+Attenzione particolare in fase di test: la funzione usa
+`Path(db_path).exists()` come guardia (già presente in sync_db.py::carica)
+— con il DB in-memory dei test (':memory:') questo la fa uscire subito
+senza mai tentare un accesso reale a Drive, quindi nessun test ha
+toccato la cartella Drive vera di Roberto (verificato che è
+effettivamente montata su questa macchina, da qui la cautela).
+
 ## Sessione 69 addendum 4 — Sostituzioni: spostata da navbar a Impostazioni
 
 Roberto: "la navbar è troppo piena. Sostituzioni potrebbe essere

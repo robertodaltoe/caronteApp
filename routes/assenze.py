@@ -16,7 +16,7 @@ from modules.assenze_registrazione import (
     _genera_supplenze, registra_assenze_form, contesto_form_nuova,
     contesto_form_assenza, modifica_assenza,
 )
-from modules.auto_sync import registra_eliminazione
+from modules.auto_sync import registra_eliminazione, pubblica_su_drive_se_possibile
 
 assenze_bp = Blueprint('assenze', __name__)
 
@@ -138,6 +138,7 @@ def elimina(id):
     utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
     n = _elimina_assenza_righe(a, utente_corrente)
     db.session.commit()
+    pubblica_su_drive_se_possibile()
 
     from routes.auth import log as auth_log
     auth_log('elimina_assenza', _log_desc)
@@ -170,6 +171,7 @@ def elimina_multiple():
         n_sup += _elimina_assenza_righe(a, utente_corrente)
         n_ass += 1
     db.session.commit()
+    pubblica_su_drive_se_possibile()
 
     from routes.auth import log as auth_log
     if docente_ref:
@@ -220,6 +222,7 @@ def modifica(id):
     if request.method == 'POST':
         risultato = modifica_assenza(a, request.form)
         db.session.commit()
+        pubblica_su_drive_se_possibile()
 
         from routes.auth import log as auth_log
         nuovo_doc = risultato['nuovo_doc']

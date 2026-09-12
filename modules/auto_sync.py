@@ -55,6 +55,49 @@ from pathlib import Path
 
 from sqlalchemy import text
 
+
+def pubblica_su_drive_se_possibile(app=None):
+    """Ripubblica subito il database locale su Drive dopo una modifica
+    manuale a una riga già esistente di assenze/supplenze/indisponibilita
+    (assegnare un sostituto, cambiare un motivo, ecc.) -- da chiamare
+    subito dopo il commit, nella route stessa.
+
+    Perche' serve: il giro periodico di sync (esegui_sync_automatico)
+    ripubblica solo se ha inserito righe nuove o ne trova di "solo
+    locali" (chiave assente su Drive) -- una modifica in-place a una
+    riga che era GIA' su Drive non rientra in nessuno dei due casi, e
+    la copia remota resta ferma alla versione vecchia. Al giro
+    successivo il sync la confronta con quella locale aggiornata, le
+    trova diverse e crea un conflitto da rivedere a mano in
+    /sync/conflitti -- anche se non c'e' nessun'altra postazione
+    coinvolta, e' solo la copia Drive rimasta indietro rispetto a una
+    modifica fatta qui (segnalato da Roberto, Sessione 69 addendum 5).
+    Stesso meccanismo gia' in uso, con successo, in
+    routes/sync_conflitti.py::risolvi() dopo la risoluzione di un
+    conflitto -- qui viene applicato anche alle modifiche "normali",
+    non solo alla revisione di un conflitto già aperto.
+
+    Fallisce in silenzio (solo un log) se Google Drive non e'
+    configurato o irraggiungibile in questo momento: la modifica
+    locale e' comunque salvata, il prossimo giro periodico di sync la
+    ripubblicherà comunque (nel peggiore dei casi si ripresenta lo
+    stesso avviso da rivedere a mano, non una perdita di dati).
+    """
+    try:
+        from flask import current_app
+        from sync_db import carica
+        app = app or current_app._get_current_object()
+        db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+        carica(db_path)
+    except Exception as e:
+        try:
+            from flask import current_app
+            current_app.logger.warning(
+                f"[auto_sync] pubblicazione su Drive dopo modifica fallita: {e}")
+        except Exception:
+            pass
+
+
 def _parse_dt(v):
     """Converte in datetime un valore letto da SQLite grezzo (stringa
     ISO, possibile spazio invece di 'T') o già un datetime — None se

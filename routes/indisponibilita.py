@@ -4,6 +4,7 @@ from models.indisponibilita import Indisponibilita
 from models.indisponibilita_ricorrente import IndisponibilitaRicorrente
 from models.docente import Docente
 from datetime import date, timedelta
+from modules.auto_sync import pubblica_su_drive_se_possibile
 
 indisp_bp = Blueprint('indisponibilita', __name__)
 
@@ -170,6 +171,7 @@ def modifica(id):
         i.motivo     = request.form.get('motivo', i.motivo)
         i.note       = request.form.get('note', '').strip()
         db.session.commit()
+        pubblica_su_drive_se_possibile()
         flash('Indisponibilità aggiornata.', 'success')
         next_url = request.form.get('next') or url_for('dashboard.index', data=i.data.isoformat())
         return redirect(next_url)

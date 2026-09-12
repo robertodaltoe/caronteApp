@@ -8,6 +8,7 @@ from models.attivita_fuori_aula import AttivitaFuoriAula, AttivitaClasse
 from models.assenza import Assenza
 from models.indisponibilita import Indisponibilita
 from sqlalchemy import func
+from modules.auto_sync import pubblica_su_drive_se_possibile
 from datetime import date
 
 supplenze_bp = Blueprint('supplenze', __name__)
@@ -118,6 +119,7 @@ def assegna(id):
         _registra_movimento(int(id_sost), s.data, tipo, s.id)
 
     db.session.commit()
+    pubblica_su_drive_se_possibile()
     docente = Docente.query.get(int(id_sost))
     from routes.auth import log as auth_log
     auth_log('assegna_supplenza',
@@ -142,6 +144,7 @@ def annulla(id):
     s.stato = 'annullata'
     MovimentoBancaOre.query.filter_by(id_supplenza=s.id).delete()
     db.session.commit()
+    pubblica_su_drive_se_possibile()
     from routes.auth import log as auth_log
     sostituto = Docente.query.get(s.id_sostituto) if s.id_sostituto else None
     auth_log('annulla_supplenza',
@@ -563,6 +566,7 @@ def cambia_tipo(id):
 
     s.tipo = nuovo_tipo
     db.session.commit()
+    pubblica_su_drive_se_possibile()
     from routes.auth import log as auth_log
     auth_log('cambia_tipo_supplenza',
         f'{vecchio_tipo} →︎ {nuovo_tipo} ({s.data.strftime("%d/%m/%Y")} ora {s.ora} cl.{s.classe or "-"})')
@@ -640,6 +644,7 @@ def modifica(id):
             s.tipo = tipo_nuovo
 
         db.session.commit()
+        pubblica_su_drive_se_possibile()
         from routes.auth import log as auth_log
         auth_log('modifica_supplenza',
             f'{s.data.strftime("%d/%m/%Y")} ora {s.ora} cl.{s.classe or "-"} — {s.tipo}')
