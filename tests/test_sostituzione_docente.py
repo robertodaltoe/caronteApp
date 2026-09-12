@@ -203,6 +203,29 @@ def test_termina_due_volte_solleva_errore(app, db_session):
             termina_sostituzione(id_sost)
 
 
+# ── Selezione docenti (route) ───────────────────────────────────────────
+
+def test_docenti_selezionabili_esclude_chi_non_e_piu_in_servizio(app, db_session):
+    """Regressione: la pagina Sostituzioni usava solo Docente.attivo per
+    popolare i menu, mostrando anche un docente come Alaimo (attivo=True
+    ma con anno_scol_uscita già raggiunto/superato) -- va usato lo stesso
+    controllo _non_in_servizio_per_data usato in tutta l'app."""
+    _crea_tabelle(app)
+    with app.app_context():
+        from routes.sostituzioni import _docenti_selezionabili
+        presente = crea_docente('Presente')
+        uscito = crea_docente('Alaimo')
+        anno = _anno_scol_oggi()
+        uscito.anno_scol_uscita = anno
+        uscito.motivo_uscita = 'fine_td'
+        db.session.commit()
+
+        selezionabili = _docenti_selezionabili(date.today())
+        cognomi = {d.cognome for d in selezionabili}
+        assert 'Presente' in cognomi
+        assert 'Alaimo' not in cognomi
+
+
 # ── Definitiva ────────────────────────────────────────────────────────
 
 def test_definitiva_sposta_orario_e_cattedra_senza_registrare_assenze(app, db_session):

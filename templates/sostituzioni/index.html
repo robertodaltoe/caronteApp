@@ -20,7 +20,7 @@
     <form method="get" action="{{ url_for('sostituzioni.nuova') }}" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
         <div class="form-group" style="margin:0; min-width:260px;">
             <label>Docente titolare (chi esce)</label>
-            <select name="id_titolare" required>
+            <select name="id_titolare" required data-search="1">
                 <option value="">-- seleziona --</option>
                 {% for d in docenti %}
                 <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>

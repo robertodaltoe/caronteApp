@@ -2,6 +2,34 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 3 — Fix: selezione docenti in Sostituzioni incoerente col resto dell'app
+
+Roberto ha segnalato due problemi sulla pagina Sostituzioni appena
+creata: "non c'e' coerenza con il metodo di selezione dei docenti" e
+in elenco compariva un docente non piu' in servizio (Alaimo).
+
+**Causa 1 (elenco sbagliato)**: `routes/sostituzioni.py` popolava i menu
+con `Docente.query.filter_by(attivo=True)`, che non basta — Alaimo ha
+`attivo=True` ma `anno_scol_uscita='2026-2027'` (fine contratto TD):
+resta "attivo" in anagrafica ma non e' piu' in servizio per l'anno
+corrente. Tutta l'app usa invece `routes/attivita_ist.py::
+_non_in_servizio_per_data()` per questo identico controllo (supplenze,
+dashboard, piano personale, formazione, esami integrativi...) — qui non
+veniva riusato. Aggiunta `_docenti_selezionabili(data)` in
+routes/sostituzioni.py che lo applica, usata sia per il titolare che
+per il sostituto.
+
+**Causa 2 (incoerenza select)**: i menu docente in tutta l'app usano
+`<select data-search="1">`, potenziato da static/js/select_ricerca.js
+in un campo con ricerca — i miei erano `<select>` semplici. Aggiunto
+`data-search="1"` ai due select coinvolti.
+
+**Verifica**: nuovo test `test_docenti_selezionabili_esclude_chi_non_e_piu_in_servizio`
+in tests/test_sostituzione_docente.py — suite 470/470. Verificato anche
+live su copia isolata del database reale: Alaimo non compare più né
+come titolare né come sostituto selezionabile, i due select sono ora
+con ricerca.
+
 ## Sessione 69 addendum 2 — Nuovo: Sostituzione docente (temporanea/definitiva)
 
 Roberto ha chiesto come procedere, con gli strumenti esistenti, quando

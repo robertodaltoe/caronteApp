@@ -29,7 +29,7 @@
         </div>
         <div class="form-group">
             <label>Docente sostituto *</label>
-            <select name="id_sostituto" required>
+            <select name="id_sostituto" required data-search="1">
                 <option value="">-- seleziona --</option>
                 {% for d in docenti if d.id != titolare.id %}
                 <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>

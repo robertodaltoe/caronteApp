@@ -22,13 +22,28 @@ sostituzioni_bp = Blueprint('sostituzioni', __name__)
 _MOTIVI_SOSTITUZIONE = ['malattia', 'permesso_personale', 'non_recuperabile']
 
 
+def _docenti_selezionabili(data_riferimento):
+    # Docenti attivi E in servizio a una data (esclude chi e' gia' uscito,
+    # non ancora arrivato, in aspettativa/AP uscente...) -- stesso
+    # controllo usato in tutta l'app per popolare un menu di scelta
+    # docente (routes/supplenze.py::nuova, routes/dashboard.py, ecc.),
+    # vedi routes/attivita_ist.py::_non_in_servizio_per_data. Prima qui si
+    # usava solo Docente.attivo, che non basta: un docente 'attivo' in
+    # anagrafica ma uscito a fine di un anno precedente (anno_scol_uscita)
+    # compariva comunque in elenco (segnalato da Roberto, caso Alaimo).
+    from routes.attivita_ist import _non_in_servizio_per_data
+    esclusi = _non_in_servizio_per_data(data_riferimento)
+    return [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+            if d.id not in esclusi]
+
+
 @sostituzioni_bp.route('/sostituzioni')
 def index():
     attive = (SostituzioneDocente.query.filter_by(stato='attiva')
               .order_by(SostituzioneDocente.data_inizio.desc()).all())
     concluse = (SostituzioneDocente.query.filter_by(stato='conclusa')
                 .order_by(SostituzioneDocente.data_inizio.desc()).limit(30).all())
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    docenti = _docenti_selezionabili(_date.today())
     return render_template('sostituzioni/index.html',
                             attive=attive, concluse=concluse, docenti=docenti)
 
@@ -47,7 +62,7 @@ def nuova():
                  .all())
         classi_titolare = sorted({r.classe for r in righe if r.classe not in ('---', '-x-', '')})
 
-    docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    docenti = _docenti_selezionabili(_date.today())
     return render_template('sostituzioni/nuova.html',
                             titolare=titolare, classi_titolare=classi_titolare,
                             docenti=docenti, motivi=_MOTIVI_SOSTITUZIONE,
