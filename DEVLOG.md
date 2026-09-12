@@ -2,6 +2,19 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 4 — Sostituzioni: spostata da navbar a Impostazioni
+
+Roberto: "la navbar è troppo piena. Sostituzioni potrebbe essere
+inserita in un sottomenu in impostazioni". Verificato che è già il
+pattern esistente per strumenti di questa stessa famiglia — Docenti,
+Aule, Incarichi non sono in navbar, sono raggiungibili solo da
+Impostazioni (`templates/impostazioni/index.html`); anche Assegnazioni
+non ha una voce propria, si raggiunge dall'Hub impostazione anno.
+Tolto il link da `templates/base.html`, aggiunta una card in
+Impostazioni > Docenti, subito sotto "Anagrafica docenti" (stessa
+sezione permessi 'sostituzioni', nessun cambiamento ai permessi).
+Verificato dal vivo: non più in navbar, raggiungibile da /impostazioni.
+
 ## Sessione 69 addendum 3 — Fix: selezione docenti in Sostituzioni incoerente col resto dell'app
 
 Roberto ha segnalato due problemi sulla pagina Sostituzioni appena

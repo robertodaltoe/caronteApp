@@ -132,6 +132,13 @@
         <span class="badge-count">{{ n_docenti }} docenti</span>
     </a>
     {% endif %}
+    {% if puo_vedere('sostituzioni') %}
+    <a href="{{ url_for('sostituzioni.index') }}" class="imp-link"
+       title="Sostituire un docente titolare (temporaneamente o per il resto dell'anno) con un altro docente">
+        {{ icon('refresh') }} Sostituzioni
+        <span>{{ icon('arrow') }}</span>
+    </a>
+    {% endif %}
     {% if puo_vedere('organico') %}
     <a href="{{ url_for('impostazione_anno.docenti_classi_concorso') }}" class="imp-link">
         {{ icon('diamond') }} Docenti ↔︎ Classi di concorso
