@@ -103,6 +103,9 @@ def avvia():
     if risultato['n_assenze']:
         msg += (f', {risultato["n_assenze"]} giorni di assenza registrati, '
                 f'{risultato["n_supplenze"]} supplenze già assegnate')
+    if risultato.get('n_supplenze_gia_scoperte'):
+        msg += (f', {risultato["n_supplenze_gia_scoperte"]} supplenze già scoperte '
+                f'in precedenza ora assegnate al sostituto')
     if risultato['n_eventi_ist']:
         msg += f', {risultato["n_eventi_ist"]} riunioni istituzionali aggiornate'
     if risultato['n_cattedre_trasferite']:

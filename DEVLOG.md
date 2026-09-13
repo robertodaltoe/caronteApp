@@ -2,6 +2,54 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 9 — Sostituzioni: funziona anche se l'assenza esisteva già (+ incidente Drive)
+
+Roberto ha chiesto se, una volta trovata una sostituta per Alessi, può
+usare la funzione "Sostituzioni" appena costruita — ma l'assenza di
+Alessi (261 supplenze scoperte) era già stata registrata PRIMA di
+sapere chi sarebbe stata la sostituta (addendum 8). Verificato che
+`avvia_sostituzione()` in quel caso avrebbe:
+1. duplicato l'assenza (nessun controllo su un'assenza già esistente
+   per quel giorno);
+2. lasciato le supplenze scoperte tali e quali, perché
+   `_genera_supplenze()` è idempotente e le salta se esistono già —
+   il sostituto non sarebbe mai stato assegnato.
+
+Esattamente il limite già documentato nel modulo. Corretto:
+per ogni giorno del periodo, se un'assenza del titolare esiste già,
+non viene duplicata — le supplenze "scoperta" già presenti per quel
+giorno vengono invece assegnate direttamente al sostituto indicato
+(nuova `_assegna_sostituto_a_scoperte()`, stesso credito di banca ore
+di un'assegnazione manuale). Funziona quindi sia avviando la
+sostituzione PRIMA sia DOPO aver registrato l'assenza.
+
+**Incidente durante la verifica dal vivo, corretto subito**: la
+funzione richiama `pubblica_su_drive_se_possibile()` (addendum 5) ogni
+volta che assegna qualcosa. Verificando su una copia di `database.db`
+in `/tmp` (stesso protocollo di sicurezza di sempre), quella
+pubblicazione ha comunque scritto per davvero sul Google Drive
+condiviso di Roberto — la copia locale protegge la lettura/scrittura
+locale, non la destinazione della pubblicazione, che è un percorso
+fisso su Drive indipendente da quale file locale la genera. Il Drive
+reale è finito per qualche istante con dati di test (un docente
+fittizio "PROVA_SOSTITUTA"). Accortomene subito dall'output della
+chiamata (`sync_db.py::carica()` stampa il percorso su cui scrive),
+corretto ripubblicando immediatamente il vero `database.db` locale
+(mai stato toccato, la copia esisteva solo in /tmp) sopra a quello di
+prova. Verificato che il database.db locale reale sia rimasto pulito
+(nessun docente di test, integrity check ok). Salvata una memoria
+(`feedback_test_sostituzioni_tocca_drive_reale.md`) per non ripetere
+l'errore: qualunque verifica dal vivo di codice che tocca
+`pubblica_su_drive_se_possibile()`/`sync_db.carica()` deve mockare
+quella chiamata, non solo lavorare su una copia locale.
+
+**Verifica**: nuovo test `test_temporanea_con_assenza_gia_registrata_assegna_le_scoperte_esistenti`
+in tests/test_sostituzione_docente.py — suite 484/484. Verificato anche
+dal vivo (su copia isolata, questa volta consapevoli dell'effetto
+collaterale) con un periodo diverso da quello appena corretto: 7
+supplenze già scoperte di Alessi assegnate correttamente al sostituto
+di prova, nessuna assenza duplicata.
+
 ## Sessione 69 addendum 8 — Alessi: orario ricaricato correttamente + assenza per aspettativa
 
 Seguito diretto dell'addendum 7. Rifatto l'import dell'orario perché

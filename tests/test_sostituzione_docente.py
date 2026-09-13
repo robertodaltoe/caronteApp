@@ -203,6 +203,44 @@ def test_termina_due_volte_solleva_errore(app, db_session):
             termina_sostituzione(id_sost)
 
 
+def test_temporanea_con_assenza_gia_registrata_assegna_le_scoperte_esistenti(app, db_session):
+    """Caso reale (Alessi): l'assenza era già stata registrata, con
+    supplenze 'scoperta', PRIMA di conoscere il sostituto. Avviare la
+    sostituzione dopo non deve duplicare l'assenza né lasciare le
+    supplenze scoperte -- deve assegnarle al sostituto appena indicato."""
+    _crea_tabelle(app)
+    with app.app_context():
+        titolare = crea_docente('Alessi')
+        sostituto = crea_docente('Prova')
+        lunedi = date(2026, 9, 14)
+        _crea_orario(titolare.id, [(0, 1, '4ACAT'), (0, 2, '4ARIM')])
+
+        # Assenza + supplenze scoperte già registrate in precedenza,
+        # senza sapere ancora chi sarebbe stato il sostituto.
+        db.session.add(Assenza(id_docente=titolare.id, data=lunedi,
+                                ora_inizio=1, ora_fine=9, motivo='non_recuperabile'))
+        db.session.commit()
+        from modules.assenze_registrazione import _genera_supplenze
+        _genera_supplenze(titolare.id, lunedi, 1, 9, True, '')
+        assert Supplenza.query.filter_by(id_assente=titolare.id, stato='scoperta').count() == 2
+
+        risultato = avvia_sostituzione(
+            id_titolare=titolare.id, id_sostituto=sostituto.id, tipo='temporanea',
+            data_inizio=lunedi, data_fine=lunedi,
+        )
+
+        assert risultato['n_assenze'] == 0  # non duplicata
+        assert risultato['n_supplenze'] == 0
+        assert risultato['n_supplenze_gia_scoperte'] == 2
+
+        assert Assenza.query.filter_by(id_docente=titolare.id, data=lunedi).count() == 1
+        supplenze = Supplenza.query.filter_by(id_assente=titolare.id, data=lunedi).all()
+        assert len(supplenze) == 2
+        assert all(s.id_sostituto == sostituto.id and s.stato == 'assegnata' for s in supplenze)
+        movimenti = MovimentoBancaOre.query.filter_by(id_docente=sostituto.id).all()
+        assert len(movimenti) == 2
+
+
 # ── Selezione docenti (route) ───────────────────────────────────────────
 
 def test_docenti_selezionabili_esclude_chi_non_e_piu_in_servizio(app, db_session):

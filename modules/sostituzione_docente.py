@@ -50,13 +50,14 @@ Limiti noti (scelta deliberata, non svista):
   rientro ancora ignota, usare comunque una data_fine provvisoria e
   poi concludere/riavviare quando si sa di piu' (non c'e' ancora
   un'azione "estendi").
-- Se per il titolare esistono gia' delle supplenze 'scoperta' generate
-  in precedenza per le stesse date/ore (es. l'assenza era gia' stata
-  registrata a mano prima di sapere chi sarebbe stato il sostituto),
-  _genera_supplenze() le trova gia' presenti e le salta (e' pensata per
-  essere idempotente) -- NON le riassegna al sostituto. In quel caso
-  vanno assegnate a mano da Supplenze, come sempre; avviare una
-  sostituzione PRIMA di registrare l'assenza evita il problema.
+- Se per il titolare esiste GIA' un'assenza per un giorno del periodo
+  (es. era stata registrata prima di sapere chi sarebbe stato il
+  sostituto -- caso reale: Alessi, aspettativa senza sostituto ancora
+  nominato), quel giorno non viene duplicato: le supplenze 'scoperta'
+  già generate per quel giorno vengono assegnate al sostituto appena
+  indicato (stesso credito di banca ore di un'assegnazione manuale),
+  vedi _assegna_sostituto_a_scoperte(). Funziona sia avviando la
+  sostituzione PRIMA di registrare l'assenza sia DOPO.
 """
 from datetime import date as _date, datetime as _datetime_mod, timedelta
 
@@ -64,6 +65,7 @@ from models import db
 from models.docente import Docente
 from models.orario_docente import OrarioDocente
 from models.assenza import Assenza, cat_genera_supplenza, cat_assegnabile
+from models.supplenza import Supplenza
 from modules.assenze_registrazione import _genera_supplenze, is_sospensione, GIORNI_SETTIMANA
 
 
@@ -133,12 +135,29 @@ def avvia_sostituzione(id_titolare, id_sostituto, tipo, data_inizio,
 
     n_assenze = 0
     n_supplenze = 0
+    n_supplenze_gia_scoperte = 0
     if tipo == 'temporanea':
         # Genera assenza + supplenze PRIMA di spostare l'orario: la
         # generazione legge OrarioDocente del titolare, che a questo
         # punto deve avere ancora le sue righe.
+        #
+        # Se per un giorno esiste GIA' un'assenza del titolare (es. era
+        # stata registrata prima di conoscere il sostituto, come nel
+        # caso di un'aspettativa senza sostituto ancora nominato): non
+        # duplicarla -- _genera_supplenze() salterebbe comunque le
+        # supplenze già presenti (è idempotente), quindi senza questo
+        # ramo il sostituto non verrebbe mai assegnato a chi era già
+        # "scoperta". Si assegnano invece direttamente le supplenze
+        # scoperte già esistenti per quel giorno, con lo stesso credito
+        # di banca ore che avrebbe una nuova generazione.
         for giorno in _giorni_periodo(data_inizio, data_fine):
             if is_sospensione(giorno):
+                continue
+            assenza_esistente = Assenza.query.filter_by(
+                id_docente=id_titolare, data=giorno).first()
+            if assenza_esistente:
+                n_supplenze_gia_scoperte += _assegna_sostituto_a_scoperte(
+                    id_titolare, id_sostituto, giorno)
                 continue
             db.session.add(Assenza(
                 id_docente=id_titolare, data=giorno, ora_inizio=1, ora_fine=9,
@@ -179,7 +198,7 @@ def avvia_sostituzione(id_titolare, id_sostituto, tipo, data_inizio,
         n_cattedre = _trasferisci_cattedra(id_titolare, id_sostituto)
 
     db.session.commit()
-    if n_assenze or n_supplenze:
+    if n_assenze or n_supplenze or n_supplenze_gia_scoperte:
         from modules.auto_sync import pubblica_su_drive_se_possibile
         pubblica_su_drive_se_possibile()
     return {
@@ -187,9 +206,32 @@ def avvia_sostituzione(id_titolare, id_sostituto, tipo, data_inizio,
         'n_slot_orario': len(slots),
         'n_assenze': n_assenze,
         'n_supplenze': n_supplenze,
+        'n_supplenze_gia_scoperte': n_supplenze_gia_scoperte,
         'n_eventi_ist': n_eventi,
         'n_cattedre_trasferite': n_cattedre,
     }
+
+
+def _assegna_sostituto_a_scoperte(id_titolare, id_sostituto, giorno):
+    """Assegna id_sostituto a tutte le supplenze 'scoperta' del titolare
+    già esistenti per quel giorno (create da una precedente registrazione
+    dell'assenza, prima che il sostituto fosse noto) -- stesso credito di
+    banca ore che darebbe un'assegnazione manuale da Supplenze. Ritorna
+    quante ne ha assegnate."""
+    from routes.supplenze import _registra_movimento
+
+    scoperte = Supplenza.query.filter_by(
+        id_assente=id_titolare, data=giorno, stato='scoperta').all()
+    n = 0
+    for s in scoperte:
+        s.id_sostituto = id_sostituto
+        s.stato = 'assegnata'
+        if not s.tipo:
+            s.tipo = 'recupero'
+        db.session.flush()
+        _registra_movimento(id_sostituto, giorno, s.tipo, s.id)
+        n += 1
+    return n
 
 
 def _classi_cattedra_titolare(id_titolare):
