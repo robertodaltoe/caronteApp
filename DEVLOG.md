@@ -2,6 +2,45 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 8 — Alessi: orario ricaricato correttamente + assenza per aspettativa
+
+Seguito diretto dell'addendum 7. Rifatto l'import dell'orario perché
+ora Alessi ha una scheda in anagrafica (id 128): puntando esplicitamente
+al file giusto (`ORARIO_DOCENTI_SETTIMANA_1B_teachers_time_horizontal.xlsx`)
+il risultato è 740 slot totali (erano 733), 0 nomi non riconosciuti,
+7 ore reali assegnate ad Alessi (Italiano/Storia su 4A CAT, 4A RIM,
+1B CAT).
+
+**Incidente durante l'operazione, corretto subito**: un primo tentativo
+passato dalla route normale (`routes/sincronizzazione.py::importa()`)
+ha invece importato un file VECCHIO (`ORARIO DEFINITIVO_DOCENTI DA
+GENNAIO 26.xlsx`, 24/05, ancora presente in `data/`): quella route
+sceglie "il primo file che trova" il cui nome contiene "ORARIO" nella
+cartella, senza nessuna preferenza per il più recente — con due file
+del genere presenti, il risultato non è deterministico. Accortomi
+subito dal conteggio slot anomalo (1278 invece di 740), corretto
+rilanciando l'import con il percorso esplicito del file giusto.
+Verificato che l'import errato non avesse creato anagrafiche spurie
+(tutti i nomi già esistenti) prima di procedere. **Da fare**: spostare/
+rinominare il file vecchio di maggio (non più necessario) e/o rendere
+deterministica la scelta del file nella route (es. il più recente per
+data di modifica) — non ancora fatto, segnalato a Roberto.
+
+Roberto ha poi chiarito che Alessi è realmente in aspettativa e che
+**non esiste ancora un sostituto nominato** per le sue 7 ore: vanno
+segnalate come "da assegnare". Registrata la sua assenza (motivo
+`non_recuperabile`, dal 13/09/2026 al 30/06/2027 — data di fine
+provvisoria, da aggiornare quando si saprà di più sul rientro) tramite
+`registra_assenze_form()`, esattamente come farebbe il form normale:
+249 giorni di assenza, 261 supplenze "scoperta" generate (una per ogni
+sua ora reale in ciascuna settimana del periodo).
+
+Tutte le operazioni verificate prima su copia isolata di `database.db`,
+poi applicate al reale con backup cifrato prima
+(`database_20260913_1956_pre_reimport_orario_con_alessi.db.enc`,
+`database_20260913_2136_pre_assenza_alessi_aspettativa.db.enc`) e
+`PRAGMA integrity_check` = ok dopo ciascuna.
+
 ## Sessione 69 addendum 7 — Verifica orario: docenti senza ore assegnate + ALESSI mancante in anagrafica
 
 Su richiesta di Roberto, verificati tutti i 77 docenti attualmente in
