@@ -2,6 +2,37 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 7 — Verifica orario: docenti senza ore assegnate + ALESSI mancante in anagrafica
+
+Su richiesta di Roberto, verificati tutti i 77 docenti attualmente in
+servizio (stesso criterio di `_non_in_servizio_per_data`) contro
+`OrarioDocente`/`OrarioSostegno`. Nessun riferimento orfano nell'orario
+(ogni id_docente in `OrarioDocente` corrisponde a un docente reale).
+Trovati 9 docenti con cattedra regolarmente assegnata per il 2026-2027
+ma zero ore nell'orario importato: 6 di sostegno (CARBONE, FANELLI,
+LEONE, SCHIOPPA, SOLDANO, VERDERAME — cattedra ADSS, nessuna riga né in
+OrarioDocente né in OrarioSostegno) e 3 di cattedra/ITP (MARGARITA,
+MASCOLO, RIGNANESE) — probabile file orario ancora provvisorio/
+incompleto su questi profili, non un problema di abbinamento nomi.
+
+Roberto ha poi segnalato un caso concreto di verifica inversa:
+**ALESSI**, che ha preso servizio ed è andato subito in aspettativa,
+non aveva alcuna scheda in anagrafica. Confermato consultando
+`log_importazioni` (id 5, l'import attualmente attivo, 11/09): un solo
+nome non riconosciuto, "ALESSI" — le sue ore nel file sono state
+scartate silenziosamente all'import (comportamento normale per un nome
+senza corrispondenza, non un bug: vedi `applica_importazione()` in
+modules/parser_orario.py). Gli altri due casi noti da inizio sessione
+(AGRO', VALENA S) risultano già risolti negli import successivi (non
+più tra i non riconosciuti).
+
+Creata la scheda anagrafica (`ALESSI Cristina`, id 128,
+`status_presenza='aspettativa'`, `attivo=True`) direttamente sul
+database reale (backup cifrato
+`database_20260913_1950_pre_crea_alessi.db.enc` prima, `PRAGMA
+integrity_check` = ok dopo) — così un prossimo import dell'orario la
+riconoscerà automaticamente invece di scartare di nuovo le sue righe.
+
 ## Sessione 69 addendum 6 — GDPR: /display richiede login + iniziali al posto dei nomi
 
 Roberto ha condiviso una comunicazione del DPO (Legal & Digital,
