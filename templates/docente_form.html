@@ -88,6 +88,17 @@
                    value="{{ docente.email if docente and docente.email and docente.email != 'None' else '' }}"
                    placeholder="nome.cognome@istituto.it">
         </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Codice per il display pubblico (opzionale)</label>
+            <input type="text" name="codice_display" maxlength="20"
+                   value="{{ docente.codice_display if docente and docente.codice_display else '' }}"
+                   placeholder="es. un codice noto solo al docente">
+            <p style="font-size:.78rem; color:var(--grigio); margin-top:4px;">
+                Se compilato, sul monitor delle supplenze (/display) compare questo
+                codice al posto delle iniziali calcolate automaticamente. Lasciare
+                vuoto per usare le iniziali (il comportamento normale).
+            </p>
+        </div>
     </div>
 
     {# ── 2. Contratto ─────────────────────────────────────────────── #}

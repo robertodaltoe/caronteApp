@@ -8,6 +8,7 @@ from models.attivita_fuori_aula import AttivitaFuoriAula
 from models.assenza import Assenza
 from models.docente import Docente
 from datetime import date, timedelta
+from modules.identificativo_display import identificativi_display
 
 display_bp = Blueprint('display', __name__)
 
@@ -102,6 +103,15 @@ def display():
                 'docente':    Docente.query.get(a.id_docente),
             })
 
+    # Iniziali/codice al posto del nome intero sul monitor condiviso
+    # (Sessione 69 addendum 6, richiesto dal DS dopo la comunicazione
+    # del DPO sul Provvedimento Garante 112/2026) — calcolate su TUTTI
+    # i docenti attivi, non solo quelli di oggi, cosi' la sigla di una
+    # persona resta la stessa da un giorno all'altro invece di
+    # ricalcolarsi (e magari cambiare) in base a chi altro compare quel
+    # giorno.
+    id_display = identificativi_display(Docente.query.filter_by(attivo=True).all())
+
     return render_template('display.html',
         timedelta=timedelta,
         supplenze=supplenze,
@@ -111,4 +121,5 @@ def display():
         slot_map=slot_map,
         migrazione_per_ora=dict(migrazione_per_ora),
         classi_libere=classi_libere,
+        id_display=id_display,
     )

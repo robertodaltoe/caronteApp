@@ -246,8 +246,21 @@ def create_app(avvio_con_reloader=True):
     app.jinja_env.filters['from_json'] = lambda s: json.loads(s) if s else []
     app.jinja_env.filters['enumerate'] = enumerate
 
-    # Protezione accesso — tutte le route tranne display e auth
-    ROUTE_PUBBLICHE = {'display.display', 'auth.login', 'auth.logout',
+    # Protezione accesso — tutte le route tranne login/PIN e i link personali.
+    #
+    # 'display.display' NON è più qui (Sessione 69 addendum 6): mostra
+    # cognomi di docenti assenti/sostituti — pubblicarla senza nessun
+    # controllo d'accesso è esattamente il caso descritto dal Garante nel
+    # Provvedimento n. 112/2026 (bacheca di assenze/sostituzioni
+    # nominative raggiungibile da chiunque, anche non autorizzato al
+    # trattamento — sanzione reale citata nella lettera del DPO). Il
+    # ruolo 'display' esiste apposta per questo (vedi sotto, u.ruolo ==
+    # 'display'): un utente dedicato che, una volta loggato UNA volta
+    # sul monitor fisico con un PIN, resta autenticato (session.permanent)
+    # e vede solo questa pagina — chiunque altro sulla stessa rete, senza
+    # aver fatto login, viene rimandato a /login come per il resto
+    # dell'app.
+    ROUTE_PUBBLICHE = {'auth.login', 'auth.logout',
                         'auth.privacy', 'static',
                         # Link personale del docente per il Piano delle Attività
                         # (Sessione 57): nessun account per i docenti in questa
@@ -616,6 +629,7 @@ def _auto_migrate():
         ('progetti_fse',  'riferimento_delibera_adesione_cdi', 'VARCHAR(200)', None),
         ('progetti_fse',  'capitolo_entrata', 'VARCHAR(300)', None),
         ('progetti_fse',  'capitolo_spesa',   'VARCHAR(300)', None),
+        ('docenti',       'codice_display',   'VARCHAR(20)',  None),
     ]
 
     with db.engine.connect() as conn:

@@ -2,6 +2,72 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 6 — GDPR: /display richiede login + iniziali al posto dei nomi
+
+Roberto ha condiviso una comunicazione del DPO (Legal & Digital,
+Provvedimento del Garante n. 112/2026) su un caso reale sanzionato
+(€2.000): una scuola che rendeva conoscibili online, con nominativi,
+orario/assenze/sostituzioni dei docenti — anche dentro un'area con
+credenziali, se l'accesso non è verificato come riservato ai soli
+soggetti autorizzati.
+
+Confrontando la lettera con il codice: `routes/display.py`
+(il monitor con supplenze/classi libere del giorno) era registrato in
+`app.py::ROUTE_PUBBLICHE` — **raggiungibile senza nessun login** — e
+mostrava cognomi interi (classi libere: cognome completo + iniziale
+nome del docente assente) e abbreviazioni parziali (supplenze:
+sostituto). Esattamente il caso descritto dal Garante.
+
+**Fix parte 1 — accesso**: tolto `display.display` da `ROUTE_PUBBLICHE`.
+Il ruolo utente `'display'` esisteva già nel codice (`app.py::check_auth`,
+`u.ruolo == 'display'` → redirect fisso a `/display`, mai altrove) ma
+non era mai stato collegato: nessuna route pubblica lo richiedeva prima
+d'ora, e nessun account con quel ruolo esisteva nel database reale.
+Creato l'utente `monitor` (ruolo `display`, PIN `9137` — da cambiare
+con "Cambia PIN" una volta fatto il primo accesso, se si preferisce un
+altro codice) da usare per il login UNA TANTUM sul PC/monitor della
+sala docenti (`session.permanent = True`, resta loggato).
+
+**Fix parte 2 — cosa si vede**: su richiesta esplicita del DS (tramite
+Roberto), aggiunta discrezione ulteriore sopra al login: nuovo modulo
+`modules/identificativo_display.py::calcola_iniziali_uniche()` — prima
+lettera del cognome + iniziale del nome (es. "S.M."), estesa lettera
+per lettera SOLO per i docenti che condividono la sigla finché non
+sono di nuovo distinguibili tra loro (regola indicata dal DS). Nessuna
+cache: ricalcolate ad ogni richiesta su tutti i docenti attivi (costo
+trascurabile), così restano stabili nel tempo indipendentemente da chi
+compare quel giorno specifico. `templates/display.html` non mostra più
+`cognome`/`nome` diretti, solo il risultato di questa funzione.
+
+**Predisposizione per un codice alfanumerico** (richiesta esplicita:
+"predisponiamo il sistema affinché si utilizzi un codice alfanumerico
+in caso il DS voglia anche questa misura ulteriore"): nuovo campo
+opzionale `Docente.codice_display` (migrazione additiva in
+`_auto_migrate()`), esposto come campo libero nella scheda anagrafica
+del docente ("Codice per il display pubblico"). Se valorizzato, sostituisce
+le iniziali calcolate per quel singolo docente — nessun altro codice da
+scrivere quando il DS deciderà di attivarlo, la logica in
+`identificativo_display.py` lo controlla già.
+
+Nota su un limite reale, non nascosto: anche le iniziali restano dato
+personale in una scuola piccola (sigla + classe + materia identificano
+comunque la persona) — la misura che risolve davvero il rischio
+segnalato dal Garante è il login, le iniziali sono discrezione visiva
+in più sullo schermo condiviso, non un sostituto.
+
+**Verifica**: 8 nuovi test (`tests/test_identificativo_display.py`,
+5 casi — sigle senza collisioni, con collisione a 2/3 vie, omonimia
+vera senza loop infinito, precedenza di `codice_display`; e
+`tests/test_display_richiede_login.py`, 3 casi — redirect a /login
+senza sessione, accesso con login normale, ruolo `display` vincolato
+alla sola pagina) — suite 483/483. Verificato anche dal vivo su copia
+isolata di `database.db`: redirect a /login confermato senza sessione,
+sigle mostrate correttamente con login, nessun cognome per esteso nella
+pagina. Poi applicato al database reale (backup cifrato
+`database_20260913_1933_pre_display_login_gate.db.enc` prima, `PRAGMA
+integrity_check` = ok dopo): colonna `codice_display` aggiunta, utente
+`monitor` (ruolo display) creato.
+
 ## Sessione 69 addendum 5 — Fix: falso conflitto di sync su modifiche allo stesso dispositivo
 
 Seguito diretto della segnalazione precedente (banner "2 modifiche

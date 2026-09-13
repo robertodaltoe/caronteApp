@@ -171,6 +171,7 @@ def nuovo():
             materia        = request.form.get('materia', '').strip(),
             ore_contratto  = int(request.form.get('ore_contratto', 18) or 0),
             email          = request.form.get('email', '').strip(),
+            codice_display = request.form.get('codice_display', '').strip() or None,
             tipo_contratto = request.form.get('tipo_contratto', '').strip(),
             ruolo          = request.form.get('ruolo', 'titolare').strip(),
             part_time      = (request.form.get('tipo_servizio') == 'part_time'),
@@ -227,6 +228,7 @@ def modifica(id):
         d.anno_scol_ore_max = (request.form.get('anno_scol_ore_max', '').strip()
                                or None) if d.ore_max_anno else None
         d.email          = request.form.get('email', '').strip()
+        d.codice_display = request.form.get('codice_display', '').strip() or None
         d.tipo_contratto = request.form.get('tipo_contratto', '').strip()
         d.ruolo          = request.form.get('ruolo', 'titolare').strip()
         d.sostegno_aggiuntivo = 'sostegno_aggiuntivo' in request.form

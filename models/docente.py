@@ -57,6 +57,16 @@ class Docente(db.Model):
     cognome       = db.Column(db.String(80),  nullable=False)
     nome          = db.Column(db.String(80),  nullable=False)
     nome_display  = db.Column(db.String(80))   # es. "FERRARI M."
+    # Codice alfanumerico opzionale da mostrare al posto delle iniziali
+    # sul monitor pubblico (routes/display.py) — NON è nome_display
+    # (quello resta "COGNOME N.", usato in ricerca/anagrafica interna,
+    # sempre dietro login): questo campo esiste per la richiesta del DS
+    # (Sessione 69 addendum 6, GDPR/Provvedimento Garante 112/2026) di
+    # poter, in futuro, sostituire anche le iniziali con un codice noto
+    # solo al singolo docente (es. un identificativo badge). Finché è
+    # NULL (il caso normale, non ancora attivato) il display calcola da
+    # solo delle iniziali uniche — vedi modules/identificativo_display.py.
+    codice_display = db.Column(db.String(20), nullable=True)
     materia       = db.Column(db.String(120))   # campo legacy testuale, vedi id_classe_concorso
     # Usato come "versione" per il controllo di concorrenza ottimistico
     # nel form di modifica (vedi routes/docenti.py::modifica): se due

@@ -203,7 +203,7 @@
                     <div class="box-sost">
                         {% if s.stato == 'non_assegnabile' %}&#x2715;&#xFE0E; N/A
                         {% elif s.sostituto %}
-                            {{- s.sostituto.cognome[:3] | upper -}}.{{- s.sostituto.nome[0] ~ '.' if s.sostituto.nome else '' }}
+                            {{ id_display.get(s.sostituto.id, '—') }}
                         {% else %}&#x25B2;&#xFE0E; SCOPERTA{% endif %}
                     </div>
                     {% if aula_info %}
@@ -235,7 +235,7 @@
                     <div class="box-cl-classe">{{ cl.classe }}</div>
                     <div class="box-cl-testo">{{ cl.testo }}</div>
                     {% if cl.docente %}
-                    <div class="box-cl-doc">{{ cl.docente.cognome }}{% if cl.docente.nome %} {{ cl.docente.nome[0] }}.{% endif %}</div>
+                    <div class="box-cl-doc">{{ id_display.get(cl.docente.id, '—') }}</div>
                     {% endif %}
                 </div>
                 {% endfor %}
