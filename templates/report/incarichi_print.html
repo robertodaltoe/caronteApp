@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Incarichi docenti {{ anno }}</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+@font-face {
+    font-family: 'Open Sans'; font-weight: 400; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_400 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 600; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_600 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 700; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_700 }}) format('woff2');
+}
+body { font-family: 'Open Sans', Arial, sans-serif; font-size:9.5pt;
+       color:#1e2939; padding:14px 18px; }
+h1 { font-size:14pt; color:#7a1c17; margin-bottom:2px; }
+.sub { font-size:9pt; color:#6b7280; margin-bottom:16px; }
+
+.docente { break-inside:avoid; margin-bottom:12px; }
+.docente h2 { font-size:10.5pt; color:#1e2939; background:#f3e5e2;
+              padding:4px 8px; border-radius:4px; margin-bottom:4px; }
+table { width:100%; border-collapse:collapse; margin-bottom:6px; }
+th { background:#7a1c17; color:white; padding:4px 6px; text-align:left;
+     font-weight:600; font-size:7.8pt; }
+td { padding:4px 6px; border-bottom:1px solid #e5eaf0; font-size:8.5pt; }
+
+.piede { margin-top:14px; font-size:7.5pt; color:#9ca3af; }
+</style>
+</head>
+<body>
+
+<h1>Incarichi docenti — {{ anno }}</h1>
+<div class="sub">Stampato il {{ oggi.strftime('%d/%m/%Y') }}</div>
+
+{% if not per_doc %}
+<div class="sub">Nessun incarico assegnato per {{ anno }}.</div>
+{% endif %}
+
+{% for doc, nomine in per_doc.items() %}
+<div class="docente">
+    <h2>{{ doc.cognome }} {{ doc.nome }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Incarico</th>
+                <th>Contesto</th>
+                <th>Ore</th>
+                <th>Compenso</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for n in nomine %}
+            <tr>
+                <td>{{ n.tipo.nome }}</td>
+                <td>{{ n.label_classe or (n.dipartimento.nome if n.dipartimento else '—') }}</td>
+                <td>{{ n.ore or '—' }}</td>
+                <td>{{ n.compenso_display }}</td>
+                <td>{{ n.note or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+
+<div class="piede">CaronteApp — elenco incarichi ad uso interno.</div>
+
+</body>
+</html>

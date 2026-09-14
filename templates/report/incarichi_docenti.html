@@ -12,6 +12,8 @@
                   background:{{ '#1e40af' if a==anno else '#f3f4f6' }};
                   color:{{ 'white' if a==anno else '#374151' }};">{{ a }}</a>
         {% endfor %}
+        <a href="{{ url_for('report.incarichi_docenti_pdf', anno=anno) }}" class="btn btn-sm" style="background:#6b7280;color:white;">{{ icon('print') }} Stampa / PDF</a>
+        <a href="{{ url_for('report.incarichi_docenti_xlsx', anno=anno) }}" class="btn btn-sm btn-success">{{ icon('chart') }} XLSX</a>
         <a href="{{ url_for('incarichi.index', anno=anno) }}" class="btn btn-sm btn-primary">{{ icon('gear') }} Gestisci incarichi</a>
     </div>
 </div>

@@ -1198,6 +1198,18 @@ def pianifica_permessi():
         ore_ultimo_giorno=calc['ore_ultimo_giorno'])
 
 
+def _nomine_incarichi_anno(anno):
+    """Tutte le nomine (IncaricaDocente) dell'anno indicato, ordinate per
+    docente -- riusata dalla vista, dal PDF e dall'XLSX (Sessione 69
+    addendum 11) cosi' i tre restano sempre coerenti tra loro."""
+    from models.incarico import IncaricaDocente
+    return (IncaricaDocente.query
+            .filter_by(anno_scol=anno)
+            .join(Docente, IncaricaDocente.id_docente == Docente.id)
+            .order_by(Docente.cognome, Docente.nome)
+            .all())
+
+
 # ── INCARICHI PER DOCENTE (vista di sola lettura) ────────────
 @report_bp.route('/report/incarichi-docenti')
 def incarichi_docenti():
@@ -1207,11 +1219,7 @@ def incarichi_docenti():
     from config_anno import get_anno_corrente
     anno = request.args.get('anno', get_anno_corrente())
 
-    nomine = (IncaricaDocente.query
-              .filter_by(anno_scol=anno)
-              .join(Docente, IncaricaDocente.id_docente == Docente.id)
-              .order_by(Docente.cognome, Docente.nome)
-              .all())
+    nomine = _nomine_incarichi_anno(anno)
 
     # Raggruppa per docente
     from collections import defaultdict
@@ -1225,6 +1233,111 @@ def incarichi_docenti():
 
     return render_template('report/incarichi_docenti.html',
         anno=anno, anni_disponibili=anni, per_doc=per_doc)
+
+
+@report_bp.route('/report/incarichi-docenti/pdf')
+def incarichi_docenti_pdf():
+    """PDF dell'elenco incarichi per docente dell'anno -- stessa vista
+    raggruppata della pagina, pensata per la stampa/archiviazione."""
+    from config_anno import get_anno_corrente
+    anno = request.args.get('anno', get_anno_corrente())
+    nomine = _nomine_incarichi_anno(anno)
+
+    from collections import defaultdict
+    per_doc = defaultdict(list)
+    for n in nomine:
+        per_doc[n.docente].append(n)
+
+    from modules.pdf_fonts import contesto_open_sans
+    html_content = render_template('report/incarichi_print.html',
+        anno=anno, per_doc=per_doc, oggi=date.today(),
+        **contesto_open_sans(),
+    )
+
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'incarichi_{anno}_{date.today().isoformat()}.pdf'
+        )
+    except (ImportError, OSError):
+        # Vedi commento analogo in singolo_pdf poco sopra.
+        return html_content
+
+
+@report_bp.route('/report/incarichi-docenti/xlsx')
+def incarichi_docenti_xlsx():
+    """XLSX dell'elenco incarichi dell'anno, una riga per incarico
+    (tabella piatta, più utile in Excel della vista raggruppata per
+    filtrare/ordinare) -- vedi incarichi_docenti_pdf per la versione
+    da stampare raggruppata per docente."""
+    try:
+        import openpyxl
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+    except ImportError:
+        return "openpyxl non disponibile", 500
+
+    from config_anno import get_anno_corrente
+    anno = request.args.get('anno', get_anno_corrente())
+    nomine = _nomine_incarichi_anno(anno)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Incarichi"
+
+    BLU = PatternFill("solid", fgColor="1F3864")
+
+    def hdr(cell, text):
+        cell.value = text
+        cell.fill = BLU
+        cell.font = Font(bold=True, color="FFFFFF", size=10)
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    def thin():
+        side = Side(style="thin", color="AAAAAA")
+        return Border(left=side, right=side, top=side, bottom=side)
+
+    from config_istituto import get_dati_istituto as _get_dati_istituto_inc
+    nome_ist = _get_dati_istituto_inc()['nome_istituto']
+    ws.merge_cells("A1:H1")
+    ws["A1"].value = f"INCARICHI DOCENTI {anno} — {nome_ist} — {date.today().strftime('%d/%m/%Y')}"
+    ws["A1"].font = Font(bold=True, size=13, color="1F3864")
+    ws.row_dimensions[1].height = 24
+
+    headers = ["Cognome", "Nome", "Incarico", "Categoria", "Contesto",
+               "Ore", "Compenso", "Note"]
+    for c, h in enumerate(headers, 1):
+        hdr(ws.cell(3, c), h)
+
+    for row_n, n in enumerate(nomine, 4):
+        contesto = n.label_classe or (n.dipartimento.nome if n.dipartimento else '') or ''
+        valori = [
+            n.docente.cognome, n.docente.nome, n.tipo.nome,
+            n.tipo.categoria, contesto,
+            n.ore if n.ore else None, n.compenso_display, n.note or '',
+        ]
+        for c, v in enumerate(valori, 1):
+            cell = ws.cell(row_n, c)
+            cell.value = v
+            cell.border = thin()
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
+
+    larghezze = [16, 14, 26, 16, 16, 8, 14, 30]
+    for c, larg in enumerate(larghezze, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = larg
+    ws.freeze_panes = "A4"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'incarichi_{anno}_{date.today().isoformat()}.xlsx'
+    )
 
 
 # ── STORICO PROSPETTI ────────────────────────────────────────

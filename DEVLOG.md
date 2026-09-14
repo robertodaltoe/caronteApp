@@ -2,6 +2,31 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 11 — Export incarichi docenti (PDF + Excel)
+
+Roberto: "c'è un modo per esportare anche gli incarichi assegnati?" —
+chiarito che intendeva un export a sé della pagina Report → Report
+Docenti → Incarichi docenti (elenco di tutti i docenti con le nomine
+dell'anno: coordinatore, referente, ecc.), che non aveva nessun
+pulsante di stampa/scarico. Confermato "sia PDF che Excel".
+
+- `routes/report.py::_nomine_incarichi_anno(anno)` — la query già in
+  `incarichi_docenti()` fattorizzata in una funzione a sé, riusata
+  dalla pagina e da entrambi gli export (stessa fonte, mai disallineati).
+- `/report/incarichi-docenti/pdf` — stessa vista raggruppata per
+  docente della pagina, stile e font incorporato coerenti con gli
+  altri PDF (`singolo_print.html`, `orario_print.html`).
+- `/report/incarichi-docenti/xlsx` — tabella piatta, una riga per
+  incarico (cognome, nome, incarico, categoria, contesto classe/
+  dipartimento, ore, compenso, note) — più utile in Excel della vista
+  raggruppata, per filtrare/ordinare.
+- Due pulsanti aggiunti in `templates/report/incarichi_docenti.html`.
+
+**Verifica**: 4 nuovi test in `tests/test_export_incarichi.py` (PDF/
+XLSX con dati e senza, formato XLSX verificato riga per riga) — suite
+494/494. Verificato anche dal vivo su copia isolata di `database.db`:
+55 incarichi reali esportati correttamente in entrambi i formati.
+
 ## Sessione 69 addendum 10 — Stampa griglia oraria singolo docente
 
 Roberto voleva stampare SOLO la griglia oraria settimanale di un
