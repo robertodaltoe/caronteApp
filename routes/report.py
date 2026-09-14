@@ -465,8 +465,53 @@ def singolo_pdf(id):
             as_attachment=True,
             download_name=f'report_{d.cognome}{suffisso_anno}_{date.today().isoformat()}.pdf'
         )
-    except ImportError:
-        # WeasyPrint non installato — ritorna HTML con print CSS
+    except (ImportError, OSError):
+        # WeasyPrint non installato (ImportError) o librerie di sistema
+        # native mancanti (OSError da cffi, tipico in sandbox Linux) —
+        # ritorna HTML con print CSS in entrambi i casi.
+        return html_content
+
+
+# ── STAMPA SOLO GRIGLIA ORARIA ───────────────────────────────
+@report_bp.route('/report/docente/<int:id>/orario-pdf')
+def orario_pdf(id):
+    """PDF con la sola griglia oraria settimanale di un docente --
+    niente banca ore/saldi (quelli restano nel report normale,
+    singolo_pdf). Richiesto da Roberto per due usi: stampare l'orario
+    di chi ce l'ha, e stampare un modulo VUOTO da compilare a mano per
+    chi ha una cattedra assegnata ma l'orario non è ancora stato
+    importato per lui (casi reali Rignanese/Mascolo, Sessione 69
+    addendum 7) -- vedi griglia_settimanale(..., completa_se_vuota=True).
+    """
+    from models.orario_docente import griglia_settimanale, GIORNI
+
+    d = Docente.query.get_or_404(id)
+    orario, ore_list, giorni_usati = griglia_settimanale(id, completa_se_vuota=True)
+
+    ORA_LABEL = {
+        1: '7:45–8:40',   2: '8:40–9:35',   3: '9:35–10:40',
+        4: '10:40–11:30', 5: '11:30–12:25', 6: '12:25–13:25',
+        7: '13:25–14:25', 8: '14:25–15:25', 9: '15:25–16:25',
+    }
+
+    from modules.pdf_fonts import contesto_open_sans
+    html_content = render_template('report/orario_print.html',
+        docente=d, orario=orario, ore_list=ore_list, giorni_usati=giorni_usati,
+        giorni_nomi=GIORNI, ora_label=ORA_LABEL, oggi=date.today(),
+        **contesto_open_sans(),
+    )
+
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'orario_{d.cognome}_{date.today().isoformat()}.pdf'
+        )
+    except (ImportError, OSError):
+        # Vedi commento analogo in singolo_pdf poco sopra.
         return html_content
 
 
@@ -741,8 +786,8 @@ def esporta_tutti_pdf():
     import zipfile
     try:
         from weasyprint import HTML
-    except ImportError:
-        return 'WeasyPrint non installato — impossibile generare PDF', 500
+    except (ImportError, OSError):
+        return 'WeasyPrint non disponibile — impossibile generare PDF', 500
 
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     oggi_str = date.today().isoformat()

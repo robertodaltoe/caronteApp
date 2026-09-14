@@ -70,6 +70,11 @@
            class="btn btn-sm" style="background:#6b7280;color:white;">
             {{ icon('print') }} Stampa / PDF
         </a>
+        <a href="{{ url_for('report.orario_pdf', id=docente.id) }}"
+           class="btn btn-sm" style="background:#6b7280;color:white;"
+           title="Solo la griglia oraria settimanale, senza banca ore — anche vuota se l'orario non è ancora stato importato per questo docente">
+            {{ icon('grid') }} Stampa orario
+        </a>
         <a href="{{ url_for('report.singolo_xlsx', id=docente.id, anno=anno) }}"
            class="btn btn-sm btn-success">
             {{ icon('chart') }} XLSX

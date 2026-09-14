@@ -2,6 +2,48 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 10 — Stampa griglia oraria singolo docente
+
+Roberto voleva stampare SOLO la griglia oraria settimanale di un
+docente (non tutto il report banca ore, che è quanto scarica oggi il
+pulsante "Stampa/PDF" già esistente in Report → Docenti → Dettaglio)
+— e per chi ha una cattedra assegnata ma l'orario non ancora importato
+(casi reali Rignanese/Mascolo, addendum 7) un modulo vuoto da
+compilare a mano.
+
+- `models/orario_docente.py::griglia_settimanale(id_docente,
+  completa_se_vuota=False)` — fattorizza la logica di costruzione
+  griglia già duplicata in `routes/banca_ore.py::singolo()`
+  (riusata da lì, comportamento invariato) più il nuovo caso
+  `completa_se_vuota=True`: se il docente non ha nessuna ora reale,
+  ritorna comunque tutti i giorni (Lun-Sab) e tutte le ore (1-9) —
+  un modello pieno da stampare in bianco.
+- Nuova route `/report/docente/<id>/orario-pdf` (`routes/report.py::orario_pdf`)
+  + template a sé `templates/report/orario_print.html` (stesso stile
+  brand/font incorporato di `singolo_print.html`, ma solo la griglia,
+  nessun dato di banca ore) — link "Stampa orario" aggiunto accanto al
+  pulsante "Stampa / PDF" esistente in `templates/banca_ore/singolo.html`.
+
+**Bug pre-esistente trovato e corretto durante l'implementazione**:
+tre route PDF di `routes/report.py` (`singolo_pdf`, `esporta_tutti_pdf`,
+e per coerenza la nuova `orario_pdf`) catturavano solo `ImportError`
+attorno a `from weasyprint import HTML` — ma quando WeasyPrint è
+installato pip-wise senza le sue librerie di sistema native (pango/
+cairo/gdk-pixbuf, es. sandbox Linux o un ambiente Mac con setup
+incompleto) l'errore reale è un `OSError` da cffi, non catturato,
+quindi la route andava in errore 500 invece del fallback HTML previsto.
+`routes/attivita_ist.py::piano_annuale_pdf` aveva già la correzione
+giusta (`except (ImportError, OSError)`) da tempo — non ancora
+applicata qui. Allineato tutto e tre i punti.
+
+**Verifica**: 6 nuovi test in `tests/test_orario_pdf_docente.py`
+(griglia con dati reali, vuota, vuota-completa, con-dati-ignora-
+completa, route con orario, route senza orario) — suite 490/490.
+Verificato anche dal vivo su copia isolata: PDF generato per un
+docente con orario (Santagata) e per uno senza (Rignanese, griglia
+vuota completa 6 giorni × 9 ore), link "Stampa orario" presente e
+funzionante nella pagina Report → Docenti → Dettaglio.
+
 ## Sessione 69 addendum 9 — Sostituzioni: funziona anche se l'assenza esisteva già (+ incidente Drive)
 
 Roberto ha chiesto se, una volta trovata una sostituta per Alessi, può

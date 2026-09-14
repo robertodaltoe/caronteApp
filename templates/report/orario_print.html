@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Orario {{ docente.cognome }} — {{ oggi.strftime('%d/%m/%Y') }}</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+@font-face {
+    font-family: 'Open Sans'; font-weight: 400; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_400 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 600; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_600 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 700; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_700 }}) format('woff2');
+}
+body { font-family: 'Open Sans', Arial, sans-serif; font-size:10pt;
+       color:#1e2939; padding:14px 18px; }
+h1 { font-size:15pt; color:#7a1c17; margin-bottom:2px; }
+.sub { font-size:9pt; color:#6b7280; margin-bottom:16px; }
+
+table { width:100%; border-collapse:collapse; table-layout:fixed; }
+th { background:#7a1c17; color:white; padding:7px 4px; text-align:center;
+     font-weight:600; font-size:8.5pt; }
+th.col-ora { width:70px; }
+td.col-ora { background:#f3e5e2; font-weight:700; font-size:8pt;
+             text-align:center; vertical-align:middle; color:#7a1c17; }
+td { border:1px solid #d9dfe6; padding:4px; height:44px;
+     vertical-align:middle; text-align:center; font-size:8.5pt; }
+td.vuota { background:#fafafa; }
+.classe { font-weight:700; font-size:9.5pt; }
+.materia { color:#6b7280; font-size:7.5pt; margin-top:2px; }
+
+.piede { margin-top:14px; font-size:7.5pt; color:#9ca3af; }
+</style>
+</head>
+<body>
+
+<h1>Orario settimanale — {{ docente.cognome }} {{ docente.nome }}</h1>
+<div class="sub">Stampato il {{ oggi.strftime('%d/%m/%Y') }}</div>
+
+{% if not orario %}
+<div class="sub" style="color:#b91c1c; font-weight:700;">
+    Nessun orario importato per questo docente — modulo vuoto da compilare a mano.
+</div>
+{% endif %}
+
+<table>
+    <thead>
+        <tr>
+            <th class="col-ora"></th>
+            {% for g in giorni_usati %}
+            <th>{{ giorni_nomi[g] }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for ora in ore_list %}
+        <tr>
+            <td class="col-ora">{{ ora }}ª<br>{{ ora_label.get(ora, '') }}</td>
+            {% for g in giorni_usati %}
+            {% set slot = orario.get(g, {}).get(ora) %}
+            <td class="{{ '' if slot else 'vuota' }}">
+                {% if slot %}
+                <div class="classe">{{ slot.classe }}</div>
+                {% if slot.materia %}<div class="materia">{{ slot.materia }}</div>{% endif %}
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="piede">CaronteApp — orario ad uso interno, non destinato alla pubblicazione.</div>
+
+</body>
+</html>

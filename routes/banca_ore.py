@@ -78,7 +78,6 @@ def index():
 def singolo(id):
     from routes.report import get_saldi_docente, get_storico_settimanale, get_ore_ist_docente
     from models.supplenza import Supplenza
-    from models.orario_docente import OrarioDocente
 
     anno_corrente = get_anno_corrente()
     anno = request.args.get('anno', anno_corrente)
@@ -110,17 +109,11 @@ def singolo(id):
                  .order_by(Supplenza.data)
                  .all())
 
+    from models.orario_docente import griglia_settimanale
     GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
-    slots = OrarioDocente.query.filter_by(id_docente=id).order_by(
-        OrarioDocente.giorno, OrarioDocente.ora).all()
-    orario = {}
-    ore_usate = set()
-    for s in slots:
-        if s.classe and s.classe not in ('---', '-x-', ''):
-            orario.setdefault(s.giorno, {})[s.ora] = s
-            ore_usate.add(s.ora)
-    ore_list = sorted(ore_usate) if ore_usate else list(range(1, 6))
-    giorni_usati = sorted(set(s.giorno for s in slots))
+    orario, ore_list, giorni_usati = griglia_settimanale(id)
+    if not ore_list:
+        ore_list = list(range(1, 6))
 
     ruolo_utente = session.get('ruolo', 'collaboratore')
     ore_ist = None
