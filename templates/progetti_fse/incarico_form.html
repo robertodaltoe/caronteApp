@@ -25,7 +25,7 @@
     </div>
     <div class="form-group">
         <label>Oppure nome (se persona esterna non censita)</label>
-        <input type="text" name="nome_esterno" value="{{ incarico.nome_esterno if incarico else '' }}">
+        <input type="text" name="nome_esterno" value="{{ incarico.nome_esterno if incarico and incarico.nome_esterno is not none else '' }}">
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group">
@@ -49,15 +49,15 @@
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
         <div class="form-group">
             <label>Tariffa oraria (€/h)</label>
-            <input type="text" name="tariffa_oraria" value="{{ incarico.tariffa_oraria if incarico else '' }}">
+            <input type="text" name="tariffa_oraria" value="{{ incarico.tariffa_oraria if incarico and incarico.tariffa_oraria is not none else '' }}">
         </div>
         <div class="form-group">
             <label>Ore previste</label>
-            <input type="text" name="ore_previste" value="{{ incarico.ore_previste if incarico else '' }}">
+            <input type="text" name="ore_previste" value="{{ incarico.ore_previste if incarico and incarico.ore_previste is not none else '' }}">
         </div>
         <div class="form-group">
             <label>Ore rendicontate</label>
-            <input type="text" name="ore_rendicontate" value="{{ incarico.ore_rendicontate if incarico else '' }}">
+            <input type="text" name="ore_rendicontate" value="{{ incarico.ore_rendicontate if incarico and incarico.ore_rendicontate is not none else '' }}">
         </div>
     </div>
     <div class="form-group">
@@ -70,7 +70,7 @@
     </div>
     <div class="form-group">
         <label>Note</label>
-        <textarea name="note" rows="3">{{ incarico.note if incarico else '' }}</textarea>
+        <textarea name="note" rows="3">{{ incarico.note if incarico and incarico.note is not none else '' }}</textarea>
     </div>
 </div>
 
@@ -83,7 +83,7 @@
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group">
             <label>Luogo di nascita</label>
-            <input type="text" name="luogo_nascita" value="{{ incarico.luogo_nascita if incarico else '' }}">
+            <input type="text" name="luogo_nascita" value="{{ incarico.luogo_nascita if incarico and incarico.luogo_nascita is not none else '' }}">
         </div>
         <div class="form-group">
             <label>Data di nascita</label>
@@ -93,11 +93,11 @@
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group">
             <label>Codice fiscale</label>
-            <input type="text" name="codice_fiscale" maxlength="16" value="{{ incarico.codice_fiscale if incarico else '' }}">
+            <input type="text" name="codice_fiscale" maxlength="16" value="{{ incarico.codice_fiscale if incarico and incarico.codice_fiscale is not none else '' }}">
         </div>
         <div class="form-group">
             <label>Indirizzo di residenza</label>
-            <input type="text" name="indirizzo_residenza" value="{{ incarico.indirizzo_residenza if incarico else '' }}">
+            <input type="text" name="indirizzo_residenza" value="{{ incarico.indirizzo_residenza if incarico and incarico.indirizzo_residenza is not none else '' }}">
         </div>
     </div>
 </div>

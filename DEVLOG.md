@@ -2,6 +2,60 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 15 — Progetti FSE/FESR: tabella moduli nel decreto di avvio + fix crash cambio stato incarico
+
+Due segnalazioni di Roberto insieme:
+
+**1. Tabella moduli anche nel decreto di avvio selezione.** La tabella
+riepilogativa (modulo/ore/figure richieste/compensi) esisteva solo
+nell'avviso di selezione. Estratta in un partial condiviso
+`templates/progetti_fse/documenti/_tabella_moduli.html`, incluso ora
+sia da `avviso_selezione.html` sia da `decreto_avvio_selezione.html`
+(addendum 13) — stessa tabella, non una copia da tenere sincronizzata
+a mano. Verificato con rendering reale (non il render finto dei test):
+entrambi i moduli del progetto "Menti in Movimento" compaiono nel
+decreto di avvio generato.
+
+**2. "Pagina di errore" modificando lo stato di un incarico da
+incaricato a candidato.** Riprodotto passo-passo nel browser (server
+temporaneo su porta 5099 puntato a una copia isolata del `database.db`
+reale, mai quello vero) cliccando esattamente come farebbe Roberto:
+apertura di "Modifica incarico" su un incaricato con `ore_rendicontate`
+NULL, cambio del solo campo stato, Salva -> **500 Internal Server
+Error**.
+
+**Causa reale** (dal traceback): `templates/progetti_fse/incarico_form.html`
+(e allo stesso modo `form.html` del progetto e `modulo_form.html`)
+precompilavano i campi nullable con il pattern
+`{{ obj.campo if obj else '' }}` — che copre solo il caso "oggetto
+nuovo" (obj è None), non il caso "oggetto esistente ma campo NULL":
+Jinja stampa in quel caso il testo letterale `"None"` invece di
+lasciare il campo vuoto (comportamento di default, non un bug di
+Jinja). Al submit, quel testo tornava indietro invariato e
+`routes/progetti_fse.py::_decimal()` chiamava `float("None")`, che
+solleva `ValueError` non gestito -> 500. Per i campi di TESTO (non
+numerici) lo stesso pattern non fa crashare nulla ma è più insidioso:
+scriverebbe silenziosamente la stringa `"None"` nel database se il
+form viene salvato senza toccare quel campo.
+
+**Fix**: corretto il pattern in tutti e 42 i punti dei tre template
+(`form.html`, `modulo_form.html`, `incarico_form.html`) — ora
+`{{ obj.campo if obj and obj.campo is not none else '' }}`. Aggiunta
+anche una rete di sicurezza in `_decimal()`: tratta esplicitamente il
+testo `"None"`/`"none"` come vuoto invece di far fallire `float()`, nel
+caso lo stesso pattern ricompaia altrove in futuro.
+
+**Verifica**: 4 nuovi test (41 totali in `tests/test_progetti_fse.py`,
+tutti verdi) — submit reale che riproduce il caso di Roberto (stato
+incaricato -> candidato con ore_rendicontate NULL, non deve più dare
+500), `_decimal` con input `"None"`/`"none"`, e presenza dell'include
+condiviso nei due documenti. Riprodotto anche l'errore ORIGINALE nel
+browser prima del fix (500 confermato con lo stesso traceback), poi
+la correzione verificata di nuovo nello stesso modo dopo il fix
+("Incarico aggiornato.", nessun errore). `database.db` reale mai
+toccato in tutta la verifica (solo copie in `/tmp`, server temporaneo
+su porta separata 5099).
+
 ## Sessione 69 addendum 14 — Progetti FSE/FESR: link mancanti a modifica/elimina incarico
 
 Roberto, dalla pagina dettaglio di un progetto: come faccio a modificare

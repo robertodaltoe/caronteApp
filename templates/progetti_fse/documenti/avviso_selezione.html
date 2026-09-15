@@ -40,34 +40,7 @@ Codice progetto: {{ progetto.codice_progetto or '—' }}
 P.A. e persone fisiche, mediante procedura comparativa di titoli, delle figure professionali per lo
 svolgimento delle attività di seguito specificate:</p>
 
-<table class="tabella-incarichi">
-    <tr>
-        <th>Modulo</th><th>Titolo del corso</th><th class="num">Ore</th>
-        <th class="num">Partecipanti min.</th><th>Figure richieste</th>
-        <th class="num">Compenso orario</th><th class="num">Compenso complessivo</th>
-    </tr>
-    {% for m in progetto.moduli %}
-    <tr>
-        <td>{{ m.codice_esterno or '—' }}</td>
-        <td>{{ m.titolo }}{% if m.tipologia %}<br><span style="color:#666;">{{ m.tipologia }}</span>{% endif %}</td>
-        <td class="num">{{ m.ore }}</td>
-        <td class="num">{{ m.n_partecipanti_minimo or '—' }}</td>
-        <td>
-            N. 1 ESPERTO<br>N. 1 TUTOR
-            {% for inc in m.incarichi if inc.ruolo == 'figura_aggiuntiva' %}<br>N. 1 FIGURA AGGIUNTIVA{% endfor %}
-        </td>
-        <td class="num">
-            {% if progetto.tariffa_esperto %}€{{ '%.2f'|format(progetto.tariffa_esperto) }}/h{% endif %}<br>
-            {% if progetto.tariffa_tutor %}€{{ '%.2f'|format(progetto.tariffa_tutor) }}/h{% endif %}
-        </td>
-        <td class="num">
-            {% if progetto.tariffa_esperto and progetto.tariffa_tutor %}
-            €{{ '%.2f'|format(progetto.tariffa_esperto * m.ore + progetto.tariffa_tutor * m.ore) }}
-            {% else %}—{% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+{% include 'progetti_fse/documenti/_tabella_moduli.html' %}
 
 <p>La misura del compenso è stabilita per un totale complessivo come indicato nella tabella sopra riportata,
 tenuto conto in ogni caso delle ore effettivamente svolte e rendicontate dal soggetto incaricato. In caso di

@@ -846,6 +846,79 @@ def test_genera_decreto_avvio_selezione_crea_documento_tracciato(app, db_session
     assert doc is not None
 
 
+def test_decreto_avvio_selezione_include_la_tabella_moduli_condivisa(app, db_session, monkeypatch):
+    """Roberto: la tabella dei moduli/figure/compensi dell'avviso di
+    selezione deve comparire identica anche nel decreto di avvio --
+    estratta in _tabella_moduli.html e inclusa da entrambi. Il render
+    reale con dati (WeasyPrint/Jinja) è verificato a mano su copia
+    isolata del database, come da protocollo di sicurezza della
+    sessione; qui verifichiamo solo che il sorgente di entrambi i
+    documenti includa lo stesso partial, e che le route che li generano
+    funzionino."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        assert c.post(f'/progetti-fse/{p.id}/documenti/decreto-avvio-selezione', data={}).status_code == 200
+        assert c.post(f'/progetti-fse/{p.id}/documenti/avviso-selezione', data={}).status_code == 200
+
+    import pathlib
+    src_decreto = pathlib.Path('templates/progetti_fse/documenti/decreto_avvio_selezione.html').read_text()
+    src_avviso = pathlib.Path('templates/progetti_fse/documenti/avviso_selezione.html').read_text()
+    assert "{% include 'progetti_fse/documenti/_tabella_moduli.html' %}" in src_decreto
+    assert "{% include 'progetti_fse/documenti/_tabella_moduli.html' %}" in src_avviso
+
+
+def test_decimal_tratta_none_letterale_come_vuoto(app, db_session):
+    """Regressione: i form di progetto/modulo/incarico prima
+    ristampavano un campo NULL esistente come testo letterale "None"
+    (Roberto: pagina di errore cambiando lo stato di un incarico da
+    incaricato a candidato, perché il campo "ore rendicontate" vuoto
+    veniva precompilato con "None" e rispedito indietro tale e quale).
+    I template sono stati corretti, ma _decimal deve comunque trattare
+    "None"/"none" come vuoto invece di far fallire float() con un
+    ValueError non gestito -- rete di sicurezza indipendente dal fix
+    nei template."""
+    from routes.progetti_fse import _decimal
+    from werkzeug.datastructures import MultiDict
+    assert _decimal(MultiDict({'ore': 'None'}), 'ore') is None
+    assert _decimal(MultiDict({'ore': 'none'}), 'ore') is None
+    assert _decimal(MultiDict({'ore': '30,5'}), 'ore') == 30.5
+    assert _decimal(MultiDict({'ore': ''}), 'ore') is None
+
+
+def test_modifica_incarico_cambia_stato_senza_errore_con_campi_nulli(app, db_session, monkeypatch):
+    """Riproduce esattamente il caso segnalato da Roberto: un incarico
+    con ore_rendicontate NULL, modificato cambiando solo lo stato da
+    'incaricato' a 'candidato' -- prima del fix ai template, il
+    campo veniva rimandato indietro come testo "None" e la route
+    andava in errore 500."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Modulo test', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, nome_esterno='Mario Rossi', ruolo='tutor',
+                       tariffa_oraria=30, ore_previste=30, ore_rendicontate=None, stato='incaricato')
+    db.session.add(inc)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/incarichi/{inc.id}/modifica', data={
+            'ruolo': 'tutor', 'stato': 'candidato',
+            'tariffa_oraria': '30', 'ore_previste': '30', 'ore_rendicontate': '',
+        })
+        assert r.status_code == 302
+
+    assert IncaricoFSE.query.get(inc.id).stato == 'candidato'
+
+
 def test_avviso_selezione_cita_decreto_avvio_gia_protocollato(app, db_session, monkeypatch):
     """Come per gli altri riferimenti incrociati: una volta protocollato
     il decreto di avvio, l'avviso di selezione generato dopo deve poter

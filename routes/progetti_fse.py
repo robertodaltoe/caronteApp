@@ -30,6 +30,18 @@ def _utente():
 
 def _decimal(form, campo):
     v = (form.get(campo) or '').strip().replace(',', '.')
+    if v.lower() == 'none':
+        # Difesa in profondità: i template dei form (form.html,
+        # modulo_form.html, incarico_form.html) prima valorizzavano i
+        # campi nullable con "{{ obj.campo if obj else '' }}", che con
+        # un campo esistente ma NULL stampa il testo letterale "None"
+        # (comportamento di default di Jinja) invece di lasciare vuoto
+        # -- risalendo poi qui come stringa non numerica e facendo
+        # crashare float() con un 500 (segnalato da Roberto cambiando
+        # lo stato di un incarico). Già corretto nei template, questo
+        # resta solo come rete di sicurezza per non ripetere lo stesso
+        # crash se lo stesso pattern ricompare altrove in futuro.
+        return None
     return float(v) if v else None
 
 
