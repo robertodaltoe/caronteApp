@@ -588,13 +588,17 @@ def test_genera_nomina_commissione_crea_documento(app, db_session, monkeypatch):
     assert doc is not None
 
 
-def test_genera_verbale_commissione_include_solo_incaricati(app, db_session, monkeypatch):
-    """L'esito riportato nel verbale deve limitarsi agli incarichi
-    esperto/tutor/figura aggiuntiva assegnati -- non un candidato ancora
-    da valutare, e non l'incarico di Direzione e Coordinamento (quello
-    non passa dalla procedura comparativa della commissione, ha un
-    proprio decreto dedicato: mescolarlo nell'esito della selezione
-    sarebbe un errore di contenuto, non solo di forma)."""
+def test_genera_verbale_commissione_include_tutte_le_candidature(app, db_session, monkeypatch):
+    """Roberto: il verbale deve elencare modulo e candidature pervenute
+    per ciascuno, così da dover scrivere a mano solo punteggio e
+    posizione -- quindi deve includere sia i "candidato" (non ancora
+    valutati) sia gli "incaricato" (già decisi in una sessione
+    precedente), NON solo l'esito finale come nella versione
+    precedente. Esclusa solo la Direzione e Coordinamento (quell'
+    incarico non passa dalla procedura comparativa della commissione,
+    ha un proprio decreto dedicato: mescolarlo nell'elenco delle
+    candidature esaminate dalla commissione sarebbe un errore di
+    contenuto, non solo di forma)."""
     _crea_tabelle(app)
     _registra_blueprint(app, monkeypatch)
     p, m, inc = _progetto_con_incarico_confermato()
@@ -608,7 +612,6 @@ def test_genera_verbale_commissione_include_solo_incaricati(app, db_session, mon
 
     import routes.progetti_fse as mod
     catturato = {}
-    orig = mod.render_template
     def _capture(nome, **k):
         if nome == 'progetti_fse/documenti/verbale_commissione.html':
             catturato.update(k)
@@ -622,10 +625,36 @@ def test_genera_verbale_commissione_include_solo_incaricati(app, db_session, mon
         })
         assert r.status_code == 200
 
-    incarichi_passati = catturato['incarichi']
-    assert [i.id for i in incarichi_passati] == [inc.id]  # non include il "candidato"
+    candidature_passate = catturato['candidature']
+    assert {i.id for i in candidature_passate} == {inc.id, candidato.id}  # non il project_manager
     doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='verbale_commissione').first()
     assert doc is not None
+
+
+def test_candidature_pervenute_ordina_per_modulo_e_ruolo(app, db_session):
+    """L'elenco deve restare raggruppato per modulo e poi per figura
+    (esperto prima di tutor, come in RUOLI_INCARICO), così i candidati
+    dello stesso modulo/ruolo compaiono vicini in tabella invece che
+    mischiati nell'ordine casuale di inserimento -- altrimenti la
+    commissione dovrebbe comunque riordinarli a mano prima di scrivere
+    punteggio/posizione, vanificando il motivo per cui li precompiliamo."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _candidature_pervenute
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m1 = ModuloFSE(id_progetto=p.id, titolo='Modulo A', ore=30)
+    m2 = ModuloFSE(id_progetto=p.id, titolo='Modulo B', ore=30)
+    db.session.add_all([m1, m2])
+    db.session.flush()
+    tutor_m1 = IncaricoFSE(id_modulo=m1.id, nome_esterno='Tutor Uno', ruolo='tutor', tariffa_oraria=30, ore_previste=30)
+    esperto_m1 = IncaricoFSE(id_modulo=m1.id, nome_esterno='Esperto Uno', ruolo='esperto', tariffa_oraria=70, ore_previste=30)
+    esperto_m2 = IncaricoFSE(id_modulo=m2.id, nome_esterno='Esperto Due', ruolo='esperto', tariffa_oraria=70, ore_previste=30)
+    db.session.add_all([tutor_m1, esperto_m1, esperto_m2])
+    db.session.commit()
+
+    ordinati = _candidature_pervenute(p)
+    assert [c.nome_completo for c in ordinati] == ['Esperto Uno', 'Tutor Uno', 'Esperto Due']
 
 
 def test_genera_pubblicazione_graduatoria_crea_documento(app, db_session, monkeypatch):

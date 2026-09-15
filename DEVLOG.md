@@ -2,6 +2,44 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 16 — Progetti FSE/FESR: il verbale commissione precompila moduli e candidature pervenute
+
+Roberto: il verbale di valutazione dovrebbe riportare in tabella
+almeno i moduli e le candidature pervenute per ciascuno, così da dover
+inserire a mano solo punteggio e posizione, senza ritrascrivere anche
+i nominativi.
+
+**Prima**: la tabella del verbale mostrava solo l'ESITO già deciso
+(`_incarichi_confermati()`, stato 'incaricato') — utile a decreto e
+graduatoria (che devono mostrare solo il risultato finale), ma inutile
+come base di lavoro per la seduta della commissione, che deve valutare
+le candidature PRIMA che l'esito sia deciso.
+
+**Fix**: nuova funzione `_candidature_pervenute()`
+(`routes/progetti_fse.py`) — tutte le candidature di ogni modulo,
+qualunque stato (candidato/incaricato/rinunciato), esclusa sempre la
+Direzione e Coordinamento (non passa dalla commissione), ordinate per
+modulo e poi per figura (esperto prima di tutor, come in
+`RUOLI_INCARICO`) così i candidati dello stesso modulo/ruolo restano
+vicini in tabella. `genera_verbale_commissione()` ora usa questa
+funzione al posto di `_incarichi_confermati()` (che resta invariata,
+ancora corretta per decreto di nomina e pubblicazione graduatoria: lì
+serve solo l'esito). Il template `verbale_commissione.html` ha due
+nuove colonne vuote "Punteggio"/"Posizione" da compilare a mano (o a
+video prima della stampa) e il testo introduttivo aggiornato per
+riflettere che la tabella è materiale di lavoro per la seduta, non più
+un esito già deciso.
+
+**Verifica**: 2 nuovi test (42 in `tests/test_progetti_fse.py`, tutti
+verdi) — uno riscritto per riflettere il nuovo comportamento voluto
+(prima verificava esplicitamente il vecchio comportamento "solo
+incaricati", ora verifica che compaiano sia candidati che incaricati,
+mai la Direzione e Coordinamento), uno nuovo sull'ordinamento per
+modulo/ruolo. Verificato anche con rendering reale sulle 7 candidature
+vere del progetto "Menti in movimento" (3 moduli, copia isolata del
+`database.db` reale in `/tmp`, mai quello vero): tutte compaiono in
+tabella raggruppate per modulo, con le due colonne vuote presenti.
+
 ## Sessione 69 addendum 15 — Progetti FSE/FESR: tabella moduli nel decreto di avvio + fix crash cambio stato incarico
 
 Due segnalazioni di Roberto insieme:

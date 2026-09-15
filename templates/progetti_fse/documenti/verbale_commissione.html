@@ -43,24 +43,28 @@ graduatoria degli aspiranti.</p>
 <p>{{ note_esame }}</p>
 {% endif %}
 
-<p>Esaminata la documentazione presentata dai candidati, la Commissione individua per ciascun modulo i
-seguenti nominativi quale esito della valutazione comparativa:</p>
+<p>Esaminata la documentazione presentata dai candidati per ciascun modulo e figura professionale, la
+Commissione attribuisce a ciascuno il punteggio risultante dall'applicazione dei criteri di valutazione di
+cui all'Avviso di selezione e la conseguente posizione nella graduatoria di merito, come segue:</p>
 
 <table class="tabella-incarichi">
-    <tr><th>Modulo</th><th>Figura</th><th>Incaricato</th></tr>
-    {% for inc in incarichi %}
+    <tr><th>Modulo</th><th>Figura</th><th>Candidato</th><th class="num">Punteggio</th><th class="num">Posizione</th></tr>
+    {% for c in candidature %}
     <tr>
-        <td>{{ inc.modulo.titolo }} ({{ inc.modulo.codice_esterno or '—' }})</td>
-        <td>{{ ruoli_label.get(inc.ruolo, inc.ruolo)|upper }}</td>
-        <td>{{ inc.nome_completo }}</td>
+        <td>{{ c.modulo.titolo }} ({{ c.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(c.ruolo, c.ruolo)|upper }}</td>
+        <td>{{ c.nome_completo }}</td>
+        <td class="num">&nbsp;</td>
+        <td class="num">&nbsp;</td>
     </tr>
     {% endfor %}
 </table>
 
-<p style="font-size:9px; color:#777;">Nota: il presente verbale riporta l'esito finale della valutazione
-comparativa registrato in CaronteApp. Il dettaglio dei punteggi attribuiti a ciascun candidato e le
-eventuali graduatorie per categoria (personale interno / altre amministrazioni / esterni), non gestiti da
-questo modulo, vanno allegati o integrati manualmente prima della protocollazione.</p>
+<p style="font-size:9px; color:#777;">Nota: l'elenco riporta tutte le candidature pervenute per modulo/figura
+già registrate in CaronteApp, comprese eventuali rinunce — verificare che corrisponda alle domande
+effettivamente pervenute entro i termini prima della seduta. Punteggio e posizione in graduatoria non sono
+gestiti da CaronteApp: vanno compilati a mano (o a video, prima della stampa) sulla base dei criteri
+dell'Avviso di selezione.</p>
 
 <p>La Commissione trasmette il presente verbale al Dirigente Scolastico per gli adempimenti connessi alla
 pubblicità legale.</p>

@@ -828,6 +828,23 @@ def _incarichi_confermati(progetto):
             if i.stato == 'incaricato' and i.ruolo != 'project_manager']
 
 
+def _candidature_pervenute(progetto):
+    """Tutte le candidature ricevute per ciascun modulo (qualunque
+    stato: candidato/incaricato/rinunciato), esclusa la Direzione e
+    Coordinamento -- a differenza di _incarichi_confermati() (solo
+    l'esito già deciso), qui serve l'elenco COMPLETO di chi ha
+    presentato domanda, da usare nel verbale della commissione: Roberto
+    vuole trovarci già modulo/figura/nominativo per ciascun candidato
+    pervenuto, in modo da dover scrivere a mano solo punteggio e
+    posizione durante la seduta, invece di ritrascrivere anche i nomi.
+    Ordinata per modulo (ordine di creazione) e poi per ruolo, cosi' i
+    candidati dello stesso modulo/figura restano vicini in tabella."""
+    ordine_ruolo = {cod: i for i, (cod, _lbl) in enumerate(RUOLI_INCARICO)}
+    candidature = [i for m in progetto.moduli for i in m.incarichi if i.ruolo != 'project_manager']
+    candidature.sort(key=lambda i: (i.id_modulo, ordine_ruolo.get(i.ruolo, 99), i.nome_completo))
+    return candidature
+
+
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/nomina-commissione', methods=['GET', 'POST'])
 def genera_nomina_commissione(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
@@ -883,13 +900,13 @@ def genera_dichiarazione_insussistenza_commissario(id_progetto):
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/verbale-commissione', methods=['GET', 'POST'])
 def genera_verbale_commissione(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
-    incarichi = _incarichi_confermati(p)
+    candidature = _candidature_pervenute(p)
     if request.method == 'POST':
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
         riferimento_nomina = _riferimento_documento(p, 'nomina_commissione')
         html_content = render_template('progetti_fse/documenti/verbale_commissione.html',
             progetto=p, data_generazione=date.today(), riferimento_bando=riferimento_bando,
-            riferimento_nomina=riferimento_nomina, incarichi=incarichi, ruoli_label=RUOLI_INCARICO_LABEL,
+            riferimento_nomina=riferimento_nomina, candidature=candidature, ruoli_label=RUOLI_INCARICO_LABEL,
             presidente=request.form.get('presidente', '').strip() or None,
             componente=request.form.get('componente', '').strip() or None,
             segretario=request.form.get('segretario', '').strip() or None,
