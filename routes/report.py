@@ -765,9 +765,21 @@ def prospetto(data_str=None):
 
     save_dir   = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                               'data', 'prospetti')
-    xlsx_bytes = genera_prospetto(data_sel, supplenze, template_path,
-                                  save_dir=save_dir,
-                                  attivita_ist=attivita_ist_giorno)
+    xlsx_bytes, classi_non_trovate, avviso_foglio = genera_prospetto(
+        data_sel, supplenze, template_path, save_dir=save_dir, attivita_ist=attivita_ist_giorno)
+    if avviso_foglio:
+        flash('Prospetto generato: ' + avviso_foglio, 'warning')
+    if classi_non_trovate:
+        # Il file viene comunque scaricato (i supplenti restano visibili
+        # nella tabella firme in fondo, che non dipende da questo
+        # lookup): senza avviso, un nome mancante nella griglia ore/
+        # classi passerebbe inosservato finché qualcuno non lo nota a
+        # mano sul foglio stampato (Roberto, verificando: "non mi
+        # compaiono i nomi nelle celle corrispondenti a ore e classi").
+        flash('Prospetto generato, ma queste classi non sono state riconosciute e le relative supplenze '
+              'non compaiono nella griglia (restano comunque nella tabella firme in fondo al foglio): '
+              + ', '.join(classi_non_trovate) + '. Verifica come sono scritte in Supplenze, o se la '
+              'classe manca dal template.', 'warning')
 
     nome_file = f'Prospetto_supplenze_{data_sel.strftime("%d%m%Y")}.xlsx'
     return send_file(

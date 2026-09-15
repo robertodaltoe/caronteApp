@@ -2,6 +2,70 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 20 — Prospetto supplenze: nomi assenti dalla griglia ore/classi
+
+Roberto: generando il prospetto dalla dashboard, i nominativi
+comparivano nella tabella firme in fondo al foglio ma non nelle celle
+ore/classi.
+
+**Causa reale** (verificata sui dati veri, non ipotizzata): il modulo
+`modules/prospetto_supplenze.py` usava un dizionario Python fisso
+(`CLASSE_RIGHE_RAW`) con le righe del foglio `MATRICE 25_26` del
+template — l'anno SCORSO. Il template (`data/prospetto_template.xlsx`,
+non versionato) contiene però già un foglio aggiornato `MATRICE 26_27`
+con le righe delle sezioni B aggiunte quest'anno (1B CAT, 1B AFM,
+1B LSU, 3B LSC, 3B RIM), mai raggiunto dal codice perché il nome del
+foglio era fisso. Query dirette sul DB reale: 77 supplenze su "1B CAT"
+da sole, tutte con classe assente dalla mappa fissa. In più, 10 classi
+distinte nei dati reali sono salvate senza lo spazio fra sezione e
+indirizzo (es. "1ACAT" invece di "1A CAT" — così le scrive
+l'importazione orario), mai gestito dalla normalizzazione precedente.
+La tabella firme in fondo, non dipendendo da questa mappa, mostrava
+comunque il nome — motivo per cui il problema è passato inosservato
+finché non si è guardata la griglia con attenzione.
+
+**Fix — riscritto il modulo per leggere la struttura dal foglio invece
+che da costanti Python**:
+- `_scegli_foglio()`: sceglie il foglio `MATRICE aa_bb` corrispondente
+  all'anno scolastico corrente (`config_anno.get_anno_corrente()`),
+  con fallback sul foglio "MATRICE ..." più recente se quello esatto
+  non è ancora stato preparato — segnalato con un flash all'utente
+  invece di procedere in silenzio con un foglio potenzialmente
+  sbagliato.
+- `_righe_classi()`: legge la mappa classe→riga direttamente dal
+  foglio scelto (colonna B, dalla prima riga classe fino a "FIRMA
+  DOCENTI INTERESSATI"), non più un dizionario fisso — si adatta da
+  solo quando Roberto aggiunge/toglie una sezione, senza bisogno di
+  aggiornare il codice ogni anno (esattamente quello che è mancato).
+- `_righe_firme()`: stessa idea per l'intestazione della tabella firme
+  (cerca la cella "DOCENTE" invece di righe fisse — il foglio nuovo ne
+  ha due in più di intestazione).
+- `_trova_riga()`/`_norm_compatto()`: prova prima la forma con spazio
+  (come scritta nel template), poi quella compatta senza spazio (come
+  la salva l'importazione orario), prima di arrendersi — e se non
+  trova comunque nulla, registra la classe invece di scartarla in
+  silenzio (`except: pass`, com'era prima), così la route può
+  segnalarla a Roberto invece di far sparire un nome senza traccia.
+- `genera_prospetto()` ritorna ora `(xlsx_bytes, classi_non_trovate,
+  avviso_foglio)`; `routes/report.py::prospetto()` mostra un flash se
+  una o entrambe le cose non tornano pulite — il file si scarica
+  comunque (i supplenti restano visibili in tabella firme).
+
+**Verifica**: 11 nuovi test in `tests/test_prospetto_supplenze.py`
+(prima il modulo non aveva nessun test) — template minimo costruito a
+mano con openpyxl (non dipende dal file reale, non versionato), copre
+selezione foglio per anno/fallback, lettura dinamica righe
+classi/firme, recupero forma compatta, segnalazione classe assente dal
+template, indipendenza della tabella firme dal riconoscimento classe.
+Verificato anche con rendering reale: contro il template vero
+(`/Users/Roberto/CaronteApp/data/prospetto_template.xlsx`, mai
+scritto, solo letto) e supplenze reali sulle classi "1BCAT"/"1BLSU"/
+"3BLLI" prima non riconosciute — ora tutte trovate, zero classi non
+riconosciute residue per i dati verificati. `database.db` reale
+verificato invariato prima/dopo (solo copie in `/tmp` per le query di
+lettura). Suite completa: 518 test verdi (11 nuovi inclusi), stessi 3
+fallimenti pre-esistenti non collegati (fixture `app_reale`/login).
+
 ## Sessione 69 addendum 19 — Progetti FSE/FESR: lettera di incarico e contratto autonomo citano tutti i riferimenti pescati dai documenti
 
 Roberto: nell'elaborazione degli incarichi, il riferimento alla

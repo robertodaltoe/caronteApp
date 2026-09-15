@@ -1,44 +1,37 @@
 """
 modules/prospetto_supplenze.py
-Genera il Prospetto Supplenze giornaliero nel formato MATRICE 25_26 aggiornato.
+Genera il Prospetto Supplenze giornaliero, leggendo la struttura
+(righe classi, tabella firme) direttamente dal foglio del template
+invece di righe fisse in Python — vedi _scegli_foglio()/_righe_classi()
+/_righe_firme() più sotto per il perché (Roberto, 15/09/2026: i nomi
+non comparivano nella griglia per le classi con sezione B, perché il
+codice era ancorato al foglio 'MATRICE 25_26' dell'anno scorso mentre
+quelle sezioni esistono solo nel foglio 'MATRICE 26_27', già presente
+nel template ma mai usato).
 """
 import io, re
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 
 # Mappatura ora -> (col_assente, col_sostituto) — celle merged D:E, F:G, H:I...
+# Verificata identica nei fogli 'MATRICE 25_26' e 'MATRICE 26_27' del
+# template reale (stessa intestazione righe 7-8): a differenza delle
+# righe classi, qui non serve derivarla dal foglio.
 ORA_COLS = {
     1: (4,  6),   2: (8,  10),  3: (12, 14),
     4: (16, 18),  5: (20, 22),  6: (24, 26),
     7: (28, 30),  8: (32, 34),  9: (36, 38),
 }
 
-# Righe classi (col B:C merged)
-CLASSE_RIGHE_RAW = {
-    '1A AFM': 9,  '2A AFM': 10, '2B AFM': 11,
-    '3A RIM': 12, '4A RIM': 13, '5A RIM': 14,
-    '1A CAT': 15, '2A CAT': 16, '3A CAT': 17, '4A CAT': 18, '5A CAT': 19,
-    '1A LSC': 22, '2A LSC': 23, '2B LSC': 24, '3A LSC': 25, '4A LSC': 26, '5A LSC': 27,
-    '1A LSU': 28, '2A LSU': 29, '3A LSU': 30, '4A LSU': 31, '5A LSU': 32, '5B LSU': 33,
-    '1A LLI': 34, '1B LLI': 35, '2A LLI': 36, '2B LLI': 37, '3A LLI': 38,
-    '4A LLI': 39, '5A LLI': 40, '5B LLI': 41,
-    '1A LSP': 42, '2A LSP': 43, '3A LSP': 44, '4A LSP': 45, '5A LSP': 46,
-}
-
-# Seconda intestazione righe 20-21 (stessa struttura)
-CLASSE_RIGHE_2 = {k: v for k, v in CLASSE_RIGHE_RAW.items() if v >= 22}
-
-# Firme: (col_docente, col_euro, col_c, col_r, col_p) righe 51-59
-# Template aggiornato: B:E=docente, J=€, K=C, L=R, M=P per col1
-#                      N:Q=docente, V=€, W=C, X=R, Y=P per col2
-#                      Z:AC=docente, AH=€, AI=C, AJ=R, AK=P per col3
+# Firme: (col_docente, col_euro, col_c, col_r, col_p) — colonne verificate
+# identiche nei due fogli del template reale, solo le righe (FIRME_START/
+# END) cambiano da un anno all'altro e vengono quindi derivate dal
+# foglio (vedi _righe_firme), non fissate qui.
 FIRME_COLS = [
     (2,  10, 11, 12, 13),   # col1: docente=B(2), €=J(10), C=K(11), R=L(12), P=M(13)
     (14, 22, 23, 24, 25),   # col2: docente=N(14), €=V(22), C=W(23), R=X(24), P=Y(25)
     (26, 34, 35, 36, 37),   # col3: docente=Z(26), €=AH(34), C=AI(35), R=AJ(36), P=AK(37)
 ]
-FIRME_START = 51
-FIRME_END   = 59
 
 FILL_TIPO = {
     'recupero':      PatternFill('solid', fgColor='C6EFCE'),
@@ -65,20 +58,113 @@ def _norm(c):
     return re.sub(r'\s+', ' ', str(c).strip().upper())
 
 
+def _norm_compatto(c):
+    """Come _norm() ma toglie anche gli spazi residui, non solo li
+    normalizza — serve a recuperare le classi salvate senza lo spazio
+    fra sezione e indirizzo (es. "1ACAT" invece di "1A CAT": verificato
+    sui dati reali, l'importazione orario usa sistematicamente il
+    formato senza spazio). La chiave "ufficiale" resta quella con lo
+    spazio (come scritta nel template), qui si prova solo un secondo
+    tentativo prima di arrendersi."""
+    return _norm(c).replace(' ', '')
+
+
 def _data_label(d):
     return f"{GIORNI_IT[d.weekday()]} {d.day} {MESI_IT[d.month]} {d.year}"
+
+
+def _scegli_foglio(wb):
+    """Sceglie il foglio del template corrispondente all'anno
+    scolastico corrente (es. anno '2026-2027' -> foglio 'MATRICE
+    26_27') invece di un nome fisso: un nome fisso è esattamente la
+    causa del bug segnalato da Roberto — 'MATRICE 25_26' (anno
+    scorso) non ha le righe delle sezioni B aggiunte quest'anno
+    (1B CAT, 1B AFM, 1B LSU, 3B LSC, 3B RIM), presenti invece nel
+    foglio aggiornato 'MATRICE 26_27' già nel template ma mai
+    raggiunto dal codice. Ricade sul foglio "MATRICE ..." più recente
+    per nome se quello dell'anno esatto non è ancora stato preparato,
+    segnalando comunque quale ha usato (restituito come secondo
+    valore: True se corrisponde esattamente all'anno corrente)."""
+    from config_anno import get_anno_corrente
+    nome_atteso = None
+    try:
+        aa, bb = get_anno_corrente().split('-')
+        nome_atteso = f'MATRICE {aa[-2:]}_{bb[-2:]}'
+    except ValueError:
+        pass
+
+    if nome_atteso and nome_atteso in wb.sheetnames:
+        return nome_atteso, True
+
+    fogli_matrice = sorted(s for s in wb.sheetnames if s.upper().startswith('MATRICE'))
+    if fogli_matrice:
+        return fogli_matrice[-1], False
+    return wb.sheetnames[0], False
+
+
+def _righe_classi(ws):
+    """Mappa classe(normalizzata) -> riga, letta DIRETTAMENTE dal
+    foglio del template (colonna B, dalla prima riga classe fino a
+    "FIRMA DOCENTI INTERESSATI") invece di un dizionario fisso in
+    Python — così la mappatura segue sempre il template reale, anche
+    quando viene aggiunta o tolta una sezione, senza bisogno di
+    aggiornare il codice ogni volta (è esattamente quello che è
+    mancato con le nuove sezioni B di quest'anno)."""
+    righe = {}
+    for r in range(9, ws.max_row + 1):
+        v = ws.cell(r, 2).value
+        if v is None:
+            continue
+        v = str(v).strip()
+        if not v:
+            continue
+        if v.upper().startswith('FIRMA'):
+            break
+        righe[_norm(v)] = r
+    return righe
+
+
+def _righe_firme(ws):
+    """Riga di inizio/fine della tabella firme, derivate cercando
+    l'intestazione "DOCENTE" nel foglio invece di righe fisse (il
+    foglio più recente ha una riga di intestazione in più rispetto a
+    quello vecchio, spostando tutto in basso di due righe)."""
+    for r in range(1, ws.max_row + 1):
+        if str(ws.cell(r, 2).value or '').strip().upper() == 'DOCENTE':
+            return r + 1, ws.max_row
+    return None, None
+
+
+def _trova_riga(classe_raw, righe_classi, non_trovate):
+    """Riga del prospetto per una classe, provando prima la forma
+    "ufficiale" (con spazio, come scritta nel template) e poi quella
+    compatta (senza spazio, come la salva l'importazione orario) prima
+    di arrendersi. Se non trova nulla, registra la classe in
+    `non_trovate` (invece di scartarla silenziosamente: un vero errore
+    di dati — una classe scritta in un modo non riconosciuto, o
+    davvero assente dal template — spariva senza traccia dalla
+    griglia, con il supplente comunque visibile in fondo nella tabella
+    firme che non dipende da questo lookup) così la route può
+    segnalarlo a Roberto."""
+    riga = righe_classi.get(_norm(classe_raw))
+    if riga is None:
+        righe_compatte = {k.replace(' ', ''): v for k, v in righe_classi.items()}
+        riga = righe_compatte.get(_norm_compatto(classe_raw))
+    if riga is None:
+        non_trovate.add(str(classe_raw).strip())
+    return riga
 
 
 def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita_ist=None):
     wb = load_workbook(template_path)
 
-    if 'MATRICE 25_26' in wb.sheetnames:
-        ws = wb.copy_worksheet(wb['MATRICE 25_26'])
-        nome_foglio = data_sel.strftime('%Y%m%d') + '_Prospetto supplenze'
-        ws.title = nome_foglio
-    else:
-        ws = wb.active
-        nome_foglio = ws.title
+    nome_foglio_template, foglio_anno_corrente = _scegli_foglio(wb)
+    ws = wb.copy_worksheet(wb[nome_foglio_template])
+    nome_foglio = data_sel.strftime('%Y%m%d') + '_Prospetto supplenze'
+    ws.title = nome_foglio
+
+    righe_classi = _righe_classi(ws)
+    firme_inizio, firme_fine = _righe_firme(ws)
 
     # ── 1. Data ───────────────────────────────────────────────
     data_str = _data_label(data_sel)
@@ -94,8 +180,6 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
 
     # Recupera anche indisponibili del giorno dal DB
     from models.indisponibilita import Indisponibilita
-    from models.assenza import Assenza
-    from models import db
     indisp_list = Indisponibilita.query.filter_by(data=data_sel).all()
     for i in indisp_list:
         if i.docente:
@@ -112,7 +196,7 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
     ws.cell(5, 2).font  = FONT_BOLD
 
     # ── 3. Svuota celle dati ──────────────────────────────────
-    for riga in CLASSE_RIGHE_RAW.values():
+    for riga in righe_classi.values():
         for ora in range(1, 10):
             ca, cs = ORA_COLS[ora]
             try:
@@ -122,20 +206,22 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
             except Exception:
                 pass
 
-    for col_doc, col_euro, col_c, col_r, col_p in FIRME_COLS:
-        for riga in range(FIRME_START, FIRME_END + 1):
-            for c in [col_doc, col_euro, col_c, col_r, col_p]:
-                try:
-                    ws.cell(riga, c).value = None
-                except Exception:
-                    pass
+    if firme_inizio:
+        for col_doc, col_euro, col_c, col_r, col_p in FIRME_COLS:
+            for riga in range(firme_inizio, firme_fine + 1):
+                for c in [col_doc, col_euro, col_c, col_r, col_p]:
+                    try:
+                        ws.cell(riga, c).value = None
+                    except Exception:
+                        pass
 
     # ── 4. Compila supplenze ──────────────────────────────────
+    classi_non_trovate = set()
     for s in supplenze:
         if s.stato == 'annullata' or s.ora not in ORA_COLS:
             continue
 
-        riga = CLASSE_RIGHE_RAW.get(_norm(s.classe))
+        riga = _trova_riga(s.classe, righe_classi, classi_non_trovate)
         if riga is None:
             continue
 
@@ -175,27 +261,27 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
         if s.tipo:
             sostituti[nome].add(s.tipo)
 
-    idx = 0
-    for col_doc, col_euro, col_c, col_r, col_p in FIRME_COLS:
-        for riga in range(FIRME_START, FIRME_END + 1):
-            if idx >= len(sostituti):
-                break
-            nome, tipi = sorted(sostituti.items())[idx]
-            try:
-                ws.cell(riga, col_doc).value = nome
-                ws.cell(riga, col_doc).font  = FONT_BOLD
-                if 'pagamento'     in tipi: ws.cell(riga, col_euro).value = 'X'
-                if 'completamento' in tipi: ws.cell(riga, col_c).value    = 'X'
-                if 'recupero'      in tipi: ws.cell(riga, col_r).value    = 'X'
-                if 'potenziamento' in tipi: ws.cell(riga, col_p).value    = 'X'
-            except Exception:
-                pass
-            idx += 1
+    if firme_inizio:
+        idx = 0
+        for col_doc, col_euro, col_c, col_r, col_p in FIRME_COLS:
+            for riga in range(firme_inizio, firme_fine + 1):
+                if idx >= len(sostituti):
+                    break
+                nome, tipi = sorted(sostituti.items())[idx]
+                try:
+                    ws.cell(riga, col_doc).value = nome
+                    ws.cell(riga, col_doc).font  = FONT_BOLD
+                    if 'pagamento'     in tipi: ws.cell(riga, col_euro).value = 'X'
+                    if 'completamento' in tipi: ws.cell(riga, col_c).value    = 'X'
+                    if 'recupero'      in tipi: ws.cell(riga, col_r).value    = 'X'
+                    if 'potenziamento' in tipi: ws.cell(riga, col_p).value    = 'X'
+                except Exception:
+                    pass
+                idx += 1
 
     # ── 6. Attività Istituzionali del giorno ────────────────
     if attivita_ist:
         from openpyxl.styles import Alignment, Border, Side
-        from openpyxl.utils import get_column_letter
         # Aggiungi un foglio separato "Att. Istituzionali"
         ws_ist = wb.create_sheet(title='Att. Istituzionali')
         _s = Side(style='thin', color='AAAAAA')
@@ -262,4 +348,9 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
         with open(os.path.join(save_dir, nome_file), 'wb') as f:
             f.write(xlsx_bytes)
 
-    return xlsx_bytes
+    avviso_foglio = None if foglio_anno_corrente else (
+        f'usato il foglio "{nome_foglio_template}" del template perché non ne ho trovato uno per '
+        f'l\'anno scolastico corrente — verifica che sia quello giusto, o aggiungi il foglio aggiornato '
+        f'al template.')
+
+    return xlsx_bytes, sorted(classi_non_trovate), avviso_foglio
