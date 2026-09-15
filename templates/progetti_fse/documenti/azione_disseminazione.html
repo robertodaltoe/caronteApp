@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Azione di disseminazione — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Azione di disseminazione, comunicazione,
+sensibilizzazione e pubblicizzazione del progetto
+</div>
+<div class="estremi">
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
+CUP: {{ progetto.cup or '—' }}
+</div>
+
+<p><b>Alle Istituzioni Scolastiche del territorio</b><br>
+<b>All'Ufficio Scolastico Territoriale</b><br>
+<b>Al sito web dell'Istituto — Albo on-line</b></p>
+
+{% if progetto.prot_nota_autorizzazione %}
+<p>VISTO il documento autorizzativo, nota di autorizzazione prot. n. {{ progetto.prot_nota_autorizzazione }}
+{% if progetto.data_nota_autorizzazione %} del {{ progetto.data_nota_autorizzazione.strftime('%d/%m/%Y') }}{% endif %},
+che consente l'attuazione del progetto {{ progetto.codice_progetto or '' }} dal titolo "{{ progetto.titolo }}"
+per un importo pari a {{ '€%.2f'|format(progetto.importo_autorizzato) if progetto.importo_autorizzato is not none else '' }};</p>
+{% endif %}
+
+<p>{{ testo_comunicazione }}</p>
+
+<p>Il presente atto viene trasmesso alle Istituzioni Scolastiche del territorio e all'Ufficio Scolastico
+Territoriale competente, e pubblicato sul sito web istituzionale nelle sezioni Albo on-line e Amministrazione
+Trasparente, ai fini della più ampia diffusione dell'iniziativa.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

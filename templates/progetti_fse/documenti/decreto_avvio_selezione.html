@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Decreto di avvio selezione — {{ progetto.titolo }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+{% include 'progetti_fse/documenti/_footer_ue.html' %}
+
+<div class="protocollo">Protocollo come da segnatura</div>
+<div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Decreto di avvio della procedura di selezione del
+personale esperto, tutor e figure aggiuntive
+</div>
+<div class="estremi">
+Titolo progetto: "{{ progetto.titolo }}"<br>
+Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
+CUP: {{ progetto.cup or '—' }}
+</div>
+
+<div class="qualifica">il Dirigente Scolastico</div>
+
+{% include 'progetti_fse/documenti/_premesse_normative.html' %}
+{% include 'progetti_fse/documenti/_premesse_finanziamento.html' %}
+
+<p>RILEVATA la necessità di avviare la procedura di selezione del personale esperto, tutor e figure
+aggiuntive necessario alla realizzazione degli interventi previsti dal progetto;</p>
+<p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
+
+<div class="atto">DECRETA</div>
+
+<p>&bull; di avviare la procedura di selezione del personale interno, di personale di altre Istituzioni
+scolastiche in regime di collaborazione plurima e di soggetti privati esterni persone fisiche, necessario
+alla realizzazione degli interventi previsti dal progetto in oggetto, mediante procedura comparativa di
+titoli;</p>
+<p>&bull; di dare mandato agli uffici di segreteria per la predisposizione e la pubblicazione del relativo
+Avviso pubblico di selezione, con i criteri, le modalità di presentazione delle istanze e i termini di
+scadenza ivi indicati;</p>
+<p>&bull; di pubblicare il presente decreto sul sito web dell'Istituzione Scolastica {{ sito_web }}, nelle
+sezioni Albo on-line e Amministrazione Trasparente.</p>
+
+<div class="firma">Il Dirigente Scolastico<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Documento informatico firmato digitalmente ai sensi del D. Lgs. 82/2005, il quale
+sostituisce il documento cartaceo e la firma autografa.</div>
+
+<div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
+bozza da verificare prima della protocollazione.</div>
+
+</body>
+</html>

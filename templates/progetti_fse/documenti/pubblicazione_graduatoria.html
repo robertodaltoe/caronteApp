@@ -28,6 +28,10 @@ Codice progetto: {{ progetto.codice_progetto or '—' }}
 {% if riferimento_verbale %}
 <p>VISTO il verbale della Commissione di valutazione {{ riferimento_verbale }};</p>
 {% endif %}
+{% if riferimento_provvisoria %}
+<p>VISTA la propria graduatoria provvisoria, {{ riferimento_provvisoria }};</p>
+<p>{% if reclami_pervenuti %}ESAMINATI i reclami pervenuti avverso la graduatoria provvisoria — {{ reclami_pervenuti }}{% else %}CONSTATATO che, decorso il termine di 7 giorni dalla pubblicazione della graduatoria provvisoria, non sono pervenuti reclami{% endif %};</p>
+{% endif %}
 <p>VISTI gli atti d'ufficio relativi alla procedura di selezione in oggetto;</p>
 
 <div class="atto">RENDE PUBBLICA</div>

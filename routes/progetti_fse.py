@@ -16,7 +16,7 @@ from models.progetto_fse import (
     ProgettoFSE, ModuloFSE, IncaricoFSE, SessioneFSE, PresenzaFSE, DocumentoFSE,
     STATI_PROGETTO, STATI_MODULO, RUOLI_INCARICO, RUOLI_INCARICO_LABEL,
     TIPI_RAPPORTO, TIPI_COSTO, STATI_DOCUMENTO,
-    TIPI_DOCUMENTO_GENERABILI, TIPI_DOCUMENTO_GENERABILI_LABEL,
+    TIPI_DOCUMENTO_GENERABILI, TIPI_DOCUMENTO_GENERABILI_LABEL, PASSI_PROCEDURA,
 )
 from models.docente import Docente
 from modules import dati_istituto
@@ -525,13 +525,62 @@ def _formato_richiesto(form):
     return 'docx' if form.get('formato') == 'docx' else 'pdf'
 
 
+def _documenti_del_passo(progetto, passo):
+    """Documenti già generati che soddisfano un passo della checklist —
+    i due passi della graduatoria condividono lo stesso tipo di
+    documento (pubblicazione_graduatoria): si distinguono guardando la
+    parola "provvisoria"/"definitiva" nel titolo, l'unico punto in cui
+    è registrata oggi (vedi genera_pubblicazione_graduatoria) — evita
+    di aggiungere una colonna solo per questa distinzione."""
+    if passo['numero'] == 8:
+        return [d for d in progetto.documenti if d.tipo == 'pubblicazione_graduatoria'
+                and 'provvisoria' in (d.titolo or '')]
+    if passo['numero'] == 9:
+        return [d for d in progetto.documenti if d.tipo == 'pubblicazione_graduatoria'
+                and 'definitiva' in (d.titolo or '')]
+    return [d for d in progetto.documenti if d.tipo in passo['tipi']]
+
+
+def _checklist_procedura(progetto):
+    """Stato dei passi della procedura FSE/FESR (PASSI_PROCEDURA) per la
+    vista a checklist — non blocca la generazione in altro ordine, è
+    solo una guida visiva sulla sequenza corretta e su cosa manca."""
+    righe = []
+    for passo in PASSI_PROCEDURA:
+        if passo.get('manuale'):
+            righe.append({**passo, 'stato': 'manuale', 'count': 0, 'target': None})
+            continue
+        docs = _documenti_del_passo(progetto, passo)
+        protocollati_per_tipo = {t: any(d.protocollo for d in docs if d.tipo == t) for t in passo['tipi']}
+        if passo.get('multiplo'):
+            target = len(_incarichi_confermati(progetto)) if passo['numero'] == 11 else None
+            n_protocollati = sum(1 for d in docs if d.protocollo)
+            if not docs:
+                stato = 'assente'
+            elif n_protocollati == len(docs) and (target is None or len(docs) >= target):
+                stato = 'completo'
+            else:
+                stato = 'in_corso'
+            righe.append({**passo, 'stato': stato, 'count': len(docs), 'target': target})
+        else:
+            tipi_presenti = {d.tipo for d in docs}
+            if not docs:
+                stato = 'assente'
+            elif set(passo['tipi']) <= tipi_presenti and all(protocollati_per_tipo.values()):
+                stato = 'completo'
+            else:
+                stato = 'in_corso'
+            righe.append({**passo, 'stato': stato, 'count': len(docs), 'target': None})
+    return righe
+
+
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti')
 def documenti_progetto(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
     documenti = sorted(p.documenti, key=lambda d: d.creato_il, reverse=True)
     return render_template('progetti_fse/documenti_index.html', progetto=p,
         documenti=documenti, tipi_label=TIPI_DOCUMENTO_GENERABILI_LABEL,
-        stati_label=dict(STATI_DOCUMENTO))
+        stati_label=dict(STATI_DOCUMENTO), checklist=_checklist_procedura(p))
 
 
 @progetti_fse_bp.route('/progetti-fse/documenti/<int:id>/modifica', methods=['GET', 'POST'])
@@ -560,6 +609,57 @@ def elimina_documento(id):
     return redirect(url_for('progetti_fse.documenti_progetto', id_progetto=id_progetto))
 
 
+@progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/azione-disseminazione', methods=['GET', 'POST'])
+def genera_azione_disseminazione(id_progetto):
+    p = ProgettoFSE.query.get_or_404(id_progetto)
+    testo_default = (
+        "Si comunica che questa Istituzione Scolastica risulta assegnataria del finanziamento relativo al "
+        "progetto sopra indicato, nell'ambito del programma {programma}. Il presente avviso è pubblicato a "
+        "fini di disseminazione, comunicazione, sensibilizzazione e pubblicizzazione dell'iniziativa, ai "
+        "sensi della normativa di riferimento sui fondi strutturali europei."
+    ).format(programma=p.programma or 'PN "Scuola e competenze" 2021-2027')
+    if request.method == 'POST':
+        html_content = render_template('progetti_fse/documenti/azione_disseminazione.html',
+            progetto=p, data_generazione=date.today(),
+            testo_comunicazione=request.form.get('testo_comunicazione', '').strip() or testo_default,
+            **_contesto_istituto(),
+        )
+        doc = DocumentoFSE(id_progetto=p.id, tipo='azione_disseminazione', fase='avvio',
+            titolo=f'Azione di disseminazione — {p.titolo}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Azione di disseminazione generata. Ricorda di registrare protocollo e data dopo la '
+              'protocollazione.', 'success')
+        return _rendi_documento(html_content, f'azione_disseminazione_{p.id}', _formato_richiesto(request.form))
+
+    return render_template('progetti_fse/documenti/genera_disseminazione.html', progetto=p,
+        testo_default=testo_default)
+
+
+@progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/decreto-avvio-selezione', methods=['GET', 'POST'])
+def genera_decreto_avvio_selezione(id_progetto):
+    p = ProgettoFSE.query.get_or_404(id_progetto)
+    if request.method == 'POST':
+        html_content = render_template('progetti_fse/documenti/decreto_avvio_selezione.html',
+            progetto=p, data_generazione=date.today(),
+            **_contesto_istituto(),
+        )
+        doc = DocumentoFSE(id_progetto=p.id, tipo='decreto_avvio_selezione', fase='selezione',
+            titolo=f'Decreto di avvio selezione — {p.titolo}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Decreto di avvio selezione generato. Ricorda di registrare protocollo e data dopo la '
+              'protocollazione.', 'success')
+        return _rendi_documento(html_content, f'decreto_avvio_selezione_{p.id}', _formato_richiesto(request.form))
+
+    return render_template('progetti_fse/documenti/genera_semplice.html', progetto=p,
+        tipo_documento='decreto_avvio_selezione',
+        titolo_pagina="Genera decreto di avvio della procedura di selezione",
+        avviso_dati_mancanti=None)
+
+
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/avviso-selezione', methods=['GET', 'POST'])
 def genera_avviso_selezione(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
@@ -579,8 +679,9 @@ def genera_avviso_selezione(id_progetto):
         "consenta il raggiungimento del target."
     )
     if request.method == 'POST':
+        riferimento_avvio = _riferimento_documento(p, 'decreto_avvio_selezione')
         html_content = render_template('progetti_fse/documenti/avviso_selezione.html',
-            progetto=p, data_generazione=date.today(),
+            progetto=p, data_generazione=date.today(), riferimento_avvio=riferimento_avvio,
             scadenza_data=_data(request.form, 'scadenza_data'),
             scadenza_ora=request.form.get('scadenza_ora', '').strip() or '____',
             requisiti_esperto=request.form.get('requisiti_esperto', '').strip() or requisito_esperto_default,
@@ -743,6 +844,30 @@ def genera_nomina_commissione(id_progetto):
         tipo_documento='nomina_commissione')
 
 
+@progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/dichiarazione-insussistenza-commissario', methods=['GET', 'POST'])
+def genera_dichiarazione_insussistenza_commissario(id_progetto):
+    p = ProgettoFSE.query.get_or_404(id_progetto)
+    if request.method == 'POST':
+        riferimento_nomina = _riferimento_documento(p, 'nomina_commissione')
+        nominativo = request.form.get('nominativo', '').strip() or None
+        ruolo_commissione = request.form.get('ruolo_commissione', '').strip() or None
+        html_content = render_template('progetti_fse/documenti/dichiarazione_insussistenza_commissario.html',
+            progetto=p, data_generazione=date.today(), riferimento_nomina=riferimento_nomina,
+            nominativo=nominativo, ruolo_commissione=ruolo_commissione,
+            **_contesto_istituto(),
+        )
+        doc = DocumentoFSE(id_progetto=p.id, tipo='dichiarazione_insussistenza_commissario', fase='selezione',
+            titolo=f'Dichiarazione insussistenza commissario — {nominativo or "—"}', stato='bozza',
+            note=request.form.get('note_documento', '').strip() or None)
+        db.session.add(doc)
+        db.session.commit()
+        flash('Dichiarazione generata. Ricorda di registrare protocollo e data dopo la protocollazione — '
+              'ripeti la generazione per ciascun componente della commissione.', 'success')
+        return _rendi_documento(html_content, f'dichiarazione_insussistenza_commissario_{p.id}', _formato_richiesto(request.form))
+
+    return render_template('progetti_fse/documenti/genera_dichiarazione_commissario.html', progetto=p)
+
+
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/verbale-commissione', methods=['GET', 'POST'])
 def genera_verbale_commissione(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
@@ -784,9 +909,28 @@ def genera_pubblicazione_graduatoria(id_progetto):
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
         riferimento_verbale = _riferimento_documento(p, 'verbale_commissione')
         tipo_graduatoria = request.form.get('tipo_graduatoria', 'provvisoria')
+        # La definitiva cita anche la provvisoria: cerca l'ultimo
+        # DocumentoFSE 'pubblicazione_graduatoria' protocollato il cui
+        # titolo contiene "provvisoria" (stesso tipo per entrambe, si
+        # distinguono solo dal titolo — vedi anche
+        # routes/progetti_fse.py::_documenti_del_passo per lo stesso
+        # meccanismo usato dalla checklist).
+        riferimento_provvisoria = None
+        if tipo_graduatoria != 'provvisoria':
+            doc_prov = (DocumentoFSE.query
+                        .filter_by(id_progetto=p.id, tipo='pubblicazione_graduatoria')
+                        .filter(DocumentoFSE.titolo.contains('provvisoria'))
+                        .filter(DocumentoFSE.protocollo.isnot(None))
+                        .order_by(DocumentoFSE.data_documento.desc().nullslast(), DocumentoFSE.id.desc())
+                        .first())
+            if doc_prov:
+                riferimento_provvisoria = (f'prot. n. {doc_prov.protocollo}'
+                    + (f' del {doc_prov.data_documento.strftime("%d/%m/%Y")}' if doc_prov.data_documento else ''))
         html_content = render_template('progetti_fse/documenti/pubblicazione_graduatoria.html',
             progetto=p, data_generazione=date.today(), riferimento_bando=riferimento_bando,
             riferimento_verbale=riferimento_verbale, tipo_graduatoria=tipo_graduatoria,
+            riferimento_provvisoria=riferimento_provvisoria,
+            reclami_pervenuti=request.form.get('reclami_pervenuti', '').strip() or None,
             incarichi=incarichi, ruoli_label=RUOLI_INCARICO_LABEL,
             **_contesto_istituto(),
         )

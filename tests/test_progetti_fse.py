@@ -805,3 +805,210 @@ def test_cruscotto_reachable_senza_progetti(app, db_session, monkeypatch):
     with app.test_client() as c:
         r = c.get('/progetti-fse/cruscotto')
         assert r.status_code == 200
+
+
+# ── Nuovi documenti (disseminazione, avvio selezione, dichiarazione
+# commissario) e checklist della sequenza procedurale — aggiunti per
+# coprire l'intero iter descritto da Roberto: disseminazione -> decreto
+# assunzione bilancio -> decreto avvio selezione + avviso -> raccolta
+# candidature (manuale) -> nomina commissione -> dichiarazioni
+# commissari -> verbale -> graduatoria provvisoria/definitiva ->
+# decreto unico -> lettere di incarico. ─────────────────────────────
+
+def test_genera_azione_disseminazione_crea_documento_tracciato(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/azione-disseminazione', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='azione_disseminazione').first()
+    assert doc is not None
+    assert doc.protocollo is None
+
+
+def test_genera_decreto_avvio_selezione_crea_documento_tracciato(app, db_session, monkeypatch):
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/decreto-avvio-selezione', data={})
+        assert r.status_code == 200
+
+    doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='decreto_avvio_selezione').first()
+    assert doc is not None
+
+
+def test_avviso_selezione_cita_decreto_avvio_gia_protocollato(app, db_session, monkeypatch):
+    """Come per gli altri riferimenti incrociati: una volta protocollato
+    il decreto di avvio, l'avviso di selezione generato dopo deve poter
+    recuperarne il protocollo (via _riferimento_documento) -- qui si
+    verifica solo che la route lo passi al render, non il testo del
+    template (contenuto statico, non testato altrove nel file)."""
+    _crea_tabelle(app)
+    _registra_blueprint(app)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='decreto_avvio_selezione', titolo='Decreto avvio',
+                                 protocollo='100', data_documento=date(2026, 5, 1)))
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    monkeypatch.setattr(mod, 'render_template', lambda nome, **k: catturato.update(kwargs=k) or '<html></html>')
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/avviso-selezione', data={})
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['riferimento_avvio'] == 'prot. n. 100 del 01/05/2026'
+
+
+def test_genera_dichiarazione_insussistenza_commissario_crea_documento_per_ciascun_commissario(app, db_session, monkeypatch):
+    """Il passo 6 prevede un documento per ciascun componente della
+    commissione: generarlo due volte per due nominativi diversi deve
+    produrre due DocumentoFSE distinti, non uno solo sovrascritto."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    with app.test_client() as c:
+        r1 = c.post(f'/progetti-fse/{p.id}/documenti/dichiarazione-insussistenza-commissario',
+                     data={'nominativo': 'Anna Bianchi', 'ruolo_commissione': 'Presidente'})
+        assert r1.status_code == 200
+        r2 = c.post(f'/progetti-fse/{p.id}/documenti/dichiarazione-insussistenza-commissario',
+                     data={'nominativo': 'Marco Verdi', 'ruolo_commissione': 'componente'})
+        assert r2.status_code == 200
+
+    docs = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='dichiarazione_insussistenza_commissario').all()
+    assert len(docs) == 2
+    titoli = {d.titolo for d in docs}
+    assert titoli == {'Dichiarazione insussistenza commissario — Anna Bianchi',
+                       'Dichiarazione insussistenza commissario — Marco Verdi'}
+
+
+def test_checklist_procedura_passo_singolo_passa_da_assente_a_completo(app, db_session):
+    """Un passo a documento singolo (es. decreto assunzione bilancio)
+    deve risultare 'assente' senza documenti, 'in_corso' se generato ma
+    non protocollato, 'completo' solo dopo la protocollazione -- è
+    esattamente il dato che la vista a checklist mostra a colpo
+    d'occhio, quindi va verificato che segua davvero la protocollazione
+    e non solo l'esistenza del documento."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _checklist_procedura
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    db.session.commit()
+
+    passo_bilancio = lambda: next(r for r in _checklist_procedura(p) if r['numero'] == 2)
+    assert passo_bilancio()['stato'] == 'assente'
+
+    doc = DocumentoFSE(id_progetto=p.id, tipo='decreto_assunzione_bilancio', titolo='Decreto')
+    db.session.add(doc)
+    db.session.commit()
+    assert passo_bilancio()['stato'] == 'in_corso'
+
+    doc.protocollo = '55'
+    doc.data_documento = date(2026, 6, 1)
+    db.session.commit()
+    assert passo_bilancio()['stato'] == 'completo'
+
+
+def test_checklist_procedura_distingue_graduatoria_provvisoria_da_definitiva(app, db_session):
+    """Provvisoria e definitiva condividono lo stesso tipo di documento
+    (pubblicazione_graduatoria): la checklist li distingue dal titolo
+    generato dalla route -- verifica che i passi 8 e 9 non si
+    confondano a vicenda quando esiste solo l'uno o solo l'altro."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _checklist_procedura
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria',
+                                 titolo=f'Pubblicazione graduatoria provvisoria — {p.titolo}',
+                                 protocollo='200', data_documento=date(2026, 6, 1)))
+    db.session.commit()
+
+    righe = {r['numero']: r for r in _checklist_procedura(p)}
+    assert righe[8]['stato'] == 'completo'
+    assert righe[9]['stato'] == 'assente'
+
+
+def test_graduatoria_definitiva_cita_protocollo_provvisoria_gia_protocollata(app, db_session, monkeypatch):
+    """Roberto ha segnalato che la definitiva non richiamava affatto la
+    provvisoria: verifica che, una volta protocollata la provvisoria, la
+    generazione della definitiva la recuperi via _riferimento_documento
+    (stesso meccanismo già usato per bando/verbale) e la passi al
+    template come riferimento_provvisoria."""
+    _crea_tabelle(app)
+    _registra_blueprint(app)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria',
+                                 titolo=f'Pubblicazione graduatoria provvisoria — {p.titolo}',
+                                 protocollo='321', data_documento=date(2026, 6, 10)))
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    monkeypatch.setattr(mod, 'render_template', lambda nome, **k: catturato.update(kwargs=k) or '<html></html>')
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/pubblicazione-graduatoria',
+                    data={'tipo_graduatoria': 'definitiva'})
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['riferimento_provvisoria'] == 'prot. n. 321 del 10/06/2026'
+
+
+def test_graduatoria_provvisoria_non_cita_se_stessa(app, db_session, monkeypatch):
+    """Generando la PROVVISORIA (non la definitiva), riferimento_provvisoria
+    deve restare None anche se esiste già un'altra graduatoria
+    provvisoria protocollata in precedenza (es. rigenerata a mano) --
+    non ha senso che una provvisoria citi un'altra provvisoria."""
+    _crea_tabelle(app)
+    _registra_blueprint(app)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria',
+                                 titolo=f'Pubblicazione graduatoria provvisoria — {p.titolo}',
+                                 protocollo='321', data_documento=date(2026, 6, 10)))
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    monkeypatch.setattr(mod, 'render_template', lambda nome, **k: catturato.update(kwargs=k) or '<html></html>')
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/pubblicazione-graduatoria',
+                    data={'tipo_graduatoria': 'provvisoria'})
+        assert r.status_code == 200
+
+    assert catturato['kwargs']['riferimento_provvisoria'] is None
+
+
+def test_checklist_procedura_passo_manuale_non_richiede_documenti(app, db_session):
+    """Il passo 4 (raccolta candidature) non genera nessun DocumentoFSE
+    -- deve comparire come 'manuale', non come 'assente' (che
+    implicherebbe erroneamente qualcosa da generare)."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _checklist_procedura
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.commit()
+
+    righe = {r['numero']: r for r in _checklist_procedura(p)}
+    assert righe[4]['stato'] == 'manuale'

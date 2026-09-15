@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Genera dichiarazione commissario{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ url_for('progetti_fse.documenti_progetto', id_progetto=progetto.id) }}" style="font-size:.8rem; color:var(--grigio); text-decoration:none;">
+        {{ icon('arrow-left') }} Documenti
+    </a>
+    <h1 style="font-size:1.3rem; color:var(--blu); margin-top:2px;">{{ icon('print') }} Genera dichiarazione insussistenza/incompatibilità commissario</h1>
+    <p style="font-size:.82rem; color:var(--grigio);">
+        {{ progetto.titolo }} — genera un documento alla volta: ripeti per ciascun componente della
+        commissione (presidente, componente, segretario).
+    </p>
+</div>
+
+<form method="post">
+<div class="card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Nominativo del commissario</label>
+        <input type="text" name="nominativo" placeholder="Nome Cognome" required>
+    </div>
+    <div class="form-group">
+        <label>Ruolo nella commissione</label>
+        <select name="ruolo_commissione">
+            <option value="Presidente">Presidente</option>
+            <option value="componente">Componente</option>
+            <option value="segretario verbalizzante">Segretario verbalizzante</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Nota interna (facoltativa, non compare nel documento)</label>
+        <input type="text" name="note_documento">
+    </div>
+    {% include 'progetti_fse/documenti/_scelta_formato.html' %}
+    <button type="submit" class="btn btn-success">{{ icon('print') }} Genera documento</button>
+</div>
+</form>
+{% endblock %}

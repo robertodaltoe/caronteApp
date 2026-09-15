@@ -29,6 +29,9 @@ Codice progetto: {{ progetto.codice_progetto or '—' }}
 {% include 'progetti_fse/documenti/_premesse_normative.html' %}
 {% include 'progetti_fse/documenti/_premesse_finanziamento.html' %}
 
+{% if riferimento_avvio %}
+<p>VISTO il proprio decreto di avvio della procedura di selezione, {{ riferimento_avvio }};</p>
+{% endif %}
 <p>tutto ciò visto e rilevato, che costituisce parte integrante del presente provvedimento,</p>
 
 <div class="atto">EMANA</div>

@@ -25,6 +25,15 @@
         individuali non sono gestiti da CaronteApp.
     </p>
     <div class="form-group">
+        <label>Reclami pervenuti (solo per la definitiva — lascia vuoto se nessun reclamo)</label>
+        <textarea name="reclami_pervenuti" rows="2" placeholder="es. reclamo del candidato ... prot. ... del ..., respinto in quanto ..."></textarea>
+        <p style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+            Se compilato, la definitiva richiamerà "esaminati i reclami pervenuti" con questo testo; se vuoto,
+            richiamerà che non ne sono pervenuti. Cita automaticamente anche il protocollo della provvisoria,
+            se già registrato.
+        </p>
+    </div>
+    <div class="form-group">
         <label>Nota interna (facoltativa, non compare nel documento)</label>
         <input type="text" name="note_documento">
     </div>

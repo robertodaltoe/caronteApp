@@ -2,6 +2,81 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 13 — Progetti FSE/FESR: colma la sequenza completa disseminazione→incarichi
+
+Roberto è tornato sulla sezione "Progetti FSE/FESR" chiedendo di
+aggiornarla; il worktree di questa sessione era però 158 commit
+indietro rispetto a `main` (dove il modulo esiste già dalla Sessione
+69 con 5 commit dedicati) — prima cosa fatta: `git merge --ff-only
+main` per allinearlo, nessun lavoro locale perso (il branch non aveva
+commit propri non già su main).
+
+Roberto ha poi sintetizzato a voce l'intero iter amministrativo in 11
+passi, dall'autorizzazione dell'Autorità di Gestione fino alle lettere
+di incarico individuali, sottolineando che "la sequenza procedurale di
+generazione è fondamentale per il corretto richiamo nelle premesse".
+Confrontando il flusso con `models/progetto_fse.py`/`routes/progetti_fse.py`
+esistenti, mancavano 3 tipi di documento e la vista d'insieme non
+seguiva l'ordine dei passi — confermato con Roberto via AskUserQuestion
+prima di implementare (tutti "sì"):
+
+1. **Azione di disseminazione** (passo 1) — prima non generabile, solo
+   registrabile a mano (`prot_azione_disseminazione`). Nuovo tipo
+   `azione_disseminazione` + route `genera_azione_disseminazione` +
+   template `documenti/azione_disseminazione.html` (comunicazione a
+   scuole del territorio/UST + testo per il sito, cita
+   `prot_nota_autorizzazione` se compilato).
+2. **Decreto di avvio selezione** (passo 3, atto separato dal bando per
+   Roberto) — nuovo tipo `decreto_avvio_selezione` + route
+   `genera_decreto_avvio_selezione` (riusa `genera_semplice.html`) +
+   template dedicato. L'avviso di selezione ora lo cita in premessa
+   (`riferimento_avvio`, via `_riferimento_documento`) quando
+   protocollato.
+3. **Dichiarazione insussistenza/incompatibilità del singolo commissario**
+   (passo 6) — prima esisteva solo quella del DS
+   (`dichiarazione_insussistenza`). Nuovo tipo
+   `dichiarazione_insussistenza_commissario`, generabile più volte (una
+   per componente: nominativo + ruolo come campi del form), cita la
+   nomina commissione se protocollata.
+4. **Checklist ordinata** in `documenti_progetto` — nuova funzione
+   `_checklist_procedura()` (`routes/progetti_fse.py`) che calcola lo
+   stato (assente/in corso/completo/manuale) di ciascuno degli 11 passi
+   da `PASSI_PROCEDURA` (nuova costante in `models/progetto_fse.py`),
+   mostrata come pallini colorati in cima alla pagina documenti. Non
+   blocca la generazione fuori ordine, è solo una guida visiva. I passi
+   "graduatoria provvisoria" e "definitiva" condividono lo stesso tipo
+   di `DocumentoFSE` (`pubblicazione_graduatoria`): si distinguono solo
+   dalla parola nel titolo generato dalla route — nessuna nuova colonna
+   per questo, coerente con la scelta già fatta altrove nel modulo di
+   non duplicare stato già ricavabile.
+
+**Verifica aggiuntiva, non richiesta esplicitamente**: mentre
+implementavo, Roberto ha chiesto se la pubblicazione della graduatoria
+definitiva richiama in premessa il protocollo della provvisoria —
+risposta: no, non lo faceva (citava solo il verbale commissione).
+Corretto nella stessa route (`genera_pubblicazione_graduatoria`): la
+definitiva ora cerca l'ultimo `DocumentoFSE` `pubblicazione_graduatoria`
+con "provvisoria" nel titolo, protocollato, e lo cita ("VISTA la
+propria graduatoria provvisoria, prot. n. X del gg/mm/aaaa"), più una
+riga su reclami pervenuti/non pervenuti (nuovo campo facoltativo
+`reclami_pervenuti` nel form).
+
+**Verifica end-to-end**: 38 test in `tests/test_progetti_fse.py`
+(13 nuovi: 3 route × documento tracciato, citazione incrociata avviso
+↔ decreto avvio, dichiarazione commissario generata più volte senza
+sovrascriversi, 3 su stato/distinzione della checklist, 2 sulla
+citazione provvisoria↔definitiva) — tutti verdi. In più, rendering
+reale (non solo `render_template` finto) verificato su una copia
+isolata del `database.db` reale in `/tmp` (protocollo di sicurezza
+della sessione: patch di `os.path.join`, mai il file vero) contro il
+progetto "Menti in Movimento" già presente: tutti i nuovi documenti si
+generano come PDF veri via WeasyPrint, nessun errore di template.
+`database.db` reale verificato invariato (md5 identico) prima e dopo.
+Unico test pre-esistente non eseguibile in questo ambiente:
+`test_genera_documento_in_formato_docx` (manca `python-docx` installato
+nel Python di sistema usato da questa sessione, non un problema del
+codice — coerente con l'avviso già in CLAUDE.md sul venv).
+
 ## Sessione 69 addendum 12 — Fix: "nessuno (scoperta)" spariva dal menu sostituto
 
 Roberto: dopo l'aggiunta della ricerca ai menu docente (Sessione

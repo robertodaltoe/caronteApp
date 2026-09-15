@@ -77,8 +77,11 @@ STATI_DOCUMENTO = [
 # templates/progetti_fse/documenti/) — fisso perché lega ogni tipo a un
 # template HTML specifico, non ai dati del singolo progetto.
 TIPI_DOCUMENTO_GENERABILI = [
+    ('azione_disseminazione',         'Azione di disseminazione (scuole/UST/sito)'),
+    ('decreto_avvio_selezione',       'Decreto di avvio della procedura di selezione'),
     ('nomina_commissione',            'Nomina e convocazione commissione di valutazione'),
     ('avviso_selezione',              'Avviso di selezione interna (bando)'),
+    ('dichiarazione_insussistenza_commissario', 'Dichiarazione insussistenza/incompatibilità commissario'),
     ('verbale_commissione',           'Verbale della commissione di valutazione'),
     ('pubblicazione_graduatoria',     'Pubblicazione graduatoria'),
     ('decreto_nomina',                'Decreto di nomina esperti/tutor'),
@@ -90,6 +93,27 @@ TIPI_DOCUMENTO_GENERABILI = [
     ('dichiarazione_insussistenza',   'Dichiarazione DS insussistenza conflitto di interessi'),
 ]
 TIPI_DOCUMENTO_GENERABILI_LABEL = dict(TIPI_DOCUMENTO_GENERABILI)
+
+# Sequenza procedurale (Roberto, Sessione FSE/FESR addendum "checklist"):
+# undici passi dall'autorizzazione alla nomina dei singoli incarichi,
+# ognuno legato a uno o più tipi di DocumentoFSE generabili — usata solo
+# per la vista a checklist ordinata (routes/progetti_fse.py::documenti_progetto),
+# non per vincolare/bloccare la generazione (resta libera, come oggi).
+# 'multiplo' = lo step prevede più documenti dello stesso tipo (uno per
+# commissario, uno per incarico) invece di uno solo per l'intero progetto.
+PASSI_PROCEDURA = [
+    {'numero': 1,  'etichetta': 'Disseminazione', 'tipi': ['azione_disseminazione'], 'multiplo': False},
+    {'numero': 2,  'etichetta': 'Decreto di assunzione al bilancio', 'tipi': ['decreto_assunzione_bilancio'], 'multiplo': False},
+    {'numero': 3,  'etichetta': 'Decreto di avvio selezione e avviso di selezione', 'tipi': ['decreto_avvio_selezione', 'avviso_selezione'], 'multiplo': False},
+    {'numero': 4,  'etichetta': 'Raccolta candidature', 'tipi': [], 'multiplo': False, 'manuale': 'Nessun documento: le candidature si registrano come incarichi in stato "Candidato".'},
+    {'numero': 5,  'etichetta': 'Chiusura raccolta e nomina commissione', 'tipi': ['nomina_commissione'], 'multiplo': False},
+    {'numero': 6,  'etichetta': 'Dichiarazioni insussistenza/incompatibilità commissari', 'tipi': ['dichiarazione_insussistenza_commissario'], 'multiplo': True},
+    {'numero': 7,  'etichetta': 'Verbale di valutazione', 'tipi': ['verbale_commissione'], 'multiplo': False},
+    {'numero': 8,  'etichetta': 'Pubblicazione graduatoria provvisoria', 'tipi': ['pubblicazione_graduatoria'], 'multiplo': False},
+    {'numero': 9,  'etichetta': 'Pubblicazione graduatoria definitiva (dopo 5 gg)', 'tipi': ['pubblicazione_graduatoria'], 'multiplo': False},
+    {'numero': 10, 'etichetta': 'Decreto unico di conferimento incarichi', 'tipi': ['decreto_nomina'], 'multiplo': False},
+    {'numero': 11, 'etichetta': 'Lettere di incarico / contratti individuali', 'tipi': ['lettera_incarico', 'contratto_autonomo'], 'multiplo': True},
+]
 
 
 class ProgettoFSE(db.Model):

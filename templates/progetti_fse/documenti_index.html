@@ -16,13 +16,56 @@
 </div>
 
 <div class="card" style="margin-bottom:16px;">
+    <h2 style="font-size:.9rem;">{{ icon('list') }} Sequenza della procedura</h2>
+    <p style="font-size:.78rem; color:var(--grigio); margin-top:2px;">
+        L'ordine corretto di generazione — ogni atto successivo cita automaticamente il protocollo di
+        quelli già protocollati. Non blocca la generazione fuori ordine, è solo una guida.
+    </p>
+    <div style="margin-top:10px;">
+    {% for passo in checklist %}
+    <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid #eef1f5;">
+        <span style="flex:0 0 22px; text-align:center; font-size:.78rem; color:var(--grigio);">{{ passo.numero }}</span>
+        <span
+            style="flex:0 0 12px; height:12px; border-radius:50%; display:inline-block;
+            {% if passo.stato == 'completo' %}background:#2e7d4f;
+            {% elif passo.stato == 'in_corso' %}background:#e0a627;
+            {% elif passo.stato == 'manuale' %}background:#8aa0c4;
+            {% else %}background:#d8dee6;{% endif %}"
+            title="{{ 'completo' if passo.stato == 'completo' else ('in corso' if passo.stato == 'in_corso' else ('gestito fuori CaronteApp' if passo.stato == 'manuale' else 'da fare')) }}"
+        ></span>
+        <span style="flex:1; font-size:.86rem;">{{ passo.etichetta }}</span>
+        <span style="font-size:.76rem; color:var(--grigio);">
+            {% if passo.manuale %}{{ passo.manuale }}
+            {% elif passo.multiplo %}{{ passo.count }} generat{{ 'o' if passo.count == 1 else 'i' }}{% if passo.target %} / {{ passo.target }}{% endif %}
+            {% elif passo.stato == 'completo' %}protocollato
+            {% elif passo.stato == 'in_corso' %}generato, da protocollare
+            {% else %}non ancora generato{% endif %}
+        </span>
+    </div>
+    {% endfor %}
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
     <h2 style="font-size:.9rem;">{{ icon('plus') }} Genera nuovo documento</h2>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-        <a href="{{ url_for('progetti_fse.genera_nomina_commissione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
-            Nomina commissione
+        <a href="{{ url_for('progetti_fse.genera_azione_disseminazione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Azione di disseminazione
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_decreto_assunzione_bilancio', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Decreto assunzione al bilancio
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_decreto_avvio_selezione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Decreto di avvio selezione
         </a>
         <a href="{{ url_for('progetti_fse.genera_avviso_selezione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
             Avviso di selezione (bando)
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_nomina_commissione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Nomina commissione
+        </a>
+        <a href="{{ url_for('progetti_fse.genera_dichiarazione_insussistenza_commissario', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            Dichiarazione insussistenza commissario
         </a>
         <a href="{{ url_for('progetti_fse.genera_verbale_commissione', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
             Verbale commissione
@@ -33,11 +76,8 @@
         <a href="{{ url_for('progetti_fse.genera_decreto_nomina', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
             Decreto di nomina
         </a>
-        <a href="{{ url_for('progetti_fse.genera_decreto_assunzione_bilancio', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
-            Decreto assunzione al bilancio
-        </a>
         <a href="{{ url_for('progetti_fse.genera_dichiarazione_insussistenza', id_progetto=progetto.id) }}" class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
-            Dichiarazione insussistenza conflitto interessi
+            Dichiarazione insussistenza conflitto interessi (DS)
         </a>
     </div>
     <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
