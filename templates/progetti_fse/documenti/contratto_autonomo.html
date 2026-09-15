@@ -33,6 +33,10 @@ IN QUALITÀ DI {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|upper }}</div>
 <p>(di seguito, entrambe individualmente indicate come la "Parte" e, congiuntamente, come le "Parti").</p>
 
 <p>PREMESSO CHE</p>
+{% if riferimento_decreto_avvio %}
+<p>&bull; con proprio decreto di avvio della procedura di selezione, {{ riferimento_decreto_avvio }}, è
+stata avviata la selezione pubblica per la figura in oggetto;</p>
+{% endif %}
 {% if riferimento_bando %}
 <p>&bull; con Avviso di selezione {{ riferimento_bando }} è stata autorizzata ed espletata la procedura di
 selezione pubblica per la figura in oggetto;</p>

@@ -25,12 +25,17 @@
 </div>
 {% endif %}
 
+<div class="card" style="max-width:640px; margin-bottom:14px;">
+    <p style="font-size:.82rem; margin:0; color:var(--grigio);">
+        I riferimenti a decreto di avvio selezione, avviso di selezione, graduatoria definitiva e decreto di
+        conferimento incarichi vengono ripresi automaticamente dai documenti del progetto già protocollati —
+        nessuno va inserito qui. Se manca una citazione nel documento generato, protocolla prima il
+        documento corrispondente dalla pagina "Documenti" del progetto.
+    </p>
+</div>
+
 <form method="post">
 <div class="card" style="max-width:640px;">
-    <div class="form-group">
-        <label>Riferimento graduatoria definitiva (es. "pubblicata con prot. n. 11746 del 13.08.2026")</label>
-        <input type="text" name="riferimento_graduatoria" value="{{ riferimento_graduatoria_default }}">
-    </div>
     <div class="form-group">
         <label>Nota interna (facoltativa, non compare nel documento)</label>
         <input type="text" name="note_documento">

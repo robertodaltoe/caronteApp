@@ -29,6 +29,9 @@ CUP: {{ progetto.cup or '—' }}
 
 {% include 'progetti_fse/documenti/_premesse_normative.html' %}
 
+{% if riferimento_decreto_avvio %}
+<p>VISTO il proprio decreto di avvio della procedura di selezione, {{ riferimento_decreto_avvio }};</p>
+{% endif %}
 {% if riferimento_bando %}
 <p>VISTO e richiamato in preambolo l'Avviso di selezione {{ riferimento_bando }} che fissa i criteri, le
 modalità di presentazione ed i termini di scadenza delle istanze pervenute per l'incarico in oggetto;</p>

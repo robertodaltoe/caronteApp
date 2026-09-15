@@ -2,6 +2,42 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 19 — Progetti FSE/FESR: lettera di incarico e contratto autonomo citano tutti i riferimenti pescati dai documenti
+
+Roberto: nell'elaborazione degli incarichi, il riferimento alla
+graduatoria definitiva deve essere pescato dai dati dei documenti (non
+più digitato a mano) — e in realtà nella lettera di incarico devono
+comparire anche i riferimenti al decreto di avvio e all'avviso di
+selezione, oltre a graduatoria definitiva e decreto di conferimento
+(quest'ultimo già presente).
+
+**Prima**: `genera_lettera_incarico()`/`genera_contratto_autonomo()`
+citavano solo avviso (`riferimento_bando`) e decreto di nomina
+(`riferimento_decreto`); la graduatoria definitiva era un campo di
+testo libero nel form (`riferimento_graduatoria`), da ricopiare a mano
+ogni volta — lo stesso dato che il modulo sa già recuperare da solo
+per gli altri documenti (decreto di nomina, addendum 18).
+
+**Fix**: entrambe le route recuperano ora anche `riferimento_decreto_avvio`
+(`_riferimento_documento(p, 'decreto_avvio_selezione')`) e sostituiscono
+il campo manuale con `_riferimento_graduatoria(p, 'definitiva')`
+(fattorizzata nell'addendum 18). `lettera_incarico.html` e
+`contratto_autonomo.html` hanno un nuovo paragrafo che cita il decreto
+di avvio, prima dell'avviso di selezione (ordine cronologico: avvio →
+avviso → graduatoria → conferimento). Rimosso dal form
+(`genera_incarico.html`) il campo "Riferimento graduatoria definitiva",
+sostituito da una nota che spiega che tutti i riferimenti sono ora
+automatici.
+
+**Verifica**: 1 nuovo test (48 in `tests/test_progetti_fse.py`, tutti
+verdi) — tutti e quattro i riferimenti recuperati correttamente quando
+protocollati. Verificato anche con rendering reale sul progetto "Menti
+in movimento" (copia isolata del `database.db` reale in `/tmp`, mai
+quello vero): decreto di avvio, avviso e decreto di nomina reali già
+protocollati citati correttamente; aggiunta una graduatoria definitiva
+di prova (non ancora presente per questo progetto) per completare la
+verifica dei quattro riferimenti insieme.
+
 ## Sessione 69 addendum 18 — Progetti FSE/FESR: il decreto di nomina cita anche verbale e graduatorie
 
 Roberto: nel decreto di nomina cumulativo, aggiungi i riferimenti al

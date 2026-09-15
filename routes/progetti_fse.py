@@ -789,12 +789,14 @@ def genera_lettera_incarico(id_incarico):
     p = inc.modulo.progetto
 
     if request.method == 'POST':
+        riferimento_decreto_avvio = _riferimento_documento(p, 'decreto_avvio_selezione')
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
+        riferimento_graduatoria = _riferimento_graduatoria(p, 'definitiva')
         riferimento_decreto = _riferimento_documento(p, 'decreto_nomina')
-        riferimento_graduatoria = request.form.get('riferimento_graduatoria', '').strip() or None
         html_content = render_template('progetti_fse/documenti/lettera_incarico.html',
             progetto=p, incarico=inc, data_generazione=date.today(),
             ruoli_label=RUOLI_INCARICO_LABEL,
+            riferimento_decreto_avvio=riferimento_decreto_avvio,
             riferimento_bando=riferimento_bando, riferimento_decreto=riferimento_decreto,
             riferimento_graduatoria=riferimento_graduatoria,
             **_contesto_istituto(),
@@ -810,8 +812,7 @@ def genera_lettera_incarico(id_incarico):
         return _rendi_documento(html_content, f'lettera_incarico_{inc.id}', _formato_richiesto(request.form))
 
     return render_template('progetti_fse/documenti/genera_incarico.html', incarico=inc,
-        tipo_documento='lettera_incarico',
-        riferimento_graduatoria_default='')
+        tipo_documento='lettera_incarico')
 
 
 @progetti_fse_bp.route('/progetti-fse/incarichi/<int:id_incarico>/documenti/contratto-autonomo', methods=['GET', 'POST'])
@@ -820,12 +821,14 @@ def genera_contratto_autonomo(id_incarico):
     p = inc.modulo.progetto
 
     if request.method == 'POST':
+        riferimento_decreto_avvio = _riferimento_documento(p, 'decreto_avvio_selezione')
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
+        riferimento_graduatoria = _riferimento_graduatoria(p, 'definitiva')
         riferimento_decreto = _riferimento_documento(p, 'decreto_nomina')
-        riferimento_graduatoria = request.form.get('riferimento_graduatoria', '').strip() or None
         html_content = render_template('progetti_fse/documenti/contratto_autonomo.html',
             progetto=p, incarico=inc, data_generazione=date.today(),
             ruoli_label=RUOLI_INCARICO_LABEL,
+            riferimento_decreto_avvio=riferimento_decreto_avvio,
             riferimento_bando=riferimento_bando, riferimento_decreto=riferimento_decreto,
             riferimento_graduatoria=riferimento_graduatoria,
             **_contesto_istituto(),
@@ -846,8 +849,7 @@ def genera_contratto_autonomo(id_incarico):
               'vuoti: completali dalla scheda incarico prima di inviarlo.', 'error')
 
     return render_template('progetti_fse/documenti/genera_incarico.html', incarico=inc,
-        tipo_documento='contratto_autonomo',
-        riferimento_graduatoria_default='')
+        tipo_documento='contratto_autonomo')
 
 
 def _incarichi_confermati(progetto):

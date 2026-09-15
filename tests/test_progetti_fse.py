@@ -557,6 +557,53 @@ def test_genera_contratto_autonomo_registra_dati_incarico(app, db_session, monke
     assert doc is not None
 
 
+def test_lettera_incarico_cita_decreto_avvio_e_graduatoria_definitiva_automaticamente(app, db_session, monkeypatch):
+    """Roberto: nella lettera di incarico devono comparire i riferimenti
+    a decreto di avvio, avviso di selezione, graduatoria definitiva e
+    decreto di conferimento -- tutti pescati dai documenti del progetto
+    già protocollati, non più digitati a mano (il campo manuale
+    "Riferimento graduatoria definitiva" del form è stato rimosso)."""
+    _crea_tabelle(app)
+    _registra_blueprint(app)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Padel 1', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, nome_esterno='Docente Interno', ruolo='tutor',
+                       tipo_rapporto='dipendente_interno', tariffa_oraria=30, ore_previste=30,
+                       stato='incaricato')
+    db.session.add(inc)
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='decreto_avvio_selezione', titolo='Decreto avvio',
+                                 protocollo='100', data_documento=date(2026, 5, 1)))
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='avviso_selezione', titolo='Avviso',
+                                 protocollo='200', data_documento=date(2026, 5, 10)))
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria',
+                                 titolo=f'Pubblicazione graduatoria definitiva — {p.titolo}',
+                                 protocollo='300', data_documento=date(2026, 6, 1)))
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='decreto_nomina', titolo='Decreto nomina',
+                                 protocollo='400', data_documento=date(2026, 6, 10)))
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    def _capture(nome, **k):
+        if nome == 'progetti_fse/documenti/lettera_incarico.html':
+            catturato.update(k)
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _capture)
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/incarichi/{inc.id}/documenti/lettera-incarico', data={})
+        assert r.status_code == 200
+
+    assert catturato['riferimento_decreto_avvio'] == 'prot. n. 100 del 01/05/2026'
+    assert catturato['riferimento_bando'] == 'prot. n. 200 del 10/05/2026'
+    assert catturato['riferimento_graduatoria'] == 'prot. n. 300 del 01/06/2026'
+    assert catturato['riferimento_decreto'] == 'prot. n. 400 del 10/06/2026'
+
+
 def test_modifica_documento_registra_protocollo(app, db_session, monkeypatch):
     _crea_tabelle(app)
     _registra_blueprint(app, monkeypatch)
