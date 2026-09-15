@@ -51,20 +51,22 @@ cui all'Avviso di selezione e la conseguente posizione nella graduatoria di meri
     <tr><th>Modulo</th><th>Figura</th><th>Candidato</th><th class="num">Punteggio</th><th class="num">Posizione</th></tr>
     {% for c in candidature %}
     <tr>
-        <td>{{ c.modulo.titolo }} ({{ c.modulo.codice_esterno or '—' }})</td>
-        <td>{{ ruoli_label.get(c.ruolo, c.ruolo)|upper }}</td>
-        <td>{{ c.nome_completo }}</td>
-        <td class="num">&nbsp;</td>
-        <td class="num">&nbsp;</td>
+        <td>{{ c.incarico.modulo.titolo }} ({{ c.incarico.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(c.incarico.ruolo, c.incarico.ruolo)|upper }}</td>
+        <td>{{ c.incarico.nome_completo }}</td>
+        <td class="num">{{ '%.2f'|format(c.incarico.punteggio) if c.incarico.punteggio is not none else '&nbsp;'|safe }}</td>
+        <td class="num">{{ c.posizione if c.posizione is not none else '&nbsp;'|safe }}</td>
     </tr>
     {% endfor %}
 </table>
 
 <p style="font-size:9px; color:#777;">Nota: l'elenco riporta tutte le candidature pervenute per modulo/figura
 già registrate in CaronteApp, comprese eventuali rinunce — verificare che corrisponda alle domande
-effettivamente pervenute entro i termini prima della seduta. Punteggio e posizione in graduatoria non sono
-gestiti da CaronteApp: vanno compilati a mano (o a video, prima della stampa) sulla base dei criteri
-dell'Avviso di selezione.</p>
+effettivamente pervenute entro i termini prima della seduta. Punteggio e posizione già inseriti in CaronteApp
+(scheda incarico) compaiono qui automaticamente; le celle vuote indicano un punteggio non ancora registrato,
+da inserire prima della protocollazione (a parità di punteggio, la posizione segue l'ordine alfabetico: i
+criteri di preferenza reali, es. età anagrafica, non sono gestiti da CaronteApp e vanno corretti a mano se
+rilevano).</p>
 
 <p>La Commissione trasmette il presente verbale al Dirigente Scolastico per gli adempimenti connessi alla
 pubblicità legale.</p>

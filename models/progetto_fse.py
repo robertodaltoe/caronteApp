@@ -257,6 +257,17 @@ class IncaricoFSE(db.Model):
     tariffa_oraria   = db.Column(db.Numeric(6, 2))
     ore_previste     = db.Column(db.Numeric(6, 2))
     ore_rendicontate = db.Column(db.Numeric(6, 2))
+    # Punteggio attribuito dalla commissione secondo i criteri
+    # dell'Avviso di selezione (Roberto: va inserito qui una volta sola
+    # per comparire automaticamente sia nel verbale di valutazione sia
+    # nelle graduatorie provvisoria/definitiva, invece di ritrascriverlo
+    # a mano in ciascun documento). La POSIZIONE in graduatoria non è un
+    # campo a sé: si ricalcola sempre dal punteggio (vedi
+    # routes/progetti_fse.py::_candidature_con_posizione) per non
+    # rischiare un campo congelato che resta disallineato se un
+    # punteggio viene corretto dopo la prima generazione (stesso
+    # principio di ANNO_SCOL_CORRENTE/id_cc_default, vedi CLAUDE.md).
+    punteggio        = db.Column(db.Numeric(6, 2))
     stato            = db.Column(db.String(30), default='incaricato')
     note             = db.Column(db.Text)
 

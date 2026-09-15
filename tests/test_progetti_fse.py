@@ -626,7 +626,7 @@ def test_genera_verbale_commissione_include_tutte_le_candidature(app, db_session
         assert r.status_code == 200
 
     candidature_passate = catturato['candidature']
-    assert {i.id for i in candidature_passate} == {inc.id, candidato.id}  # non il project_manager
+    assert {c['incarico'].id for c in candidature_passate} == {inc.id, candidato.id}  # non il project_manager
     doc = DocumentoFSE.query.filter_by(id_progetto=p.id, tipo='verbale_commissione').first()
     assert doc is not None
 
@@ -655,6 +655,117 @@ def test_candidature_pervenute_ordina_per_modulo_e_ruolo(app, db_session):
 
     ordinati = _candidature_pervenute(p)
     assert [c.nome_completo for c in ordinati] == ['Esperto Uno', 'Tutor Uno', 'Esperto Due']
+
+
+def test_candidature_con_posizione_ordina_per_punteggio_decrescente(app, db_session):
+    """Roberto: il punteggio inserito nella scheda dell'incarico deve
+    determinare la posizione in graduatoria -- verifica il caso base,
+    due candidati sulla stessa figura dello stesso modulo, il punteggio
+    più alto deve avere posizione 1."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _candidature_con_posizione
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Modulo A', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    basso = IncaricoFSE(id_modulo=m.id, nome_esterno='Punteggio Basso', ruolo='esperto',
+                         tariffa_oraria=70, ore_previste=30, punteggio=60)
+    alto = IncaricoFSE(id_modulo=m.id, nome_esterno='Punteggio Alto', ruolo='esperto',
+                        tariffa_oraria=70, ore_previste=30, punteggio=85)
+    db.session.add_all([basso, alto])
+    db.session.commit()
+
+    risultato = {r['incarico'].nome_completo: r['posizione'] for r in _candidature_con_posizione(p)}
+    assert risultato == {'Punteggio Alto': 1, 'Punteggio Basso': 2}
+
+
+def test_candidature_con_posizione_gruppi_separati_per_modulo_e_ruolo(app, db_session):
+    """La graduatoria è per modulo+figura, non unica per il progetto:
+    un esperto con punteggio 50 in un modulo e un tutor con punteggio 90
+    in un altro modulo devono avere ENTRAMBI posizione 1 (sono classifiche
+    separate), non 2 e 1 -- errore facile se si confonde con un ranking
+    globale su tutte le candidature del progetto."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _candidature_con_posizione
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m1 = ModuloFSE(id_progetto=p.id, titolo='Modulo A', ore=30)
+    m2 = ModuloFSE(id_progetto=p.id, titolo='Modulo B', ore=30)
+    db.session.add_all([m1, m2])
+    db.session.flush()
+    esperto_m1 = IncaricoFSE(id_modulo=m1.id, nome_esterno='Esperto M1', ruolo='esperto',
+                              tariffa_oraria=70, ore_previste=30, punteggio=50)
+    tutor_m2 = IncaricoFSE(id_modulo=m2.id, nome_esterno='Tutor M2', ruolo='tutor',
+                            tariffa_oraria=30, ore_previste=30, punteggio=90)
+    db.session.add_all([esperto_m1, tutor_m2])
+    db.session.commit()
+
+    risultato = {r['incarico'].nome_completo: r['posizione'] for r in _candidature_con_posizione(p)}
+    assert risultato == {'Esperto M1': 1, 'Tutor M2': 1}
+
+
+def test_candidature_con_posizione_senza_punteggio_resta_none(app, db_session):
+    """Un candidato senza punteggio inserito non deve avere una
+    posizione -- niente numero inventato, e non deve "rubare" un numero
+    di posizione ai candidati già valutati (verificato qui insieme a un
+    candidato punteggiato, per controllare che quest'ultimo resti in
+    posizione 1 e non 2)."""
+    _crea_tabelle(app)
+    from routes.progetti_fse import _candidature_con_posizione
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Modulo A', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    valutato = IncaricoFSE(id_modulo=m.id, nome_esterno='Valutato', ruolo='esperto',
+                            tariffa_oraria=70, ore_previste=30, punteggio=75)
+    non_valutato = IncaricoFSE(id_modulo=m.id, nome_esterno='Non Valutato', ruolo='esperto',
+                                tariffa_oraria=70, ore_previste=30, punteggio=None)
+    db.session.add_all([valutato, non_valutato])
+    db.session.commit()
+
+    risultato = {r['incarico'].nome_completo: r['posizione'] for r in _candidature_con_posizione(p)}
+    assert risultato == {'Valutato': 1, 'Non Valutato': None}
+
+
+def test_pubblicazione_graduatoria_usa_candidature_con_posizione(app, db_session, monkeypatch):
+    """La graduatoria pubblicata deve mostrare TUTTE le candidature
+    ranked (non solo gli 'incaricato' come prima) -- altrimenti un
+    candidato secondo in posizione ma non ancora formalmente incaricato
+    (es. la commissione ha appena assegnato i punteggi, il decreto di
+    nomina non è ancora stato generato) sparirebbe dalla graduatoria
+    pubblicata, che invece deve elencare l'intera classifica."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo='Modulo A', ore=30)
+    db.session.add(m)
+    db.session.flush()
+    candidato_non_incaricato = IncaricoFSE(id_modulo=m.id, nome_esterno='Solo Candidato', ruolo='esperto',
+                                            tariffa_oraria=70, ore_previste=30, punteggio=40, stato='candidato')
+    db.session.add(candidato_non_incaricato)
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    def _capture(nome, **k):
+        if nome == 'progetti_fse/documenti/pubblicazione_graduatoria.html':
+            catturato.update(k)
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _capture)
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/pubblicazione-graduatoria', data={'tipo_graduatoria': 'provvisoria'})
+        assert r.status_code == 200
+
+    nomi = {c['incarico'].nome_completo for c in catturato['candidature']}
+    assert 'Solo Candidato' in nomi
 
 
 def test_genera_pubblicazione_graduatoria_crea_documento(app, db_session, monkeypatch):

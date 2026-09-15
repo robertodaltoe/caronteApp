@@ -630,6 +630,7 @@ def _auto_migrate():
         ('progetti_fse',  'capitolo_entrata', 'VARCHAR(300)', None),
         ('progetti_fse',  'capitolo_spesa',   'VARCHAR(300)', None),
         ('docenti',       'codice_display',   'VARCHAR(20)',  None),
+        ('incarichi_fse', 'punteggio',        'NUMERIC(6,2)', None),
     ]
 
     with db.engine.connect() as conn:

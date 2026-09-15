@@ -303,6 +303,7 @@ def nuovo_incarico(id_modulo):
             tariffa_oraria=_decimal(request.form, 'tariffa_oraria'),
             ore_previste=_decimal(request.form, 'ore_previste'),
             ore_rendicontate=_decimal(request.form, 'ore_rendicontate'),
+            punteggio=_decimal(request.form, 'punteggio'),
             stato=request.form.get('stato', 'incaricato'),
             note=request.form.get('note', '').strip() or None,
             luogo_nascita=request.form.get('luogo_nascita', '').strip() or None,
@@ -332,6 +333,7 @@ def modifica_incarico(id):
         inc.tariffa_oraria = _decimal(request.form, 'tariffa_oraria')
         inc.ore_previste = _decimal(request.form, 'ore_previste')
         inc.ore_rendicontate = _decimal(request.form, 'ore_rendicontate')
+        inc.punteggio = _decimal(request.form, 'punteggio')
         inc.stato = request.form.get('stato', inc.stato)
         inc.note = request.form.get('note', '').strip() or None
         inc.luogo_nascita = request.form.get('luogo_nascita', '').strip() or None
@@ -845,6 +847,40 @@ def _candidature_pervenute(progetto):
     return candidature
 
 
+def _candidature_con_posizione(progetto):
+    """Le candidature pervenute (_candidature_pervenute) con la
+    posizione in graduatoria calcolata dal punteggio -- non un campo a
+    parte da tenere sincronizzato: se un punteggio viene corretto dopo
+    la prima generazione, la posizione cambia subito ovunque (verbale,
+    graduatoria provvisoria e definitiva), invece di restare congelata
+    su un valore vecchio (Roberto ha chiesto esplicitamente che il
+    punteggio inserito una volta compaia coerente in tutti e tre i
+    documenti). Graduatoria calcolata per gruppo modulo+figura
+    professionale (ogni modulo/ruolo ha la propria classifica, non
+    un'unica graduatoria per l'intero progetto): a parità di punteggio
+    l'ordine resta quello alfabetico per nominativo (i criteri reali di
+    preferenza a parità di punteggio, es. età anagrafica, non sono
+    gestiti da CaronteApp — va corretto a mano nel documento se rileva).
+    Un candidato senza punteggio non ha posizione (None), e viene
+    comunque elencato per restare visibile come "da valutare"."""
+    from itertools import groupby
+    risultato = []
+    for _chiave, gruppo in groupby(_candidature_pervenute(progetto), key=lambda i: (i.id_modulo, i.ruolo)):
+        ordinati = sorted(gruppo, key=lambda i: (
+            i.punteggio is None,
+            -float(i.punteggio) if i.punteggio is not None else 0,
+            i.nome_completo,
+        ))
+        posizione = 0
+        for i in ordinati:
+            if i.punteggio is not None:
+                posizione += 1
+                risultato.append({'incarico': i, 'posizione': posizione})
+            else:
+                risultato.append({'incarico': i, 'posizione': None})
+    return risultato
+
+
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/nomina-commissione', methods=['GET', 'POST'])
 def genera_nomina_commissione(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
@@ -900,7 +936,7 @@ def genera_dichiarazione_insussistenza_commissario(id_progetto):
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/verbale-commissione', methods=['GET', 'POST'])
 def genera_verbale_commissione(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
-    candidature = _candidature_pervenute(p)
+    candidature = _candidature_con_posizione(p)
     if request.method == 'POST':
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
         riferimento_nomina = _riferimento_documento(p, 'nomina_commissione')
@@ -933,7 +969,7 @@ def genera_verbale_commissione(id_progetto):
 @progetti_fse_bp.route('/progetti-fse/<int:id_progetto>/documenti/pubblicazione-graduatoria', methods=['GET', 'POST'])
 def genera_pubblicazione_graduatoria(id_progetto):
     p = ProgettoFSE.query.get_or_404(id_progetto)
-    incarichi = _incarichi_confermati(p)
+    candidature = _candidature_con_posizione(p)
     if request.method == 'POST':
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
         riferimento_verbale = _riferimento_documento(p, 'verbale_commissione')
@@ -960,7 +996,7 @@ def genera_pubblicazione_graduatoria(id_progetto):
             riferimento_verbale=riferimento_verbale, tipo_graduatoria=tipo_graduatoria,
             riferimento_provvisoria=riferimento_provvisoria,
             reclami_pervenuti=request.form.get('reclami_pervenuti', '').strip() or None,
-            incarichi=incarichi, ruoli_label=RUOLI_INCARICO_LABEL,
+            candidature=candidature, ruoli_label=RUOLI_INCARICO_LABEL,
             **_contesto_istituto(),
         )
         doc = DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria', fase='selezione',

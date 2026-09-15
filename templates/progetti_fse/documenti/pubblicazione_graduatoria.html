@@ -36,19 +36,24 @@ Codice progetto: {{ progetto.codice_progetto or '—' }}
 
 <div class="atto">RENDE PUBBLICA</div>
 
-<p>la {{ tipo_graduatoria or 'provvisoria' }} graduatoria degli aspiranti selezionati per il conferimento
-degli incarichi di cui al presente progetto:</p>
+<p>la {{ tipo_graduatoria or 'provvisoria' }} graduatoria di merito dei candidati per ciascun modulo e
+figura professionale di cui al presente progetto, secondo i punteggi attribuiti dalla Commissione di
+valutazione:</p>
 
 <table class="tabella-incarichi">
-    <tr><th>Modulo</th><th>Figura</th><th>Nominativo</th></tr>
-    {% for inc in incarichi %}
+    <tr><th>Modulo</th><th>Figura</th><th>Nominativo</th><th class="num">Punteggio</th><th class="num">Posizione</th></tr>
+    {% for c in candidature %}
     <tr>
-        <td>{{ inc.modulo.titolo }} ({{ inc.modulo.codice_esterno or '—' }})</td>
-        <td>{{ ruoli_label.get(inc.ruolo, inc.ruolo)|upper }}</td>
-        <td>{{ inc.nome_completo }}</td>
+        <td>{{ c.incarico.modulo.titolo }} ({{ c.incarico.modulo.codice_esterno or '—' }})</td>
+        <td>{{ ruoli_label.get(c.incarico.ruolo, c.incarico.ruolo)|upper }}</td>
+        <td>{{ c.incarico.nome_completo }}</td>
+        <td class="num">{{ '%.2f'|format(c.incarico.punteggio) if c.incarico.punteggio is not none else '&nbsp;'|safe }}</td>
+        <td class="num">{{ c.posizione if c.posizione is not none else '&nbsp;'|safe }}</td>
     </tr>
     {% endfor %}
 </table>
+<p style="font-size:9px; color:#777;">Il conferimento degli incarichi segue l'ordine di posizione qui
+riportato per ciascun modulo/figura, secondo quanto previsto dall'Avviso di selezione.</p>
 
 {% if tipo_graduatoria == 'provvisoria' %}
 <p>Avverso la presente graduatoria provvisoria è possibile presentare reclamo entro 7 giorni dalla data di
@@ -64,8 +69,9 @@ straordinario al Capo dello Stato nelle forme e nei termini previsti dalla Legge
 sostituisce il documento cartaceo e la firma autografa.</div>
 
 <div class="nota-generazione">Generato da CaronteApp il {{ data_generazione.strftime('%d/%m/%Y %H:%M') }} —
-bozza da verificare prima della protocollazione. Non riporta i punteggi individuali, non gestiti da questo
-modulo: integrare manualmente se richiesti dal bando.</div>
+bozza da verificare prima della protocollazione. Punteggio e posizione sono presi dalla scheda di ciascun
+incarico: le celle vuote indicano un punteggio non ancora inserito, da completare prima della
+protocollazione.</div>
 
 </body>
 </html>

@@ -2,6 +2,53 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 17 — Progetti FSE/FESR: punteggio inserito una volta, coerente in verbale e graduatorie
+
+Roberto: i punteggi assegnati a ciascuna candidatura andrebbero
+inseriti direttamente sull'app, in modo da comparire sia nel verbale
+di valutazione sia nelle graduatorie provvisoria e definitiva.
+
+**Modello**: nuovo campo `punteggio` (Numeric 6,2) su `IncaricoFSE`
+(migrazione additiva in `app.py`). Deliberatamente NON c'è un campo
+"posizione" a parte: si ricalcola sempre dal punteggio
+(`routes/progetti_fse.py::_candidature_con_posizione()`), altrimenti
+correggere un punteggio dopo la prima generazione lascerebbe la
+posizione vecchia disallineata negli altri documenti — lo stesso
+pattern di bug di `ANNO_SCOL_CORRENTE`/`id_cc_default` già noto in
+CLAUDE.md, evitato qui a monte.
+
+**Calcolo posizione**: raggruppato per modulo+figura professionale
+(ogni modulo/ruolo ha la propria classifica separata — un esperto con
+50 punti in un modulo e un tutor con 90 punti in un altro hanno
+ENTRAMBI posizione 1, non è un ranking unico di progetto), ordinato
+per punteggio decrescente, a parità di punteggio ordine alfabetico per
+nominativo (i criteri di preferenza reali dell'avviso — titoli, età —
+non gestiti da CaronteApp, da correggere a mano se rilevano). Un
+candidato senza punteggio resta in elenco ma senza posizione (non un
+numero a caso).
+
+**Collegamento**: `incarico_form.html` ha un nuovo campo "Punteggio";
+`verbale_commissione.html` e `pubblicazione_graduatoria.html` (sia
+provvisoria che definitiva, stesso meccanismo) mostrano ora punteggio e
+posizione già inseriti invece di colonne sempre vuote (addendum 16).
+La graduatoria pubblicata è passata da "solo gli incarichi già
+confermati" (`_incarichi_confermati`, che resta invariata e continua a
+servire a decreto di nomina e checklist) a "tutte le candidature
+ranked" (`_candidature_con_posizione`) — coerente con cosa significa
+davvero una graduatoria: l'elenco COMPLETO dei candidati in ordine di
+merito, non solo i vincitori già decisi.
+
+**Verifica**: 4 nuovi test (46 in `tests/test_progetti_fse.py`, tutti
+verdi) — posizione da punteggio decrescente, gruppi separati per
+modulo+ruolo, candidato senza punteggio resta senza posizione, la
+graduatoria include anche un "solo candidato" non ancora incaricato.
+Verificato anche con rendering reale: assegnati due punteggi diversi
+(88.00 e 72.50) a due tutor dello stesso modulo del progetto "Menti in
+movimento" su copia isolata del `database.db` (mai quello vero),
+generata la graduatoria provvisoria — posizione 1/2 corrette, il terzo
+candidato del modulo (senza punteggio) mostra le celle vuote come
+atteso.
+
 ## Sessione 69 addendum 16 — Progetti FSE/FESR: il verbale commissione precompila moduli e candidature pervenute
 
 Roberto: il verbale di valutazione dovrebbe riportare in tabella

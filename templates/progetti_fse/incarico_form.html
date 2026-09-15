@@ -60,13 +60,23 @@
             <input type="text" name="ore_rendicontate" value="{{ incarico.ore_rendicontate if incarico and incarico.ore_rendicontate is not none else '' }}">
         </div>
     </div>
-    <div class="form-group">
-        <label>Stato</label>
-        <select name="stato">
-            <option value="candidato" {% if incarico and incarico.stato == 'candidato' %}selected{% endif %}>Candidato</option>
-            <option value="incaricato" {% if not incarico or incarico.stato == 'incaricato' %}selected{% endif %}>Incaricato</option>
-            <option value="rinunciato" {% if incarico and incarico.stato == 'rinunciato' %}selected{% endif %}>Rinunciato</option>
-        </select>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+            <label>Punteggio (criteri Avviso di selezione)</label>
+            <input type="text" name="punteggio" value="{{ incarico.punteggio if incarico and incarico.punteggio is not none else '' }}">
+            <p style="font-size:.76rem; color:var(--grigio); margin-top:2px;">
+                Compare automaticamente nel verbale della commissione e nelle graduatorie provvisoria/
+                definitiva; la posizione in graduatoria si calcola da qui, non va inserita a parte.
+            </p>
+        </div>
+        <div class="form-group">
+            <label>Stato</label>
+            <select name="stato">
+                <option value="candidato" {% if incarico and incarico.stato == 'candidato' %}selected{% endif %}>Candidato</option>
+                <option value="incaricato" {% if not incarico or incarico.stato == 'incaricato' %}selected{% endif %}>Incaricato</option>
+                <option value="rinunciato" {% if incarico and incarico.stato == 'rinunciato' %}selected{% endif %}>Rinunciato</option>
+            </select>
+        </div>
     </div>
     <div class="form-group">
         <label>Note</label>
