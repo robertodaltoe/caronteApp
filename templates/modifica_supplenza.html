@@ -46,7 +46,7 @@
     <div class="form-group">
         <label>Docente assente</label>
         <select name="id_assente" data-search="1">
-            <option value="">— nessuno —</option>
+            <option value="" data-selezionabile="1">— nessuno —</option>
             {% for d in docenti %}
             <option value="{{ d.id }}"
                 {% if supplenza.id_assente == d.id %}selected{% endif %}>
@@ -59,7 +59,7 @@
     <div class="form-group">
         <label>Sostituto</label>
         <select name="id_sostituto" data-search="1">
-            <option value="">— nessuno (scoperta) —</option>
+            <option value="" data-selezionabile="1">— nessuno (scoperta) —</option>
             {% for d in docenti %}
             <option value="{{ d.id }}"
                 {% if supplenza.id_sostituto == d.id %}selected{% endif %}>

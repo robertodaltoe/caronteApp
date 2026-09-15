@@ -87,7 +87,7 @@
             <div class="form-group">
                 <label>Docente assente</label>
                 <select name="id_assente" data-search="1">
-                    <option value="">— non specificato —</option>
+                    <option value="" data-selezionabile="1">— non specificato —</option>
                     {% for d in docenti %}
                     <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}</option>
                     {% endfor %}
@@ -96,7 +96,7 @@
             <div class="form-group">
                 <label>Sostituto</label>
                 <select name="id_sostituto" data-search="1">
-                    <option value="">— da assegnare —</option>
+                    <option value="" data-selezionabile="1">— da assegnare —</option>
                     {% for d in docenti %}
                     <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}</option>
                     {% endfor %}

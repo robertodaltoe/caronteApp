@@ -24,15 +24,27 @@
         return opt.textContent.replace(/\s+/g, ' ').trim();
     }
 
+    function eOpzioneReale(o) {
+        // Un'opzione value="" e' normalmente solo il placeholder "-- 
+        // seleziona --" (va nascosta dalla tendina/etichetta: non e'
+        // una scelta vera). Alcuni campi pero' usano value="" per una
+        // scelta effettiva e significativa (es. "nessuno (scoperta)"
+        // per togliere il sostituto da una supplenza gia' assegnata,
+        // vedi templates/modifica_supplenza.html) -- quell'opzione va
+        // marcata con data-selezionabile="1" nel markup per restare
+        // visibile e selezionabile qui, invece di sparire come un
+        // placeholder qualunque (bug reale, Roberto: dopo l'aggiunta
+        // della ricerca "nessuno (scoperta)" non compariva piu').
+        return o.value !== '' || o.dataset.selezionabile === '1';
+    }
+
     function etichettaSelezionata(select) {
         var opt = select.selectedOptions[0];
-        return (opt && opt.value) ? testoOpzione(opt) : '';
+        return (opt && eOpzioneReale(opt)) ? testoOpzione(opt) : '';
     }
 
     function opzioniValide(select) {
-        return Array.prototype.filter.call(select.options, function (o) {
-            return o.value !== '';
-        });
+        return Array.prototype.filter.call(select.options, eOpzioneReale);
     }
 
     function creaSelectRicerca(select) {

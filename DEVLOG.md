@@ -2,6 +2,40 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 12 — Fix: "nessuno (scoperta)" spariva dal menu sostituto
+
+Roberto: dopo l'aggiunta della ricerca ai menu docente (Sessione
+precedente, "Usabilita': blocco 2"), modificando una supplenza già
+assegnata non trovava più l'opzione per togliere il sostituto
+("— nessuno (scoperta) —").
+
+**Causa**: `static/js/select_ricerca.js::opzioniValide()` esclude
+sempre le `<option value="">` dalla tendina di ricerca, per non
+mostrare come "scelta vera" il placeholder "-- seleziona --" di
+partenza (comportamento voluto per la maggior parte dei campi, dove
+value="" significa "non hai ancora scelto"). Ma in
+`templates/modifica_supplenza.html` (e analoghi in
+`supplenza_form.html`) value="" su questi campi è una scelta
+DELIBERATA e frequente — "nessuno (scoperta)" per il sostituto,
+"non specificato"/"da assegnare" per l'assente — non un placeholder:
+lo stesso filtro la nascondeva per errore.
+
+**Fix**: nuovo attributo `data-selezionabile="1"` sull'opzione, che la
+esclude dal filtro placeholder in `opzioniValide()`/`etichettaSelezionata()`
+— applicato alle 4 opzioni realmente coinvolte (`id_sostituto`/
+`id_assente` in `modifica_supplenza.html` e `supplenza_form.html`); i
+placeholder veri (es. "-- seleziona --" per il docente di un'assenza,
+obbligatorio) restano esclusi come prima, comportamento invariato.
+
+**Verifica**: JS-only, nessun test Python pertinente. Verificato dal
+vivo in un mini-harness statico separato (nessun server/DB coinvolto):
+select con le stesse opzioni di modifica_supplenza.html servito su
+localhost, "— nessuno (scoperta) —" ora compare nella tendina di
+ricerca e cliccandola il `<select>` sottostante torna correttamente a
+value="" — esattamente il valore che il form invia al server per
+riportare la supplenza a stato 'scoperta'. Suite pytest invariata
+494/494 (nessuna route toccata).
+
 ## Sessione 69 addendum 11 — Export incarichi docenti (PDF + Excel)
 
 Roberto: "c'è un modo per esportare anche gli incarichi assegnati?" —
