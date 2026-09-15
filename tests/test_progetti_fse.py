@@ -458,6 +458,50 @@ def test_genera_decreto_nomina_include_solo_incarichi_confermati_e_cita_avviso(a
     assert doc is not None
 
 
+def test_decreto_nomina_cita_verbale_e_graduatorie_gia_protocollati(app, db_session, monkeypatch):
+    """Roberto: il decreto di nomina cumulativo deve richiamare anche il
+    protocollo del verbale della commissione e delle pubblicazioni di
+    graduatoria provvisoria/definitiva, non solo dell'avviso di
+    selezione -- verifica che tutti e tre arrivino al render quando
+    già protocollati."""
+    _crea_tabelle(app)
+    _registra_blueprint(app)
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo="Let's English", ore=30, n_partecipanti_previsti=15)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, nome_esterno='Esperto Confermato', ruolo='esperto',
+                       tariffa_oraria=70, ore_previste=30, stato='incaricato')
+    db.session.add(inc)
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='verbale_commissione', titolo='Verbale',
+                                 protocollo='500', data_documento=date(2026, 7, 10)))
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria',
+                                 titolo=f'Pubblicazione graduatoria provvisoria — {p.titolo}',
+                                 protocollo='600', data_documento=date(2026, 7, 15)))
+    db.session.add(DocumentoFSE(id_progetto=p.id, tipo='pubblicazione_graduatoria',
+                                 titolo=f'Pubblicazione graduatoria definitiva — {p.titolo}',
+                                 protocollo='650', data_documento=date(2026, 7, 25)))
+    db.session.commit()
+
+    import routes.progetti_fse as mod
+    catturato = {}
+    def _capture(nome, **k):
+        if nome == 'progetti_fse/documenti/decreto_nomina.html':
+            catturato.update(k)
+        return '<html></html>'
+    monkeypatch.setattr(mod, 'render_template', _capture)
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{p.id}/documenti/decreto-nomina', data={'id_incarico': [str(inc.id)]})
+        assert r.status_code == 200
+
+    assert catturato['riferimento_verbale'] == 'prot. n. 500 del 10/07/2026'
+    assert catturato['riferimento_graduatoria_provvisoria'] == 'prot. n. 600 del 15/07/2026'
+    assert catturato['riferimento_graduatoria_definitiva'] == 'prot. n. 650 del 25/07/2026'
+
+
 def test_genera_lettera_incarico_registra_id_incarico(app, db_session, monkeypatch):
     _crea_tabelle(app)
     _registra_blueprint(app, monkeypatch)

@@ -32,6 +32,15 @@ CUP: {{ progetto.cup or '—' }}
 <p>VISTO e richiamato in preambolo l'Avviso di selezione {{ riferimento_bando }} che fissa i criteri, le
 modalità di presentazione ed i termini di scadenza delle istanze pervenute per l'incarico in oggetto;</p>
 {% endif %}
+{% if riferimento_verbale %}
+<p>VISTO il verbale della Commissione di valutazione {{ riferimento_verbale }};</p>
+{% endif %}
+{% if riferimento_graduatoria_provvisoria %}
+<p>VISTA la pubblicazione della graduatoria provvisoria, {{ riferimento_graduatoria_provvisoria }};</p>
+{% endif %}
+{% if riferimento_graduatoria_definitiva %}
+<p>VISTA la pubblicazione della graduatoria definitiva, {{ riferimento_graduatoria_definitiva }};</p>
+{% endif %}
 
 {% if note_aggiuntive %}
 {% for riga in note_aggiuntive.split('\n') if riga.strip() %}

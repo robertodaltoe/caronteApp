@@ -2,6 +2,35 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 18 — Progetti FSE/FESR: il decreto di nomina cita anche verbale e graduatorie
+
+Roberto: nel decreto di nomina cumulativo, aggiungi i riferimenti al
+protocollo del verbale della commissione e delle graduatorie
+provvisoria/definitiva (prima citava solo l'avviso di selezione).
+
+**Fix**: `genera_decreto_nomina()` (`routes/progetti_fse.py`) ora
+recupera anche `riferimento_verbale` (`_riferimento_documento`, come
+già per l'avviso) e i due riferimenti di graduatoria tramite una nuova
+funzione condivisa `_riferimento_graduatoria(progetto, tipo)` —
+fattorizzata dalla logica già scritta per la graduatoria definitiva che
+cita la provvisoria (addendum 15), così la stessa ricerca "ultimo
+DocumentoFSE pubblicazione_graduatoria protocollato con 'provvisoria'/
+'definitiva' nel titolo" non resta duplicata in due punti.
+`decreto_nomina.html` ha tre nuovi paragrafi VISTO (verbale,
+graduatoria provvisoria, graduatoria definitiva), ciascuno condizionale
+alla protocollazione già avvenuta — stesso pattern degli altri
+riferimenti incrociati del modulo, nessun "prot. n. None" se non
+ancora protocollati.
+
+**Verifica**: 1 nuovo test (47 in `tests/test_progetti_fse.py`, tutti
+verdi). Verificato anche con rendering reale sul progetto "Menti in
+movimento" (copia isolata del `database.db` reale in `/tmp`, mai
+quello vero): il verbale e la graduatoria provvisoria REALI già
+protocollati da Roberto sono stati citati correttamente (recuperato
+automaticamente il protocollo più recente), aggiunta una graduatoria
+definitiva di prova per completare la verifica dei tre riferimenti
+insieme.
+
 ## Sessione 69 addendum 17 — Progetti FSE/FESR: punteggio inserito una volta, coerente in verbale e graduatorie
 
 Roberto: i punteggi assegnati a ciascuna candidatura andrebbero

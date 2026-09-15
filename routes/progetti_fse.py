@@ -479,6 +479,29 @@ def _riferimento_documento(progetto, tipo):
     return f'prot. n. {doc.protocollo}'
 
 
+def _riferimento_graduatoria(progetto, tipo_graduatoria):
+    """Riferimento ("prot. n. X del gg/mm/aaaa") dell'ultima
+    pubblicazione graduatoria PROTOCOLLATA di un certo tipo
+    (provvisoria/definitiva). Provvisoria e definitiva condividono lo
+    stesso tipo di DocumentoFSE (pubblicazione_graduatoria) e si
+    distinguono solo dalla parola nel titolo generato dalla route (vedi
+    anche _documenti_del_passo, stesso meccanismo usato dalla
+    checklist) -- fattorizzato qui perché riusato sia dalla graduatoria
+    definitiva (per citare la provvisoria) sia dal decreto di nomina
+    cumulativo (per citare entrambe, richiesto da Roberto)."""
+    doc = (DocumentoFSE.query
+           .filter_by(id_progetto=progetto.id, tipo='pubblicazione_graduatoria')
+           .filter(DocumentoFSE.titolo.contains(tipo_graduatoria))
+           .filter(DocumentoFSE.protocollo.isnot(None))
+           .order_by(DocumentoFSE.data_documento.desc().nullslast(), DocumentoFSE.id.desc())
+           .first())
+    if not doc:
+        return None
+    if doc.data_documento:
+        return f'prot. n. {doc.protocollo} del {doc.data_documento.strftime("%d/%m/%Y")}'
+    return f'prot. n. {doc.protocollo}'
+
+
 def _contesto_istituto():
     """Kwargs comuni a tutti i template dei documenti generati: dati
     dell'istituto, intestazione (solo prima pagina) e banner PN/UE (ogni
@@ -735,9 +758,15 @@ def genera_decreto_nomina(id_progetto):
             return redirect(url_for('progetti_fse.genera_decreto_nomina', id_progetto=p.id))
 
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
+        riferimento_verbale = _riferimento_documento(p, 'verbale_commissione')
+        riferimento_graduatoria_provvisoria = _riferimento_graduatoria(p, 'provvisoria')
+        riferimento_graduatoria_definitiva = _riferimento_graduatoria(p, 'definitiva')
         html_content = render_template('progetti_fse/documenti/decreto_nomina.html',
             progetto=p, data_generazione=date.today(), incarichi=incarichi,
             ruoli_label=RUOLI_INCARICO_LABEL, riferimento_bando=riferimento_bando,
+            riferimento_verbale=riferimento_verbale,
+            riferimento_graduatoria_provvisoria=riferimento_graduatoria_provvisoria,
+            riferimento_graduatoria_definitiva=riferimento_graduatoria_definitiva,
             note_aggiuntive=request.form.get('note_aggiuntive', '').strip() or None,
             **_contesto_istituto(),
         )
@@ -974,23 +1003,10 @@ def genera_pubblicazione_graduatoria(id_progetto):
         riferimento_bando = _riferimento_documento(p, 'avviso_selezione') or p.riferimento_bando_interno
         riferimento_verbale = _riferimento_documento(p, 'verbale_commissione')
         tipo_graduatoria = request.form.get('tipo_graduatoria', 'provvisoria')
-        # La definitiva cita anche la provvisoria: cerca l'ultimo
-        # DocumentoFSE 'pubblicazione_graduatoria' protocollato il cui
-        # titolo contiene "provvisoria" (stesso tipo per entrambe, si
-        # distinguono solo dal titolo — vedi anche
-        # routes/progetti_fse.py::_documenti_del_passo per lo stesso
-        # meccanismo usato dalla checklist).
-        riferimento_provvisoria = None
-        if tipo_graduatoria != 'provvisoria':
-            doc_prov = (DocumentoFSE.query
-                        .filter_by(id_progetto=p.id, tipo='pubblicazione_graduatoria')
-                        .filter(DocumentoFSE.titolo.contains('provvisoria'))
-                        .filter(DocumentoFSE.protocollo.isnot(None))
-                        .order_by(DocumentoFSE.data_documento.desc().nullslast(), DocumentoFSE.id.desc())
-                        .first())
-            if doc_prov:
-                riferimento_provvisoria = (f'prot. n. {doc_prov.protocollo}'
-                    + (f' del {doc_prov.data_documento.strftime("%d/%m/%Y")}' if doc_prov.data_documento else ''))
+        # La definitiva cita anche la provvisoria (stesso tipo di
+        # documento per entrambe, distinte solo dal titolo).
+        riferimento_provvisoria = (_riferimento_graduatoria(p, 'provvisoria')
+                                    if tipo_graduatoria != 'provvisoria' else None)
         html_content = render_template('progetti_fse/documenti/pubblicazione_graduatoria.html',
             progetto=p, data_generazione=date.today(), riferimento_bando=riferimento_bando,
             riferimento_verbale=riferimento_verbale, tipo_graduatoria=tipo_graduatoria,
