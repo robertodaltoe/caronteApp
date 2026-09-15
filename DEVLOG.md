@@ -2,6 +2,29 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 14 — Progetti FSE/FESR: link mancanti a modifica/elimina incarico
+
+Roberto, dalla pagina dettaglio di un progetto: come faccio a modificare
+i dati di un tutor o eliminare un candidato? Verificato che le route
+esistevano già (`modifica_incarico`, `elimina_incarico`,
+`incarico_form.html` — comprende anche lo stato candidato/incaricato/
+rinunciato) ma `templates/progetti_fse/dettaglio.html` non le linkava
+da nessuna parte nella lista incarichi per modulo: stesso pattern
+"backend pronto ma non raggiungibile dall'interfaccia" già annotato in
+CLAUDE.md (Agenda, pulsante "Nomina" placeholder, ecc.).
+
+**Fix**: aggiunte icona matita (modifica) e icona chiusura (elimina,
+con conferma) accanto a ciascun incaricato, stesso pattern già usato
+per i moduli nella riga sopra. Aggiunto anche un badge con lo stato
+quando diverso da "incaricato" (candidato/rinunciato), prima invisibile
+in questa vista. La route `dettaglio()` ora passa `ruoli_label` al
+template (prima l'etichetta del ruolo non era tradotta, restava lo
+slug grezzo tipo "tutor" invece di "Tutor").
+
+Verificato con rendering reale su copia isolata del `database.db`
+reale in `/tmp` (mai il file vero): la pagina si genera senza errori e
+il link a modifica incarico compare.
+
 ## Sessione 69 addendum 13 — Progetti FSE/FESR: colma la sequenza completa disseminazione→incarichi
 
 Roberto è tornato sulla sezione "Progetti FSE/FESR" chiedendo di

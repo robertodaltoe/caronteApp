@@ -172,7 +172,7 @@ def dettaglio(id):
     r = _riepilogo_progetto(p)
     return render_template('progetti_fse/dettaglio.html', progetto=p,
         riepilogo_moduli=r['riepilogo_moduli'], totale_previsto=r['totale_previsto'],
-        scostamento=r['scostamento'])
+        scostamento=r['scostamento'], ruoli_label=RUOLI_INCARICO_LABEL)
 
 
 @progetti_fse_bp.route('/progetti-fse/cruscotto')

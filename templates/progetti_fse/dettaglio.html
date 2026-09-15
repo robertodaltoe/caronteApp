@@ -84,8 +84,11 @@
                 </td>
                 <td style="padding:8px;">
                     {% for inc in m.incarichi %}
-                    <div style="font-size:.8rem;">
-                        {{ inc.nome_completo }} — {{ inc.ruolo }}
+                    <div style="font-size:.8rem; display:flex; align-items:center; gap:6px;">
+                        <span>
+                            {{ inc.nome_completo }} — {{ ruoli_label.get(inc.ruolo, inc.ruolo) }}
+                            {% if inc.stato != 'incaricato' %}<span class="badge badge-grigio" style="font-size:.68rem;">{{ inc.stato }}</span>{% endif %}
+                        </span>
                         {% if inc.ruolo == 'project_manager' %}
                         <a href="{{ url_for('progetti_fse.genera_decreto_direzione_coordinamento', id_incarico=inc.id) }}" title="Genera decreto Direzione e Coordinamento" style="font-size:.72rem;">{{ icon('print') }}</a>
                         {% elif inc.tipo_rapporto == 'lavoro_autonomo' %}
@@ -93,6 +96,11 @@
                         {% else %}
                         <a href="{{ url_for('progetti_fse.genera_lettera_incarico', id_incarico=inc.id) }}" title="Genera lettera di incarico" style="font-size:.72rem;">{{ icon('print') }}</a>
                         {% endif %}
+                        <a href="{{ url_for('progetti_fse.modifica_incarico', id=inc.id) }}" title="Modifica incarico" style="font-size:.72rem;">{{ icon('edit') }}</a>
+                        <form method="post" action="{{ url_for('progetti_fse.elimina_incarico', id=inc.id) }}" style="display:inline;"
+                              onsubmit="return confirm('Eliminare l\'incarico di {{ inc.nome_completo }}?')">
+                            <button type="submit" style="background:none; border:none; padding:0; cursor:pointer; font-size:.72rem; color:var(--rosso);" title="Elimina incarico">{{ icon('close') }}</button>
+                        </form>
                     </div>
                     {% else %}
                     <span style="color:var(--grigio);">—</span>
