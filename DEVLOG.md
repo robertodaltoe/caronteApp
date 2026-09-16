@@ -2,6 +2,48 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 22 — Display: le frecce cambio-giorno sparivano con l'autoscroll
+
+Roberto: è da sistemare anche l'interazione con la data per cambiare
+la visualizzazione del giorno.
+
+**Causa reale, riprodotta in browser** (server temporaneo su copia
+isolata del `database.db`, mai quello vero): `header` e `.banner`
+(che contiene le frecce ‹/›/Oggi) scorrevano via col resto della
+pagina come qualunque altro contenuto — non erano ancorati. Lo script
+`avviaAutoScroll()` (già presente, pensato per il monitor fisso in
+corridoio) parte da solo pochi secondi dopo il caricamento su
+qualunque giorno con contenuto sufficiente a superare lo schermo: ho
+verificato che bastano 3 secondi perché le frecce escano completamente
+dal viewport, verso l'alto. Un click su quel punto dello schermo dopo
+l'avvio dello scroll non colpisce più il link (che nel frattempo si è
+spostato), ma qualunque box di supplenza si trovi ora in quella
+posizione — da qui "l'interazione non funziona", non un problema del
+link in sé (l'`href` calcolato era sempre corretto).
+
+**Fix**: `header` e `.banner` avvolti in un unico contenitore
+`.top-bar` con `position:sticky; top:0` — restano visibili in cima
+allo schermo indipendentemente da quanto la pagina sia scorsa, il
+contenuto scorre sotto di loro invece di trascinarli via. Un solo
+wrapper sticky invece di due regole sticky separate (una per header,
+una per banner con offset calcolato a mano): evita di dover conoscere
+l'altezza esatta dell'header, che potrebbe variare. Bottoni ‹/›/Oggi
+anche leggermente ingranditi (padding 4px 10px → 7px 14px) per essere
+più facili da colpire.
+
+**Verifica end-to-end reale** (non solo visiva): riprodotto il bug nel
+browser sul codice precedente (click su ‹ dopo l'avvio dell'autoscroll
+→ la pagina restava sullo stesso giorno, confermato leggendo il testo
+della pagina dopo il click, non solo una supposizione), poi verificato
+che lo stesso identico click funziona dopo il fix (navigazione reale
+da 04/06/2026 a 03/06/2026, letta dal contenuto della pagina dopo il
+click). Confermato via JavaScript che `.top-bar` resta a `rect.top: 0`
+anche con `scrollY` oltre 2000px. `database.db` reale mai toccato
+(solo copia in `/tmp`, server temporaneo su porta separata). Test
+`test_display_richiede_login.py`/`test_identificativo_display.py`
+rieseguiti: stesso unico fallimento pre-esistente non collegato
+(fixture `app_reale`/login).
+
 ## Sessione 69 addendum 21 — Display: contrasto e gerarchia (nome sostituto più grande della classe)
 
 Roberto: il contrasto della pagina display non è il massimo, poco

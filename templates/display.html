@@ -30,6 +30,20 @@
         html, body { min-height:100%; background:var(--bg); color:white; font-family:var(--font); -webkit-font-smoothing:antialiased; font-variant-emoji: text; }
         body { padding-bottom: 50px; }
 
+        /* Header + banner ancorati in cima (sticky) come un unico
+           blocco: prima scorrevano via col resto della pagina, portando
+           con sé le frecce ‹/›/Oggi. Sullo schermo del display
+           l'autoscroll automatico parte da solo pochi secondi dopo il
+           caricamento (vedi avviaAutoScroll() più sotto) — su un
+           browser normale (Roberto, per cambiare giorno da remoto) i
+           controlli sparivano quindi quasi subito dallo schermo,
+           irraggiungibili finché lo scroll non tornava in cima da solo.
+           Un solo wrapper sticky invece di due regole sticky separate
+           con offset calcolati a mano: evita di dover conoscere
+           l'altezza esatta dell'header (che può variare leggermente) per
+           posizionare il banner subito sotto. */
+        .top-bar { position:sticky; top:0; z-index:20; }
+
         header { background:var(--blu-header); border-bottom:3px solid var(--blu-line); padding:10px 40px; min-height:76px; display:flex; align-items:center; justify-content:space-between; }
         .header-left { display:flex; align-items:center; gap:14px; }
         .header-left img { height:44px; width:44px; object-fit:contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
@@ -41,8 +55,8 @@
         .banner { background:linear-gradient(90deg,#3a1310,#5c1512); padding:10px 40px; font-size:.85rem; font-weight:600; color:var(--grigio); border-bottom:1px solid rgba(255,255,255,.07); display:flex; justify-content:space-between; align-items:center; }
         .banner strong { color:white; }
         .nav-date { display:flex; gap:6px; align-items:center; }
-        .nav-btn { padding:4px 10px; border-radius:6px; background:rgba(255,255,255,.12); color:white; text-decoration:none; font-size:.9rem; font-weight:700; }
-        .nav-btn:hover { background:rgba(255,255,255,.22); }
+        .nav-btn { padding:7px 14px; border-radius:6px; background:rgba(255,255,255,.14); color:white; text-decoration:none; font-size:1rem; font-weight:700; }
+        .nav-btn:hover { background:rgba(255,255,255,.24); }
 
         .sezione-ora { padding:10px 40px 4px; }
         .ora-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -152,6 +166,7 @@
 {% include '_display_bg.html' %}
 </div>
 
+<div class="top-bar">
 <header>
     <div class="header-left">
         <img src="{{ url_for('static', filename='img/brand/caronte-icon.png') }}" alt="">
@@ -185,6 +200,7 @@
         <a class="nav-btn" href="/display?data={{ (data_sel + timedelta(days=1)).isoformat() }}">›</a>
         <a class="nav-btn" href="/display" style="font-size:.8rem;font-weight:600;">Oggi</a>
     </div>
+</div>
 </div>
 
 {% set sup_visibili = supplenze | rejectattr('stato','eq','annullata') | list %}
