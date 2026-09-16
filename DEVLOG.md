@@ -2,6 +2,65 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 21 — Display: contrasto e gerarchia (nome sostituto più grande della classe)
+
+Roberto: il contrasto della pagina display non è il massimo, poco
+leggibile su schermo grande; la riga del nome docente dovrebbe essere
+più grande della classe per individuarlo più in fretta.
+
+**Problemi reali trovati in `templates/display.html`** (non solo
+"colori da rivedere" in astratto):
+1. Il testo dentro i box prendeva lo stesso colore dello sfondo
+   (rosso su sfondo rosso per "scoperta", viola su viola per "non
+   assegnabile") — contrasto testo/sfondo basso anche se le tinte
+   sembravano diverse a schermo piccolo, perché la differenza di tonalità
+   non aiuta il contrasto reale (conta solo la luminanza).
+2. L'evidenziazione dell'ora in corso (`.ora-corrente`) SOSTITUIVA lo
+   sfondo di stato con un giallo quasi trasparente (`rgba(255,248,0,.07)`)
+   invece di aggiungersi — cancellando il segnale verde/rosso/viola
+   proprio durante l'ora più rilevante, quella in corso.
+3. Gerarchia dimensioni invertita rispetto a quello che serve scorrere
+   più in fretta: la classe (1.3rem/800) era più grande del nome del
+   sostituto (1.05rem/700).
+
+**Fix**:
+- Testo principale dentro i box ora bianco/quasi bianco ad alto
+  contrasto sempre (nome sostituto), tranne le etichette di allarme
+  brevi (SCOPERTA/N/A) che restano colorate — sono parole-sagoma da
+  riconoscere al volo, non nomi da leggere, e il colore lì aiuta invece
+  di competere con la leggibilità.
+- Sfondi di stato più coperti (.22/.24 → .30/.32 di opacità) e bordo
+  sinistro sempre in tinta piena (non più rgba tenue) — il colore resta
+  il modo per distinguere lo stato a colpo d'occhio da lontano, ma ora
+  sul bordo/sfondo, non in competizione con il testo.
+- Evidenziazione ora corrente sostituita con un alone (`box-shadow`)
+  giallo AGGIUNTO al colore di stato esistente, non più uno sfondo che
+  lo sovrascrive — un'unica regola `.box.ora-corrente` invece di tre
+  copie duplicate per tipo di box (assegnata/scoperta/non_assegnabile),
+  rimosse anche le due copie duplicate per classe-libera/migrazione
+  (stesso pattern, stesso fix).
+- `--grigio` (colore testo secondario: fascia oraria, materia, aula,
+  footer) da `rgba(255,255,255,.38)` a `.55` — contrasto secondario più
+  leggibile in tutta la pagina, non solo nei box.
+- Nome sostituto ora il testo più grande del box (1.7rem/800, era
+  1.05rem/700), classe ridotta a etichetta più piccola sopra
+  (1.05rem/700, maiuscolo, era 1.3rem/800) — invertita la gerarchia
+  come richiesto.
+
+**Verifica**: nessuna logica di route toccata (solo CSS/HTML), quindi
+nessun nuovo test — verificato visivamente con screenshot reali su
+copia isolata del `database.db` (mai quello vero, server temporaneo su
+porta 5098) contro una giornata con 35 supplenze reali: il nome del
+sostituto si legge nettamente più in fretta della classe, il box
+"scoperta" risalta con un rosso pieno leggibile, e l'alone giallo
+dell'ora corrente (simulato via JS, dato che l'orario reale non
+coincideva con nessuna fascia del giorno di test) resta visibile senza
+cancellare il rosso sottostante. Test `test_display_richiede_login.py`
+e `test_identificativo_display.py` (unica suite che tocca questa
+pagina) rieseguiti: stesso unico fallimento pre-esistente non
+collegato (fixture `app_reale`/login) già presente prima di questa
+modifica.
+
 ## Sessione 69 addendum 20 — Prospetto supplenze: nomi assenti dalla griglia ore/classi
 
 Roberto: generando il prospetto dalla dashboard, i nominativi
