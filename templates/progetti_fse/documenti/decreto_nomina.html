@@ -14,13 +14,14 @@
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 
 <div class="oggetto">
-<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Decreto per conferimento incarichi ad esperti e
-tutor per la realizzazione degli interventi del progetto{% if riferimento_bando %} — {{ riferimento_bando }}{% endif %}
+<b>Oggetto:</b> Decreto per conferimento incarichi ad esperti e tutor per la realizzazione degli interventi
+del progetto{% if riferimento_bando %} — Avviso di selezione interna {{ riferimento_bando }}{% endif %}.
 </div>
 <div class="estremi">
-Titolo progetto: "{{ progetto.titolo }}"<br>
-Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
-CUP: {{ progetto.cup or '—' }}
+<i>{{ progetto.riferimento_avviso or '' }}</i><br>
+Titolo progetto: <b>"{{ progetto.titolo }}"</b><br>
+Codice progetto: <b>{{ progetto.codice_progetto or '—' }}</b><br>
+CUP: <b>{{ progetto.cup or '—' }}</b>
 </div>
 
 <div class="qualifica">il Dirigente Scolastico</div>

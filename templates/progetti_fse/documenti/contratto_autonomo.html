@@ -12,12 +12,13 @@
 
 <div class="protocollo">Protocollo come da segnatura</div>
 <div class="oggetto">
-<b>Oggetto:</b> Contratto di lavoro autonomo — Selezione interna per {{ progetto.riferimento_avviso or '' }}
+<b>Oggetto:</b> Contratto di lavoro autonomo in qualità di {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower }}{% if riferimento_bando %} — Avviso di selezione interna {{ riferimento_bando }}{% endif %}.
 </div>
 <div class="estremi">
-CUP: {{ progetto.cup or '—' }}<br>
-Titolo progetto: "{{ progetto.titolo }}"<br>
-Codice progetto: {{ progetto.codice_progetto or '—' }}
+<i>{{ progetto.riferimento_avviso or '' }}</i><br>
+Titolo progetto: <b>"{{ progetto.titolo }}"</b><br>
+Codice progetto: <b>{{ progetto.codice_progetto or '—' }}</b><br>
+CUP: <b>{{ progetto.cup or '—' }}</b>
 </div>
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 

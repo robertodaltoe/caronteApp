@@ -14,15 +14,15 @@
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 
 <div class="oggetto">
-<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Dichiarazione di insussistenza di cause di
-incompatibilità e assenza di conflitto di interessi per l'incarico di componente della Commissione di
-valutazione delle istanze pervenute
-{% if riferimento_nomina %}, nominato con {{ riferimento_nomina }}{% endif %}
+<b>Oggetto:</b> Dichiarazione di insussistenza di cause di incompatibilità e assenza di conflitto di
+interessi per l'incarico di componente della Commissione di valutazione delle istanze
+pervenute{% if riferimento_nomina %}, nominato con {{ riferimento_nomina }}{% endif %}.
 </div>
 <div class="estremi">
-Titolo progetto: "{{ progetto.titolo }}"<br>
-Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
-CUP: {{ progetto.cup or '—' }}
+<i>{{ progetto.riferimento_avviso or '' }}</i><br>
+Titolo progetto: <b>"{{ progetto.titolo }}"</b><br>
+Codice progetto: <b>{{ progetto.codice_progetto or '—' }}</b><br>
+CUP: <b>{{ progetto.cup or '—' }}</b>
 </div>
 
 <p>Il/la sottoscritto/a <b>{{ nominativo or '_______________________' }}</b>, in qualità di

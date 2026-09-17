@@ -2,6 +2,74 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 27 — Progetti FSE/FESR: oggetto documenti in due sezioni
+
+Roberto: l'oggetto di ogni documento generato (decreti, avvisi, lettere
+di incarico, contratti, verbali) andava diviso in due sezioni — sopra
+il documento specifico generato (con eventuale protocollo dell'avviso
+di selezione interna), sotto per intero la dicitura dell'Avviso
+Pubblico ministeriale in corsivo, più titolo/codice/CUP del progetto
+in grassetto. Prima di applicare la modifica, anteprima mostrata su un
+decreto di nomina reale (progetto "Menti in movimento") — confermata,
+poi estesa esplicitamente da Roberto a tutti gli altri documenti.
+
+**decreto_nomina.html** (prototipo): `<div class="oggetto">` ora
+contiene solo il nome del documento + (se disponibile) protocollo
+dell'avviso di selezione interna; `<div class="estremi">` sotto
+contiene, in quest'ordine, l'intera dicitura `progetto.riferimento_avviso`
+in corsivo (`<i>`), poi Titolo progetto/Codice progetto/CUP in
+grassetto (`<b>`). `<b>`/`<i>` già supportati da WeasyPrint (PDF) senza
+CSS aggiuntivo; aggiunte comunque regole esplicite `.estremi b`/`.estremi i`
+in `_stile_decreto.html` per coerenza con `.oggetto b` già presente —
+nota: il convertitore verso `.docx` (`modules/genera_docx_fse.py`) NON
+supporta ancora `<i>`, solo `<b>`/`<br>` (verificato, nessun
+`run.italic` nel codice) — chi genera in formato Word invece di PDF
+perderà il corsivo finché non si estende `_scrivi_run_inline` con un
+tag dispatch parallelo per `<i>` (segnalato, non affrontato in questo
+addendum: Roberto genera prevalentemente in PDF).
+
+**Dato reale mancante**: il campo `riferimento_avviso` del progetto
+"Menti in movimento" conteneva solo una versione abbreviata ("Avviso
+prot. n. 0112894 del 11/05/2026 (D.M. 79/2026)"), non la dicitura
+ufficiale completa (nome del Piano Estate, riferimento ai Fondi
+Strutturali Europei). Backup cifrato del `database.db` reale prima
+della modifica (`database_20260917_1554_pre_fix_riferimento_avviso_fse.db.enc`),
+poi `UPDATE` diretto del campo con la dicitura completa fornita da
+Roberto (spazi doppi da copia-incolla normalizzati a singoli),
+`PRAGMA integrity_check` dopo la scrittura: ok.
+
+**Estensione a tutti gli altri 13 documenti** (avviso_selezione,
+azione_disseminazione, contratto_autonomo, decreto_assunzione_bilancio,
+decreto_avvio_selezione, decreto_direzione_coordinamento,
+dichiarazione_avvio_modulo, dichiarazione_insussistenza,
+dichiarazione_insussistenza_commissario, lettera_incarico,
+nomina_commissione, pubblicazione_graduatoria, verbale_commissione):
+stesso schema — riferimento_avviso spostato dall'oggetto agli estremi
+(mai più duplicato nell'oggetto), CUP/Titolo/Codice standardizzati
+sempre nello stesso ordine (Titolo, Codice, CUP) dove prima l'ordine
+variava da documento a documento, ed etichettato esplicitamente "Avviso
+di selezione interna {{ riferimento_bando }}" ovunque il documento già
+calcolava quel riferimento incrociato (decreto_nomina, contratto_autonomo,
+lettera_incarico, nomina_commissione, pubblicazione_graduatoria,
+verbale_commissione) invece di appenderlo senza etichetta come prima.
+`dichiarazione_avvio_modulo.html` aveva anche una riga ridondante
+("Dichiarazione avvio modulo {{ codice }}" ripetuta sia nell'oggetto
+sia negli estremi) — consolidata nell'oggetto con anche il titolo del
+modulo, invece che duplicata.
+
+**Verifica**: tutte le 14 route di generazione documento (progetto id
+reale "Menti in movimento") interrogate via fetch su copia isolata del
+`database.db` reale — tutte 200, nessun errore Jinja. Resa visiva
+verificata per 3 documenti rappresentativi (decreto di nomina, avviso
+di selezione, verbale commissione) renderizzando l'HTML direttamente e
+ispezionandolo in browser: corsivo/grassetto corretti, nessun testo
+tagliato o sovrapposto anche con la dicitura completa dell'avviso su 3
+righe. Suite completa: 545 verdi, stessi 4 fallimenti pre-esistenti non
+collegati (nessun test asseriva sul testo esatto di oggetto/estremi).
+`PRAGMA integrity_check` sulle copie di verifica: ok; `database.db`
+reale toccato solo dall'aggiornamento intenzionale di
+`riferimento_avviso` (backup cifrato creato prima).
+
 ## Sessione 69 addendum 26 — Display: sfondo chiaro + aule mancanti
 
 Roberto: "in display, dovremmo cambiare lo sfondo perchè così scuro non

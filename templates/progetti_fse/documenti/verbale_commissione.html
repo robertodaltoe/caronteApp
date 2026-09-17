@@ -14,13 +14,13 @@
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 
 <div class="oggetto">
-<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Verbale della Commissione di valutazione
-istanze{% if riferimento_bando %} — {{ riferimento_bando }}{% endif %}
+<b>Oggetto:</b> Verbale della Commissione di valutazione istanze{% if riferimento_bando %} — Avviso di selezione interna {{ riferimento_bando }}{% endif %}.
 </div>
 <div class="estremi">
-CUP: {{ progetto.cup or '—' }}<br>
-Titolo progetto: "{{ progetto.titolo }}"<br>
-Codice progetto: {{ progetto.codice_progetto or '—' }}
+<i>{{ progetto.riferimento_avviso or '' }}</i><br>
+Titolo progetto: <b>"{{ progetto.titolo }}"</b><br>
+Codice progetto: <b>{{ progetto.codice_progetto or '—' }}</b><br>
+CUP: <b>{{ progetto.cup or '—' }}</b>
 </div>
 
 <p>Il giorno {{ data_seduta.strftime('%d/%m/%Y') if data_seduta else '___________' }} alle ore

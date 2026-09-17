@@ -14,13 +14,13 @@
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 
 <div class="oggetto">
-<b>Oggetto:</b> {{ progetto.riferimento_avviso or '' }} — Azione di disseminazione, comunicazione,
-sensibilizzazione e pubblicizzazione del progetto
+<b>Oggetto:</b> Azione di disseminazione, comunicazione, sensibilizzazione e pubblicizzazione del progetto.
 </div>
 <div class="estremi">
-Titolo progetto: "{{ progetto.titolo }}"<br>
-Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
-CUP: {{ progetto.cup or '—' }}
+<i>{{ progetto.riferimento_avviso or '' }}</i><br>
+Titolo progetto: <b>"{{ progetto.titolo }}"</b><br>
+Codice progetto: <b>{{ progetto.codice_progetto or '—' }}</b><br>
+CUP: <b>{{ progetto.cup or '—' }}</b>
 </div>
 
 <p><b>Alle Istituzioni Scolastiche del territorio</b><br>

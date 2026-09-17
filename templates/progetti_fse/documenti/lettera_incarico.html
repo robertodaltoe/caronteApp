@@ -15,13 +15,13 @@
 
 <div class="oggetto">
 <b>Oggetto:</b> Lettera di incarico in qualità di {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower }}
-per il corso "{{ incarico.modulo.titolo }}" (modulo n. {{ incarico.modulo.codice_esterno or '—' }}) —
-{{ progetto.riferimento_avviso or '' }}
+per il corso "{{ incarico.modulo.titolo }}" (modulo n. {{ incarico.modulo.codice_esterno or '—' }}){% if riferimento_bando %} — Avviso di selezione interna {{ riferimento_bando }}{% endif %}.
 </div>
 <div class="estremi">
-Titolo progetto: "{{ progetto.titolo }}"<br>
-Codice progetto: {{ progetto.codice_progetto or '—' }}<br>
-CUP: {{ progetto.cup or '—' }}
+<i>{{ progetto.riferimento_avviso or '' }}</i><br>
+Titolo progetto: <b>"{{ progetto.titolo }}"</b><br>
+Codice progetto: <b>{{ progetto.codice_progetto or '—' }}</b><br>
+CUP: <b>{{ progetto.cup or '—' }}</b>
 </div>
 <div class="data-luogo">Chiavenna, {{ data_generazione.strftime('%d/%m/%Y') }}</div>
 
