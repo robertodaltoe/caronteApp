@@ -14,6 +14,16 @@ class OrarioDocente(db.Model):
     tipo_ora    = db.Column(db.String(20), default='lezione')
     # lezione | compresenza | potenziamento | disposizione | altro
 
+    # Periodo di validità dell'orario caricato con l'ultimo import
+    # (routes/sincronizzazione.py::importa) — valorizzato identico su
+    # tutte le righe dello stesso import, NULL/NULL = "sempre valido"
+    # (comportamento di sempre, usato per l'orario definitivo). Serve
+    # per la fase di orari provvisori settimanali: vedi
+    # modules/assenze_registrazione.py::_genera_supplenze/
+    # ricalcola_supplenze_periodo.
+    data_inizio_validita = db.Column(db.Date, nullable=True)
+    data_fine_validita   = db.Column(db.Date, nullable=True)
+
     docente     = db.relationship('Docente', backref='orario', lazy=True)
 
     @property
@@ -64,6 +74,18 @@ def griglia_settimanale(id_docente, completa_se_vuota=False):
         giorni_usati = []
 
     return orario, ore_list, giorni_usati
+
+
+def validita_orario_corrente():
+    """(data_inizio_validita, data_fine_validita) dell'orario attualmente
+    caricato, letti da una riga qualunque della tabella (identici su
+    tutte le righe dello stesso import). (None, None) se la tabella è
+    vuota o se l'orario è stato caricato senza indicare una validità
+    (comportamento "sempre valido", quello di sempre)."""
+    riga = OrarioDocente.query.with_entities(
+        OrarioDocente.data_inizio_validita, OrarioDocente.data_fine_validita
+    ).first()
+    return riga if riga else (None, None)
 
 
 def classi_attive():

@@ -41,7 +41,10 @@
     <h2>⇧︎ Aggiorna orario</h2>
     <p style="color:var(--grigio); font-size:.88rem; margin-bottom:16px;">
         Carica un nuovo file Excel oppure usa quello già presente in <code>data/</code>.
-        Le supplenze e la banca ore esistenti non vengono toccate.
+        Se non indichi una validità, le supplenze e la banca ore esistenti non vengono
+        toccate (solo aggiunte quelle mancanti per assenze già registrate). Se indichi
+        una validità, le supplenze automatiche nel periodo vengono ricalcolate: quelle
+        non più coerenti col nuovo orario sono rimosse e quelle mancanti aggiunte.
     </p>
     <form method="post" action="{{ url_for('sync.importa') }}"
           enctype="multipart/form-data">
@@ -51,6 +54,14 @@
                 <input type="file" name="file_orario" accept=".xlsx,.xlsm"
                        style="padding:6px;">
             </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Valido dal <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">(opzionale)</span></label>
+                <input type="date" name="data_inizio_validita" style="padding:6px;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Valido al <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">(opzionale)</span></label>
+                <input type="date" name="data_fine_validita" style="padding:6px;">
+            </div>
             <button class="btn btn-success" type="submit"
                     onclick="return confirm('Aggiornare l\'orario? L\'operazione sovrascrive tutti gli slot orario.')">
                 {{ icon('refresh') }} Aggiorna orario
@@ -59,6 +70,10 @@
         <p style="font-size:.78rem; color:var(--grigio); margin-top:8px;">
             Se non carichi un file, viene usato automaticamente
             <strong>{{ file_corrente or 'nessun file trovato' }}</strong>.
+            Lasciando vuoto "valido dal/al" l'orario resta valido sempre (usalo per
+            l'orario definitivo di fine assestamento); indicando un periodo, fuori da
+            quel periodo non verrà proposta nessuna supplenza finché non importi un
+            orario successivo.
         </p>
     </form>
 </div>

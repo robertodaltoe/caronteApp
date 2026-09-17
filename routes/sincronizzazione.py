@@ -126,23 +126,60 @@ def importa():
         flash('Nessun file orario trovato. Carica un file .xlsx/.xlsm.', 'error')
         return redirect(url_for('sync.index'))
 
+    from datetime import date, datetime
+    data_inizio_validita = data_fine_validita = None
+    v_ini_raw = request.form.get('data_inizio_validita', '').strip()
+    v_fine_raw = request.form.get('data_fine_validita', '').strip()
+    if v_ini_raw:
+        data_inizio_validita = datetime.strptime(v_ini_raw, '%Y-%m-%d').date()
+    if v_fine_raw:
+        data_fine_validita = datetime.strptime(v_fine_raw, '%Y-%m-%d').date()
+    if data_inizio_validita and data_fine_validita and data_inizio_validita > data_fine_validita:
+        flash('La data di inizio validità non può essere successiva alla data di fine.', 'error')
+        return redirect(url_for('sync.index'))
+
     try:
-        stats = applica_importazione(file_path, db.session)
+        stats = applica_importazione(
+            file_path, db.session,
+            data_inizio_validita=data_inizio_validita,
+            data_fine_validita=data_fine_validita,
+        )
     except Exception as e:
         db.session.rollback()
         flash(f'Errore durante l\'importazione: {e}', 'error')
         return redirect(url_for('sync.index'))
 
-    from datetime import date
-    from modules.assenze_registrazione import rigenera_supplenze_mancanti
-    supplenze_rigenerate = rigenera_supplenze_mancanti(data_da=date.today())
-
     msg = (f'Orario aggiornato: {stats["slot_totali"]} slot, '
            f'{stats["docenti_nuovi"]} docenti nuovi.')
-    if supplenze_rigenerate:
-        msg += (f' {supplenze_rigenerate} supplenz{"a" if supplenze_rigenerate == 1 else "e"} '
-                f'da assegnare generat{"a" if supplenze_rigenerate == 1 else "e"} per assenze '
-                f'già registrate che risultano ora coperte dal nuovo orario.')
+
+    if data_inizio_validita or data_fine_validita:
+        from modules.assenze_registrazione import ricalcola_supplenze_periodo
+        # Ricalcolo su tutto il periodo indicato (se un solo estremo è
+        # dato, ricalcola comunque solo entro quell'estremo sull'altro
+        # lato aperto -- qui serve un intervallo concreto: se manca un
+        # estremo si usa oggi/fra un anno come bordo pratico).
+        d_ini = data_inizio_validita or date.today()
+        d_fine = data_fine_validita or (d_ini.replace(year=d_ini.year + 1))
+        esito = ricalcola_supplenze_periodo(d_ini, d_fine)
+        if esito['create'] or esito['cancellate']:
+            msg += (f' Supplenze ricalcolate nel periodo indicato: '
+                    f'{esito["create"]} aggiunte, {esito["cancellate"]} rimosse perché non più coerenti col nuovo orario.')
+        if esito['da_rivedere']:
+            righe = '; '.join(
+                f'{r["docente"]} {r["data"]} ora {r["ora"]} cl.{r["classe"]}'
+                for r in esito['da_rivedere'][:10]
+            )
+            altro = f' e altre {len(esito["da_rivedere"]) - 10}' if len(esito['da_rivedere']) > 10 else ''
+            flash(f'⚠︎ {len(esito["da_rivedere"])} supplenza/e in un giorno precedente a oggi '
+                  f'non è più coerente col nuovo orario ma NON è stata toccata (verifica a mano): '
+                  f'{righe}{altro}.', 'warning')
+    else:
+        from modules.assenze_registrazione import rigenera_supplenze_mancanti
+        supplenze_rigenerate = rigenera_supplenze_mancanti(data_da=date.today())
+        if supplenze_rigenerate:
+            msg += (f' {supplenze_rigenerate} supplenz{"a" if supplenze_rigenerate == 1 else "e"} '
+                    f'da assegnare generat{"a" if supplenze_rigenerate == 1 else "e"} per assenze '
+                    f'già registrate che risultano ora coperte dal nuovo orario.')
 
     if stats['non_riconosciuti']:
         nr = ', '.join(stats['non_riconosciuti'])

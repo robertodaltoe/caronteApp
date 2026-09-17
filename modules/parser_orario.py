@@ -268,7 +268,12 @@ def parse_file(excel_path):
     return {'docenti_anagrafica': anagrafica, 'slots': slots}
 
 
-def applica_importazione(excel_path, db_session):
+def applica_importazione(excel_path, db_session,
+                          data_inizio_validita=None, data_fine_validita=None):
+    """data_inizio_validita/data_fine_validita: periodo in cui l'orario
+    importato è considerato in vigore (fase di orari provvisori
+    settimanali) — None/None = sempre valido, comportamento di sempre
+    (orario definitivo)."""
     from models.docente import Docente
     from models.orario_docente import OrarioDocente
     from models.sync_orario import AliasDocente, LogImportazione
@@ -331,6 +336,8 @@ def applica_importazione(excel_path, db_session):
             id_docente=doc.id, giorno=slot['giorno'], ora=slot['ora'],
             classe=slot['classe'], materia=slot['materia'],
             tipo_ora=slot['tipo_ora'],
+            data_inizio_validita=data_inizio_validita,
+            data_fine_validita=data_fine_validita,
         ))
         stats['slot_totali'] += 1
 

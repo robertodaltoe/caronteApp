@@ -2,6 +2,76 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 25 — Validità temporale dell'orario + ricalcolo automatico supplenze
+
+Roberto: durante la fase di orari provvisori settimanali (inizio anno)
+sta caricando un orario diverso ogni settimana. Ogni import sovrascrive
+l'intero `OrarioDocente` senza alcuna nozione di data, mentre le
+`Supplenze` già generate da un'assenza restano congelate col vecchio
+orario per sempre — l'unico meccanismo post-import esistente
+(`rigenera_supplenze_mancanti`) *aggiunge* solo le mancanti, non tocca
+mai quelle esistenti. Risultato: supplenze già assegnate su classi che
+la settimana dopo non esistono più (es. su Alessi), senza modo di
+correggerle senza cancellare a mano mesi di sostituzioni.
+
+**Decisione di design** (dopo aver verificato che `OrarioDocente` è
+referenziato in 21 file diversi, quasi tutti assumendo "un orario solo,
+sempre valido"): niente versionamento riga per riga. Si aggiungono solo
+due colonne `data_inizio_validita`/`data_fine_validita` su
+`OrarioDocente` (nullable, stesso valore su tutte le righe dello stesso
+import — se vuote, comportamento invariato = sempre valido, per
+l'orario **definitivo** di fine assestamento). L'unico punto che deve
+sapere della validità è la generazione supplenze da un'assenza — nessuno
+dei 21 file esistenti è stato toccato.
+
+**Implementazione**:
+- `models/orario_docente.py`: due nuove colonne + helper
+  `validita_orario_corrente()`.
+- `modules/parser_orario.py::applica_importazione`: nuovi parametri
+  opzionali, valorizzati su ogni riga inserita.
+- `templates/sincronizzazione.html` + `routes/sincronizzazione.py`: due
+  campi data opzionali "Valido dal/al" nel form di import.
+- `modules/assenze_registrazione.py::_genera_supplenze`: nuova guardia
+  in testa — se la validità è impostata e la data dell'assenza cade
+  fuori, non genera nulla (vale sia per la registrazione quotidiana sia
+  per il ricalcolo massivo).
+- Nuova `modules/assenze_registrazione.py::ricalcola_supplenze_periodo()`:
+  per ogni assenza nel periodo indicato, cancella le supplenze
+  automatiche (mai quelle `origine='manuale'`) il cui `(ora, classe)`
+  non è più coerente col nuovo orario — **anche se già assegnate a un
+  sostituto**, per esplicita richiesta di Roberto — e aggiunge quelle
+  mancanti riusando `_genera_supplenze` (già idempotente). Segue lo
+  stesso pattern di cancellazione già in uso altrove: tombstone
+  (`registra_eliminazione`) + `MovimentoBancaOre` collegato + delete.
+  Eccezione richiesta esplicitamente da Roberto: per un giorno
+  **precedente alla data di importazione** (presumibilmente già
+  svolto), non cancella ma segnala in un elenco `da_rivedere` nel flash
+  — mai una cancellazione silenziosa di qualcosa di già accaduto.
+- Banner di avviso in dashboard (`routes/dashboard.py` +
+  `templates/dashboard.html`) quando la data selezionata cade fuori
+  dalla validità corrente, per non far sembrare un bug l'assenza di
+  supplenze.
+- Migrazione additiva in `app.py::_auto_migrate()` (pattern esistente).
+
+**Verifica**: 10 nuovi test (`tests/test_validita_orario.py`) —
+cancellazione di una supplenza già assegnata quando la classe cambia,
+nessun tocco alle supplenze manuali, nessuna cancellazione+segnalazione
+per un giorno precedente all'import, aggiunta delle mancanti, nessun
+effetto quando già coerente, comportamento invariato senza validità
+impostata. Suite completa: 541 verdi, stessi 4 fallimenti pre-esistenti
+non collegati (uno è lo stesso già verificato pre-esistente in una
+sessione precedente). End-to-end in browser su copia isolata del
+`database.db` reale (mai quello vero): registrata un'assenza reale su
+AGRÒ (21/9, 1ALSU), reimportato lo stesso file orario reale con
+validità 21-26/9 — le sue 3 supplenze restano intatte (coerenti), 4
+altre supplenze automatiche preesistenti nel periodo vengono rimosse
+perché non più coerenti col file reimportato (nessun orfano in
+`banca_ore`, tombstone registrati); una nuova assenza fuori dalla
+finestra (28/9) genera correttamente **zero** supplenze, e il banner
+"Nessun orario in vigore" compare in dashboard su quella data e non su
+una data dentro la finestra. `PRAGMA integrity_check` sulla copia: ok;
+`database.db` reale invariato (md5 identico prima/dopo).
+
 ## Sessione 69 addendum 24 — Nuovo comando dashboard: assegna potenziamento/compresenza
 
 Roberto: "dovremmo pensare ad un comando in dashboard che mi permetta

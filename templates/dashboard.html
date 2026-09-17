@@ -52,6 +52,16 @@
 
 {% block content %}
 
+{% if orario_non_in_vigore %}
+<div style="background:#fef3c7; border-left:4px solid #d97706; border-radius:6px;
+            padding:10px 14px; margin-bottom:16px; font-size:.86rem; color:#92400e;">
+    ⚠ Nessun orario in vigore per il {{ data_sel.strftime('%d/%m/%Y') }}: l'orario
+    caricato copre solo un altro periodo. Nessuna supplenza automatica può essere
+    generata finché non importi l'orario di questa settimana (Sincronizzazione →
+    Aggiorna orario).
+</div>
+{% endif %}
+
 <!-- HEADER -->
 <div style="display:flex; align-items:center; justify-content:space-between;
             margin-bottom:20px; flex-wrap:wrap; gap:12px;">

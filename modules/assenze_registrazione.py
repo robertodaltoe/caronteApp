@@ -15,7 +15,7 @@ from models.assenza import (
     MOTIVI_RISERVATI, RUOLI_MOTIVO_SPECIFICO,
 )
 from models.movimento_banca_ore import MovimentoBancaOre
-from models.orario_docente import OrarioDocente
+from models.orario_docente import OrarioDocente, validita_orario_corrente
 from models.scambio_orario import ScambioOrario, ScambioSlot
 from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante, AttivitaIstPresenza
 from models.supplenza import Supplenza
@@ -224,6 +224,14 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
     if giorno_num is None:
         return 0
 
+    # Fase di orari provvisori settimanali: se l'orario corrente ha una
+    # validità impostata e 'data' cade fuori, non esiste un orario per
+    # quel giorno -- nessuna supplenza va generata (vedi
+    # ricalcola_supplenze_periodo per il ricalcolo dopo un reimport).
+    v_ini, v_fine = validita_orario_corrente()
+    if (v_ini and data < v_ini) or (v_fine and data > v_fine):
+        return 0
+
     if ore_singole:
         slots = OrarioDocente.query.filter_by(
             id_docente=id_docente, giorno=giorno_num
@@ -370,6 +378,96 @@ def rigenera_supplenze_mancanti(data_da=None):
     if count:
         db.session.commit()
     return count
+
+
+def ricalcola_supplenze_periodo(data_inizio, data_fine, oggi=None):
+    """Da chiamare dopo un import di orario CON validità impostata
+    (fase di orari provvisori settimanali, routes/sincronizzazione.py).
+
+    A differenza di rigenera_supplenze_mancanti() (che aggiunge soltanto
+    le supplenze mancanti e non tocca mai quelle esistenti), qui l'orario
+    è cambiato per il periodo [data_inizio, data_fine]: le supplenze
+    automatiche già generate per quelle date che non corrispondono più a
+    nessuno slot del nuovo orario vanno eliminate (sono 'scadute'), e
+    quelle mancanti aggiunte.
+
+    Non tocca MAI le supplenze origine='manuale' (inserite a mano). Per
+    ogni giorno precedente a 'oggi' (default: data odierna), non elimina
+    le supplenze scadute ma le elenca in 'da_rivedere' -- si presume che
+    quel giorno sia già passato/svolto e una cancellazione silenziosa
+    rischierebbe di far sparire un incarico già comunicato.
+
+    Ritorna {'create': n, 'cancellate': n, 'da_rivedere': [dettagli]}.
+    """
+    if oggi is None:
+        oggi = date.today()
+
+    da_rivedere = []
+    n_create = 0
+    n_cancellate = 0
+
+    d = data_inizio
+    while d <= data_fine:
+        giorno_num = GIORNI_SETTIMANA.get(d.weekday())
+        if giorno_num is None or is_sospensione(d):
+            d += timedelta(days=1)
+            continue
+
+        assenze = Assenza.query.filter_by(data=d).all()
+        for a in assenze:
+            if not cat_genera_supplenza(a.motivo):
+                continue
+
+            attesi = {
+                (s.ora, (s.classe or '').strip().upper())
+                for s in OrarioDocente.query.filter_by(
+                    id_docente=a.id_docente, giorno=giorno_num).all()
+                if s.classe and s.classe not in ('---', '-x-', '', 'POTENZIAMENTO')
+                and s.tipo_ora != 'potenziamento'
+            }
+
+            esistenti = Supplenza.query.filter_by(
+                data=d, id_assente=a.id_docente, origine='automatica'
+            ).all()
+            for s in esistenti:
+                chiave = (s.ora, (s.classe or '').strip().upper())
+                if chiave in attesi:
+                    continue
+                if d < oggi:
+                    da_rivedere.append({
+                        'id_docente': a.id_docente,
+                        'data': s.data.isoformat(), 'ora': s.ora,
+                        'classe': s.classe,
+                    })
+                    continue
+                from flask import g as _g
+                _utente = _g.utente.username if getattr(_g, 'utente', None) else None
+                registra_eliminazione('supplenze', {
+                    'data': s.data.isoformat(), 'ora': s.ora,
+                    'classe': s.classe, 'id_assente': s.id_assente,
+                }, utente=_utente)
+                MovimentoBancaOre.query.filter_by(id_supplenza=s.id).delete()
+                db.session.delete(s)
+                n_cancellate += 1
+
+            assegnabile = False if a.classe_libera else cat_assegnabile(a.motivo)
+            n_create += _genera_supplenze(
+                a.id_docente, a.data, a.ora_inizio, a.ora_fine,
+                assegnabile, note_display='',
+            )
+        d += timedelta(days=1)
+
+    if da_rivedere:
+        from models.docente import Docente as _Doc
+        nomi = {dd.id: dd.cognome for dd in _Doc.query.filter(
+            _Doc.id.in_({r['id_docente'] for r in da_rivedere})).all()}
+        for r in da_rivedere:
+            r['docente'] = nomi.get(r['id_docente'], '?')
+
+    if n_create or n_cancellate:
+        db.session.commit()
+
+    return {'create': n_create, 'cancellate': n_cancellate, 'da_rivedere': da_rivedere}
 
 
 def _gestisci_scambio_orario(form, id_docente, note):

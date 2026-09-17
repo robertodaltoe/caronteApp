@@ -62,6 +62,16 @@ def index():
     except Exception:
         eventi_ist = []
 
+    # Fase di orari provvisori settimanali: se l'orario in vigore ha
+    # una validità impostata e la data selezionata cade fuori, nessuna
+    # supplenza automatica può esistere per quel giorno -- avvisa,
+    # altrimenti l'assenza di supplenze sembra un bug.
+    from models.orario_docente import validita_orario_corrente
+    v_ini, v_fine = validita_orario_corrente()
+    orario_non_in_vigore = bool(
+        (v_ini or v_fine) and ((v_ini and data_sel < v_ini) or (v_fine and data_sel > v_fine))
+    )
+
     return render_template('dashboard.html',
         supplenze=supplenze,
         assenze=assenze,
@@ -74,4 +84,5 @@ def index():
         stats=stats,
         timedelta=timedelta,
         eventi_ist=eventi_ist,
+        orario_non_in_vigore=orario_non_in_vigore,
     )
