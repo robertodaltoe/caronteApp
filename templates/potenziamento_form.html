@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Assegna potenziamento/compresenza{% endblock %}
+
+{% block extra_style %}
+<style>
+.ora-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.ora-chip { padding:6px 14px; border:2px solid #e5eaf0; border-radius:20px;
+    cursor:pointer; font-size:.84rem; font-weight:700; color:var(--grigio);
+    background:white; transition:all .12s; user-select:none; }
+.ora-chip:hover { border-color:var(--blu-med); color:var(--blu); }
+.ora-chip.sel { border-color:var(--blu); background:var(--blu); color:white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu); margin-bottom:4px;">
+    {{ icon('school') }} Assegna potenziamento/compresenza
+</h1>
+<p style="color:var(--grigio); font-size:.82rem; margin-bottom:20px;">
+    Per un docente di potenziamento, o semplicemente libero quell'ora, da destinare a una classe
+    (potenziamento didattico o compresenza) — non è un'assenza: non serve un docente da sostituire.
+    Il docente assegnato non comparirà più tra i suggeriti per un'altra supplenza nelle stesse ore,
+    ma resta selezionabile manualmente se serve davvero dirottarlo.
+</p>
+<div class="card" style="max-width:600px;">
+    <form method="post" id="form-potenziamento">
+        <div class="form-group">
+            <label>Docente *</label>
+            <select name="id_sostituto" id="sel-docente" required data-search="1">
+                <option value="">— seleziona —</option>
+                {% for d in docenti %}
+                <option value="{{ d.id }}">{{ d.cognome }}{% if d.nome %} {{ d.nome }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="data" id="inp-data" required value="{{ data_sel }}">
+        </div>
+        <div class="form-group">
+            <label>Classe *</label>
+            <input type="text" name="classe" required placeholder="Es. 3A LSU"
+                   list="classi-attive-list" autocomplete="off"
+                   style="text-transform:uppercase;">
+            <datalist id="classi-attive-list">
+                {% for c in classi_attive %}<option value="{{ c }}">{% endfor %}
+            </datalist>
+        </div>
+        <div class="form-group">
+            <label>Ore *
+                <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">
+                    (una o più, anche non consecutive)
+                </span>
+            </label>
+            <div class="ora-grid" id="ore-grid">
+                {% for num, label in ore.items() %}
+                <span class="ora-chip" data-ora="{{ num }}" onclick="toggleOra(this)">{{ num }}ª</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div id="hidden-ore"></div>
+        <div class="form-group">
+            <label>Note interne</label>
+            <textarea name="note" rows="2" placeholder="Opzionale"></textarea>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <button class="btn btn-success" type="submit">Assegna</button>
+            <a href="{{ url_for('dashboard.index', data=data_sel) }}"
+               class="btn btn-primary">Annulla</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleOra(el) {
+    el.classList.toggle('sel');
+    aggiornaOreNascoste();
+}
+
+function aggiornaOreNascoste() {
+    const cont = document.getElementById('hidden-ore');
+    cont.innerHTML = '';
+    document.querySelectorAll('#ore-grid .ora-chip.sel').forEach(chip => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'ore';
+        inp.value = chip.dataset.ora;
+        cont.appendChild(inp);
+    });
+}
+
+document.getElementById('form-potenziamento').addEventListener('submit', function(e) {
+    if (!document.querySelectorAll('#ore-grid .ora-chip.sel').length) {
+        e.preventDefault();
+        alert('Seleziona almeno un\'ora.');
+    }
+});
+</script>
+{% endblock %}

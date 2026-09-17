@@ -83,6 +83,8 @@
            class="btn btn-sm" style="background:#0369a1; color:white;">{{ icon('forbidden') }} Indisponibilità</a>
         <a href="{{ url_for('supplenze.nuova', data=data_sel.isoformat()) }}"
            class="btn btn-success btn-sm">+ Supplenza</a>
+        <a href="{{ url_for('supplenze.nuovo_potenziamento', data=data_sel.isoformat()) }}"
+           class="btn btn-sm" style="background:#7c3aed; color:white;">{{ icon('school') }} Potenziamento/compresenza</a>
         <a href="{{ url_for('display.display', data=data_sel.isoformat()) }}"
            target="_blank" class="btn btn-sm" style="background:var(--blu); color:white;">
             ⧉︎ Display {{ data_sel.strftime('%d/%m') }}

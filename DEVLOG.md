@@ -2,6 +2,68 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 24 — Nuovo comando dashboard: assegna potenziamento/compresenza
+
+Roberto: "dovremmo pensare ad un comando in dashboard che mi permetta
+di assegnare un docente di potenziamento o un docente libero in
+potenziamento/compresenza alla classe. Assegnazione che poi esclude
+quel docente appena assegnato dalle disponibilità per supplenze che
+dovrebbero successivamente sopraggiungere."
+
+**Ricerca preliminare** (Explore, prima di scrivere codice): il tipo
+`potenziamento` esisteva già come valore di `Supplenza.tipo` e si
+poteva già creare una supplenza senza `id_assente` — l'infrastruttura
+dati c'era. Ma `modules/suggerimenti_supplenza.py::docenti_occupati_stessa_ora()`
+esclude *deliberatamente* le coperture di tipo `potenziamento` dal
+conteggio "occupati" (per un motivo legittimo: un docente di
+potenziamento nel proprio orario, che sta coprendo un'ALTRA
+potenziamento, deve restare visibile nel gruppo Potenziamento). Ma
+`routes/supplenze.py::api_suggerimenti()` non applicava questa
+esclusione al gruppo "liberi" (`else:` quando il docente non ha
+niente in orario quell'ora): un docente libero pescato per
+potenziamento/compresenza restava comunque suggerito per un'ALTRA
+supplenza nella stessa ora — l'opposto di quanto richiesto.
+
+Confermato con Roberto via AskUserQuestion prima di implementare: se
+arriva davvero un bisogno di supplenza per quella classe/ora, il
+docente **può essere dirottato** (non un'esclusione rigida/impossibile
+da forzare) — e l'assegnazione è per ore specifiche a scelta, come le
+assenze normali, non giornata intera.
+
+**Implementazione**:
+- Nuova route `routes/supplenze.py::nuovo_potenziamento()` +
+  template `templates/potenziamento_form.html` (stesso pattern chip
+  multi-ora di `assenza_form.html`) — crea una `Supplenza` per
+  ciascuna ora selezionata, `id_assente=None`, `tipo='potenziamento'`,
+  con controllo anti-duplicati (stesso docente/data/ora già
+  assegnato). Pulsante "Potenziamento/compresenza" in dashboard,
+  accanto agli altri comandi rapidi.
+- Fix in `api_suggerimenti()`: un docente in `occupati_pot_ids`
+  (già assegnato a potenziamento/compresenza in quell'ora, via questo
+  nuovo comando O tramite l'esistente form generico) viene ora
+  tolto — PRIMA della diramazione su `slot_ora`, quindi vale sia per i
+  docenti liberi sia per quelli con potenziamento strutturale in
+  orario — dai gruppi "liberi"/"potenziamento" di default, e messo in
+  un nuovo gruppo separato `⚠ Già assegnati a potenziamento/compresenza`
+  in fondo alla lista, selezionabile ma chiaramente segnalato: soddisfa
+  sia l'esclusione di default richiesta sia il "può essere dirottato"
+  confermato da Roberto — nessun automatismo silenzioso, ma resta
+  possibile con un click consapevole.
+
+**Verifica**: 6 nuovi test (`tests/test_potenziamento_compresenza.py`)
+— creazione multi-ora, anti-duplicati, validazione campi obbligatori,
+`docenti_occupati_stessa_ora()` (comportamento preesistente non
+regredito), e il fix vero e proprio: un docente assegnato a
+potenziamento in un'ora non compare nei gruppi liberi per un'altra
+supplenza nella STESSA ora, ma resta invariato in un'ora DIVERSA dello
+stesso giorno. Suite completa: 528 verdi, stessi 4 fallimenti
+pre-esistenti non collegati. Verificato anche end-to-end in browser
+su copia isolata del `database.db` reale (mai quello vero): assegnato
+un docente reale (ABRAMINI) a potenziamento in 3A LSU ora 3 — sparisce
+dai suggerimenti normali per quell'ora, compare nel gruppo "già
+assegnati", resta "Libero (ora adiacente)" nell'ora 4. `PRAGMA
+integrity_check` sulla copia: ok; `database.db` reale invariato.
+
 ## Sessione 69 addendum 23 — Assenze: "Attività istituzionali in programma" non si aggiornava cambiando la data
 
 Roberto: in registrazione assenza, cambiando il giorno dell'assenza il

@@ -86,6 +86,89 @@ def nuova():
         classi_attive=_classi_attive())
 
 
+# ── ASSEGNA POTENZIAMENTO/COMPRESENZA ─────────────────────────
+@supplenze_bp.route('/supplenze/potenziamento', methods=['GET', 'POST'])
+def nuovo_potenziamento():
+    """
+    Comando dedicato in dashboard (Roberto, richiesta esplicita) per
+    assegnare un docente di potenziamento — o semplicemente un docente
+    libero quell'ora — a una classe per potenziamento/compresenza, su
+    una o più ore dello stesso giorno in un solo invio.
+
+    Tecnicamente crea le stesse Supplenza(tipo='potenziamento',
+    id_assente=None) già supportate da nuova() (il campo "Docente
+    assente" lì è facoltativo e "Potenziamento" è già un tipo
+    selezionabile) — ma nuova() permette una sola ora per invio e
+    obbliga a capire da soli che va lasciato vuoto "Docente assente"
+    per questo caso d'uso. Qui la selezione multi-ora è esplicita ed è
+    l'unico scopo del form, come le ore dell'assenza in
+    assenza_form.html.
+
+    L'esclusione del docente appena assegnato dalle disponibilità per
+    supplenze successive sulla stessa ora non è qui: è in
+    api_suggerimenti() più sotto, che già calcola chi copre
+    potenziamento (occupati_pot_ids) — corretto per toglierlo dai
+    gruppi "liberi" di default, pur restando selezionabile in un
+    gruppo a parte per poterlo dirottare consapevolmente se serve
+    davvero (Roberto: "può essere dirottato").
+    """
+    if request.method == 'POST':
+        data_str = request.form['data']
+        classe   = request.form.get('classe', '').strip().upper()
+        id_sost  = request.form.get('id_sostituto', type=int)
+        ore_sel  = sorted({int(o) for o in request.form.getlist('ore') if o.isdigit()})
+        note     = request.form.get('note', '').strip()
+
+        if not classe or not id_sost or not ore_sel:
+            flash('Seleziona docente, classe e almeno un\'ora.', 'error')
+            return redirect(url_for('supplenze.nuovo_potenziamento', data=data_str))
+
+        data_ins = date.fromisoformat(data_str)
+        docente = Docente.query.get_or_404(id_sost)
+
+        creati = 0
+        for ora in ore_sel:
+            # Evita duplicati: stesso docente già assegnato a
+            # potenziamento in quella stessa data/ora (doppio invio, o
+            # riassegnazione dalla stessa pagina).
+            gia_presente = Supplenza.query.filter_by(
+                data=data_ins, ora=ora, id_sostituto=id_sost, tipo='potenziamento',
+            ).filter(Supplenza.stato != 'annullata').first()
+            if gia_presente:
+                continue
+            db.session.add(Supplenza(
+                data=data_ins, ora=ora, classe=classe,
+                id_assente=None, id_sostituto=id_sost,
+                tipo='potenziamento', stato='assegnata',
+                note=note or None, origine='manuale',
+                creato_da=g.utente.username if getattr(g, 'utente', None) else None,
+            ))
+            creati += 1
+        db.session.commit()
+
+        from routes.auth import log as auth_log
+        if creati:
+            auth_log('assegna_potenziamento',
+                f'{docente.cognome} — cl.{classe} ({data_ins.strftime("%d/%m/%Y")}, '
+                f'ore {", ".join(str(o) for o in ore_sel)})')
+            flash(f'{docente.cognome} assegnato a potenziamento/compresenza in {classe} '
+                  f'per {creati} ora/e.', 'success')
+        else:
+            flash(f'{docente.cognome} risultava già assegnato a potenziamento/compresenza '
+                  f'in tutte le ore selezionate: nessuna nuova riga creata.', 'warning')
+        return redirect(url_for('dashboard.index', data=data_str))
+
+    oggi     = date.today()
+    data_str = request.args.get('data', oggi.isoformat())
+    from routes.attivita_ist import _non_in_servizio_per_data
+    esclusi_servizio = _non_in_servizio_per_data(date.fromisoformat(data_str))
+    docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+               if d.id not in esclusi_servizio]
+    return render_template('potenziamento_form.html',
+        docenti=docenti, data_sel=data_str, ore=ORA_LABEL,
+        classi_attive=_classi_attive())
+
+
 # ── ASSEGNA SOSTITUTO (form inline dashboard) ─────────────────
 @supplenze_bp.route('/supplenze/<int:id>/assegna', methods=['POST'])
 def assegna(id):
@@ -283,6 +366,7 @@ def api_suggerimenti():
     gruppo_comp   = []  # Compresenza nell'ora
     gruppo_adj    = []  # Liberi nell'ora con ora adiacente
     gruppo_liberi = []  # Liberi nell'ora senza adiacenza
+    gruppo_pot_occupato = []  # Già assegnati a potenziamento/compresenza in quest'ora (dirottabili)
 
     for doc_id, doc in tutti.items():
         slots = slots_per_doc.get(doc_id, [])
@@ -375,16 +459,32 @@ def api_suggerimenti():
             'fuori_sede': fuori_sede,
         }
 
+        # Già assegnato a potenziamento/compresenza in quest'ora (comando
+        # dashboard "Assegna potenziamento/compresenza") — va tolto dai
+        # gruppi "liberi" di default (altrimenti un docente pescato lì
+        # per una classe risultava ancora comodamente selezionabile per
+        # un'altra supplenza nella stessa ora, l'opposto di quanto
+        # richiesto da Roberto), ma resta selezionabile in un gruppo a
+        # parte per poterlo dirottare consapevolmente se serve davvero
+        # ("può essere dirottato", confermato esplicitamente). Controllo
+        # qui, PRIMA della diramazione su slot_ora, perché riguarda
+        # docenti sia con slot_ora vuoto (erano liberi, sarebbero finiti
+        # nei gruppi "liberi") sia con slot_ora di tipo potenziamento
+        # strutturale (sarebbero finiti in gruppo_pot).
+        if doc_id in occupati_pot_ids:
+            entry['dettaglio'] = 'Già assegnato a potenziamento/compresenza'
+            gruppo_pot_occupato.append(entry)
+            continue
+
         if slot_ora:
             if slot_ora.tipo_ora == 'potenziamento':
-                # Escludi chi è già occupato come sostituto in quell'ora
-                # sia su classe reale che su potenziamento
-                if doc_id in occupati_ids or doc_id in occupati_pot_ids:
-                    pass  # già impiegato — non mostrare
-                else:
-                    entry['dettaglio'] = 'Potenziamento'
-                    entry['docente_classe'] = docente_della_classe
-                    gruppo_pot.append(entry)
+                # occupati_ids/occupati_pot_ids già escludono chi non va
+                # mostrato qui: occupati_ids non arriva nemmeno in "tutti"
+                # (fa parte di esclusi più sopra), occupati_pot_ids è
+                # gestito dal controllo unificato subito sopra.
+                entry['dettaglio'] = 'Potenziamento'
+                entry['docente_classe'] = docente_della_classe
+                gruppo_pot.append(entry)
             elif slot_ora.tipo_ora == 'compresenza':
                 # Verifica che il compagno di compresenza sia presente
                 from modules.compresenze import compagni_presenti as _cp
@@ -421,7 +521,7 @@ def api_suggerimenti():
             # Se non ha nessuna ora nel giorno →︎ non è in servizio →︎ escluso
 
     # Ordina ogni gruppo per saldo crescente (più debito = priorità)
-    for g in [gruppo_pot, gruppo_comp, gruppo_adj, gruppo_liberi]:
+    for g in [gruppo_pot, gruppo_comp, gruppo_adj, gruppo_liberi, gruppo_pot_occupato]:
         g.sort(key=lambda x: x['saldo_min'])
 
     # ── Mappa orario completo (tutti i giorni) per il badge "sua classe" ──
@@ -432,7 +532,7 @@ def api_suggerimenti():
 
     # Aggiorna docente_della_classe nei gruppi già costruiti usando l'orario completo
     if classe_sup:
-        for gruppo in [gruppo_adj, gruppo_liberi, gruppo_pot, gruppo_comp]:
+        for gruppo in [gruppo_adj, gruppo_liberi, gruppo_pot, gruppo_comp, gruppo_pot_occupato]:
             for entry in gruppo:
                 entry['docente_classe'] = any(
                     s.classe == classe_sup
@@ -532,6 +632,13 @@ def api_suggerimenti():
         gruppi.append({'label': '○ Liberi (ora non adiacente)', 'key': 'lib',
                        'note': 'Verificare disponibilità',
                        'docenti': gruppo_liberi})
+    if gruppo_pot_occupato:
+        # In fondo e distinto dagli altri: non è un suggerimento "buono",
+        # è un dirottamento consapevole da un impegno già assegnato.
+        gruppi.append({'label': '⚠ Già assegnati a potenziamento/compresenza', 'key': 'pot_occupato',
+                       'note': 'Selezionandolo, resta comunque impegnato nell\'altra classe: '
+                               'verifica prima di confermare.',
+                       'docenti': gruppo_pot_occupato})
 
     return jsonify({
         'gruppi': gruppi,
