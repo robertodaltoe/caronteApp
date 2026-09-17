@@ -24,6 +24,10 @@
         <a href="{{ url_for('progetti_fse.nuovo_modulo', id_progetto=progetto.id) }}" class="btn btn-success btn-sm">
             {{ icon('plus') }} Nuovo modulo
         </a>
+        <form method="post" action="{{ url_for('progetti_fse.elimina', id=progetto.id) }}" style="display:inline;"
+              onsubmit="return confirm('Eliminare definitivamente il progetto \'{{ progetto.titolo }}\'? Verranno eliminati anche tutti i moduli, incarichi, presenze e documenti collegati. L\'operazione non è reversibile.')">
+            <button type="submit" class="btn btn-danger btn-sm">{{ icon('close') }} Elimina progetto</button>
+        </form>
     </div>
 </div>
 

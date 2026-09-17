@@ -2,6 +2,38 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 28 — Progetti FSE/FESR: non si potevano eliminare i progetti
+
+Roberto: "non è possibile eliminare i progetti che vengono inseriti".
+
+**Causa reale**: non un bug nella cancellazione — `routes/progetti_fse.py::elimina()`
+esisteva già e funzionava correttamente (il modello `ProgettoFSE` ha
+già `cascade='all, delete-orphan'` su moduli/documenti, e
+`ModuloFSE` a sua volta su incarichi/sessioni/presenze) — ma
+**nessun template collegava a quella route**: `templates/progetti_fse/dettaglio.html`
+aveva pulsanti "Documenti"/"Modifica progetto"/"Nuovo modulo" ma
+nessun "Elimina progetto", a differenza di modulo/incarico/documento/
+presenza/sessione che avevano tutti il loro pulsante di eliminazione.
+Stesso pattern ricorrente già visto più volte in questo progetto:
+backend pronto ma irraggiungibile dall'interfaccia.
+
+**Fix**: aggiunto il pulsante "Elimina progetto" nella barra azioni di
+`dettaglio.html`, stesso pattern `confirm()` + form POST già usato per
+modulo/incarico, con messaggio esplicito che elenca cosa verrà
+cancellato (moduli, incarichi, presenze, documenti) trattandosi di
+un'operazione irreversibile e a cascata.
+
+**Verifica**: nuovo test `test_elimina_progetto_cancella_a_cascata_moduli_incarichi_e_documenti`
+in `tests/test_progetti_fse.py` (50 test FSE, tutti verdi). End-to-end
+in browser su copia isolata del `database.db` reale: eliminato il
+progetto reale "Menti in movimento" (3 moduli, 8 incarichi, 15
+documenti collegati) — cancellazione pulita confermata via query SQL
+diretta, zero righe orfane in nessuna delle tabelle collegate. Suite
+completa: 546 verdi, stessi 4 fallimenti pre-esistenti non collegati.
+`PRAGMA integrity_check` sulla copia: ok; `database.db` reale
+invariato (era solo una verifica, nessuna scrittura voluta su dati
+reali in questo addendum).
+
 ## Sessione 69 addendum 27 — Progetti FSE/FESR: oggetto documenti in due sezioni
 
 Roberto: l'oggetto di ogni documento generato (decreti, avvisi, lettere

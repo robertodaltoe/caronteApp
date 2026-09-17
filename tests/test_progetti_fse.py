@@ -145,6 +145,44 @@ def test_crea_progetto_modulo_e_incarico_end_to_end(app, db_session, monkeypatch
     assert inc.costo_previsto == 70 * 30
 
 
+def test_elimina_progetto_cancella_a_cascata_moduli_incarichi_e_documenti(app, db_session, monkeypatch):
+    """Roberto: non era possibile eliminare un progetto dall'interfaccia
+    -- non un bug nella cancellazione stessa (il modello ha già
+    cascade='all, delete-orphan' su moduli/documenti, e su
+    incarichi/sessioni/presenze dal modulo), ma nell'interfaccia: la
+    route routes/progetti_fse.py::elimina() esisteva già e funzionava,
+    semplicemente nessun template ci linkava (pulsante mancante in
+    templates/progetti_fse/dettaglio.html). Questo test verifica il
+    comportamento della route stessa: cancellazione a cascata pulita,
+    nessuna riga orfana."""
+    _crea_tabelle(app)
+    _registra_blueprint(app, monkeypatch)
+    d = crea_docente('Fontana')
+    p = _progetto_ucs()
+    db.session.add(p)
+    db.session.flush()
+    m = ModuloFSE(id_progetto=p.id, titolo="Let's English", ore=30)
+    db.session.add(m)
+    db.session.flush()
+    inc = IncaricoFSE(id_modulo=m.id, id_docente=d.id, ruolo='esperto',
+                       tariffa_oraria=70.0, ore_previste=30, stato='incaricato')
+    db.session.add(inc)
+    doc = DocumentoFSE(id_progetto=p.id, id_modulo=m.id, tipo='avviso_selezione',
+                        fase='selezione', titolo='Avviso di selezione', stato='bozza')
+    db.session.add(doc)
+    db.session.commit()
+    id_progetto, id_modulo, id_incarico, id_documento = p.id, m.id, inc.id, doc.id
+
+    with app.test_client() as c:
+        r = c.post(f'/progetti-fse/{id_progetto}/elimina', follow_redirects=True)
+        assert r.status_code == 200
+
+    assert ProgettoFSE.query.get(id_progetto) is None
+    assert ModuloFSE.query.get(id_modulo) is None
+    assert IncaricoFSE.query.get(id_incarico) is None
+    assert DocumentoFSE.query.get(id_documento) is None
+
+
 def test_dettaglio_progetto_mostra_stima_costo_complessiva(app, db_session, monkeypatch):
     """La pagina di dettaglio calcola e passa al template il riepilogo
     per modulo e il totale stimato -- verificato sui kwargs passati a
