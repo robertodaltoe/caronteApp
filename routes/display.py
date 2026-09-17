@@ -1,3 +1,4 @@
+import re
 from flask import Blueprint, render_template, request
 from models.supplenza import Supplenza
 from models.aula import Aula
@@ -8,9 +9,21 @@ from models.attivita_fuori_aula import AttivitaFuoriAula
 from models.assenza import Assenza
 from models.docente import Docente
 from datetime import date, timedelta
+from config_anno import get_anno_corrente
 from modules.identificativo_display import identificativi_display
 
 display_bp = Blueprint('display', __name__)
+
+
+def _norm_classe(c):
+    """Stessa normalizzazione già usata da modules/prospetto_supplenze.py:
+    l'orario importato salva la classe SENZA lo spazio fra sezione e
+    indirizzo (es. 'Supplenza.classe' = '1ACAT'), mentre 'Aula.classe'
+    è sempre scritta con lo spazio ('1A CAT') — un lookup esatto
+    falliva sistematicamente e l'aula spariva in silenzio dal display
+    per queste classi (segnalato da Roberto)."""
+    return re.sub(r'\s+', '', str(c).strip().upper())
+
 
 @display_bp.route('/display')
 def display():
@@ -26,8 +39,13 @@ def display():
         .order_by(Supplenza.ora)\
         .all()
 
-    # Mappa classe -> aula standard
-    aule_map = {a.classe: a for a in Aula.query.all()}
+    # Mappa classe -> aula standard, indicizzata sia sulla forma
+    # "ufficiale" (con spazio) sia su quella compatta salvata
+    # dall'orario importato, per non perdere il match per un semplice
+    # spazio mancante (vedi _norm_classe sopra).
+    aule_map = {a.classe: a for a in Aula.query.filter_by(anno_scol=get_anno_corrente()).all()}
+    for _classe, _aula in list(aule_map.items()):
+        aule_map.setdefault(_norm_classe(_classe), _aula)
 
     # Mappa id_supplenza -> override aula
     override_map = {ov.id_supplenza: ov for ov in AulaOverride.query.all()}

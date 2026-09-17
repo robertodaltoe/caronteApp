@@ -2,6 +2,52 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 26 — Display: sfondo chiaro + aule mancanti
+
+Roberto: "in display, dovremmo cambiare lo sfondo perchè così scuro non
+è leggibile. fammi vedere come viene con uno sfondo più chiaro" —
+richiesta esplorativa, prototipo mostrato su copia isolata del DB
+reale prima di applicare. Approvato ("va bene pubblica"), poi segnalato
+un secondo problema nella stessa pagina: "al momento noto anche che non
+compaiono le aule in cui si deve recare il docente".
+
+**Sfondo chiaro** (`templates/display.html`): cambiata solo l'area
+contenuto (dove stanno le card delle supplenze) da scuro
+(`--bg:#1a0a08`, testo bianco) a chiaro (`--bg:#f3efe8`, testo scuro).
+Header/banner/footer restano scuri (sono superfici proprie con sfondo
+esplicito, fanno da cornice/branding) — attenzione: il loro testo, che
+prima ereditava il bianco dal `body`, andava reso esplicito (nuova
+`--grigio-chiaro`) altrimenti diventava illeggibile ereditando il nuovo
+colore scuro del body. Introdotte varianti "-testo" più scure degli
+accent color (verde/rosso/giallo/viola) per il testo dentro le card
+chiare — l'accent "acceso" resta solo su bordo/badge, dove basta il
+contrasto col fondo tenue.
+
+**Aule mancanti** — causa reale: `routes/display.py::display()` cercava
+l'aula con un lookup esatto `aule_map.get(s.classe)`, ma `Aula.classe`
+è sempre salvata con lo spazio ("1A CAT") mentre `Supplenza.classe`
+(copiata dall'orario importato) è spesso salvata SENZA lo spazio
+("1ACAT") — **stesso disallineamento già trovato e risolto** in
+`modules/prospetto_supplenze.py` (addendum precedente di questa
+sessione, `_norm_compatto`) ma non ancora applicato qui. Il lookup
+falliva in silenzio: nessun errore, l'aula spariva e basta. In più
+`aule_map` non filtrava per anno scolastico (`Aula.query.all()`
+prendeva righe di qualunque anno), diversamente da `routes/aule.py`
+che filtra sempre per `anno_scol`. Fix: nuovo helper `_norm_classe()`
+(stessa normalizzazione), `aule_map` ora indicizzata sia sulla forma
+ufficiale sia su quella compatta, e filtrata per
+`get_anno_corrente()`.
+
+**Verifica**: 4 nuovi test (`tests/test_display_aule.py`) — match
+compatto, nessuna regressione per classi già allineate, anno
+scolastico sbagliato ignorato. Suite completa: 545 verdi, stessi 4
+fallimenti pre-esistenti non collegati. End-to-end in browser su copia
+isolata del `database.db` reale: schermata 26/09/2026 confrontata
+prima/dopo — tutte le 10 supplenze scoperte di quella giornata (classi
+in formato compatto tipo "1BCAT", "3ALLI") ora mostrano correttamente
+l'aula, che prima non compariva per nessuna di esse. `PRAGMA
+integrity_check` sulla copia: ok; `database.db` reale invariato.
+
 ## Sessione 69 addendum 25 — Validità temporale dell'orario + ricalcolo automatico supplenze
 
 Roberto: durante la fase di orari provvisori settimanali (inizio anno)
