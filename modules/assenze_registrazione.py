@@ -746,11 +746,26 @@ def contesto_form_assenza(data_str, escludi_assenza_id=None, ruolo=None):
 
     sospensione_oggi = date_sospese.get(data_str)
 
-    try:
-        eventi_ist_giorno = AttivitaIst.query.filter_by(
-            data=date.fromisoformat(data_str)).all()
-    except Exception:
-        eventi_ist_giorno = []
+    # Mappa data -> eventi istituzionali di quel giorno, per l'intero anno
+    # scolastico (stesso intervallo inizio_as/fine_as già usato sopra per
+    # gli utilizzi CCNL) — passata al template come JSON e riletta lato
+    # client ad ogni cambio del campo data (stesso meccanismo già in uso
+    # per DATE_SOSPESE/verificaSospensione). Prima si interrogava un
+    # SOLO giorno lato server e si renderizzava una volta sola: cambiando
+    # la data nel form senza ricaricare la pagina, il riquadro "Attività
+    # istituzionali in programma" restava fermo su quello iniziale
+    # (Roberto, verificato: il box a destra non si aggiornava mai).
+    eventi_ist_per_data = {}
+    for ev in AttivitaIst.query.filter(
+            AttivitaIst.data >= inizio_as, AttivitaIst.data <= fine_as).all():
+        eventi_ist_per_data.setdefault(ev.data.isoformat(), []).append({
+            'tipo_emoji': ev.tipo_emoji,
+            'tipo_label': ev.tipo_label,
+            'titolo': ev.titolo,
+            'ora_inizio': ev.ora_inizio,
+            'ora_fine': ev.ora_fine,
+            'classe': ev.classe,
+        })
 
     return {
         'docenti': docenti,
@@ -759,7 +774,8 @@ def contesto_form_assenza(data_str, escludi_assenza_id=None, ruolo=None):
         'utilizzi_ccnl': utilizzi_ccnl,
         'date_sospese': date_sospese,
         'sospensione_oggi': sospensione_oggi,
-        'eventi_ist_giorno': eventi_ist_giorno,
+        'eventi_ist_per_data': eventi_ist_per_data,
+        'eventi_ist_giorno': eventi_ist_per_data.get(data_str, []),
     }
 
 

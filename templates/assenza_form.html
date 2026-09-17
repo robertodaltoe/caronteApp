@@ -234,28 +234,25 @@
         </div>
         {% endif %}
 
-        <!-- ALERT ATTIVITÀ ISTITUZIONALI DEL GIORNO -->
-        {% if eventi_ist_giorno %}
-        <div id="alert-ist" style="background:var(--blu-light); border:1px solid #bfdbfe;
+        <!-- ALERT ATTIVITÀ ISTITUZIONALI DEL GIORNO — contenuto
+             popolato via JS (aggiornaAlertIst) da EVENTI_IST, così si
+             aggiorna anche cambiando la data senza ricaricare la
+             pagina (prima era renderizzato una sola volta lato server
+             sulla sola data di apertura del form: cambiando data non
+             si vedeva mai aggiornato). display:none iniziale tolto da
+             aggiornaAlertIst() al primo giro se ci sono eventi. -->
+        <div id="alert-ist" style="display:none; background:var(--blu-light); border:1px solid #bfdbfe;
              border-radius:8px; padding:10px 14px; margin-bottom:12px;">
             <div style="font-size:.82rem; font-weight:700; color:#1e40af; margin-bottom:6px;">
                 {{ icon('school') }} Attività istituzionali in programma questo giorno:
             </div>
-            {% for ev in eventi_ist_giorno %}
-            <div style="font-size:.8rem; color:var(--blu); margin-bottom:3px;">
-                <strong>{{ ev.tipo_emoji }} {{ ev.tipo_label }}</strong>
-                — {{ ev.titolo }}
-                {% if ev.ora_inizio %}· {{ ev.ora_inizio }}{% if ev.ora_fine %}–{{ ev.ora_fine }}{% endif %}{% endif %}
-                {% if ev.classe %}<span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 5px;font-size:.72rem;">{{ ev.classe }}</span>{% endif %}
-            </div>
-            {% endfor %}
+            <div id="alert-ist-eventi"></div>
             <div style="font-size:.74rem; color:#6b7280; margin-top:5px;">
                 Se il docente era previsto a questa riunione, selezionando
                 <strong>{{ icon('school') }} Att. ist.</strong> la sua presenza verrà marcata come
                 <em>giustificato</em> automaticamente.
             </div>
         </div>
-        {% endif %}
 
         <!-- ALERT CCNL -->
         <div id="alert-ccnl" style="display:none; margin-top:8px; padding:8px 12px;
@@ -404,6 +401,12 @@ function setDurata(tipo, btn) {
     // Ore: solo per singolo e range (non periodico con giorni multipli variabili)
     document.getElementById('sez-ore').style.display = 'block';
     aggiornaOrarioDocente();
+    // Cambiare tab (singolo/più giorni/periodico) cambia anche quale
+    // campo data è "quello attivo" per getDataCorrente(): senza questo,
+    // sospensione/attività istituzionali restavano quelle del tab
+    // precedente finché non si toccava di nuovo un campo data.
+    verificaSospensione(getDataCorrente());
+    aggiornaAlertIst(getDataCorrente());
 }
 
 // ── TIPO ASSENZA ─────────────────────────────────────────────
@@ -613,6 +616,40 @@ function aggiungiSlotScambio() {
 // ── INIT ─────────────────────────────────────────────────────
 // Mappa date sospese passata da Flask
 const DATE_SOSPESE = {{ date_sospese | tojson }};
+// Mappa data -> eventi istituzionali di quel giorno (vedi
+// modules/assenze_registrazione.py::contesto_form_assenza), riletta
+// ad ogni cambio data invece di essere renderizzata una volta sola.
+const EVENTI_IST = {{ eventi_ist_per_data | tojson }};
+
+function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+}
+
+function aggiornaAlertIst(dataStr) {
+    const box  = document.getElementById('alert-ist');
+    const cont = document.getElementById('alert-ist-eventi');
+    const eventi = EVENTI_IST[dataStr] || [];
+    if (!eventi.length) {
+        box.style.display = 'none';
+        cont.innerHTML = '';
+        return;
+    }
+    cont.innerHTML = eventi.map(ev => {
+        let riga = '<strong>' + escHtml(ev.tipo_emoji) + ' ' + escHtml(ev.tipo_label) + '</strong>'
+            + ' — ' + escHtml(ev.titolo);
+        if (ev.ora_inizio) {
+            riga += ' · ' + escHtml(ev.ora_inizio) + (ev.ora_fine ? '–' + escHtml(ev.ora_fine) : '');
+        }
+        if (ev.classe) {
+            riga += ' <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 5px;font-size:.72rem;">'
+                + escHtml(ev.classe) + '</span>';
+        }
+        return '<div style="font-size:.8rem; color:var(--blu); margin-bottom:3px;">' + riga + '</div>';
+    }).join('');
+    box.style.display = 'block';
+}
 
 function verificaSospensione(dataStr) {
     const motivo = DATE_SOSPESE[dataStr];
@@ -641,6 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calcolaDurataIst();
     // Controlla data corrente
     verificaSospensione(getDataCorrente());
+    aggiornaAlertIst(getDataCorrente());
     setTipo(tipoCorrente, document.querySelector(`.tipo-btn[data-tipo="${tipoCorrente}"]`));
     aggiornaOrarioDocente();
     // Listener date
@@ -649,6 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) {
             el.addEventListener('change', aggiornaOrarioDocente);
             el.addEventListener('change', () => verificaSospensione(getDataCorrente()));
+            el.addEventListener('change', () => aggiornaAlertIst(getDataCorrente()));
         }
     });
 });

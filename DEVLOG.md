@@ -2,6 +2,51 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 23 — Assenze: "Attività istituzionali in programma" non si aggiornava cambiando la data
+
+Roberto: in registrazione assenza, cambiando il giorno dell'assenza il
+riquadro "Attività istituzionali in programma questo giorno" restava
+sempre quello della giornata odierna.
+
+**Causa reale**: `contesto_form_assenza()`
+(`modules/assenze_registrazione.py`) interrogava un SOLO giorno
+(`eventi_ist_giorno`, quello con cui il form era stato aperto) e il
+template lo renderizzava una volta sola lato server. Il campo data del
+form invece si può cambiare senza ricaricare la pagina — esattamente
+come per le sospensioni didattiche, che infatti SONO già gestite bene:
+`DATE_SOSPESE` è una mappa data→descrizione per l'intero anno,
+precaricata in JSON e riletta lato client ad ogni cambio data
+(`verificaSospensione()`). Le attività istituzionali non avevano
+l'equivalente.
+
+**Fix**: nuova mappa `eventi_ist_per_data` (stesso raggio
+`inizio_as`/`fine_as` già calcolato per gli utilizzi CCNL), passata al
+template come JSON; nuova funzione JS `aggiornaAlertIst()` che
+ricostruisce il contenuto del riquadro da questa mappa, richiamata da:
+DOMContentLoaded, ogni `change` sui campi data (`inp-data`/
+`inp-range-ini`/`inp-per-ini`, stessi listener già in uso per
+`verificaSospensione`), e anche da `setDurata()` — cambiare tab
+("Un giorno"/"Più giorni"/"Periodico") cambia quale campo data è
+"quello attivo" per `getDataCorrente()`, e prima nemmeno la
+sospensione veniva ricontrollata in quel caso: stesso bug, stessa
+correzione applicata a entrambi. Testo iniettato via `textContent`
+(mai `innerHTML` diretto sui dati) per non rischiare XSS sul titolo
+di un evento, che è testo libero inserito da chi crea l'attività
+istituzionale.
+
+**Verifica**: 5 nuovi test in `tests/test_eventi_ist_per_data.py`
+(raggruppamento per data, campi completi per il template, esclusione
+eventi fuori anno scolastico, coerenza fra `eventi_ist_giorno` e la
+nuova mappa). Verificato anche end-to-end in browser su copia isolata
+del `database.db` reale (mai quello vero): cambiando il campo data da
+JS su una giornata reale con 24 attività istituzionali, il riquadro si
+aggiorna subito mostrandole tutte senza ricaricare la pagina; su una
+data senza eventi si nasconde. Suite completa rieseguita dopo aver
+ripristinato le modifiche da uno stash usato per isolare un falso
+sospetto: `test_termina_sostituzione_ripristina_orario_e_partecipanti`
+falliva anche sul codice originale (date fisse nel test sensibili al
+passare dei giorni, non collegato a questa modifica) — non toccato.
+
 ## Sessione 69 addendum 22 — Display: le frecce cambio-giorno sparivano con l'autoscroll
 
 Roberto: è da sistemare anche l'interazione con la data per cambiare

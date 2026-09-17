@@ -67,6 +67,7 @@ def nuova():
         utilizzi_ccnl=ctx['utilizzi_ccnl'],
         ruolo_utente=ruolo,
         eventi_ist_giorno=ctx['eventi_ist_giorno'],
+        eventi_ist_per_data=ctx['eventi_ist_per_data'],
         date_sospese=ctx['date_sospese'],
         sospensione_oggi=ctx['sospensione_oggi'],
     )
@@ -256,6 +257,7 @@ def modifica(id):
         utilizzi_ccnl=ctx['utilizzi_ccnl'],
         ruolo_utente=ruolo,
         eventi_ist_giorno=ctx['eventi_ist_giorno'],
+        eventi_ist_per_data=ctx['eventi_ist_per_data'],
         date_sospese=ctx['date_sospese'],
         sospensione_oggi=ctx['sospensione_oggi'],
         next=request.args.get("next", ""))
