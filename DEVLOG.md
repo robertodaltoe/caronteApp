@@ -2,6 +2,46 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 30 — Orario globale: titolare e ITP scambiati in compresenza
+
+Roberto: "credo che siano stati considerati i docenti titolari come itp
+e gli itp come docenti titolari. ad esempio: 3alli, 4^ ora di martedì
+May risulta titolare (e nell'anagrafica dovrebbe essere impostata ITP)
+e Strambini registrato come titolare risulta ITP".
+
+**Diagnosi** (Explore, prima di scrivere codice): verificato subito che
+NON è un bug del parser dell'orario — `modules/parser_orario.py` non
+legge/scrive mai `Docente.ruolo` né tocca `CoppiaDocenteItp`, tratta i
+due docenti di una compresenza in modo simmetrico. Verificato anche
+sul DB reale: `Docente.ruolo` per MAY (`'itp'`) e STRAMBINI
+(`'titolare'`) era già corretto — l'anagrafica non era il problema.
+
+**Causa reale**: `routes/sincronizzazione.py::orario_globale()` (pagina
+"Orario globale") interroga `OrarioDocente.query.filter_by(giorno=...)`
+**senza `ORDER BY`**, e `templates/orario_globale.html` mostra
+`slots[0]` come nome principale della cella (di fatto "titolare" a
+schermo) e `slots[1:]` con l'etichetta viola "+ cognome" (di fatto
+"ITP" a schermo) — puramente in base a quale riga capita prima nella
+lista, cioè nell'ordine di importazione, non in base a `Docente.ruolo`.
+Confermato sul DB reale: la riga di MAY (id 667) è stata importata
+prima di quella di STRAMBINI (id 1002) — da qui lo scambio visivo.
+
+**Fix**: dopo aver costruito `griglia` e `docenti_map`, ogni cella con
+più di uno slot viene riordinata mettendo sempre per primo chi ha
+`Docente.ruolo != 'itp'` — indipendentemente dall'ordine di
+importazione. Nessuna modifica al modello dati, nessun tocco
+all'anagrafica: la correzione è solo nell'ordinamento con cui la
+griglia viene presentata.
+
+**Verifica**: 3 nuovi test in `tests/test_orario_globale.py` (ITP
+importato prima del titolare — il caso reale — nessuna regressione
+quando l'ordine è già corretto, cella con un solo docente invariata).
+Suite completa: 553 verdi, stessi 4 fallimenti pre-esistenti non
+collegati. Verificato in browser sulla copia isolata del `database.db`
+reale: la riga "3ALLI" ora mostra STRAMBINI come nome principale
+(TEDESCO) e "+ MAY" con l'etichetta ITP, corretto rispetto a prima.
+`database.db` reale mai toccato (verifica di sola lettura).
+
 ## Sessione 69 addendum 29 — Import orario: nome del foglio e posizione delle righe non più fissi
 
 Roberto ha caricato un file reale ("ORARIO_PER_DOCENTI_21-26_SETTEMBRE.xlsx")

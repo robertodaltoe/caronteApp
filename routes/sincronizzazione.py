@@ -56,6 +56,21 @@ def orario_globale():
     docenti_map = {d.id: d for d in Docente.query.filter(
         Docente.id.in_(doc_ids)).all()}
 
+    # In una compresenza (due docenti sulla stessa classe/ora) il
+    # titolare va sempre mostrato per primo in cella (nome principale),
+    # l'ITP per secondo (etichetta "+ cognome" nel template) — senza
+    # questo ordinamento esplicito l'ordine dipendeva da quale riga
+    # capitava prima nella query (di fatto l'ordine di importazione),
+    # scambiando titolare e ITP a caso (Roberto: MAY/STRAMBINI su
+    # 3ALLI martedì 4ª ora risultavano invertiti).
+    for ore_map in griglia.values():
+        for slots in ore_map.values():
+            if len(slots) > 1:
+                slots.sort(key=lambda s: (
+                    docenti_map[s.id_docente].ruolo == 'itp'
+                    if s.id_docente in docenti_map else False
+                ))
+
     giorni_con_orario = sorted(set(
         r[0] for r in OrarioDocente.query
         .with_entities(OrarioDocente.giorno).distinct().all()
