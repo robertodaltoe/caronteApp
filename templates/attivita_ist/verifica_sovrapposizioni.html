@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Verifica sovrapposizioni tra riunioni{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+    <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Attività Istituzionali</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('warning') }} Verifica sovrapposizioni tra riunioni</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px; max-width:760px;">
+    Controlla se un docente si ritrova su due impegni nello stesso giorno con orari che si
+    accavallano: sia fra due riunioni istituzionali (Consigli di classe, scrutini, collegi...),
+    sia fra una riunione e una sessione di un modulo Progetti FSE/FESR (dove il docente compare
+    come tutor o esperto).
+</p>
+
+<div style="margin-bottom:16px; display:flex; gap:8px;">
+    <a href="{{ url_for('attivita_ist.verifica_sovrapposizioni', solo_future=1) }}" class="btn btn-sm"
+       style="{% if solo_future %}background:var(--blu);color:white;{% else %}background:#eef1f5;color:#374151;{% endif %}">
+        Solo da oggi in poi
+    </a>
+    <a href="{{ url_for('attivita_ist.verifica_sovrapposizioni', solo_future=0) }}" class="btn btn-sm"
+       style="{% if not solo_future %}background:var(--blu);color:white;{% else %}background:#eef1f5;color:#374151;{% endif %}">
+        Tutto l'anno
+    </a>
+</div>
+
+{% set totale = sovrapposizioni|length + conflitti_fse|length %}
+{% if not totale %}
+<div class="card" style="text-align:center; padding:32px; color:var(--grigio);">
+    {{ icon('check') }} Nessuna sovrapposizione trovata{{ ' da oggi in poi' if solo_future else '' }}.
+</div>
+{% else %}
+<div class="card" style="border-left:4px solid var(--rosso); padding:12px 16px; margin-bottom:20px;">
+    <p style="font-size:.88rem; color:var(--rosso); font-weight:600;">
+        {{ icon('warning') }} {{ totale }} sovrapposizion{{ 'e' if totale == 1 else 'i' }} trovat{{ 'a' if totale == 1 else 'e' }}.
+    </p>
+</div>
+
+{% if sovrapposizioni %}
+<h2 style="font-size:1.05rem; color:var(--blu); margin-bottom:8px;">Riunione — riunione</h2>
+<div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:800px; width:100%;">
+        <thead>
+            <tr>
+                <th style="width:130px;">Data</th>
+                <th>1ª riunione</th>
+                <th>2ª riunione</th>
+                <th style="width:150px;">Docente</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sovrapposizioni %}
+            <tr>
+                <td>{{ s.evento1.data.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    {{ s.evento1.titolo }}
+                    {%- if s.evento1.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ s.evento1.classe }}</span>{% endif %}
+                    <br>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ s.evento1.ora_inizio }}–{{ s.evento1.ora_fine }}</span>
+                </td>
+                <td>
+                    {{ s.evento2.titolo }}
+                    {%- if s.evento2.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ s.evento2.classe }}</span>{% endif %}
+                    <br>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ s.evento2.ora_inizio }}–{{ s.evento2.ora_fine }}</span>
+                </td>
+                <td>{{ s.docente.cognome if s.docente else '?' }} {{ s.docente.nome if s.docente else '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+{% if conflitti_fse %}
+<h2 style="font-size:1.05rem; color:var(--blu); margin-bottom:8px;">Riunione — sessione Progetti FSE/FESR</h2>
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:800px; width:100%;">
+        <thead>
+            <tr>
+                <th style="width:130px;">Data</th>
+                <th>Riunione</th>
+                <th>Sessione modulo</th>
+                <th style="width:150px;">Docente</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in conflitti_fse %}
+            <tr>
+                <td>{{ c.evento.data.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    {{ c.evento.titolo }}
+                    {%- if c.evento.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ c.evento.classe }}</span>{% endif %}
+                    <br>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ c.evento.ora_inizio }}–{{ c.evento.ora_fine }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('progetti_fse.calendario_modulo', id_modulo=c.modulo.id) }}">{{ c.modulo.titolo }}</a>
+                    <span style="font-size:.75rem; color:var(--grigio);">— {{ c.progetto.titolo }}</span>
+                    <br>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ c.sessione.ora_inizio }}–{{ c.sessione.ora_fine }}</span>
+                </td>
+                <td>{{ c.docente.cognome if c.docente else '?' }} {{ c.docente.nome if c.docente else '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -2,6 +2,58 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 31 — Nuova pagina: Verifica sovrapposizioni tra riunioni
+
+Roberto, dopo aver aggiornato alcune date nel Piano delle Attività:
+"dove posso verificare se ci sono conflitti con le altre riunioni già
+impostate con indicati anche i docenti che sono su più riunioni?" —
+poi, confermando di procedere: "nel controllo devono esserci anche i
+docenti tutor e i docenti esperti delle attività contenute e che
+verranno successivamente inserite nei Progetti FSE e FESR".
+
+**Ricerca preliminare** (Explore, prima di scrivere codice): questa
+funzione non esisteva, né era solo irraggiungibile dall'interfaccia —
+un controllo analogo esiste ma per un caso diverso (`/generatore-cdc/verifica-orario`,
+orario delle lezioni vs riunioni, raggiungibile solo da Impostazioni →
+Generatore CdC) e un altro, molto più ristretto, è annegato dentro il
+flusso "nomina sostituto scrutinio" (solo scrutinio-vs-scrutinio dello
+stesso giorno, nessuna pagina propria). Trovato però già pronto e
+riusabile per la metà "Progetti FSE/FESR" della richiesta:
+`modules/conflitti_progetti_fse.py::trova_conflitti_progetti_fse()`
+(nata in una sessione precedente proprio per "un docente incaricato
+come esperto/tutor è anche atteso a una riunione istituzionale nello
+stesso giorno/ora" — già usata nell'Agenda e nel calendario del
+singolo modulo, ma mai in un report generale).
+
+**Implementazione**:
+- Nuova `modules/verifica_sovrapposizioni_riunioni.py::trova_sovrapposizioni_riunioni()`
+  — stesso identico approccio a coppie/intervalli già usato altrove nel
+  progetto (`ev1.ora_inizio < ev2.ora_fine and ev1.ora_fine > ev2.ora_inizio`):
+  raggruppa gli eventi per giorno, confronta ogni coppia, segnala i
+  docenti partecipanti a entrambi.
+- Nuova route `routes/attivita_ist.py::verifica_sovrapposizioni()`
+  (`/attivita-ist/verifica-sovrapposizioni`) che combina questa nuova
+  funzione con `trova_conflitti_progetti_fse()` già esistente, in
+  un'unica pagina con due sezioni (riunione-riunione, riunione-sessione
+  FSE/FESR) — stesso layout di `/generatore-cdc/verifica-orario` per
+  coerenza visiva. Nuovo pulsante "Verifica sovrapposizioni" nella
+  pagina Attività Istituzionali (`templates/attivita_ist/lista.html`),
+  cosi' non resta di nuovo irraggiungibile.
+
+**Verifica**: 7 nuovi test (`tests/test_verifica_sovrapposizioni_riunioni.py`)
+— sovrapposizione rilevata/non rilevata (orari non accavallati, docenti
+diversi, giorni diversi, filtro `data_da`), pagina che mostra entrambe
+le fonti insieme, pagina raggiungibile senza dati. Suite completa: 560
+verdi, stessi 4 fallimenti pre-esistenti non collegati. Verificato in
+browser sulla copia isolata del `database.db` reale: la pagina trova
+72 sovrapposizioni reali genuine sull'anno in corso (es. un docente
+coordinatore convocato in due riunioni di dipartimento diverse nello
+stesso orario) — sezione Progetti FSE/FESR vuota perché nessuna
+`SessioneFSE` reale ha ancora un orario impostato (coerente con "che
+verranno successivamente inserite"), ma già coperta dai test. `PRAGMA
+integrity_check` sulla copia: ok; `database.db` reale mai toccato
+(verifica di sola lettura).
+
 ## Sessione 69 addendum 30 — Orario globale: titolare e ITP scambiati in compresenza
 
 Roberto: "credo che siano stati considerati i docenti titolari come itp

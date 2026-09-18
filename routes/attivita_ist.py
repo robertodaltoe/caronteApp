@@ -968,6 +968,33 @@ def riepilogo_ore():
         ore_per_classe=ore_per_classe, riepilogo_docenti=riepilogo_docenti)
 
 
+# ── VERIFICA SOVRAPPOSIZIONI ─────────────────────────────────────────────────
+# Richiesta esplicita di Roberto dopo aver spostato le date di alcune
+# attività: controllare se un docente si ritrova su due impegni che si
+# accavallano. Due fonti, combinate nella stessa pagina:
+# 1. riunione vs riunione (modules/verifica_sovrapposizioni_riunioni.py,
+#    nuovo);
+# 2. riunione vs sessione di un modulo Progetti FSE/FESR — dove finiscono
+#    i docenti tutor/esperti — già coperto da
+#    modules/conflitti_progetti_fse.py::trova_conflitti_progetti_fse()
+#    (nato per l'Agenda/calendario modulo, qui solo riusato).
+@attivita_ist_bp.route('/attivita-ist/verifica-sovrapposizioni')
+def verifica_sovrapposizioni():
+    solo_future = request.args.get('solo_future', '1') == '1'
+    data_da = date.today() if solo_future else None
+
+    from modules.verifica_sovrapposizioni_riunioni import trova_sovrapposizioni_riunioni
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+
+    sovrapposizioni = trova_sovrapposizioni_riunioni(data_da=data_da)
+    conflitti_fse = trova_conflitti_progetti_fse(data_da=data_da)
+
+    return render_template('attivita_ist/verifica_sovrapposizioni.html',
+        solo_future=solo_future,
+        sovrapposizioni=sovrapposizioni,
+        conflitti_fse=conflitti_fse)
+
+
 # ── NUOVO / MODIFICA ─────────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist/nuova', methods=['GET', 'POST'])
