@@ -112,6 +112,17 @@
         <button type="button" onclick="selTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Tutti</button>
         <button type="button" onclick="deselTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Nessuno</button>
     </div>
+    {% if selettori_incarico %}
+    <div style="display:flex; gap:6px; margin-bottom:12px;">
+        <select id="sel-incarico" style="flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.82rem;">
+            <option value="">— aggiungi per incarico —</option>
+            {% for s in selettori_incarico %}
+            <option value="{{ s.docenti_ids|join(',') }}">{{ s.label }} ({{ s.docenti_ids|length }})</option>
+            {% endfor %}
+        </select>
+        <button type="button" onclick="aggiungiPerIncarico()" class="btn btn-sm btn-success">+ Aggiungi</button>
+    </div>
+    {% endif %}
     <div style="max-height:420px; overflow-y:auto; border:1px solid #e5eaf0; border-radius:8px; padding:8px;">
         {% for d in docenti %}
         <label style="display:flex; align-items:center; gap:8px; padding:5px 8px;
@@ -189,6 +200,20 @@ function aggiornaTipo() {
 }
 function selTutti()  { document.querySelectorAll('.doc-check').forEach(c => c.checked = true); }
 function deselTutti(){ document.querySelectorAll('.doc-check').forEach(c => c.checked = false); }
+
+// Aggiunge (senza deselezionare gli altri) tutti i docenti che hanno
+// l'incarico scelto -- referenti di dipartimento, coordinatori,
+// membri di una commissione... (Roberto: poter aggiungere questi
+// gruppi a un evento senza spuntare i nomi a mano uno per uno).
+function aggiungiPerIncarico() {
+    const sel = document.getElementById('sel-incarico');
+    if (!sel || !sel.value) return;
+    sel.value.split(',').forEach(id => {
+        const chk = document.querySelector('.doc-check[value="' + id + '"]');
+        if (chk) chk.checked = true;
+    });
+    sel.value = '';
+}
 
 function aggiungiGiornata(data, oraIni, oraFin) {
     const cont = document.getElementById('extra-giornate');

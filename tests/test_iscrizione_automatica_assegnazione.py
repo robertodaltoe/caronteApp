@@ -147,6 +147,22 @@ def test_iscrizione_dipartimento_diretta(db_session):
     assert n == 1
 
 
+def test_iscrizione_dipartimento_non_include_riunione_referenti(db_session):
+    """Richiesta esplicita di Roberto: la riunione dei referenti/
+    capidipartimento è un gruppo ristretto (i soli referenti, non
+    l'intero dipartimento) -- un docente non ne fa parte solo perché
+    insegna quella materia."""
+    dip, mat = _dipartimento()
+    ev = AttivitaIst(tipo='riunione_referenti', titolo='Referenti Matematica',
+                      data=DOMANI, id_dipartimento=dip.id, origine='manuale')
+    db.session.add(ev)
+    db.session.commit()
+
+    d = crea_docente('Verdi')
+    n = iscrivi_docente_a_eventi_dipartimento(d.id, dip.id)
+    assert n == 0
+
+
 def test_sync_docente_materie_iscrive_a_riunione_materia(app, db_session):
     _registra_blueprint(app)
     dip, mat = _dipartimento()

@@ -356,10 +356,16 @@ def iscrivi_docente_a_eventi_classe(id_docente, classi_label, anno_scol=None):
 def iscrivi_docente_a_eventi_dipartimento(id_docente, id_dipartimento):
     """
     Iscrive un docente agli eventi futuri di dipartimento/riunione
-    materia/riunione referenti già creati per il dipartimento indicato
-    — chiamata da routes/assegnazioni.py::_sync_docente_materie() dopo
-    aver sincronizzato una nuova DocenteMateria (stesso segnale, non
-    serve aspettare altro).
+    materia già creati per il dipartimento indicato — chiamata da
+    routes/assegnazioni.py::_sync_docente_materie() dopo aver
+    sincronizzato una nuova DocenteMateria (stesso segnale, non serve
+    aspettare altro).
+
+    La riunione dei referenti/capidipartimento (tipo
+    'riunione_referenti') resta esplicitamente FUORI, per richiesta di
+    Roberto: è un gruppo ristretto (i soli referenti, non l'intero
+    dipartimento), un nuovo docente non ne fa parte solo perché
+    insegna quella materia.
 
     GLO resta fuori anche da questo: è scoped per classe (vedi
     iscrivi_docente_a_eventi_classe), non per dipartimento — un
@@ -374,7 +380,7 @@ def iscrivi_docente_a_eventi_dipartimento(id_docente, id_dipartimento):
     oggi = date.today()
     eventi = AttivitaIst.query.filter(
         AttivitaIst.data >= oggi,
-        AttivitaIst.tipo.in_(('dipartimento', 'riunione_materia', 'riunione_referenti')),
+        AttivitaIst.tipo.in_(('dipartimento', 'riunione_materia')),
         AttivitaIst.id_dipartimento == id_dipartimento,
     ).all()
     return _iscrivi_docente_a_eventi(id_docente, eventi)
@@ -390,34 +396,34 @@ def iscrivi_docente_a_obbligatori(docente):
     solo alla creazione/modifica dell'evento, non ricalcolato quando
     cambia l'anagrafica.
 
-    Copre solo i tipi il cui preset è "tutti i docenti attivi" senza
-    scelta (collegio, incontro_famiglie, altro) e i corsi di Formazione
-    con obbligatorio_tutti=True (models/formazione.py — i corsi
-    volontari restano esclusi, l'iscrizione lì è sempre una scelta).
-    Eventi scoped su classe/dipartimento (Consigli di classe,
-    dipartimenti, riunioni materia, GLO) restano fuori di proposito:
-    dipendono da orario/assegnazioni che un docente appena creato non
-    ha ancora — non c'è nulla di corretto da preimpostare qui.
+    Copre solo collegio e incontro con le famiglie (richiesta esplicita
+    di Roberto: solo le riunioni collegiali "per tutti" in senso
+    stretto). Restano fuori di proposito:
+    - 'altro' (evento generico, nessuna regola chiara su chi debba
+      esserci);
+    - 'formazione' (l'iscrizione a un corso è sempre una scelta
+      individuale, mai automatica — anche quella "obbligatoria per
+      tutti" va confermata da ciascuno, non preimpostata);
+    - eventi scoped su classe/dipartimento (Consigli di classe,
+      scrutini, GLO, dipartimenti, riunioni materia — vedi
+      iscrivi_docente_a_eventi_classe/_dipartimento) e la riunione dei
+      referenti/capidipartimento (gruppo ristretto, mai automatica):
+      dipendono da orario/assegnazioni che un docente appena creato
+      non ha ancora, o da un ruolo che non ricopre automaticamente.
 
     Ritorna il numero di iscrizioni aggiunte (0 se il docente è escluso
     per la data, o se non ci sono eventi futuri di questi tipi).
     """
     from datetime import date
     from models.attivita_ist import AttivitaIst
-    from models.formazione import CorsoFormazione
 
     oggi = date.today()
     eventi = AttivitaIst.query.filter(
         AttivitaIst.data >= oggi,
-        AttivitaIst.tipo.in_(('collegio', 'incontro_famiglie', 'altro', 'formazione')),
+        AttivitaIst.tipo.in_(('collegio', 'incontro_famiglie')),
     ).all()
     if not eventi:
         return 0
-
-    corsi_volontari_evento_ids = {
-        c.id_attivita for c in CorsoFormazione.query.filter_by(obbligatorio_tutti=False).all()}
-    eventi = [ev for ev in eventi
-              if not (ev.tipo == 'formazione' and ev.id in corsi_volontari_evento_ids)]
 
     return _iscrivi_docente_a_eventi(docente.id, eventi)
 
@@ -1151,8 +1157,21 @@ def form(id=None):
     gia_coinvolti = set(preset_ids) | docenti_selezionati
     docenti = [d for d in docenti if d.id not in esclusi_rif or d.id in gia_coinvolti]
 
+    # Selettori rapidi "aggiungi per incarico" (referenti di
+    # dipartimento, coordinatori, membri di una commissione...) —
+    # richiesta esplicita di Roberto per poter aggiungere questi gruppi
+    # a un evento senza spuntare i nomi a mano uno per uno. Riusa la
+    # stessa funzione già scritta per la checklist di "Altra riunione"
+    # nel generatore CdC (routes/generatore_cdc.py), costruita dai dati
+    # (CategoriaIncarico/TipoIncarico) invece che da un elenco fisso —
+    # un nuovo incarico aggiunto in futuro compare qui da solo.
+    from routes.generatore_cdc import _docenti_per_riunione_extra
+    anno_form = _anno_scolastico(evento.data if evento else data_rif)
+    _, _, selettori_incarico = _docenti_per_riunione_extra(anno_form)
+
     return render_template('attivita_ist/form.html',
         evento=evento, docenti=docenti, dipartimenti=dipartimenti,
+        selettori_incarico=selettori_incarico,
         classi=classi_db, tipi=TIPI_ATTIVITA,
         preset_ids=preset_ids,
         docenti_selezionati=docenti_selezionati,

@@ -2,6 +2,73 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 34 — Gruppi di docenti per incarico negli eventi del Piano delle Attività
+
+Roberto: "pensi si possa prevedere di aggiungere agli eventi del piano
+di attività anche i gruppi di docenti che hanno un incarico (ad
+esempio i referenti di dipartimento, i coordinatori, i membri di una
+commissione, ecc)". Confermato di procedere così.
+
+**Ricerca preliminare**: il modello dati per gli incarichi
+(`CategoriaIncarico`/`TipoIncarico`/`IncaricaDocente`, menu
+"Incarichi") esisteva già, popolato con 55 assegnazioni reali per
+l'anno corrente — non serviva costruire nulla da zero. C'era anche già
+una funzione che costruisce esattamente i gruppi selezionabili
+richiesti, `routes/generatore_cdc.py::_docenti_per_riunione_extra()`
+(nata per la checklist di "Altra riunione" nel generatore CdC), mai
+riusata altrove.
+
+**Implementazione**: `routes/attivita_ist.py::form()` ora calcola
+`selettori_incarico` riusando quella stessa funzione (nessuna nuova
+query duplicata) e la passa al template. Nel form di creazione/
+modifica evento, sotto i pulsanti "Tutti"/"Nessuno" della checklist
+partecipanti, nuovo selettore "— aggiungi per incarico —" + pulsante
+"+ Aggiungi": seleziona un gruppo (per categoria o per tipo esatto di
+incarico) e spunta quei docenti nella checklist SENZA deselezionare
+chi era già scelto — resta una scelta esplicita al momento di
+compilare il form, mai un'iscrizione automatica silenziosa (coerente
+con la decisione già presa per `riunione_extra`, dopo l'incidente dei
+64 docenti invitati per errore a una riunione da 9).
+
+**Verifica**: 2 nuovi test (`tests/test_attivita_ist_form_selettori_incarico.py`)
+— selettori popolati con dati reali/vuoti se nessun incarico assegnato.
+Suite completa: 565 verdi, stessi 4 fallimenti pre-esistenti non
+collegati. Verificato in browser sui dati reali (copia isolata del
+`database.db` reale): il selettore mostra correttamente i gruppi reali
+("Referente di dipartimento (9)", "Coordinatore di classe (38)",
+commissioni varie); scegliendo "Referente di dipartimento" e cliccando
+"+ Aggiungi" spunta esattamente i 9 docenti giusti nella checklist.
+`database.db` reale mai toccato.
+
+## Sessione 69 addendum 33 — Iscrizione automatica: ambito ridotto alle sole riunioni collegiali
+
+Seguito dell'addendum 30 (NOVELLI iscritto in automatico a riunioni già
+pianificate — comportamento intenzionale, non un bug, segnalato a
+Roberto). Sua decisione: mantenere l'iscrizione automatica ma **solo**
+per le riunioni collegiali in senso stretto — collegio docenti,
+incontro con le famiglie, riunione di materia e dipartimento ad esso
+collegato, consigli di classe/scrutini/GLO delle classi assegnate.
+Esplicitamente esclusi: la riunione dei referenti/capidipartimento
+("gruppo ristretto") e le Formazioni ("per cui ci si deve iscrivere" —
+anche quelle marcate obbligatorie).
+
+**Modifiche** in `routes/attivita_ist.py`:
+- `iscrivi_docente_a_eventi_dipartimento()`: tolto `riunione_referenti`
+  dai tipi coperti (restano `dipartimento`, `riunione_materia`).
+- `iscrivi_docente_a_obbligatori()`: tolti `altro` e `formazione` dai
+  tipi coperti (restano `collegio`, `incontro_famiglie`) — rimossa
+  anche la logica ormai inutile che distingueva corsi
+  obbligatori/volontari, dato che la Formazione non è più coperta in
+  nessun caso.
+- `iscrivi_docente_a_eventi_classe()` invariata (consiglio_classe,
+  scrutinio, glo restano tutti e tre, confermato da Roberto).
+
+**Verifica**: aggiornati 2 test esistenti che asserivano il vecchio
+comportamento (`test_iscrizione_automatica_docente.py`), aggiunto 1
+nuovo test per la nuova esclusione (`test_iscrizione_automatica_assegnazione.py`).
+Suite completa: 563 verdi, stessi 4 fallimenti pre-esistenti non
+collegati.
+
 ## Sessione 69 addendum 32 — Export Excel per la verifica sovrapposizioni
 
 Roberto, subito dopo l'addendum precedente: "pensi si possa avere un

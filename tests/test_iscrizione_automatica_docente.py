@@ -1,10 +1,15 @@
 """
 Un docente nuovo/riattivato deve iscriversi automaticamente agli eventi
-istituzionali futuri "per tutti" già esistenti (Collegio, incontri
-famiglie, altro, Formazione obbligatoria) — altrimenti resterebbe
+istituzionali futuri "per tutti" già esistenti — altrimenti resterebbe
 escluso da eventi creati prima che esistesse in anagrafica, dato che il
 preset viene calcolato solo alla creazione/modifica dell'evento.
 Vedi routes/attivita_ist.py::iscrivi_docente_a_obbligatori.
+
+Ambito ristretto su richiesta esplicita di Roberto (solo le riunioni
+collegiali "per tutti" in senso stretto): Collegio e incontro con le
+famiglie restano automatici; 'altro' e Formazione (anche quella
+obbligatoria) no — l'iscrizione a un corso resta sempre una scelta
+individuale, mai preimpostata.
 """
 from datetime import date, timedelta
 from models import db
@@ -42,12 +47,14 @@ def test_docente_non_si_iscrive_a_collegio_passato(db_session):
     assert n == 0
 
 
-def test_docente_si_iscrive_a_incontro_famiglie_e_altro(db_session):
-    _evento('incontro_famiglie')
+def test_docente_si_iscrive_a_incontro_famiglie_ma_non_a_altro(db_session):
+    ev_incontro = _evento('incontro_famiglie')
     _evento('altro')
     d = crea_docente('Verdi')
     n = iscrivi_docente_a_obbligatori(d)
-    assert n == 2
+    assert n == 1
+    assert AttivitaIstPartecipante.query.filter_by(
+        id_attivita=ev_incontro.id, id_docente=d.id).first() is not None
 
 
 def test_docente_non_si_iscrive_a_consiglio_classe_o_dipartimento(db_session):
@@ -60,7 +67,10 @@ def test_docente_non_si_iscrive_a_consiglio_classe_o_dipartimento(db_session):
     assert n == 0
 
 
-def test_docente_si_iscrive_a_corso_formazione_obbligatorio(db_session):
+def test_docente_non_si_iscrive_a_corso_formazione_anche_se_obbligatorio(db_session):
+    """Richiesta esplicita di Roberto: la Formazione, anche quella
+    'obbligatoria per tutti', non si iscrive mai in automatico --
+    resta sempre una scelta individuale del singolo docente."""
     ev = AttivitaIst(tipo='formazione', titolo='Sicurezza', data=DOMANI,
                       durata_min=30, origine='manuale')
     db.session.add(ev)
@@ -73,7 +83,7 @@ def test_docente_si_iscrive_a_corso_formazione_obbligatorio(db_session):
 
     d = crea_docente('Gialli')
     n = iscrivi_docente_a_obbligatori(d)
-    assert n == 1
+    assert n == 0
 
 
 def test_docente_non_si_iscrive_a_corso_formazione_volontario(db_session):
