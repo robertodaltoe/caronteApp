@@ -181,3 +181,46 @@ def test_route_verifica_sovrapposizioni_reachable_senza_dati(app, db_session, mo
 
     assert catturato['kwargs']['sovrapposizioni'] == []
     assert catturato['kwargs']['conflitti_fse'] == []
+
+
+# ── export Excel ─────────────────────────────────────────────────────
+
+def test_genera_xlsx_sovrapposizioni_contiene_entrambi_i_fogli(app, db_session):
+    """genera_xlsx_sovrapposizioni() non passa da render_template (nessun
+    problema di template_folder/base.html) -- verificabile direttamente."""
+    from modules.verifica_sovrapposizioni_riunioni import genera_xlsx_sovrapposizioni
+
+    _crea_tabelle(app)
+    d = crea_docente('Novelli')
+    ev1 = _evento('consiglio_classe', 'CdC 3A LSU', date(2027, 5, 10), '14:00', '16:00', '3A LSU')
+    ev2 = _evento('scrutinio', 'Scrutinio 2B CAT', date(2027, 5, 10), '15:00', '17:00', '2B CAT')
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev1.id, id_docente=d.id))
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev2.id, id_docente=d.id))
+    db.session.commit()
+
+    sovrapposizioni = trova_sovrapposizioni_riunioni()
+    wb = genera_xlsx_sovrapposizioni(sovrapposizioni, [])
+
+    assert wb.sheetnames == ['Riunione - riunione', 'Riunione - sessione FSE-FESR']
+    ws1 = wb['Riunione - riunione']
+    assert ws1['A1'].value == 'Data'
+    assert ws1.cell(row=2, column=1).value == '10/05/2027'
+    assert 'Novelli' in ws1.cell(row=2, column=6).value
+
+
+def test_route_verifica_sovrapposizioni_xlsx_scarica_un_file_valido(app, db_session):
+    with app.app_context():
+        db.create_all()
+    _registra_blueprint(app)
+    d = crea_docente('Novelli')
+    ev1 = _evento('consiglio_classe', 'CdC 3A LSU', date(2027, 5, 10), '14:00', '16:00', '3A LSU')
+    ev2 = _evento('scrutinio', 'Scrutinio 2B CAT', date(2027, 5, 10), '15:00', '17:00', '2B CAT')
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev1.id, id_docente=d.id))
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev2.id, id_docente=d.id))
+    db.session.commit()
+
+    with app.test_client() as c:
+        r = c.get('/attivita-ist/verifica-sovrapposizioni/xlsx?solo_future=0')
+        assert r.status_code == 200
+        assert r.mimetype == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        assert r.data[:2] == b'PK'  # xlsx è uno zip

@@ -2,6 +2,25 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 32 — Export Excel per la verifica sovrapposizioni
+
+Roberto, subito dopo l'addendum precedente: "pensi si possa avere un
+report in excel delle sovrapposizioni?".
+
+Aggiunto `modules/verifica_sovrapposizioni_riunioni.py::genera_xlsx_sovrapposizioni()`
+(due fogli, uno per fonte — "Riunione - riunione" e "Riunione - sessione
+FSE-FESR" — stesso stile intestazione colorata già usato altrove nel
+progetto, es. `modules/xlsx_report.py`), nuova route
+`GET /attivita-ist/verifica-sovrapposizioni/xlsx` e pulsante "Esporta
+Excel" nella pagina (visibile solo se ci sono righe da esportare).
+
+**Verifica**: 2 nuovi test (contenuto dei due fogli, download via
+route — verificato che il file scaricato sia un vero .xlsx leggibile).
+Suite completa: 562 verdi, stessi 4 fallimenti pre-esistenti non
+collegati. Scaricato davvero il file dalla copia isolata del
+`database.db` reale e riletto con openpyxl: 69 righe reali nel primo
+foglio, dati corretti. `database.db` reale mai toccato.
+
 ## Sessione 69 addendum 31 — Nuova pagina: Verifica sovrapposizioni tra riunioni
 
 Roberto, dopo aver aggiornato alcune date nel Piano delle Attività:

@@ -995,6 +995,30 @@ def verifica_sovrapposizioni():
         conflitti_fse=conflitti_fse)
 
 
+@attivita_ist_bp.route('/attivita-ist/verifica-sovrapposizioni/xlsx')
+def verifica_sovrapposizioni_xlsx():
+    import io
+    from flask import send_file
+    from modules.verifica_sovrapposizioni_riunioni import (
+        trova_sovrapposizioni_riunioni, genera_xlsx_sovrapposizioni)
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+
+    solo_future = request.args.get('solo_future', '1') == '1'
+    data_da = date.today() if solo_future else None
+
+    sovrapposizioni = trova_sovrapposizioni_riunioni(data_da=data_da)
+    conflitti_fse = trova_conflitti_progetti_fse(data_da=data_da)
+
+    wb = genera_xlsx_sovrapposizioni(sovrapposizioni, conflitti_fse)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf, as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        download_name=f'sovrapposizioni_riunioni_{date.today().isoformat()}.xlsx')
+
+
 # ── NUOVO / MODIFICA ─────────────────────────────────────────────────────────
 
 @attivita_ist_bp.route('/attivita-ist/nuova', methods=['GET', 'POST'])

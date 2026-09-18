@@ -23,6 +23,12 @@
        style="{% if not solo_future %}background:var(--blu);color:white;{% else %}background:#eef1f5;color:#374151;{% endif %}">
         Tutto l'anno
     </a>
+    {% if sovrapposizioni or conflitti_fse %}
+    <a href="{{ url_for('attivita_ist.verifica_sovrapposizioni_xlsx', solo_future=1 if solo_future else 0) }}"
+       class="btn btn-sm" style="background:var(--verde);color:white; margin-left:auto;">
+        {{ icon('download') }} Esporta Excel
+    </a>
+    {% endif %}
 </div>
 
 {% set totale = sovrapposizioni|length + conflitti_fse|length %}
