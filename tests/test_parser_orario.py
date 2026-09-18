@@ -123,6 +123,61 @@ def test_trova_foglio_alza_errore_chiaro_se_nessun_foglio_combacia(tmp_path):
         _trova_foglio_orario(wb_letto)
 
 
+def test_trova_foglio_riconosce_qualsiasi_nome_dalla_struttura(tmp_path):
+    """Roberto: il software di orario cambia leggermente il nome del
+    foglio a ogni export ('_teachers_ti', poi '_teachers_tim', ecc.) --
+    vuole poter caricare un file con QUALSIASI nome di foglio, senza
+    doverlo controllare o rinominare a mano ogni volta. Il foglio va
+    riconosciuto dalla struttura (giorni/orari in riga 2/3), non dal
+    nome o da un suffisso particolare."""
+    wb = _crea_workbook_formato_orizzontale(nome_foglio='ORARIO SETTIMANA 2_teachers_tim')
+    percorso = _tempfile_da_workbook(wb, tmp_path)
+    from openpyxl import load_workbook
+    wb_letto = load_workbook(percorso)
+    ws = _trova_foglio_orario(wb_letto)
+    assert ws.title == 'ORARIO SETTIMANA 2_teachers_tim'
+
+    wb2 = _crea_workbook_formato_orizzontale(nome_foglio='Un nome qualsiasi, anche senza suffisso')
+    percorso2 = _tempfile_da_workbook(wb2, tmp_path, nome='orario2.xlsx')
+    wb2_letto = load_workbook(percorso2)
+    ws2 = _trova_foglio_orario(wb2_letto)
+    assert ws2.title == 'Un nome qualsiasi, anche senza suffisso'
+
+
+def test_trova_foglio_esclude_sempre_il_foglio_docenti(tmp_path):
+    """Il foglio 'Docenti' (anagrafica) non ha la struttura di un
+    orario quindi non verrebbe comunque scelto, ma resta escluso a
+    priori esplicitamente -- un foglio Docenti mal formattato che
+    somigliasse per caso a una griglia oraria non deve mai essere
+    scambiato per l'orario."""
+    wb = _crea_workbook_formato_orizzontale(nome_foglio='ORARIO SETTIMANA 2_teachers_tim')
+    ws_doc = wb.create_sheet('Docenti')
+    ws_doc.cell(1, 1, 'ROSSI')
+    percorso = _tempfile_da_workbook(wb, tmp_path)
+    from openpyxl import load_workbook
+    wb_letto = load_workbook(percorso)
+    ws = _trova_foglio_orario(wb_letto)
+    assert ws.title == 'ORARIO SETTIMANA 2_teachers_tim'
+
+
+def test_trova_foglio_segnala_ambiguita_se_piu_fogli_sembrano_orario(tmp_path):
+    """Se più fogli hanno tutti la struttura di un orario, non si
+    sceglie a caso: si segnala l'ambiguità con i nomi trovati, cosi'
+    Roberto puo' eliminare/rinominare quello sbagliato invece di
+    rischiare di importare il foglio non voluto in silenzio."""
+    wb = _crea_workbook_formato_orizzontale(nome_foglio='Foglio A')
+    wb2_ws = wb.create_sheet('Foglio B')
+    wb2_ws.cell(2, 3, 'LUN')
+    wb2_ws.cell(2, 6, 'MAR')
+    wb2_ws.cell(3, 3, datetime.time(8, 0))
+    wb2_ws.cell(3, 6, datetime.time(8, 0))
+    percorso = _tempfile_da_workbook(wb, tmp_path)
+    from openpyxl import load_workbook
+    wb_letto = load_workbook(percorso)
+    with pytest.raises(KeyError):
+        _trova_foglio_orario(wb_letto)
+
+
 def test_parse_file_formato_a_tag_lezione_potenziamento_compresenza(tmp_path):
     wb = _crea_workbook_formato_a_tag()
     percorso = _tempfile_da_workbook(wb, tmp_path)
@@ -180,6 +235,33 @@ def test_parse_file_formato_orizzontale_compresenza_e_autosufficiente(tmp_path):
     # affrontato perché nei file reali visti finora ogni docente in
     # compresenza ha comunque il proprio blocco con classe/materia.
     assert ('VERDI', 0, 2) not in slots
+
+
+def test_parse_file_riconosce_riga_titolo_extra_prima_dei_giorni(tmp_path):
+    """Caso reale del 2026-09-18: l'export "provvisorio" ha una riga di
+    titolo in più sopra i giorni ("IIS ... ORARIO PROVVISORIO DOCENTI
+    21-26 SETTEMBRE" in riga 2), che sposta giorni/orari/dati tutti di
+    una riga rispetto al layout storico (giorni sempre in riga 2) --
+    deve funzionare comunque, senza dover rimuovere la riga a mano."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'ORARIO SETTIMANA 2_teachers_tim'
+    ws.cell(2, 2, 'IIS LEONARDO DA VINCI - ORARIO PROVVISORIO DOCENTI 21-26 SETTEMBRE')
+    ws.cell(3, 3, 'LUNEDì')
+    ws.cell(3, 6, 'MARTEDì')
+    ws.cell(4, 3, datetime.time(8, 0))
+    ws.cell(4, 4, datetime.time(9, 0))
+    ws.cell(4, 6, datetime.time(8, 0))
+    ws.cell(4, 7, datetime.time(9, 0))
+    ws.cell(5, 2, 'ABRAMINI')
+    ws.cell(5, 3, '2ALSC'); ws.cell(5, 4, '---')
+    ws.cell(6, 3, 'MATEMATICA')
+    percorso = _tempfile_da_workbook(wb, tmp_path)
+
+    parsed = parse_file(percorso)
+    slots = {(s['cognome_file'], s['giorno'], s['ora']): s for s in parsed['slots']}
+    assert slots[('ABRAMINI', 0, 1)]['classe'] == '2ALSC'
+    assert slots[('ABRAMINI', 0, 1)]['materia'] == 'MATEMATICA'
 
 
 def test_parse_file_sceglie_il_formato_giusto_in_base_alla_colonna_a(tmp_path):

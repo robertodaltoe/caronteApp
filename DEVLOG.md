@@ -2,6 +2,63 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 29 — Import orario: nome del foglio e posizione delle righe non più fissi
+
+Roberto ha caricato un file reale ("ORARIO_PER_DOCENTI_21-26_SETTEMBRE.xlsx")
+e ha ricevuto: "Nessun foglio orario trovato (cercato
+'7_ORARIO DEFINITIVO_teachers_ti' o un foglio che termina per
+'_teachers_ti'). Fogli presenti: ['ORARIO SETTIMANA 2_teachers_tim']".
+
+**Primo livello del problema — il nome del foglio**: il software di
+orario della scuola cambia leggermente il nome della scheda a ogni
+export (visti finora `_teachers_ti`, ora `_teachers_tim`). Chiarito con
+Roberto che si tratta del nome della SCHEDA dentro l'Excel (non del
+nome del file caricato, che non ha mai contato). Ha chiesto
+esplicitamente "che io possa caricare un file con qualsiasi nome ...
+lo trovo più intelligente" — non un patch per il suffisso specifico
+visto oggi, ma smettere del tutto di dipendere dal nome.
+
+**Fix 1**: `modules/parser_orario.py::_trova_foglio_orario()` non cerca
+più un nome o un suffisso — riconosce il foglio orario dalla sua
+STRUTTURA (una riga con i giorni della settimana seguita dagli orari
+sulla riga sotto, quello che `build_col_map()` sa estrarre), escludendo
+sempre a priori il foglio `Docenti` (anagrafica). Se nessun foglio ha
+questa struttura, o se più di uno ce l'ha, segnala l'ambiguità con i
+nomi trovati invece di scegliere a caso.
+
+**Secondo livello, scoperto verificando col file reale**: anche dopo il
+fix 1, il file reale continuava a fallire — non più per il nome del
+foglio, ma perché il file ha una riga di TITOLO in più
+("IIS LEONARDO DA VINCI - ... ORARIO PROVVISORIO DOCENTI 21-26
+SETTEMBRE", riga 2 come cella unita B2:AH2), che sposta giorni/orari/
+dati tutti di una riga rispetto al layout storico dato per scontato
+ovunque nel codice (giorni sempre in riga 2, orari riga 3, dati da
+riga 4) — probabilmente perché è un export "provvisorio" (coerente con
+la funzione di validità settimanale dell'addendum 25). Confermato con
+Roberto prima di procedere (coerente col non voler "iterare a
+oltranza" su export irregolari senza conferma, feedback di sessioni
+precedenti).
+
+**Fix 2**: nuova `_trova_riga_giorni()` cerca la riga dei giorni
+scansionando le prime righe del foglio (richiede almeno 2 giorni
+diversi riconosciuti sulla stessa riga, per non confondere una riga di
+titolo che nomini per caso un giorno), invece di assumerla sempre in
+riga 2. `build_col_map()`, `_e_formato_a_tag()`, `_parse_formato_a_tag()`
+e `_parse_formato_orizzontale()` ora ricevono la riga dati come
+parametro invece di usare il letterale `4`.
+
+**Verifica**: 4 nuovi test in `tests/test_parser_orario.py` (nome
+foglio qualsiasi, esclusione del foglio Docenti, ambiguità con più
+fogli candidati, riga di titolo extra) — suite parser: 11 verdi, suite
+completa: 550 verdi, stessi 4 fallimenti pre-esistenti non collegati.
+**Verificato sul file reale di Roberto**: `parse_file()` diretto
+estrae 1157 slot; import end-to-end via la route reale
+(`/sincronizzazione/importa`, con validità 21-26/9 per la funzione
+dell'addendum 25) su copia isolata del `database.db` reale — esito
+"1157 slot, 0 docenti nuovi", nessun docente non riconosciuto,
+ricalcolo supplenze eseguito (19 aggiunte, 27 rimosse). `PRAGMA
+integrity_check` sulla copia: ok; `database.db` reale invariato.
+
 ## Sessione 69 addendum 28 — Progetti FSE/FESR: non si potevano eliminare i progetti
 
 Roberto: "non è possibile eliminare i progetti che vengono inseriti".

@@ -22,6 +22,12 @@ docente):
    blocco e' autosufficiente, verificato sui casi reali MAY/STRAMBINI e
    MAY/FUMAGALLI in "ORARIO SETTIMANA 1B_teachers_ti").
 
+Il NOME del foglio non è affidabile: il software lo cambia leggermente
+a ogni export (visti finora '..._teachers_ti', '..._teachers_tim') --
+_trova_foglio_orario() lo riconosce dalla struttura (giorni/orari in
+riga 2/3), non dal nome, cosi' Roberto può caricare un file con
+qualsiasi nome di foglio senza doverlo controllare o rinominare prima.
+
 parse_file() riconosce da solo quale dei due formati ha davanti e
 restituisce sempre la stessa struttura, cosi' applica_importazione()
 non deve sapere quale dei due e' stato usato.
@@ -29,8 +35,6 @@ non deve sapere quale dei due e' stato usato.
 import re, datetime, os, json
 from openpyxl import load_workbook
 
-SHEET_ORARIO  = '7_ORARIO DEFINITIVO_teachers_ti'
-SUFFISSO_FOGLIO_ORARIO = '_teachers_ti'
 SHEET_DOCENTI = 'Docenti'
 GIORNI = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
 LIBERO = {'---', '-x-', '', 'none'}
@@ -44,25 +48,58 @@ def is_libero(v):
 def is_classe(s):
     return bool(re.match(r'^\d[A-Z]', s.strip()))
 
-def build_col_map(ws):
+
+def _trova_riga_giorni(ws, max_scan=10):
+    """La riga con i nomi dei giorni non è sempre la riga 2: alcuni
+    export aggiungono una riga di titolo sopra (es. "ORARIO PROVVISORIO
+    DOCENTI 21-26 SETTEMBRE", visto per la prima volta il 2026-09-18),
+    che sposta tutto di una riga. Invece di assumere una posizione
+    fissa, si cerca la prima riga (entro le prime `max_scan`) che
+    contiene almeno 2 giorni della settimana diversi -- richiederne
+    almeno 2 evita che una riga di titolo che nomini per caso un solo
+    giorno venga scambiata per l'intestazione vera. None se non trovata
+    (foglio senza struttura da orario)."""
+    for r in range(1, max_scan + 1):
+        trovati = set()
+        for c in range(1, ws.max_column + 1):
+            v = clean(ws.cell(r, c).value).lower()
+            if not v:
+                continue
+            for g in GIORNI:
+                gl = g.lower()
+                # Il nome del giorno puo' essere per esteso ("Lunedì",
+                # il formato "a tag") o abbreviato ("LUN", il formato
+                # "orizzontale" del 2026-09-11): un controllo nei due
+                # sensi copre entrambi senza dover sapere quale dei due e'.
+                if gl in v or v in gl:
+                    trovati.add(g)
+                    break
+        if len(trovati) >= 2:
+            return r
+    return None
+
+
+def build_col_map(ws, riga_giorni=None):
+    if riga_giorni is None:
+        riga_giorni = _trova_riga_giorni(ws)
+        if riga_giorni is None:
+            return {}
+    riga_orari = riga_giorni + 1
+
     giorno_map = {}
     for c in range(1, ws.max_column + 1):
-        v = clean(ws.cell(2, c).value).lower()
+        v = clean(ws.cell(riga_giorni, c).value).lower()
         if not v:
             continue
         for i, g in enumerate(GIORNI):
             gl = g.lower()
-            # Il nome del giorno in riga 2 puo' essere per esteso
-            # ("Lunedì", il formato "a tag") o abbreviato ("LUN", il
-            # formato "orizzontale" del 2026-09-11): un controllo nei due
-            # sensi copre entrambi senza dover sapere quale dei due e'.
             if gl in v or v in gl:
                 giorno_map[c] = i
                 break
     col_map = {}
     ora_counter = {}
     for c in range(1, ws.max_column + 1):
-        v = ws.cell(3, c).value
+        v = ws.cell(riga_orari, c).value
         if not isinstance(v, datetime.time):
             continue
         g_num = None
@@ -78,28 +115,45 @@ def build_col_map(ws):
 
 
 def _trova_foglio_orario(wb):
-    """Il foglio orario si chiama sempre '<qualcosa>_teachers_ti' --
-    esattamente '7_ORARIO DEFINITIVO_teachers_ti' nel primo export mai
-    visto, ma il software lo rinomina secondo il periodo esportato (es.
-    'ORARIO SETTIMANA 1B_teachers_ti'). Si prova prima il nome esatto
-    storico, poi si cerca per suffisso invece di richiedere sempre lo
-    stesso nome letterale."""
-    if SHEET_ORARIO in wb.sheetnames:
-        return wb[SHEET_ORARIO]
+    """Il foglio orario NON ha un nome fisso: il software che lo esporta
+    lo rinomina in modo imprevedibile da un export all'altro (visti finora
+    '7_ORARIO DEFINITIVO_teachers_ti', 'ORARIO SETTIMANA 1B_teachers_ti',
+    'ORARIO SETTIMANA 2_teachers_tim' -- Roberto ha chiesto esplicitamente
+    di non dover più controllare/rinominare nulla a mano ogni volta che
+    cambia leggermente). Invece di cercare un nome o un suffisso
+    particolare, si riconosce il foglio dalla sua STRUTTURA: quello con
+    una riga di giorni della settimana seguita dagli orari (celle di
+    tipo "ora") sulla riga subito sotto, in qualunque posizione si
+    trovino (vedi _trova_riga_giorni) -- esattamente quello che
+    build_col_map() sa estrarre. Il foglio 'Docenti' (anagrafica, non
+    orario) è sempre escluso a priori."""
+    candidati = []
     for nome in wb.sheetnames:
-        if nome.endswith(SUFFISSO_FOGLIO_ORARIO):
-            return wb[nome]
+        if nome == SHEET_DOCENTI:
+            continue
+        if build_col_map(wb[nome]):
+            candidati.append(nome)
+
+    if len(candidati) == 1:
+        return wb[candidati[0]]
+    if len(candidati) > 1:
+        raise KeyError(
+            f"Trovati più fogli con struttura da orario (una riga di giorni seguita "
+            f"dagli orari): {candidati}. Elimina o rinomina quelli che non sono "
+            f"l'orario da importare, cosi' ne resta uno solo riconoscibile."
+        )
     raise KeyError(
-        f"Nessun foglio orario trovato (cercato '{SHEET_ORARIO}' o un foglio "
-        f"che termina per '{SUFFISSO_FOGLIO_ORARIO}'). Fogli presenti: {wb.sheetnames}"
+        f"Nessun foglio con struttura da orario riconosciuta (serve una riga con i "
+        f"giorni della settimana seguita dagli orari sulla riga sotto). Fogli presenti: "
+        f"{wb.sheetnames}"
     )
 
 
-def _e_formato_a_tag(ws, val):
+def _e_formato_a_tag(ws, val, riga_dati_inizio):
     """Il formato 'a tag' ha la colonna A che marca ogni riga con
     CLASSE/MATERIE/COMPRESENZA; il formato 'orizzontale' non ha quella
     colonna di servizio. Basta cercare almeno un 'CLASSE' in colonna A."""
-    for r in range(4, ws.max_row + 1):
+    for r in range(riga_dati_inizio, ws.max_row + 1):
         if clean(val(r, 1)).upper() == 'CLASSE':
             return True
     return False
@@ -125,11 +179,11 @@ def _sembra_nota_compresenza(testo):
     return ',' in t and not any(ch.isdigit() for ch in t)
 
 
-def _parse_formato_a_tag(ws, val, col_map):
+def _parse_formato_a_tag(ws, val, col_map, riga_dati_inizio):
     slots = []
     docente_corrente = None
 
-    for r in range(4, ws.max_row + 1):
+    for r in range(riga_dati_inizio, ws.max_row + 1):
         tipo_riga = clean(val(r, 1)).upper()
         if tipo_riga not in ('CLASSE', 'MATERIE', 'COMPRESENZA'):
             continue
@@ -153,7 +207,7 @@ def _parse_formato_a_tag(ws, val, col_map):
 
         elif tipo_riga == 'COMPRESENZA' and docente_corrente:
             riga_ref = None
-            for rr in range(r - 1, 3, -1):
+            for rr in range(r - 1, riga_dati_inizio - 1, -1):
                 if clean(val(rr, 1)).upper() == 'CLASSE':
                     riga_ref = rr
                     break
@@ -171,7 +225,7 @@ def _parse_formato_a_tag(ws, val, col_map):
     return slots
 
 
-def _parse_formato_orizzontale(ws, val, col_map):
+def _parse_formato_orizzontale(ws, val, col_map, riga_dati_inizio):
     """Un blocco per docente: la riga del cognome porta gia' la classe
     (o e' vuota/'---'), la riga sotto la materia. Le compresenze
     aggiungono una terza riga (la nota "COGNOME1, COGNOME2" sostituisce
@@ -191,7 +245,7 @@ def _parse_formato_orizzontale(ws, val, col_map):
     blocchi = []
     riga_inizio = None
     cognome = None
-    for r in range(4, ws.max_row + 2):
+    for r in range(riga_dati_inizio, ws.max_row + 2):
         nome = colonna_nome(r) if r <= ws.max_row else None
         if nome:
             if riga_inizio is not None:
@@ -242,7 +296,13 @@ def parse_file(excel_path):
         mr, mc = merged.get((r, c), (r, c))
         return ws_or.cell(mr, mc).value
 
-    col_map = build_col_map(ws_or)
+    # riga_giorni trovata di nuovo qui (non solo dentro _trova_foglio_orario)
+    # perche' serve il numero esatto per derivare riga_dati_inizio -- il
+    # foglio e' già stato validato come "ha struttura da orario" a monte,
+    # quindi non può essere None.
+    riga_giorni = _trova_riga_giorni(ws_or)
+    riga_dati_inizio = riga_giorni + 2
+    col_map = build_col_map(ws_or, riga_giorni)
 
     anagrafica = []
     if SHEET_DOCENTI in wb.sheetnames:
@@ -260,10 +320,10 @@ def parse_file(excel_path):
                 'attivo':        attivo_s in ('SÌ','SI','S','1','TRUE'),
             })
 
-    if _e_formato_a_tag(ws_or, val):
-        slots = _parse_formato_a_tag(ws_or, val, col_map)
+    if _e_formato_a_tag(ws_or, val, riga_dati_inizio):
+        slots = _parse_formato_a_tag(ws_or, val, col_map, riga_dati_inizio)
     else:
-        slots = _parse_formato_orizzontale(ws_or, val, col_map)
+        slots = _parse_formato_orizzontale(ws_or, val, col_map, riga_dati_inizio)
 
     return {'docenti_anagrafica': anagrafica, 'slots': slots}
 
