@@ -69,9 +69,15 @@ def slot_irc_per_classe():
     righe = OrarioDocente.query.filter(
         func.upper(OrarioDocente.materia).like('%RELIG%')).all()
     for s in righe:
-        if s.classe and s.classe[0].isdigit():
+        if e_classe_reale(s.classe):
             out[norm_classe(s.classe)].add((s.giorno, s.ora))
     return out
+
+
+def e_classe_reale(nome):
+    """Esclude le pseudo-classi del potenziamento (es. '0A POT')."""
+    n = (nome or '').strip().upper()
+    return bool(n) and n[0].isdigit() and n[0] != '0' and 'POT' not in n
 
 
 def tutte_le_classi():
@@ -84,9 +90,9 @@ def tutte_le_classi():
     from models.assegnazione import AssegnazioneClasse
     classi = {norm_classe(c) for (c,) in
               OrarioDocente.query.with_entities(OrarioDocente.classe).distinct().all()
-              if c and c[0].isdigit()}
+              if e_classe_reale(c)}
     classi |= {norm_classe(ac.label_classe) for ac in AssegnazioneClasse.query.all()
-               if ac.label_classe}
+               if e_classe_reale(ac.label_classe)}
     return classi
 
 
@@ -96,7 +102,8 @@ def classi_con_adesione(anno):
     slot = slot_irc_per_classe()
     ades = {a.classe: a for a in AlternativaIrcAdesione.query.filter_by(anno_scol=anno)}
     righe = []
-    for cl in sorted(tutte_le_classi() | set(slot) | set(ades)):
+    for cl in sorted(c for c in tutte_le_classi() | set(slot) | set(ades)
+                     if e_classe_reale(c)):
         a = ades.get(cl)
         righe.append({
             'classe': cl, 'label': label_classe(cl),
