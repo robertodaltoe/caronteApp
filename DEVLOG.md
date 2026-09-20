@@ -2,6 +2,40 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
+
+Roberto, dopo l'addendum 35: il punto critico è che l'assenza del docente
+di un gruppo non generava nessuna supplenza; inoltre ogni classe ha 1 ora
+di religione, con l'orario definitivo i gruppi potranno essere fino a 38 —
+verificare che il dato non sia fisso.
+
+**Supplenza automatica**: le ore dell'alternativa non stanno in
+`OrarioDocente`, quindi `_genera_supplenze()` non le vedeva. Ora, dopo il
+ciclo sugli slot d'orario, cerca i gruppi assegnati all'assente in quel
+giorno/ore (`modules/alternativa_irc.py::gruppi_alternativa_docente`) e
+crea una `Supplenza` per ciascuno (classe `ALT. IRC`, elenco classi in
+`note`/`note_display`, stessa gestione di `assegnabile`, ore singole,
+uscita per altra sede, sostituto preassegnato e idempotenza delle altre).
+Anche `ricalcola_supplenze_periodo()` le considera "attese", altrimenti un
+reimport dell'orario le avrebbe cancellate. Vale la validità dell'orario
+provvisorio come per ogni altra supplenza (fuori finestra non si genera).
+
+**Nessun numero fisso**: verificato, gruppi e classi derivano solo da
+orario, assegnazioni e adesioni; l'unica costante è la soglia di 20
+studenti per l'avviso "gruppo numeroso" (indicativa, dichiarata nel
+codice). In più la pagina Adesioni ora elenca TUTTE le classi (unione di
+orario e Assegnazioni), non solo quelle con religione già in orario: con
+l'orario provvisorio ne mancano (6 su 39 sui dati reali) ma possono già
+ricevere l'adesione, segnate "non ancora in orario"; quando l'orario
+definitivo le porta, "Aggiorna gruppi" crea i gruppi mancanti. Test con 40
+classi = 40 gruppi.
+
+**Verifica**: 5 nuovi test (supplenza generata/idempotente, ore e giorno
+giusti, ricalcolo che non cancella, 40 gruppi, classi senza ora di
+religione), suite 585 verdi (stessi 4 pre-esistenti). Dal vivo su copia
+isolata del database reale: assenza di un docente assegnato a un gruppo ->
+supplenza "ALT. IRC" alla 1ª ora. `database.db` reale mai toccato.
+
 ## Sessione 69 addendum 35 — Nuova sezione: Attività alternativa all'IRC
 
 Roberto: partendo dalla nota MIM prot. 11814 del 06/05/2026 (punto 3.7,

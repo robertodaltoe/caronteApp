@@ -33,6 +33,10 @@ from models.alternativa_irc import (
 # limite normativo, serve a far notare che forse conviene dividerlo.
 SOGLIA_GRUPPO = 20
 
+# Valore di Supplenza.classe per la copertura di un gruppo (che può
+# raccogliere più classi): la lista delle classi sta in note/note_display.
+CLASSE_SUPPLENZA = 'ALT. IRC'
+
 GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
 
 LIVELLI = {
@@ -70,17 +74,34 @@ def slot_irc_per_classe():
     return out
 
 
+def tutte_le_classi():
+    """Tutte le classi dell'istituto, non solo quelle con religione già in
+    orario: con l'orario provvisorio l'ora di religione può mancare in
+    alcune classi, che devono comunque poter ricevere l'adesione. Unione
+    delle classi in orario e delle Assegnazioni (stessa fonte usata dal
+    form degli eventi). Nessun numero fisso di classi o gruppi."""
+    from models.orario_docente import OrarioDocente
+    from models.assegnazione import AssegnazioneClasse
+    classi = {norm_classe(c) for (c,) in
+              OrarioDocente.query.with_entities(OrarioDocente.classe).distinct().all()
+              if c and c[0].isdigit()}
+    classi |= {norm_classe(ac.label_classe) for ac in AssegnazioneClasse.query.all()
+               if ac.label_classe}
+    return classi
+
+
 def classi_con_adesione(anno):
-    """Elenco classi che hanno religione in orario, con l'adesione salvata."""
+    """Elenco di tutte le classi con l'adesione salvata. n_slot == 0 vuol
+    dire che l'ora di religione non è (ancora) nell'orario importato."""
     slot = slot_irc_per_classe()
     ades = {a.classe: a for a in AlternativaIrcAdesione.query.filter_by(anno_scol=anno)}
     righe = []
-    for cl in sorted(slot):
+    for cl in sorted(tutte_le_classi() | set(slot) | set(ades)):
         a = ades.get(cl)
         righe.append({
             'classe': cl, 'label': label_classe(cl),
-            'n_slot': len(slot[cl]),
-            'slot': sorted(slot[cl]),
+            'n_slot': len(slot.get(cl, ())),
+            'slot': sorted(slot.get(cl, ())),
             'n_con_docente': a.n_con_docente if a else 0,
             'n_altre': a.n_altre if a else 0,
             'note': a.note if a else '',
@@ -350,6 +371,15 @@ def docenti_occupati_alternativa(data_sel, ora):
               .filter_by(anno_scol=anno_scol_di(data_sel), giorno=data_sel.weekday(), ora=ora)
               .filter(AlternativaIrcGruppo.id_docente.isnot(None)).all())
     return {g.id_docente for g in gruppi}
+
+
+def gruppi_alternativa_docente(id_docente, data_sel, ore):
+    """Gruppi con classi assegnati al docente in quel giorno, nelle ore date."""
+    gruppi = (AlternativaIrcGruppo.query
+              .filter_by(anno_scol=anno_scol_di(data_sel), giorno=data_sel.weekday(),
+                         id_docente=id_docente)
+              .filter(AlternativaIrcGruppo.ora.in_(list(ore))).all())
+    return [g for g in gruppi if g.classi]
 
 
 # ── EXPORT ────────────────────────────────────────────────────────────

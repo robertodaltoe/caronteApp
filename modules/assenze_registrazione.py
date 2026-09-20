@@ -347,6 +347,41 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
             from routes.supplenze import _registra_movimento
             _registra_movimento(id_sostituto_preset, data, 'recupero', s.id)
 
+    # Attività alternativa all'IRC: il docente incaricato di un gruppo
+    # ha quell'ora fissa per tutto l'anno ma NON in OrarioDocente, quindi
+    # il ciclo sopra non la vede — se è assente, il gruppo va coperto
+    # come una lezione (vedi modules/alternativa_irc.py).
+    from modules.alternativa_irc import (
+        gruppi_alternativa_docente, CLASSE_SUPPLENZA, label_classe)
+    ore_richieste = set(ore_singole) if ore_singole else set(range(ora_inizio, ora_fine + 1))
+    for gr in gruppi_alternativa_docente(id_docente, data, ore_richieste):
+        if ora_max is not None and gr.ora > ora_max:
+            continue
+        if Supplenza.query.filter_by(data=data, id_assente=id_docente, ora=gr.ora).first():
+            continue
+        from flask import g as _g
+        _utente = _g.utente.username if getattr(_g, 'utente', None) else None
+        classi_txt = ', '.join(label_classe(c) for c in gr.classi_list)
+        preassegnata = bool(id_sostituto_preset) and assegnabile
+        s = Supplenza(
+            data=data, ora=gr.ora, classe=CLASSE_SUPPLENZA,
+            id_assente=id_docente,
+            id_sostituto=id_sostituto_preset if preassegnata else None,
+            tipo='recupero',
+            stato='assegnata' if preassegnata else stato,
+            origine='automatica',
+            note_display=(note_display or (
+                'NON ASSEGNABILE' if not assegnabile else f'Alternativa IRC: {classi_txt}'))[:200],
+            note=f'Auto — Alternativa IRC ({classi_txt})',
+            creato_da=_utente,
+        )
+        db.session.add(s)
+        count += 1
+        if preassegnata:
+            db.session.flush()
+            from routes.supplenze import _registra_movimento
+            _registra_movimento(id_sostituto_preset, data, 'recupero', s.id)
+
     return count
 
 
@@ -425,6 +460,12 @@ def ricalcola_supplenze_periodo(data_inizio, data_fine, oggi=None):
                 if s.classe and s.classe not in ('---', '-x-', '', 'POTENZIAMENTO')
                 and s.tipo_ora != 'potenziamento'
             }
+            # Le ore dell'alternativa IRC dell'assente sono attese
+            # anch'esse: senza, il ricalcolo le cancellerebbe.
+            from modules.alternativa_irc import (
+                gruppi_alternativa_docente, CLASSE_SUPPLENZA)
+            attesi |= {(gr.ora, CLASSE_SUPPLENZA)
+                       for gr in gruppi_alternativa_docente(a.id_docente, d, set(range(1, 10)))}
 
             esistenti = Supplenza.query.filter_by(
                 data=d, id_assente=a.id_docente, origine='automatica'

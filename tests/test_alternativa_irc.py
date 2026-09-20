@@ -205,3 +205,86 @@ def test_xlsx_contiene_gruppi_e_adesioni(app, db_session):
     assert wb.sheetnames == ['Gruppi', 'Adesioni']
     assert wb['Gruppi'].cell(2, 1).value == 'Martedì'
     assert wb['Gruppi'].cell(2, 4).value == 9
+
+
+# ── Assenza del docente dell'alternativa -> supplenza ────────────────
+
+def _con_docente_assegnato():
+    g = _scenario()
+    doc = crea_docente('Incaricato')
+    _slot(doc, 0, 1, '1ACAT')
+    db.session.add(AlternativaIrcDisponibilita(anno_scol=ANNO, id_docente=doc.id))
+    db.session.commit()
+    assert air.assegna(g, id_docente=doc.id)[0]
+    return g, doc
+
+
+def _tabelle_supplenze(app):
+    with app.app_context():
+        from models.attivita_fuori_aula import AttivitaFuoriAula, AttivitaClasse  # noqa
+        db.create_all()
+
+
+def test_assenza_del_docente_genera_supplenza_per_il_gruppo(app, db_session):
+    from models.supplenza import Supplenza
+    from modules.assenze_registrazione import _genera_supplenze
+    _tabelle_supplenze(app)
+    g, doc = _con_docente_assegnato()
+    martedi = date(2026, 9, 22)
+    n = _genera_supplenze(doc.id, martedi, 1, 9, True, note_display='')
+    db.session.commit()
+    sup = Supplenza.query.filter_by(id_assente=doc.id, data=martedi).all()
+    assert n == 1 and len(sup) == 1
+    assert (sup[0].ora, sup[0].classe, sup[0].stato) == (3, 'ALT. IRC', 'scoperta')
+    assert '3A LLI' in sup[0].note and '3B LLI' in sup[0].note
+    # idempotente
+    assert _genera_supplenze(doc.id, martedi, 1, 9, True, note_display='') == 0
+
+
+def test_supplenza_solo_nelle_ore_dell_assenza_e_nel_giorno_giusto(app, db_session):
+    from modules.assenze_registrazione import _genera_supplenze
+    _tabelle_supplenze(app)
+    g, doc = _con_docente_assegnato()
+    assert _genera_supplenze(doc.id, date(2026, 9, 22), 1, 2, True, note_display='') == 0  # ora 3 fuori
+    assert _genera_supplenze(doc.id, date(2026, 9, 23), 1, 9, True, note_display='') == 0  # mercoledì
+
+
+def test_ricalcolo_periodo_non_cancella_la_supplenza_dell_alternativa(app, db_session):
+    from models.assenza import Assenza
+    from models.supplenza import Supplenza
+    from modules.assenze_registrazione import _genera_supplenze, ricalcola_supplenze_periodo
+    _tabelle_supplenze(app)
+    g, doc = _con_docente_assegnato()
+    martedi = date(2026, 9, 22)
+    db.session.add(Assenza(id_docente=doc.id, data=martedi, ora_inizio=1, ora_fine=9, motivo='malattia'))
+    db.session.commit()
+    _genera_supplenze(doc.id, martedi, 1, 9, True, note_display='')
+    db.session.commit()
+    esito = ricalcola_supplenze_periodo(martedi, martedi, oggi=date(2026, 9, 1))
+    assert esito['cancellate'] == 0
+    assert Supplenza.query.filter_by(id_assente=doc.id, classe='ALT. IRC').count() == 1
+
+
+# ── Nessun limite fisso su classi e gruppi ───────────────────────────
+
+def test_fino_a_quaranta_gruppi_e_tutte_le_classi_in_elenco(app, db_session):
+    doc = crea_docente('Religione')
+    n_classi = 40
+    for i in range(n_classi):
+        cl = f'{(i % 5) + 1}{chr(65 + i // 5)}CAT'
+        _slot(doc, i % 6, (i // 6) + 1, cl, 'RELIGIONE')
+        db.session.add(AlternativaIrcAdesione(anno_scol=ANNO, classe=cl, n_con_docente=2))
+    db.session.commit()
+    esito = air.genera_gruppi(ANNO)
+    assert esito['creati'] == AlternativaIrcGruppo.query.count() == n_classi
+
+
+def test_classi_senza_ora_di_religione_in_orario_compaiono_comunque(app, db_session):
+    doc = crea_docente('Religione')
+    _slot(doc, 0, 1, '1ACAT', 'RELIGIONE')
+    altro = crea_docente('Altro')
+    _slot(altro, 0, 2, '2BCAT', 'MATEMATICA')    # 2BCAT: religione non ancora in orario
+    db.session.commit()
+    righe = {r['classe']: r for r in air.classi_con_adesione(ANNO)}
+    assert righe['1ACAT']['n_slot'] == 1
+    assert righe['2BCAT']['n_slot'] == 0

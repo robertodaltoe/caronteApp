@@ -7,7 +7,7 @@
     <h1 style="font-size:1.3rem; color:var(--blu);">1 · Adesioni per classe — {{ anno }}</h1>
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:14px; max-width:760px;">
-    Per ogni classe con religione in orario, indica quanti studenti chiedono un <b>docente</b>
+    Per ogni classe (l'ora di religione compare in orario man mano che viene importato), indica quanti studenti chiedono un <b>docente</b>
     (attività didattiche e formative, o studio con assistenza) e quanti hanno scelto altro (uscita o
     ingresso posticipato, studio senza assistenza). Solo i primi generano ore da coprire. Si
     registra solo il numero: nessun nominativo.
@@ -21,13 +21,13 @@
     {% for r in righe %}
     <tr>
         <td><b>{{ r.label }}</b></td>
-        <td style="font-size:.78rem; color:var(--grigio);">{% for g, o in r.slot %}{{ giorni[g][:3] }} {{ o }}ª{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td style="font-size:.78rem; color:var(--grigio);">{% for g, o in r.slot %}{{ giorni[g][:3] }} {{ o }}ª{% if not loop.last %}, {% endif %}{% else %}<span style="color:#d97706;">non ancora in orario</span>{% endfor %}</td>
         <td><input type="number" min="0" name="con_{{ r.classe }}" value="{{ r.n_con_docente }}" style="width:80px;"></td>
         <td><input type="number" min="0" name="altre_{{ r.classe }}" value="{{ r.n_altre }}" style="width:80px;"></td>
         <td><input type="text" name="note_{{ r.classe }}" value="{{ r.note }}" maxlength="200" style="width:100%;"></td>
     </tr>
     {% else %}
-    <tr><td colspan="5" style="text-align:center; color:var(--grigio); padding:24px;">Nessuna classe con ore di religione nell'orario importato.</td></tr>
+    <tr><td colspan="5" style="text-align:center; color:var(--grigio); padding:24px;">Nessuna classe trovata (importa l'orario o crea le assegnazioni).</td></tr>
     {% endfor %}
     </tbody>
     <tfoot><tr><td colspan="2"><b>Totale</b></td><td><b>{{ tot_con }}</b></td><td><b>{{ tot_altre }}</b></td><td></td></tr></tfoot>
