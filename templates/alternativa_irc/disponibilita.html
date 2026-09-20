@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Disponibilità alternativa IRC{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+    <a href="{{ url_for('alternativa_irc.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Alternativa IRC</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">2 · Disponibilità dei docenti — {{ anno }}</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:14px; max-width:760px;">
+    Spunta solo i docenti che hanno dato la disponibilità volontaria: sono gli unici proposti in
+    seconda priorità (supplenti a completamento del contratto, oppure ore eccedenti). Chi a
+    disposizione o deve completare l'orario compare in automatico in prima priorità, senza
+    dichiarazione. I docenti di potenziamento non vengono considerati.
+</p>
+<input type="search" id="filtro" placeholder="Cerca docente…" oninput="filtra()" style="padding:6px 10px; width:260px; margin-bottom:10px;">
+<form method="post">
+<div class="card" style="padding:0; overflow:hidden; max-width:900px;">
+<div style="overflow-x:auto;">
+<table style="width:100%; min-width:680px;">
+    <thead><tr><th style="width:60px;">Disp.</th><th>Docente</th><th>Tipo</th><th style="width:100px;">Max ore/sett.</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for d in docenti %}
+    {% set s = salvate.get(d.id) %}
+    <tr class="riga-doc">
+        <td><input type="checkbox" name="disp_{{ d.id }}" {% if s %}checked{% endif %}></td>
+        <td class="nome">{{ d.cognome }} {{ d.nome or '' }}</td>
+        <td><select name="tipo_{{ d.id }}">{% for cod, lbl in tipi %}<option value="{{ cod }}" {% if s and s.tipo == cod %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></td>
+        <td><input type="number" min="1" name="max_{{ d.id }}" value="{{ s.max_ore if s and s.max_ore else '' }}" style="width:70px;"></td>
+        <td><input type="text" name="note_{{ d.id }}" value="{{ s.note if s and s.note else '' }}" maxlength="200" style="width:100%;"></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div></div>
+<div style="margin-top:14px;"><button class="btn btn-success" type="submit">{{ icon('check') }} Salva disponibilità</button></div>
+</form>
+<script>
+function filtra() {
+    const q = document.getElementById('filtro').value.toLowerCase();
+    document.querySelectorAll('.riga-doc').forEach(r => {
+        r.style.display = r.querySelector('.nome').textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

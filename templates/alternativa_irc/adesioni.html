@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Adesioni alternativa IRC{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+    <a href="{{ url_for('alternativa_irc.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Alternativa IRC</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">1 · Adesioni per classe — {{ anno }}</h1>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:14px; max-width:760px;">
+    Per ogni classe con religione in orario, indica quanti studenti chiedono un <b>docente</b>
+    (attività didattiche e formative, o studio con assistenza) e quanti hanno scelto altro (uscita o
+    ingresso posticipato, studio senza assistenza). Solo i primi generano ore da coprire. Si
+    registra solo il numero: nessun nominativo.
+</p>
+<form method="post">
+<div class="card" style="padding:0; overflow:hidden; max-width:900px;">
+<div style="overflow-x:auto;">
+<table style="width:100%; min-width:640px;">
+    <thead><tr><th>Classe</th><th>Ore di religione</th><th style="width:130px;">Con docente</th><th style="width:110px;">Altre scelte</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for r in righe %}
+    <tr>
+        <td><b>{{ r.label }}</b></td>
+        <td style="font-size:.78rem; color:var(--grigio);">{% for g, o in r.slot %}{{ giorni[g][:3] }} {{ o }}ª{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td><input type="number" min="0" name="con_{{ r.classe }}" value="{{ r.n_con_docente }}" style="width:80px;"></td>
+        <td><input type="number" min="0" name="altre_{{ r.classe }}" value="{{ r.n_altre }}" style="width:80px;"></td>
+        <td><input type="text" name="note_{{ r.classe }}" value="{{ r.note }}" maxlength="200" style="width:100%;"></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" style="text-align:center; color:var(--grigio); padding:24px;">Nessuna classe con ore di religione nell'orario importato.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="2"><b>Totale</b></td><td><b>{{ tot_con }}</b></td><td><b>{{ tot_altre }}</b></td><td></td></tr></tfoot>
+</table>
+</div></div>
+<div style="margin-top:14px;"><button class="btn btn-success" type="submit">{{ icon('check') }} Salva adesioni</button></div>
+</form>
+{% endblock %}

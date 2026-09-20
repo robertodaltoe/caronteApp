@@ -2,6 +2,61 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 35 — Nuova sezione: Attività alternativa all'IRC
+
+Roberto: partendo dalla nota MIM prot. 11814 del 06/05/2026 (punto 3.7,
+attività alternativa all'IRC) ha chiesto una funzione per gestire
+adesioni, gruppi, docenti e orario. Decisioni prese insieme: si registra
+solo il NUMERO di studenti per classe (mai nominativi: dato sulle
+convinzioni religiose); il docente di ogni gruppo è fisso per tutto
+l'anno; i docenti di potenziamento non si usano; chi deve completare
+l'orario sì; le ore eccedenti solo per chi ha dato disponibilità;
+i giorni in servizio presso altra scuola (anagrafica) contano come
+indisponibilità; deve essere chiaro l'ordine di priorità della circolare.
+
+**Struttura** (nuovo `models/alternativa_irc.py`, `modules/alternativa_irc.py`,
+`routes/alternativa_irc.py`, 5 template in `templates/alternativa_irc/`,
+menu Orari → "Alternativa IRC", nuova sezione permessi `alternativa_irc`):
+1. Adesioni: per ogni classe con religione in orario, studenti "con
+   docente" (generano ore da coprire) e "altre scelte" (solo informativo).
+   Gli slot sono quelli di religione già in `OrarioDocente`, nessun dato
+   duplicato.
+2. Disponibilità: elenco docenti con spunta, tipo (completamento /
+   ore eccedenti), max ore/settimana, note. Solo chi è spuntato è
+   proposto in priorità 2.
+3. Gruppi: uno per slot (giorno, ora) con classi e totale studenti
+   (avviso oltre 20, soglia indicativa non normativa). "Aggiorna gruppi"
+   è idempotente e non perde mai il docente già assegnato.
+4. Assegnazione con candidati in ordine di circolare: priorità 1 a
+   disposizione in quell'ora o completa l'orario (ore in servizio <
+   ore di contratto); priorità 2 volontari (completamento poi ore
+   eccedenti, rispettando il massimo dichiarato); priorità 3 "supplente
+   da nominare". Esclusi sempre: chi insegna in una classe del gruppo,
+   ha un impegno in quell'ora (potenziamento incluso), è in un giorno/ora
+   presso altra scuola (`giorni_presenza`/`ora_uscita`), ha
+   un'indisponibilità ricorrente, o è già su un altro gruppo alla stessa
+   ora. I docenti spuntati ma non proponibili compaiono in un riquadro
+   con il motivo. Se l'orario cambia e il docente assegnato non è più
+   compatibile, il gruppo mostra l'avviso.
+5. Orario settimanale (griglia giorno × ora) ed export Excel.
+
+**Integrazione supplenze**: `docenti_occupati_stessa_ora()` include i
+docenti assegnati a un gruppo in quel giorno/ora (incarico per tutto
+l'anno scolastico), così non vengono proposti per una supplenza.
+
+**Limiti noti / da decidere**: un solo gruppo per slot (niente
+suddivisione manuale di un gruppo numeroso); l'assenza del docente
+dell'alternativa non genera ancora una supplenza; "completa l'orario"
+dipende dall'orario importato, con quello provvisorio molti docenti
+risultano con ore mancanti.
+
+**Verifica**: 15 nuovi test (`tests/test_alternativa_irc.py`), suite
+completa 580 verdi (stessi 4 fallimenti pre-esistenti). Provato in browser
+su copia isolata del `database.db` reale: 33 classi con religione, 6 gruppi
+dalle adesioni di prova, 16 candidati in priorità 1, assegnazione,
+griglia ed export Excel funzionanti; tabelle create in automatico.
+`database.db` reale mai toccato.
+
 ## Sessione 69 addendum 34 — Gruppi di docenti per incarico negli eventi del Piano delle Attività
 
 Roberto: "pensi si possa prevedere di aggiungere agli eventi del piano

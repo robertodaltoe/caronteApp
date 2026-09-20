@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Gruppi alternativa IRC{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+    <a href="{{ url_for('alternativa_irc.index') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Alternativa IRC</a>
+    <h1 style="font-size:1.3rem; color:var(--blu);">3 · Gruppi e assegnazione — {{ anno }}</h1>
+    <form method="post" action="{{ url_for('alternativa_irc.genera') }}" style="margin-left:auto;">
+        <button class="btn btn-sm btn-success" type="submit">{{ icon('refresh') }} Aggiorna gruppi dalle adesioni</button>
+    </form>
+</div>
+<p style="color:var(--grigio); font-size:.85rem; margin-bottom:14px; max-width:820px;">
+    Un gruppo per ogni slot in cui classi con studenti da seguire hanno religione. Il docente scelto
+    resta lo stesso per tutto l'anno. Elenco in ordine di priorità della circolare; chi insegna
+    nelle classi del gruppo, ha un impegno in quell'ora, è presso un'altra scuola o ha
+    un'indisponibilità fissa non compare.
+</p>
+{% for r in righe %}
+{% set g = r.gruppo %}
+<div class="card" id="g{{ g.id }}" style="padding:14px 16px; margin-bottom:12px; max-width:900px; border-left:4px solid {{ 'var(--verde)' if g.id_docente else ('#d97706' if g.da_nominare else 'var(--rosso)') }};">
+    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <div><b>{{ giorni[g.giorno] }} · {{ g.ora }}ª ora</b>
+            <span style="color:var(--grigio); font-size:.85rem;"> — {{ r.classi|join(', ') }}</span></div>
+        <div style="font-size:.85rem;"><b>{{ r.n_studenti }}</b> studenti
+            {% if r.numeroso %}<span style="color:var(--rosso);"> ⚠ gruppo numeroso (oltre {{ soglia }})</span>{% endif %}</div>
+    </div>
+    {% if not g.classi %}<div style="color:#d97706; font-size:.82rem; margin-top:4px;">⚠ Nessuna classe con studenti in questo slot (orario o adesioni cambiati).</div>{% endif %}
+    {% if r.avviso %}<div style="color:var(--rosso); font-size:.82rem; margin-top:4px;">⚠ Il docente assegnato non è più compatibile: {{ r.avviso }}.</div>{% endif %}
+    <form method="post" action="{{ url_for('alternativa_irc.assegna', id=g.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:10px;">
+        <div style="flex:2; min-width:260px;">
+            <label style="font-size:.75rem;">Docente</label>
+            <select name="scelta" style="width:100%;">
+                <option value="nessuno">— non assegnato —</option>
+                {% if g.id_docente and not (r.cand.livelli[1] + r.cand.livelli[2])|selectattr('docente.id','equalto',g.id_docente)|list %}
+                <option value="docente:{{ g.id_docente }}" selected>{{ g.docente.cognome }} {{ g.docente.nome or '' }} (attuale)</option>
+                {% endif %}
+                {% for liv in (1, 2) %}
+                {% if r.cand.livelli[liv] %}
+                <optgroup label="{{ livelli[liv] }}">
+                    {% for v in r.cand.livelli[liv] %}
+                    <option value="docente:{{ v.docente.id }}" {% if g.id_docente == v.docente.id %}selected{% endif %}>{{ v.docente.cognome }} {{ v.docente.nome or '' }} — {{ v.dettaglio }}{% if v.ore_alt %} · già {{ v.ore_alt }} gruppo/i{% endif %}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% endfor %}
+                <optgroup label="{{ livelli[3] }}">
+                    <option value="da_nominare" {% if g.da_nominare %}selected{% endif %}>Supplente da nominare</option>
+                </optgroup>
+            </select>
+        </div>
+        <div><label style="font-size:.75rem;">Aula</label><br><input type="text" name="aula" value="{{ g.aula or '' }}" maxlength="50" style="width:110px;"></div>
+        <div style="flex:1; min-width:140px;"><label style="font-size:.75rem;">Note</label><br><input type="text" name="note" value="{{ g.note or '' }}" maxlength="200" style="width:100%;"></div>
+        <button class="btn btn-sm btn-success" type="submit">Salva</button>
+    </form>
+    {% if r.cand.esclusi %}
+    <details style="margin-top:8px; font-size:.78rem; color:var(--grigio);">
+        <summary>{{ r.cand.esclusi|length }} docente/i con disponibilità non proponibili</summary>
+        <ul style="margin:4px 0 0 18px;">{% for e in r.cand.esclusi %}<li>{{ e.docente.cognome }} {{ e.docente.nome or '' }} — {{ e.dettaglio }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:32px; color:var(--grigio); max-width:900px;">
+    Nessun gruppo. Inserisci le adesioni e usa "Aggiorna gruppi dalle adesioni".
+</div>
+{% endfor %}
+{% endblock %}

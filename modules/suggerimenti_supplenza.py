@@ -130,6 +130,11 @@ def docenti_occupati_stessa_ora(data_sel, ora):
         .filter(Supplenza.id_sostituto.isnot(None))
         .all())
     occupati_ids = {s.id_sostituto for s in sups_stessa_ora if s.tipo != 'potenziamento'}
+    # Attività alternativa all'IRC: incarico fisso per tutto l'anno
+    # scolastico, quindi il docente in quell'ora è occupato (vedi
+    # modules/alternativa_irc.py).
+    from modules.alternativa_irc import docenti_occupati_alternativa
+    occupati_ids |= docenti_occupati_alternativa(data_sel, ora)
     occupati_pot_ids = {s.id_sostituto for s in sups_stessa_ora if s.tipo == 'potenziamento'}
     return occupati_ids, occupati_pot_ids
 

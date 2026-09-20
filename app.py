@@ -239,7 +239,9 @@ def create_app(avvio_con_reloader=True):
     from routes.progetti_fse import progetti_fse_bp
     app.register_blueprint(progetti_fse_bp)
     from routes.sostituzioni import sostituzioni_bp
+    from routes.alternativa_irc import alternativa_irc_bp
     app.register_blueprint(sostituzioni_bp)
+    app.register_blueprint(alternativa_irc_bp)
 
     # Filtro Jinja per decodificare JSON nei template
     import json
@@ -405,6 +407,8 @@ def create_app(avvio_con_reloader=True):
             SessioneFSE, PresenzaFSE, DocumentoFSE)
         from models.sostituzione_docente import (SostituzioneDocente,  # noqa
             SostituzioneOrarioSlot, SostituzioneEventoSwap)
+        from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
+            AlternativaIrcDisponibilita, AlternativaIrcGruppo, AlternativaIrcGruppoClasse)
         # Crea tabelle nuove + applica migrazioni colonne
         db.create_all()
         _auto_migrate()

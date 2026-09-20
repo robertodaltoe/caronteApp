@@ -63,6 +63,9 @@ def app():
         from models.colloqui_eccezione import ColloquiEccezione  # noqa
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
+        from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
+            AlternativaIrcDisponibilita, AlternativaIrcGruppo, AlternativaIrcGruppoClasse)
+        from models.indisponibilita_ricorrente import IndisponibilitaRicorrente  # noqa
         db.create_all()
         yield app
         db.session.remove()

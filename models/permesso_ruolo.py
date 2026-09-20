@@ -57,6 +57,7 @@ SEZIONI = [
     ('aule',                   'Aule per classe'),
     ('progetti_fse',           'Progetti FSE/FESR'),
     ('sostituzioni',           'Sostituzione docenti (temporanea/definitiva)'),
+    ('alternativa_irc',        'Attività alternativa all\'IRC'),
 ]
 SEZIONI_LABEL = dict(SEZIONI)
 
@@ -68,7 +69,7 @@ SEZIONI_GRUPPI = [
     ('Assenze e supplenze', ['assenze', 'indisponibilita', 'supplenze', 'cambi', 'agenda']),
     ('Attività', ['attivita', 'attivita_istituzionali', 'attivita_differite', 'dipartimenti', 'piano_personale']),
     ('Banca ore e report', ['banca_ore', 'import_banca_ore', 'report', 'mail_bozze']),
-    ('Orario', ['orario', 'orario_globale']),
+    ('Orario', ['orario', 'orario_globale', 'alternativa_irc']),
     ('Recupero', ['recupero', 'rientro', 'esami_integrativi']),
     ('Anno scolastico e organico', ['organico', 'dashboard_anno', 'cambio_anno']),
     ('Docenti e incarichi', ['docenti', 'incarichi', 'tipi_incarico']),
@@ -129,6 +130,7 @@ DEFAULT_MATRICE = {
     'aule':                    {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
     'progetti_fse':            {'ds': 'modifica',   'collaboratore': 'modifica',   'segreteria': 'modifica'},
     'sostituzioni':            {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'esclusa'},
+    'alternativa_irc':         {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
 }
 
 # Sezioni nate da uno scorporo di una sezione più ampia (Sessione 53):
@@ -210,6 +212,7 @@ BLUEPRINT_SEZIONE = {
     'piano_personale':    'piano_personale',
     'progetti_fse':       'progetti_fse',
     'sostituzioni':       'sostituzioni',
+    'alternativa_irc':    'alternativa_irc',
 }
 ENDPOINT_SEZIONE = {
     'attivita_ist.dipartimenti':                 'dipartimenti',
@@ -299,7 +302,7 @@ def _migra_split_sezioni_permessi():
     # dal default, come per una sezione mai vista prima da questa
     # installazione ('orario_globale', Sessione 53; 'piano_personale',
     # Sessione 57).
-    for sezione in ('orario_globale', 'piano_personale', 'progetti_fse'):
+    for sezione in ('orario_globale', 'piano_personale', 'progetti_fse', 'alternativa_irc'):
         for ruolo, _ in RUOLI_CONFIGURABILI:
             if not PermessoRuolo.query.filter_by(ruolo=ruolo, sezione=sezione).first():
                 db.session.add(PermessoRuolo(ruolo=ruolo, sezione=sezione,

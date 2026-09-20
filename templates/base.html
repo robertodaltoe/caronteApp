@@ -559,7 +559,7 @@
     {% if puo_vedere('report') %}
     <a href="{{ url_for('report.index') }}"><span class="nav-ic">{{ icon('chart') }}</span> Report</a>
     {% endif %}
-    {% if puo_vedere('orario_globale') or puo_vedere('orario') %}
+    {% if puo_vedere('orario_globale') or puo_vedere('orario') or puo_vedere('alternativa_irc') %}
     <div class="nav-dropdown">
         <a><span class="nav-ic">{{ icon('grid') }}</span> Orario</a>
         <div class="nav-drop-menu">
@@ -568,6 +568,9 @@
             {% endif %}
             {% if puo_vedere('orario') %}
             <a href="{{ url_for('orario_sostegno.index') }}"><span class="nav-ic">{{ icon('support') }}</span> Orario sostegno</a>
+            {% endif %}
+            {% if puo_vedere('alternativa_irc') %}
+            <a href="{{ url_for('alternativa_irc.index') }}"><span class="nav-ic">{{ icon('school') }}</span> Alternativa IRC</a>
             {% endif %}
         </div>
     </div>
