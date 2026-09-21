@@ -83,3 +83,18 @@ def test_html_a_docx_riporta_tabella_con_intestazioni_in_grassetto():
     testo_completo = '\n'.join(p.text for p in doc.paragraphs)
     assert '2.1.1 Test entrata' in testo_completo
     assert 'P.2.11 Test spesa' in testo_completo
+
+
+def test_docx_conserva_formattazione_del_pdf():
+    html = ('<html><body><div class="oggetto"><b>Oggetto:</b> x</div>'
+            '<div class="estremi"><i>Avviso</i><br>CUP: <b>D9</b></div>'
+            '<div style="margin: 10px 0 10px 50%;">Al tutor</div>'
+            '<p>testo</p><table class="tabella-incarichi"><tr><th>A</th></tr><tr><td>b</td></tr></table>'
+            '</body></html>')
+    doc = Document(io.BytesIO(html_a_docx(html)))
+    p = doc.paragraphs
+    assert p[0].runs[0].bold and abs(p[0].runs[0].font.size.pt - 10.5 * 0.75) < 0.01
+    assert any(r.italic for r in p[1].runs) and any(r.bold for r in p[1].runs)
+    assert p[2].paragraph_format.left_indent is not None
+    assert p[3].alignment is not None
+    assert 'EEEEEE' in doc.tables[0]._tbl.xml
