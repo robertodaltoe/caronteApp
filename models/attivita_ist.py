@@ -8,20 +8,22 @@ from datetime import datetime
 
 
 # ── Bucket CCNL ──────────────────────────────────────────────────────────────
-BUCKET_A  = 'A'   # max 40h: Collegio, info famiglie, formazione residua
-BUCKET_B  = 'B'   # max 40h: CdC, dipartimenti, GLO
+BUCKET_A  = 'A'   # max 40h (art.44 c.3 lett.a): Collegio e sue articolazioni (dipartimenti, materie, referenti), info famiglie, formazione residua
+BUCKET_B  = 'B'   # max 40h (art.44 c.3 lett.b): CdC, GLO
 BUCKET_NO = None  # fuori conteggio: scrutini, esami, riunioni ad hoc (Commissione/Staff...)
 
 TIPI_ATTIVITA = {
     'collegio':           {'label': 'Collegio docenti',          'bucket': BUCKET_A,  'emoji': '▨︎'},
     'consiglio_classe':   {'label': 'Consiglio di classe',       'bucket': BUCKET_B,  'emoji': '◍︎'},
-    'dipartimento':       {'label': 'Riunione dipartimento',     'bucket': BUCKET_B,  'emoji': '▥︎'},
-    'riunione_materia':   {'label': 'Riunione per materia',      'bucket': BUCKET_B,  'emoji': '▥︎'},
+    'dipartimento':       {'label': 'Riunione dipartimento',     'bucket': BUCKET_A,  'emoji': '▥︎'},
+    'riunione_materia':   {'label': 'Riunione per materia',      'bucket': BUCKET_A,  'emoji': '▥︎'},
     'glo':                {'label': 'GLO',                       'bucket': BUCKET_B,  'emoji': '◍︎'},
     'incontro_famiglie':  {'label': 'Incontro scuola-famiglia',  'bucket': BUCKET_A,  'emoji': '◍◍◍'},
     'scrutinio':          {'label': 'Scrutinio',                 'bucket': BUCKET_NO, 'emoji': '✎︎'},
     'formazione':         {'label': 'Formazione',                'bucket': BUCKET_A,  'emoji': '△︎'},
-    'riunione_referenti': {'label': 'Riunione referenti dip.',   'bucket': BUCKET_B,  'emoji': '◆︎'},
+    'riunione_referenti': {'label': 'Riunione referenti dip.',   'bucket': BUCKET_A,  'emoji': '◆︎'},
+    # 'altro': il bucket si sceglie evento per evento (bucket_altro);
+    # il valore qui è solo il default per gli eventi già esistenti.
     'altro':              {'label': 'Altro',                     'bucket': BUCKET_A,  'emoji': '◆︎'},
     # Commissione, Staff o altro gruppo ad hoc — titolo libero scelto
     # da Roberto, mai un bucket normativo (art.44 lett.a/b): non è un
@@ -76,6 +78,10 @@ class AttivitaIst(db.Model):
     # controllo di sicurezza, non un'opinione sul numero di partecipanti.
     partecipanti_manuali = db.Column(db.Boolean, default=False, nullable=False)
 
+    # Solo per tipo 'altro': 'A' | 'B' | 'N' (fuori conteggio). NULL = eventi
+    # precedenti alla scelta, trattati come A.
+    bucket_altro = db.Column(db.String(1), nullable=True)
+
     dipartimento  = db.relationship('Dipartimento')
     partecipanti  = db.relationship('AttivitaIstPartecipante',
                                     back_populates='attivita',
@@ -97,6 +103,8 @@ class AttivitaIst(db.Model):
 
     @property
     def bucket(self):
+        if self.tipo == 'altro' and self.bucket_altro:
+            return {'A': BUCKET_A, 'B': BUCKET_B}.get(self.bucket_altro, BUCKET_NO)
         return TIPI_ATTIVITA.get(self.tipo, {}).get('bucket')
 
     @property

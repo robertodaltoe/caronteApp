@@ -39,9 +39,9 @@ def get_ore_ist_docente(id_docente, anno=None):
         return {'A': 0.0, 'B': 0.0, 'limite': limite}
 
     ore_a = round(sum(p.ore_effettive for p in presenze
-                      if TIPI_ATTIVITA.get(p.attivita.tipo, {}).get('bucket') == 'A'), 1)
+                      if p.attivita.bucket == 'A'), 1)
     ore_b = round(sum(p.ore_effettive for p in presenze
-                      if TIPI_ATTIVITA.get(p.attivita.tipo, {}).get('bucket') == 'B'), 1)
+                      if p.attivita.bucket == 'B'), 1)
 
     # Dettaglio per il prospetto: lista presenze ordinate per data
     dettaglio = sorted(presenze, key=lambda p: p.attivita.data)

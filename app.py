@@ -617,6 +617,7 @@ def _auto_migrate():
         ('docenti', 'ore_sostegno_aggiuntivo', 'INTEGER', None),
         ('sostituzioni_scrutinio', 'modificato_il', 'DATETIME', None),
         ('attivita_ist', 'partecipanti_manuali', 'BOOLEAN', 0),
+        ('attivita_ist', 'bucket_altro', 'VARCHAR(1)', None),
         ('piano_attivita_personale', 'link_disabilitato', 'BOOLEAN', 0),
         ('progetti_fse',  'premesse_specifiche', 'TEXT',         None),
         ('incarichi_fse', 'luogo_nascita',       'VARCHAR(120)', None),

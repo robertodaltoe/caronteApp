@@ -178,10 +178,11 @@ def _eventi_selezionabili(anno_scol):
     agosto), altrimenti eventi di altri anni resterebbero selezionabili."""
     inizio_as = date(int(anno_scol[:4]), 9, 1)
     fine_as   = date(int(anno_scol[:4]) + 1, 8, 31)
-    return (AttivitaIst.query
-            .filter(AttivitaIst.tipo.in_(_TIPI_BUCKET_AB),
-                    AttivitaIst.data >= inizio_as, AttivitaIst.data <= fine_as)
-            .order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all())
+    eventi = (AttivitaIst.query
+              .filter(AttivitaIst.tipo.in_(_TIPI_BUCKET_AB),
+                      AttivitaIst.data >= inizio_as, AttivitaIst.data <= fine_as)
+              .order_by(AttivitaIst.data, AttivitaIst.ora_inizio).all())
+    return [e for e in eventi if e.bucket in (BUCKET_A, BUCKET_B)]
 
 
 @piano_personale_bp.route('/piano-personale/<token>')

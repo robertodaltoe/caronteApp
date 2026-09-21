@@ -1057,6 +1057,12 @@ def form(id=None):
         note        = request.form.get('note', '').strip() or None
         classe      = request.form.get('classe', '').strip() or None
         id_dip      = request.form.get('id_dipartimento') or None
+        bucket_altro = request.form.get('bucket_altro') if tipo == 'altro' else None
+        if bucket_altro not in ('A', 'B', 'N'):
+            bucket_altro = None
+        if tipo == 'altro' and not bucket_altro:
+            flash('Per un evento "Altro" scegli se conta nel bucket A, nel bucket B o fuori conteggio.', 'error')
+            return redirect(request.url)
         doc_ids_raw = request.form.getlist('docenti_ids')
         doc_ids     = [int(x) for x in doc_ids_raw if x.isdigit()]
 
@@ -1067,6 +1073,7 @@ def form(id=None):
             evento.data = date.fromisoformat(data_s)
             evento.ora_inizio = ora_ini; evento.ora_fine = ora_fin
             evento.note = note; evento.classe = classe
+            evento.bucket_altro = bucket_altro
             evento.id_dipartimento = int(id_dip) if id_dip else None
             # Ricrea partecipanti
             AttivitaIstPartecipante.query.filter_by(id_attivita=evento.id).delete()
@@ -1076,7 +1083,7 @@ def form(id=None):
                 tipo=tipo, titolo=titolo,
                 data=date.fromisoformat(data_s),
                 ora_inizio=ora_ini, ora_fine=ora_fin,
-                note=note, classe=classe,
+                note=note, classe=classe, bucket_altro=bucket_altro,
                 id_dipartimento=int(id_dip) if id_dip else None,
                 origine='manuale',
             )

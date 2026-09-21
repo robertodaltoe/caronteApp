@@ -24,6 +24,17 @@
         </select>
     </div>
 
+    <div class="form-group" id="sez-altro" style="display:none;">
+        <label>Conteggio ore *</label>
+        <select name="bucket_altro" id="sel-bucket-altro">
+            <option value="">— scegli —</option>
+            {% set ba = (evento.bucket_altro or 'A') if evento else '' %}
+            <option value="A" {% if ba == 'A' %}selected{% endif %}>Bucket A (art.44 lett.a, max 40h)</option>
+            <option value="B" {% if ba == 'B' %}selected{% endif %}>Bucket B (art.44 lett.b, max 40h)</option>
+            <option value="N" {% if ba == 'N' %}selected{% endif %}>Fuori conteggio</option>
+        </select>
+    </div>
+
     <div class="form-group">
         <label>Titolo *</label>
         <input type="text" name="titolo" required value="{{ evento.titolo if evento else '' }}"
@@ -176,14 +187,14 @@
 const TIPI_INFO = {
     collegio:           {bucket:'A', txt:'Bucket A — max 40h annue (art.44 lett.a)'},
     consiglio_classe:   {bucket:'B', txt:'Bucket B — max 40h annue (art.44 lett.b)', classe:true},
-    dipartimento:       {bucket:'B', txt:'Bucket B — max 40h annue', dip:true},
-    riunione_materia:   {bucket:'B', txt:'Bucket B — max 40h annue', dip:true},
+    dipartimento:       {bucket:'A', txt:'Bucket A — articolazione del Collegio (art.44 lett.a)', dip:true},
+    riunione_materia:   {bucket:'A', txt:'Bucket A — articolazione del Collegio (art.44 lett.a)', dip:true},
     glo:                {bucket:'B', txt:'Bucket B — GLO (art.44 lett.b)', classe:true},
     incontro_famiglie:  {bucket:'A', txt:'Bucket A — informazione famiglie'},
     scrutinio:          {bucket:null, txt:'Atto dovuto — fuori conteggio 40+40h', classe:true},
     formazione:         {bucket:'A', txt:'Bucket A — ore residue formazione'},
-    riunione_referenti: {bucket:'B', txt:'Bucket B — referenti dipartimento', dip:true},
-    altro:              {bucket:'A', txt:'Bucket A'},
+    riunione_referenti: {bucket:'A', txt:'Bucket A — referenti dipartimento', dip:true},
+    altro:              {bucket:null, txt:'Scegli il bucket qui sotto', altro:true},
 };
 const PRESET_IDS = new Set({{ preset_ids | tojson }});
 
@@ -192,6 +203,8 @@ function aggiornaTipo() {
     const info = TIPI_INFO[tipo] || {};
     document.getElementById('sez-classe').style.display = info.classe ? 'block' : 'none';
     document.getElementById('sez-dip').style.display    = info.dip    ? 'block' : 'none';
+    const sa = document.getElementById('sez-altro');
+    if (sa) { sa.style.display = info.altro ? 'block' : 'none'; document.getElementById('sel-bucket-altro').required = !!info.altro; }
     const box = document.getElementById('info-bucket');
     const colori = {A:'var(--blu-light),var(--blu),var(--blu-med)', B:'var(--verde-bg),var(--verde),#86efac', null:'#f3f4f6,#6b7280,#d1d5db'};
     const c = (colori[info.bucket] || colori[null]).split(',');
