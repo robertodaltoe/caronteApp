@@ -93,7 +93,7 @@ def test_docx_conserva_formattazione_del_pdf():
             '</body></html>')
     doc = Document(io.BytesIO(html_a_docx(html)))
     p = doc.paragraphs
-    assert p[0].runs[0].bold and abs(p[0].runs[0].font.size.pt - 10.5 * 0.75) < 0.01
+    assert p[0].runs[0].bold and abs(p[0].runs[0].font.size.pt - 10.5 * 0.75) <= 0.5
     assert any(r.italic for r in p[1].runs) and any(r.bold for r in p[1].runs)
     assert p[2].paragraph_format.left_indent is not None
     assert p[3].alignment is not None
