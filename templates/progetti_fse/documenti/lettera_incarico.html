@@ -11,7 +11,8 @@
 {% include 'progetti_fse/documenti/_footer_ue.html' %}
 
 <div class="protocollo">Chiavenna, prot. e data (fare rif. alla segnatura)</div>
-<div style="margin: 10px 0;">Al {{ ruoli_label.get(incarico.ruolo, incarico.ruolo) }}<br>{{ incarico.nome_completo }}</div>
+{% set dest = {'esperto': "All'esperto", 'tutor': 'Al tutor', 'figura_aggiuntiva': 'Alla figura aggiuntiva', 'project_manager': 'Al project manager'} %}
+<div style="margin: 10px 0 10px 50%;">{{ dest.get(incarico.ruolo, 'Al ' ~ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower) }}<br>{{ incarico.nome_completo }}</div>
 
 <div class="oggetto">
 <b>Oggetto:</b> Lettera di incarico in qualità di {{ ruoli_label.get(incarico.ruolo, incarico.ruolo)|lower }}
