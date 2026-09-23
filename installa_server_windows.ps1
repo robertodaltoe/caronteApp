@@ -208,6 +208,63 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
 Register-ScheduledTask -TaskName $nomeTask -Action $azione -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
 Ok "Attivita' pianificata '$nomeTask' creata: si avvia da sola all'accensione, gira come SYSTEM (non serve un utente loggato)"
 
+# ── 8b. Aggiornamento automatico del codice da GitHub ───────────────
+# Ogni 15 minuti confronta la versione locale con origin/main; se
+# diversa, scarica il codice nuovo e riavvia il server (fermando e
+# rifacendo ripartire l'attivita' pianificata sopra, che rilegge tutto
+# da zero). Se trova modifiche locali non previste in questa cartella
+# (non dovrebbe mai succedere: e' una copia solo per il server, non un
+# posto dove si lavora a mano) si ferma senza toccarle, e lo segnala
+# nel log, invece di scartarle in silenzio.
+Titolo "Aggiornamento automatico del codice"
+
+$aggiornaPath = Join-Path $Cartella "aggiorna_e_riavvia_windows.ps1"
+@'
+param([string]$Cartella = "C:\CaronteApp")
+$log = Join-Path $Cartella "aggiornamento.log"
+function Scrivi($t) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $t" | Add-Content -Path $log }
+
+Push-Location $Cartella
+try {
+    git fetch origin main *> $null
+    $locale = git rev-parse HEAD
+    $remoto = git rev-parse origin/main
+    if ($locale -eq $remoto) {
+        exit 0   # nessuna novita': niente da scrivere nel log ad ogni giro
+    }
+    if (git status --porcelain) {
+        Scrivi "Trovate modifiche locali non previste in $Cartella: aggiornamento SALTATO per sicurezza. Verificare a mano."
+        exit 1
+    }
+    Scrivi "Nuova versione disponibile ($($locale.Substring(0,7)) -> $($remoto.Substring(0,7))): aggiorno."
+    git pull --ff-only *>> $log
+    & "venv\Scripts\python.exe" -m pip install -r requirements.txt --quiet
+    Stop-ScheduledTask -TaskName "CaronteApp Server" -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    Start-ScheduledTask -TaskName "CaronteApp Server"
+    Scrivi "Codice aggiornato e server riavviato."
+} catch {
+    Scrivi "Errore durante l'aggiornamento automatico: $_"
+} finally {
+    Pop-Location
+}
+'@ | Set-Content -Path $aggiornaPath -Encoding UTF8
+Ok "Creato $aggiornaPath"
+
+$nomeTaskUpdate = "CaronteApp AutoUpdate"
+if (Get-ScheduledTask -TaskName $nomeTaskUpdate -ErrorAction SilentlyContinue) {
+    Ok "Attivita' di aggiornamento gia' presente: la aggiorno"
+    Unregister-ScheduledTask -TaskName $nomeTaskUpdate -Confirm:$false
+}
+
+$azioneUpd   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$aggiornaPath`" -Cartella `"$Cartella`"" -WorkingDirectory $Cartella
+$triggerUpd  = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
+$principalUpd = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+Register-ScheduledTask -TaskName $nomeTaskUpdate -Action $azioneUpd -Trigger $triggerUpd -Principal $principalUpd -Settings $settings | Out-Null
+Ok "Attivita' pianificata '$nomeTaskUpdate' creata: controlla GitHub ogni 15 minuti, aggiorna e riavvia da sola se trova novita'"
+Ok "Log degli aggiornamenti: $Cartella\aggiornamento.log"
+
 # ── 9. Riepilogo ──────────────────────────────────────────────────
 Titolo "Riepilogo"
 
@@ -222,6 +279,7 @@ if (-not (Test-Path "database.db")) {
 }
 Write-Host "Il server partira' da solo al prossimo avvio del PC (attivita' pianificata '$nomeTask')." -ForegroundColor Green
 Write-Host "Per avviarlo subito senza riavviare il PC: Start-ScheduledTask -TaskName '$nomeTask'" -ForegroundColor Green
+Write-Host "Il codice si aggiorna da solo da GitHub ogni 15 minuti (attivita' '$nomeTaskUpdate'); per forzare subito un controllo: Start-ScheduledTask -TaskName '$nomeTaskUpdate'" -ForegroundColor Green
 
 if ($ImpedisciSospensione) {
     Titolo "Impostazioni di risparmio energetico (richiesto con -ImpedisciSospensione)"
