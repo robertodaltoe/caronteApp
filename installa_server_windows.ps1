@@ -54,15 +54,35 @@ if (-not $isAdmin) {
 # ── 1. Git e Python ──────────────────────────────────────────────────
 Titolo "Strumenti di base (Git, Python)"
 
+function Trovato($comando) {
+    # Get-Command da solo non basta per "python": se Python non e'
+    # installato, Windows registra comunque un python.exe fittizio
+    # (alias di esecuzione app -> apre il Microsoft Store) che risulta
+    # "trovato" ma non esegue nulla di vero. Verifica quindi anche che
+    # il comando risponda davvero a --version.
+    $cmd = Get-Command $comando -ErrorAction SilentlyContinue
+    if (-not $cmd) { return $false }
+    try {
+        $out = & $comando --version 2>&1
+        return ($LASTEXITCODE -eq 0 -and $out -match '\d')
+    } catch {
+        return $false
+    }
+}
+
 function Assicura-Comando($comando, $wingetId, $nome) {
-    if (Get-Command $comando -ErrorAction SilentlyContinue) {
+    if (Trovato $comando) {
         Ok "$nome gia' installato"
         return
     }
-    Avviso "$nome non trovato: installazione via winget..."
+    Avviso "$nome non trovato (o e' solo l'alias fittizio del Microsoft Store): installazione via winget..."
     winget install --id $wingetId -e --accept-source-agreements --accept-package-agreements
-    if (-not (Get-Command $comando -ErrorAction SilentlyContinue)) {
-        Write-Host "$nome non risulta installato dopo winget. Installalo manualmente e rilancia lo script." -ForegroundColor Red
+    if (-not (Trovato $comando)) {
+        Write-Host "$nome non risulta installato dopo winget." -ForegroundColor Red
+        if ($comando -eq 'python') {
+            Write-Host "Se il problema persiste, disattiva l'alias fittizio: Impostazioni > App > Impostazioni app avanzate > Alias di esecuzione app > disattiva 'python.exe' e 'python3.exe', poi rilancia lo script." -ForegroundColor Red
+        }
+        Write-Host "Dopo aver installato/corretto $nome, chiudi e riapri PowerShell come amministratore prima di rilanciare lo script (serve ad aggiornare il PATH)." -ForegroundColor Red
         exit 1
     }
     Ok "$nome installato"
