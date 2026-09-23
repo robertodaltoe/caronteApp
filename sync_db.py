@@ -47,8 +47,15 @@ def trova_drive():
                       home/"Google Drive",
                       Path("/Volumes/Google Drive")]
     elif sistema == "Windows":
+        # Google Drive Desktop monta di norma su G:, ma il nome della
+        # cartella dentro dipende dalla lingua di Windows: "My Drive"
+        # in inglese, "Il mio Drive" in italiano (visto su un PC
+        # scolastico con Windows in italiano — senza questo, trova_drive
+        # non trovava nulla pur con Drive correttamente sincronizzato).
         up = Path(os.environ.get("USERPROFILE", "C:/Users/Roberto"))
-        candidati = [up/"Google Drive"/"My Drive", up/"Google Drive", up/"My Drive", Path("G:/My Drive")]
+        candidati = [up/"Google Drive"/"My Drive", up/"Google Drive"/"Il mio Drive",
+                     up/"Google Drive", up/"My Drive", up/"Il mio Drive",
+                     Path("G:/My Drive"), Path("G:/Il mio Drive")]
     else:
         candidati = [home/"Google Drive", home/"GoogleDrive"]
     for p in candidati:
