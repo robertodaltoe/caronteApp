@@ -115,6 +115,11 @@ def _parse_dt(v):
 
 
 INTERVALLO_SECONDI = 30
+# Pubblicazione periodica dell'intero database su Drive (anche senza righe
+# nuove nelle tabelle sincronizzate), cosi' le modifiche alle altre tabelle
+# arrivano prima o poi su Drive per un 'scarica' consapevole da un'altra macchina.
+PUBBLICAZIONE_PERIODICA_SECONDI = 900
+_ultima_pubblicazione = 0.0
 AUTOSYNC_LOCK_NAME = 'caronte_autosync.lock'
 AUTOSYNC_LOCK_MAX_ETA_SEC = 180  # oltre questa età il lock si considera abbandonato (crash) e si ignora
 
@@ -517,8 +522,14 @@ def esegui_sync_automatico(app):
         # appena inserita qui) che su Drive non ci sono ancora — altrimenti
         # l'altra macchina non le vedrebbe mai finché qualcuno non chiude
         # l'app (unico altro momento in cui si pubblica).
+        global _ultima_pubblicazione
         if risultato['inserite'] > 0 or risultato['solo_locali'] > 0:
             carica(db_locale)
+            _ultima_pubblicazione = time.monotonic()
+        elif time.monotonic() - _ultima_pubblicazione >= PUBBLICAZIONE_PERIODICA_SECONDI:
+            carica(db_locale, storico=False)
+            _ultima_pubblicazione = time.monotonic()
+            risultato['pubblicazione_periodica'] = True
 
         return risultato
     except Exception as e:

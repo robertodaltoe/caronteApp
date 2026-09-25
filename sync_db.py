@@ -195,7 +195,7 @@ def scarica(db, forzato=False):
         print("  Locale già allineato al contenuto su Drive (nessuna differenza) - lock attivato")
     return True
 
-def carica(db):
+def carica(db, storico=True):
     c = cartella_drive()
     if not c: print("  Google Drive non trovato."); return False
     if not Path(db).exists(): print("  DB locale non trovato."); return False
@@ -210,12 +210,16 @@ def carica(db):
         db_drive_old.unlink()
         print("  Rimosso il vecchio database.db in chiaro da Drive (migrazione a formato cifrato completata).")
 
-    nome_backup, n_storico = salva_storico(c, db)
     set_lock(c, False)
 
     print(f"  DB caricato e cifrato ({Path(db).stat().st_size//1024} KB) - lock rimosso")
     print(f"  Percorso: {c/DRIVE_DB_NAME}")
-    print(f"  Storico  : {nome_backup}  ({n_storico}/{MAX_BACKUP} versioni conservate, cifrate)")
+    # Le pubblicazioni periodiche (storico=False) non entrano nello
+    # storico: con la rotazione a MAX_BACKUP versioni, una copia ogni ora
+    # spazzerebbe via in mezza giornata i backup che servono davvero.
+    if storico:
+        nome_backup, n_storico = salva_storico(c, db)
+        print(f"  Storico  : {nome_backup}  ({n_storico}/{MAX_BACKUP} versioni conservate, cifrate)")
     return True
 
 def lista_storico():
