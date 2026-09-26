@@ -328,6 +328,29 @@ def parse_file(excel_path):
     return {'docenti_anagrafica': anagrafica, 'slots': slots}
 
 
+def _marca_compresenze_itp(creati):
+    """Le righe di un ITP nella stessa classe/ora di un docente non-ITP
+    sono compresenze (tipo_ora='compresenza'), anche quando il file
+    orario non le segna come tali (i formati piu' recenti riportano
+    l'ITP come una lezione normale, a volte con "MATERIA - TITOLARE"
+    nella materia). Senza questa marcatura i suggerimenti supplenza non
+    propongono mai l'ITP nel gruppo "Compresenza", perche' lo vedono in
+    lezione propria. Un ITP da solo in classe resta 'lezione'."""
+    gruppi = {}
+    for doc, r in creati:
+        if r.tipo_ora != 'lezione' or r.classe in (None, '', '---', '-x-', 'POTENZIAMENTO'):
+            continue
+        gruppi.setdefault((r.giorno, r.ora, r.classe), []).append((doc, r))
+    for righe in gruppi.values():
+        if len({d.id for d, _ in righe}) < 2:
+            continue
+        if not any((d.ruolo or 'titolare') != 'itp' for d, _ in righe):
+            continue
+        for d, r in righe:
+            if d.ruolo == 'itp':
+                r.tipo_ora = 'compresenza'
+
+
 def applica_importazione(excel_path, db_session,
                           data_inizio_validita=None, data_fine_validita=None):
     """data_inizio_validita/data_fine_validita: periodo in cui l'orario
@@ -382,6 +405,7 @@ def applica_importazione(excel_path, db_session,
     db_session.flush()
 
     seen = set()
+    creati = []
     for slot in parsed['slots']:
         doc = risolvi(slot['cognome_file'])
         if doc is None:
@@ -392,14 +416,18 @@ def applica_importazione(excel_path, db_session,
         if key in seen:
             continue
         seen.add(key)
-        db_session.add(OrarioDocente(
+        riga_orario = OrarioDocente(
             id_docente=doc.id, giorno=slot['giorno'], ora=slot['ora'],
             classe=slot['classe'], materia=slot['materia'],
             tipo_ora=slot['tipo_ora'],
             data_inizio_validita=data_inizio_validita,
             data_fine_validita=data_fine_validita,
-        ))
+        )
+        db_session.add(riga_orario)
+        creati.append((doc, riga_orario))
         stats['slot_totali'] += 1
+
+    _marca_compresenze_itp(creati)
 
     # Salva log
     nr_list = list(stats['non_riconosciuti'])
