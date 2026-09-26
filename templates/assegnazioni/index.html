@@ -410,6 +410,10 @@ input.inp-ore:focus { border-color:var(--bronzo); outline:none; }
                             class="btn-nomina" data-asgn-id="{{ a.id }}" data-placeholder="{{ a.nome_placeholder }}"
                             style="background:none; border:none; cursor:pointer;
                                    color:var(--bronzo); font-size:.85rem;">⇄︎</button>
+                    <button type="button" title="Rinomina questo placeholder"
+                            class="btn-rinomina" data-asgn-id="{{ a.id }}" data-placeholder="{{ a.nome_placeholder }}"
+                            style="background:none; border:none; cursor:pointer;
+                                   color:var(--bronzo); font-size:.85rem;">{{ icon('edit') }}</button>
                     {% endif %}
                     <form method="post"
                           action="{{ url_for('assegnazioni.elimina', asgn_id=a.id) }}"
@@ -750,6 +754,15 @@ function chiudiNomina() {
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-nomina').forEach(btn => {
         btn.addEventListener('click', () => apriNomina(btn.dataset.asgnId, btn.dataset.placeholder));
+    });
+    document.querySelectorAll('.btn-rinomina').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const nuovo = prompt('Nuovo nome del placeholder:', btn.dataset.placeholder || '');
+            if (nuovo === null || !nuovo.trim()) return;
+            const corpo = new URLSearchParams({nome_placeholder: nuovo.trim()});
+            await fetch('/assegnazioni/' + btn.dataset.asgnId + '/rinomina', {method: 'POST', body: corpo});
+            location.reload();
+        });
     });
 });
 

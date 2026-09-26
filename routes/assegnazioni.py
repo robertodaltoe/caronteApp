@@ -886,6 +886,24 @@ def elimina(asgn_id):
     return redirect(url_for('assegnazioni.index', anno=anno))
 
 
+@assegnazioni_bp.route('/assegnazioni/<int:asgn_id>/rinomina', methods=['POST'])
+def rinomina(asgn_id):
+    asgn = db.session.get(AssegnazioneDocente, asgn_id)
+    nome = (request.form.get('nome_placeholder') or '').strip()
+    if not asgn or asgn.id_docente is not None:
+        flash('Si possono rinominare solo i placeholder.', 'danger')
+        return redirect(url_for('assegnazioni.index'))
+    if not nome:
+        flash('Il nome del placeholder non può essere vuoto.', 'danger')
+    elif len(nome) > 80:
+        flash('Il nome del placeholder può avere al massimo 80 caratteri.', 'danger')
+    else:
+        asgn.nome_placeholder = nome
+        db.session.commit()
+        flash(f'Placeholder rinominato in "{nome}".', 'success')
+    return redirect(url_for('assegnazioni.index', anno=asgn.anno_scol))
+
+
 @assegnazioni_bp.route('/assegnazioni/<int:asgn_id>/nomina', methods=['POST'])
 def nomina(asgn_id):
     asgn   = db.session.get(AssegnazioneDocente, asgn_id)
