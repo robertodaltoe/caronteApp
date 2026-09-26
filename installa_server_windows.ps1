@@ -133,6 +133,7 @@ if ($gtkGia) {
 } else {
     try {
         winget install --id tschoonj.GTKforWindowsRuntimeEnvironmentInstaller -e --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -ne 0) { throw "winget non ha trovato/installato il pacchetto" }
         Ok "GTK3 Runtime installato"
     } catch {
         Avviso "Installazione automatica di GTK3 non riuscita."
@@ -264,7 +265,7 @@ if (Get-ScheduledTask -TaskName $nomeTaskUpdate -ErrorAction SilentlyContinue) {
 }
 
 $azioneUpd   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$aggiornaPath`" -Cartella `"$Cartella`"" -WorkingDirectory $Cartella
-$triggerUpd  = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
+$triggerUpd  = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration (New-TimeSpan -Days 3650)
 $principalUpd = New-ScheduledTaskPrincipal -UserId $utenteServer -LogonType Interactive -RunLevel Highest
 
 Register-ScheduledTask -TaskName $nomeTaskUpdate -Action $azioneUpd -Trigger $triggerUpd -Principal $principalUpd -Settings $settings | Out-Null
