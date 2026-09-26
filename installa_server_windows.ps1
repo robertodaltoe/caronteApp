@@ -16,7 +16,7 @@
 #      Mac — non è mai stato nel repository, vedi CLAUDE.md).
 #   7. Apre la porta 5002 in entrata sul Firewall di Windows.
 #   8. Registra un'attività pianificata che avvia CaronteApp
-#      all'accensione del PC (eseguita come SYSTEM: non richiede un
+#      all'accesso dell'utente (non come SYSTEM: Google Drive Desktop e' visibile solo nella sessione utente) (non richiede un
 #      utente loggato), con riavvio automatico se il processo termina.
 #
 # Uso: aprire PowerShell "come amministratore" sul PC Windows che
@@ -200,13 +200,19 @@ if ($taskEsistente) {
     Unregister-ScheduledTask -TaskName $nomeTask -Confirm:$false
 }
 
-$azione   = New-ScheduledTaskAction -Execute $avviaServerPath -WorkingDirectory $Cartella
-$trigger  = New-ScheduledTaskTrigger -AtStartup
-$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+# Il server gira con l'utente che esegue questo script (non come SYSTEM):
+# Google Drive Desktop monta l'unita' G: solo nella sessione dell'utente
+# loggato, SYSTEM non la vede e il sync con Drive salterebbe in silenzio.
+# Conseguenza: parte all'accesso di quell'utente, quindi dopo un riavvio
+# serve l'accesso automatico a Windows (vedi riepilogo finale).
+$utenteServer = "$env:USERDOMAIN\$env:USERNAME"
+$azione   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -NoProfile -Command `"& '$avviaServerPath'`"" -WorkingDirectory $Cartella
+$trigger  = New-ScheduledTaskTrigger -AtLogOn -User $utenteServer
+$principal = New-ScheduledTaskPrincipal -UserId $utenteServer -LogonType Interactive -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 
 Register-ScheduledTask -TaskName $nomeTask -Action $azione -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
-Ok "Attivita' pianificata '$nomeTask' creata: si avvia da sola all'accensione, gira come SYSTEM (non serve un utente loggato)"
+Ok "Attivita' pianificata '$nomeTask' creata: si avvia da sola all'accesso di $utenteServer (Drive richiede la sessione utente)"
 
 # ── 8b. Aggiornamento automatico del codice da GitHub ───────────────
 # Ogni 15 minuti confronta la versione locale con origin/main; se
@@ -259,7 +265,7 @@ if (Get-ScheduledTask -TaskName $nomeTaskUpdate -ErrorAction SilentlyContinue) {
 
 $azioneUpd   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$aggiornaPath`" -Cartella `"$Cartella`"" -WorkingDirectory $Cartella
 $triggerUpd  = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
-$principalUpd = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$principalUpd = New-ScheduledTaskPrincipal -UserId $utenteServer -LogonType Interactive -RunLevel Highest
 
 Register-ScheduledTask -TaskName $nomeTaskUpdate -Action $azioneUpd -Trigger $triggerUpd -Principal $principalUpd -Settings $settings | Out-Null
 Ok "Attivita' pianificata '$nomeTaskUpdate' creata: controlla GitHub ogni 15 minuti, aggiorna e riavvia da sola se trova novita'"
@@ -277,7 +283,8 @@ Write-Host ""
 if (-not (Test-Path "database.db")) {
     Write-Host "RICORDA: copia database.db in $Cartella prima di avviare/riavviare il PC." -ForegroundColor Yellow
 }
-Write-Host "Il server partira' da solo al prossimo avvio del PC (attivita' pianificata '$nomeTask')." -ForegroundColor Green
+Write-Host "IMPORTANTE: il server parte all'accesso a Windows di $utenteServer. Per farlo ripartire da solo dopo un riavvio, imposta l'accesso automatico (Win+R, netplwiz, togli la spunta a 'Per utilizzare questo computer...') e blocca lo schermo invece di disconnetterti." -ForegroundColor Yellow
+Write-Host "Il server partira' da solo al prossimo accesso (attivita' pianificata '$nomeTask')." -ForegroundColor Green
 Write-Host "Per avviarlo subito senza riavviare il PC: Start-ScheduledTask -TaskName '$nomeTask'" -ForegroundColor Green
 Write-Host "Il codice si aggiorna da solo da GitHub ogni 15 minuti (attivita' '$nomeTaskUpdate'); per forzare subito un controllo: Start-ScheduledTask -TaskName '$nomeTaskUpdate'" -ForegroundColor Green
 
