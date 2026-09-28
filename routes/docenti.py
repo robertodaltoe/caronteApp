@@ -567,12 +567,15 @@ def elimina(id):
     DocenteMateria.query.filter_by(id_docente=id).delete()
     DocenteClasseConcorso.query.filter_by(id_docente=id).delete()
     AttivitaIstPartecipante.query.filter_by(id_docente=id).delete()
-    # Presenze registrate e contratto dell'anno: senza anagrafica restano
-    # righe orfane (id_docente che non punta più a nessuno).
+    # Presenze registrate: senza anagrafica resterebbero righe orfane
+    # (id_docente che non punta più a nessuno). DocenteContrattoAnno
+    # NON va toccato qui: ha già cascade='all, delete-orphan' dalla
+    # relationship su Docente (models/docente.py) — cancellarlo a
+    # mano PRIMA di db.session.delete(d) fa collidere il bulk-delete
+    # con la cascade dell'ORM (StaleDataError, "Errore imprevisto"
+    # in produzione, Roberto — riscontrato sul PC Windows).
     from models.attivita_ist import AttivitaIstPresenza
-    from models.docente import DocenteContrattoAnno
     AttivitaIstPresenza.query.filter_by(id_docente=id).delete()
-    DocenteContrattoAnno.query.filter_by(id_docente=id).delete()
 
     db.session.delete(d)
     db.session.commit()
