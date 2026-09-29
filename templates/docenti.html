@@ -64,7 +64,7 @@
     <a href="{{ url_for('attivita_ist.dipartimenti') }}" style="color:var(--bronzo); text-decoration:none;">Dipartimenti e materie</a>
 </div>
 
-{% set conferma_id = request.args.get('conferma_elimina', type=int) %}
+{% set conferma_id = (request.args.get('conferma_elimina') or 0) | int %}
 
 <div class="card" style="padding:0; overflow:hidden;">
 <div style="overflow-x:auto;">
