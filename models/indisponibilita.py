@@ -9,7 +9,11 @@ class Indisponibilita(db.Model):
     data        = db.Column(db.Date,    nullable=False, index=True)
     ora         = db.Column(db.Integer, nullable=True)   # None = tutta la giornata
     motivo      = db.Column(db.String(50), default='altro')
-    # colloqui | consiglio | uscita | progetto | gara | formazione | altro
+    # colloqui | consiglio | uscita | progetto | gara | formazione | riunione | altro
+    # True se questa indisponibilita' genera anche la supplenza per la
+    # classe (il docente non e' fisicamente presente, non solo escluso
+    # dai candidati sostituto) -- vedi routes/indisponibilita.py::nuova.
+    genera_supplenza = db.Column(db.Boolean, default=False, nullable=False)
     note        = db.Column(db.Text)
     creato_il   = db.Column(db.DateTime, default=datetime.utcnow)
     # Username di chi ha inserito — vedi models/assenza.py::creato_da.

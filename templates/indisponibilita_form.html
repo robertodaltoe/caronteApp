@@ -106,6 +106,7 @@ const GIORNI = [
     {val: {{ i }}, label: "{{ g }}"},
     {% endfor %}
 ];
+const MOTIVI_AUTO_SUPPLENZA = {{ motivi_genera_default | tojson }};
 
 let nRighe = 0;
 
@@ -137,9 +138,20 @@ function aggiungiRiga() {
             <!-- Motivo -->
             <div class="form-group" style="flex:0 0 200px; margin-bottom:0;">
                 <label>Motivo</label>
-                <select name="motivo[${idx}]" style="width:100%;">
+                <select name="motivo[${idx}]" style="width:100%;"
+                        onchange="aggiornaGeneraSupplenza(${idx}, this.value)">
                     ${MOTIVI.map(m => `<option value="${m.val}">${m.label}</option>`).join('')}
                 </select>
+            </div>
+
+            <!-- Genera supplenza -->
+            <div class="form-group" style="flex:0 0 190px; margin-bottom:0;">
+                <label>&nbsp;</label>
+                <label style="display:flex; align-items:center; gap:6px; font-weight:600;
+                              cursor:pointer; white-space:nowrap;" title="Il docente non è fisicamente in classe: crea anche la supplenza da coprire">
+                    <input type="checkbox" name="genera_supplenza[${idx}]" value="1" id="gensup-${idx}">
+                    <span>Genera supplenza</span>
+                </label>
             </div>
 
             <!-- Modalità -->
@@ -242,6 +254,7 @@ function aggiungiRiga() {
     `;
 
     document.getElementById('righe-container').appendChild(div);
+    aggiornaGeneraSupplenza(idx, MOTIVI[0].val);
 
     // Gestisci checkbox "Tutta" — deseleziona le altre e viceversa
     const checkTutta = div.querySelector(`input[value=""]`);
@@ -252,6 +265,11 @@ function aggiungiRiga() {
     checkOre.forEach(c => c.addEventListener('change', function() {
         if (this.checked) checkTutta.checked = false;
     }));
+}
+
+function aggiornaGeneraSupplenza(idx, motivo) {
+    const cb = document.getElementById(`gensup-${idx}`);
+    if (cb) cb.checked = MOTIVI_AUTO_SUPPLENZA.includes(motivo);
 }
 
 function cambiaTipo(idx, tipo) {

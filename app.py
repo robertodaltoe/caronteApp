@@ -638,6 +638,7 @@ def _auto_migrate():
         ('incarichi_fse', 'punteggio',        'NUMERIC(6,2)', None),
         ('orario_docenti', 'data_inizio_validita', 'DATE', None),
         ('orario_docenti', 'data_fine_validita',   'DATE', None),
+        ('indisponibilita', 'genera_supplenza', 'BOOLEAN', 0),
     ]
 
     with db.engine.connect() as conn:

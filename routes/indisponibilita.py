@@ -5,6 +5,7 @@ from models.indisponibilita_ricorrente import IndisponibilitaRicorrente
 from models.docente import Docente
 from datetime import date, timedelta
 from modules.auto_sync import pubblica_su_drive_se_possibile
+from modules.assenze_registrazione import _genera_supplenze
 
 indisp_bp = Blueprint('indisponibilita', __name__)
 
@@ -20,6 +21,12 @@ MOTIVI = [
     ('riunione',   '🏫 Riunione / commissione'),
     ('altro',      '📌 Altro'),
 ]
+
+# Motivi per cui il docente e' tipicamente fuori dalla propria classe (non
+# solo indisponibile come sostituto): la spunta "Genera supplenza" parte
+# gia' selezionata, ma resta modificabile riga per riga -- per gli altri
+# motivi (spesso un'ora gia' libera, es. colloqui) parte deselezionata.
+MOTIVI_GENERA_SUPPLENZA_DEFAULT = {'gara', 'uscita', 'formazione'}
 
 
 def _date_da_modalita(tipo, form, idx):
@@ -77,7 +84,9 @@ def nuova():
             tipo       = request.form.get(f'tipo[{idx}]', 'singola')
             motivo     = request.form.get(f'motivo[{idx}]', 'altro')
             note       = request.form.get(f'note[{idx}]', '').strip()
+            genera_sup = request.form.get(f'genera_supplenza[{idx}]') == '1'
             ore_sel    = request.form.getlist(f'ore[{idx}][]')
+            ore_int    = [int(o) for o in ore_sel if o]
             # ore_sel è lista di stringhe es. ['1','3','5'] — None = tutta la giornata
 
             date_list = _date_da_modalita(tipo, request.form, idx)
@@ -99,8 +108,13 @@ def nuova():
                                 id_docente=id_docente, data=data,
                                 ora=o_int, motivo=motivo, note=note,
                                 creato_da=utente_corrente,
+                                genera_supplenza=genera_sup,
                             ))
                             inseriti += 1
+                    if genera_sup and ore_int:
+                        _genera_supplenze(id_docente, data, None, None,
+                                           assegnabile=True, note_display='',
+                                           ore_singole=ore_int)
                 else:
                     # Tutta la giornata
                     gia = Indisponibilita.query.filter_by(
@@ -111,8 +125,12 @@ def nuova():
                             id_docente=id_docente, data=data,
                             ora=None, motivo=motivo, note=note,
                             creato_da=utente_corrente,
+                            genera_supplenza=genera_sup,
                         ))
                         inseriti += 1
+                    if genera_sup:
+                        _genera_supplenze(id_docente, data, 1, 9,
+                                           assegnabile=True, note_display='')
 
         db.session.commit()
         flash(f'Registrate {inseriti} indisponibilità.', 'success')
@@ -132,6 +150,7 @@ def nuova():
         docenti=docenti, data_sel=data_str,
         docenti_json=docenti_json,
         ore_list=range(1, 10), motivi=MOTIVI,
+        motivi_genera_default=list(MOTIVI_GENERA_SUPPLENZA_DEFAULT),
         giorni=list(enumerate(GIORNI)))
 
 
