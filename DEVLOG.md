@@ -2,6 +2,26 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 73 — Dashboard: "Le tue sezioni" su una sola riga
+
+Roberto: la riga "Le tue sezioni" in Dashboard (Sessione 71) andava a
+capo con una chip sola sulla seconda riga, brutta da vedere; meglio una
+riga sola con chip più piccole.
+
+Solo `templates/dashboard.html` (CSS/markup della riga): chip compatte
+(font .76rem, padding 3px 8px, icona 14px), `flex-wrap:nowrap` e
+`white-space:nowrap`. Se lo schermo è troppo stretto per tutte (sotto
+~1100px per DS/DSGA, telefono per tutti) la riga scorre in orizzontale
+e il bordo destro sfuma (classe `scorre` messa da un piccolo script),
+così si capisce che continua. Nessuna scorciatoia tolta.
+
+Verificato in Chromium headless su DB temporaneo per ds, segreteria,
+collaboratore e dsga a 1440/1280/1024/390px: prima la DSGA (7 chip)
+andava su 2 righe anche a 1440px e DS/collaboratore a 1024px; dopo
+sempre una riga (altezza 54/92px → 40px), nessuno scroll orizzontale
+della pagina. Sandbox Linux (cloud), nessun accesso a `database.db`.
+Suite completa 630 verdi.
+
 ## Sessione 72 — Nuovo tipo di contratto "Contratto Suppl. Breve"
 
 Roberto: tra i tipi di contratto (Impostazione anno → Docenti anno e
