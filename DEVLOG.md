@@ -2,6 +2,27 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 74 — Progetti FSE/FESR spostato nell'area contabile
+
+Roberto: "Progetti FSE/FESR" può non stare in navbar e stare nella stessa
+area delle cose contabili, perché è più affine a quello.
+
+Voce tolta dalla navbar (`templates/base.html`) e spostata nel gruppo
+contabile del menu Impostazioni (`modules/navigazione.py`: gruppo
+`contrattazione`, ora intitolato "Contabilità e progetti", accanto a
+Fondi e capitoli / Lettere / Catalogo / Personale ATA; gruppo `fse`
+eliminato). Stessa cosa nella pagina Impostazioni (scheda "Contabilità e
+progetti", visibile anche a chi ha solo `progetti_fse`). Invariati pagine,
+permessi (`progetti_fse`) e blueprint. Restano ricerca/Ctrl+K, percorso
+sopra il titolo ("Contabilità e progetti › Progetti FSE/FESR") e voce
+Impostazioni evidenziata nelle pagine FSE. Nuovo test in
+`tests/test_navigazione.py`.
+
+Verificato in Chromium headless su DB temporaneo (ds, dsga, segreteria,
+collaboratore, 1440 e 390px): nessuna voce FSE fuori dal menu, voce
+presente nel menu a tendina, Impostazioni attiva. Sandbox Linux (cloud),
+nessun accesso a `database.db`. Suite completa 631 verdi.
+
 ## Sessione 73 — Dashboard: "Le tue sezioni" su una sola riga
 
 Roberto: la riga "Le tue sezioni" in Dashboard (Sessione 71) andava a

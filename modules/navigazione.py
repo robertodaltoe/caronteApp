@@ -33,10 +33,9 @@ GRUPPI = [
     ('differite',     'Attività differite',              'attivita',     False),
     ('anno',          'Anno scolastico',                 'impostazioni', True),
     ('docenti',       'Docenti',                         'impostazioni', True),
-    ('contrattazione', 'Contrattazione integrativa',     'impostazioni', True),
+    ('contrattazione', 'Contabilità e progetti',         'impostazioni', True),
     ('istituto',      'Istituto e calendario',           'impostazioni', True),
     ('sistema',       'Sistema',                         'impostazioni', True),
-    ('fse',           'Progetti FSE/FESR',               'progetti_fse', False),
     ('aiuto',         'Aiuto',                           'guida',        False),
 ]
 GRUPPI_LABEL = {g[0]: g[1] for g in GRUPPI}
@@ -199,9 +198,10 @@ FUNZIONI = [
     dict(label='Cambia PIN', endpoint='auth.cambia_pin', gruppo='sistema',
          sezione=None, icona='key', parole='password pin'),
 
+    dict(label='Progetti FSE/FESR', endpoint='progetti_fse.index', gruppo='contrattazione',
+         sezione='progetti_fse', icona='layers', parole='pon fse fesr piano estate contabilita fondi europei', blueprint=True),
+
     # ── Altro ────────────────────────────────────────────────────────
-    dict(label='Progetti FSE/FESR', endpoint='progetti_fse.index', gruppo='fse',
-         sezione='progetti_fse', icona='layers', parole='pon fse fesr piano estate', blueprint=True),
     dict(label='Guida', endpoint='guida.index', gruppo='aiuto',
          sezione=None, icona='help', parole='aiuto manuale istruzioni', blueprint=True),
 ]
