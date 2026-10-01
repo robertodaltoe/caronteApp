@@ -40,9 +40,7 @@ try/except: un errore nella navigazione non blocca mai la pagina.
 - *Funzioni prima difficili da raggiungere*: Assegnazioni (anche nella
   pagina Impostazioni), Cambi turno (pulsante in Dashboard accanto ad
   Agenda), Indisponibilità ricorrenti (nessun link prima: ora dal form
-  Nuova indisponibilità), Import banca ore dal file Excel storico (solo
-  da menu/ricerca: è l'import una tantum da `data/Banca_Ore_Docenti_v3.xlsm`,
-  non meritava un pulsante fisso). Non collegate di proposito:
+  Nuova indisponibilità). Non collegate di proposito:
   `recupero.proposte` (sostituita dal passo "Abbina gruppi" del recupero
   di giugno) e `attivita_ist.assegnazioni` (vecchio roster docenti-materie,
   sostituito da Docenti ↔ Materie).
@@ -51,6 +49,15 @@ try/except: un errore nella navigazione non blocca mai la pagina.
   Invio/Spazio/Freccia giù, Esc chiude e riporta il focus, `aria-expanded`
   aggiornato. Contorno di focus visibile (`:focus-visible`) su link e
   pulsanti, collegamento "Vai al contenuto" e `<main>` come contenitore.
+- *Import banca ore eliminato* (Roberto: "sezione vecchia, può essere
+  eliminata se non crea mancanze"): tolti `routes/import_banca_ore.py`,
+  `templates/import_banca_ore.html`, la registrazione del blueprint e la
+  sezione permessi `import_banca_ore` (SEZIONI, gruppi, DEFAULT_MATRICE,
+  SPLIT_DA, BLUEPRINT_SEZIONE). Resta `modules/import_banca_ore.py`: lo
+  usano ancora `report.export_excel` e `modules/export_excel_sett.py`. Le
+  eventuali righe `import_banca_ore` già salvate in `permessi_ruolo` sul DB
+  reale restano lì inerti (la pagina Permessi elenca solo SEZIONI): nessuna
+  scrittura sul DB per toglierle. `/import/banca-ore` ora risponde 404.
 
 **Verifica**: 7 nuovi test (`tests/test_navigazione.py`: ogni voce punta a
 un endpoint esistente, menu e funzioni prima nascoste presenti, voce

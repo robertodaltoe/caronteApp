@@ -102,8 +102,6 @@ FUNZIONI = [
     # ── Banca ore e report ───────────────────────────────────────────
     dict(label='Banca ore', endpoint='banca_ore.index', gruppo='banca_report',
          sezione='banca_ore', icona='coin', parole='saldo ore debito credito', blueprint=True),
-    dict(label='Importa banca ore dal file Excel storico', endpoint='import_banca.index', gruppo='banca_report',
-         sezione='import_banca_ore', icona='download', parole='import excel xlsm movimenti Banca_Ore_Docenti', azione=True, blueprint=True),
     dict(label='Report', endpoint='report.index', gruppo='banca_report',
          sezione='report', icona='chart', parole='statistiche riepiloghi', blueprint=True),
     dict(label='Report per il dirigente', endpoint='report.dirigente', gruppo='banca_report',
@@ -287,7 +285,7 @@ def area_navbar(endpoint):
         return None
     # Voci di navbar con un endpoint proprio, prima della regola per gruppo.
     diretti = {
-        'banca_ore': 'banca_ore', 'import_banca': 'banca_ore',
+        'banca_ore': 'banca_ore',
         'report': 'report', 'mail_bozze': 'report',
         'impostazioni': 'impostazioni', 'auth': None,
         'display': 'display',
