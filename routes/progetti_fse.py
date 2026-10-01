@@ -10,7 +10,7 @@ con gli impegni didattici dei docenti incaricati.
 """
 import io
 from datetime import datetime, date
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file, current_app
 from models import db
 from models.progetto_fse import (
     ProgettoFSE, ModuloFSE, IncaricoFSE, SessioneFSE, PresenzaFSE, DocumentoFSE,
@@ -549,12 +549,25 @@ def _rendi_documento(html_content, nome_file, formato='pdf'):
             as_attachment=False,
             download_name=f'{nome_file}.pdf',
         )
-    except (ImportError, OSError):
+    except (ImportError, OSError) as e:
         # ImportError: WeasyPrint non installato. OSError: WeasyPrint è
         # installato ma non trova le librerie di sistema (pango/cairo/
         # gdk-pixbuf) — stesso caso pratico già documentato per la
         # sandbox Linux (vedi CLAUDE.md), non un bug: fallback HTML con
         # CSS di stampa, stampabile comunque dal browser.
+        #
+        # Questo fallback è silenzioso nel contenuto (la pagina sembra
+        # un documento normale, non un errore) ma sulla pagina SUCCESSIVA
+        # mostra un avviso esplicito — senza, su una macchina dove WeasyPrint
+        # non funziona (es. GTK3 mancante su Windows) l'unico sintomo visibile
+        # era "il PDF non scarica ed è spaginato", senza nessun indizio della
+        # causa reale (Roberto, PC Windows, Sessione contrattazione).
+        current_app.logger.warning(f"[_rendi_documento] WeasyPrint non disponibile, fallback HTML: {e}")
+        flash('Il PDF non è stato generato come file scaricabile: su questo PC WeasyPrint (la libreria che '
+              'produce i PDF) non è disponibile o non trova le sue librerie di sistema (su Windows: '
+              'GTK3 Runtime). Il documento qui sotto è un HTML di ripiego, non impaginato come il PDF vero — '
+              'usa "Word" per avere comunque un file scaricabile, oppure genera il PDF da una macchina dove '
+              'WeasyPrint funziona.', 'warning')
         return html_content
 
 
