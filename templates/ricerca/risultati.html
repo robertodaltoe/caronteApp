@@ -21,7 +21,7 @@
 
 {% if not q %}
 <div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
-    Digita almeno 2 caratteri per cercare tra docenti, supplenze, assenze, movimenti banca ore e sospensioni.
+    Digita almeno 2 caratteri per cercare tra le funzioni dell'app, docenti, supplenze, assenze, movimenti banca ore e sospensioni.
 </div>
 {% elif q|length < 2 %}
 <div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
@@ -32,6 +32,22 @@
     Nessun risultato per «{{ q }}».
 </div>
 {% else %}
+
+{% if funzioni %}
+<div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:10px;">{{ icon('compass') }} Funzioni ({{ funzioni|length }})</h3>
+    <table style="width:100%; font-size:.85rem;">
+        {% for f in funzioni %}
+        <tr>
+            <td class="wrap" style="padding:5px 0;">
+                <a href="{{ f.url }}"><strong>{{ icon(f.icona) }} {{ f.label }}</strong></a>
+                <span style="color:var(--grigio); margin-left:8px;">{{ f.gruppo_label }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
 
 {% if risultati.docenti %}
 <div class="card" style="margin-bottom:16px;">

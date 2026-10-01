@@ -70,8 +70,12 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('forbidden') }} Nuova indisponibilità</h1>
-    <a href="{{ url_for('dashboard.index', data=data_sel) }}"
-       class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{{ url_for('indisponibilita.lista_ricorrenti') }}"
+           class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">{{ icon('swap') }} Indisponibilità ricorrenti</a>
+        <a href="{{ url_for('dashboard.index', data=data_sel) }}"
+           class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Dashboard</a>
+    </div>
 </div>
 
 <form method="post" id="form-indisp">
