@@ -176,3 +176,31 @@ def test_protocollo_lettera_una_riga_per_docente_anno(app, db_session):
         assert LetteraIncaricoProtocollo.query.count() == 1
         riga = LetteraIncaricoProtocollo.query.first()
         assert riga.numero_protocollo == '43'
+
+
+def test_catalogo_importa_accetta_blocco_senza_numero(app, db_session):
+    from models.contrattazione import TipoIncaricoContrattazione
+
+    with app.app_context():
+        c = app.test_client()
+        r = c.post('/contrattazione/catalogo/importa',
+                   data={'testo': 'Referente biblioteca\nCatalogazione del patrimonio librario.'})
+        assert r.status_code == 302
+        voce = TipoIncaricoContrattazione.query.filter_by(nome='Referente biblioteca').first()
+        assert voce is not None
+        assert voce.numero_riferimento is None
+
+
+def test_catalogo_form_senza_numero_si_salva(app, db_session):
+    from models.contrattazione import TipoIncaricoContrattazione
+    from routes.contrattazione import contrattazione_bp
+    if 'contrattazione' not in app.blueprints:
+        app.register_blueprint(contrattazione_bp)
+
+    with app.app_context():
+        c = app.test_client()
+        r = c.post('/contrattazione/catalogo/nuovo',
+                   data={'nome': 'Referente orientamento', 'testo_riferimento': 'Testo.'})
+        assert r.status_code == 302
+        voce = TipoIncaricoContrattazione.query.filter_by(nome='Referente orientamento').first()
+        assert voce is not None and voce.numero_riferimento is None

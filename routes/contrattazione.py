@@ -252,15 +252,11 @@ def catalogo_form(id=None):
         if not nome or not testo:
             flash('Nome e testo descrittivo sono obbligatori.', 'error')
             return redirect(request.url)
-        if not numero:
-            flash('Il numero di riferimento è obbligatorio: è quello che comparirà nella '
-                  'colonna "Rif." della lettera di incarico.', 'error')
-            return redirect(request.url)
         if voce is None:
             voce = TipoIncaricoContrattazione()
             db.session.add(voce)
         voce.nome               = nome
-        voce.numero_riferimento = numero
+        voce.numero_riferimento = numero or None
         voce.testo_riferimento  = testo
         voce.attivo             = request.form.get('attivo') == '1'
         db.session.commit()
@@ -295,12 +291,12 @@ def catalogo_importa():
         testo = request.form.get('testo', '')
         blocchi = [b.strip() for b in testo.split('\n---\n') if b.strip()]
         # Riconosce un numero/riferimento iniziale sulla prima riga del
-        # blocco (come nel modello del Dirigente: "2 TUTOR DOCENTI...",
-        # "28 bis: REFERENTE FSL CLASSE", "31.   COORDINATORE") e lo
-        # separa dal nome — il numero compare poi nella colonna "Rif."
-        # della lettera, quindi un blocco senza numero riconoscibile
-        # viene saltato invece di creare una voce silenziosamente priva
-        # di riferimento (Roberto: "deve essere valorizzato").
+        # blocco, se c'è (come nel modello del Dirigente: "2 TUTOR
+        # DOCENTI...", "28 bis: REFERENTE FSL CLASSE", "31. COORDINATORE")
+        # e lo separa dal nome — ma non è più obbligatorio: un blocco
+        # senza numero riconoscibile viene comunque importato, solo con
+        # la colonna "Rif." vuota (Roberto: tolto il blocco che
+        # impediva l'inserimento senza numero).
         pattern_numero = re.compile(r'^(?P<num>\d+(?:\s*bis)?)\s*[\.:\)]?\s+(?P<nome>.+)$', re.IGNORECASE)
         creati, saltati_senza_numero, saltati_esistenti = 0, 0, 0
         for blocco in blocchi:
@@ -310,13 +306,12 @@ def catalogo_importa():
             prima_riga = righe[0].strip()
             corpo = '\n'.join(righe[1:]).strip()
             m = pattern_numero.match(prima_riga)
-            if not m:
-                saltati_senza_numero += 1
-                continue
-            numero, nome = m.group('num').strip(), m.group('nome').strip()
+            numero, nome = (m.group('num').strip(), m.group('nome').strip()) if m else (None, prima_riga)
             if TipoIncaricoContrattazione.query.filter_by(nome=nome).first():
                 saltati_esistenti += 1
                 continue
+            if not m:
+                saltati_senza_numero += 1
             db.session.add(TipoIncaricoContrattazione(nome=nome, numero_riferimento=numero,
                                                        testo_riferimento=corpo))
             creati += 1
@@ -325,9 +320,9 @@ def catalogo_importa():
         if saltati_esistenti:
             msg += f' {saltati_esistenti} già esistenti (stesso nome) saltate.'
         if saltati_senza_numero:
-            msg += (f' {saltati_senza_numero} blocco/hi saltati perché la prima riga non inizia con un '
-                    'numero (es. "1 Collaboratore DS") — aggiungi il numero e reimporta, o inseriscili a mano.')
-        flash(msg, 'success' if not saltati_senza_numero else 'warning')
+            msg += (f' {saltati_senza_numero} importate senza numero di riferimento (la prima riga non '
+                    'ne aveva uno riconoscibile) — puoi aggiungerlo in un secondo momento modificando la voce.')
+        flash(msg, 'success')
         return redirect(url_for('contrattazione.catalogo'))
     return render_template('contrattazione/catalogo_importa.html')
 
