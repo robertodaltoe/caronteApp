@@ -130,8 +130,12 @@ def salva_adesioni(anno, valori):
 
 
 def genera_gruppi(anno):
-    """Crea/aggiorna un gruppo per ogni slot in cui almeno una classe con
-    studenti da seguire ha religione. Non tocca mai il docente già
+    """Crea/aggiorna i gruppi per ogni slot in cui almeno una classe con
+    studenti da seguire ha religione. Uno slot può avere più gruppi (un
+    gruppo numeroso diviso fra due docenti, vedi dividi_gruppo): la
+    divisione non viene mai disfatta, le classi nuove dello slot vanno nel
+    gruppo meno numeroso (segnalato in 'classi_aggiunte_a_diviso'), quelle
+    tolte spariscono dal gruppo in cui erano. Non tocca mai il docente già
     assegnato: un gruppo che perde tutte le classi ma ha un docente resta
     (segnalato in 'senza_classi'), uno senza docente viene tolto."""
     slot = slot_irc_per_classe()
@@ -145,41 +149,136 @@ def genera_gruppi(anno):
         for s in slot.get(cl, ()):
             per_slot[s].add(cl)
 
-    esistenti = {}
+    esistenti = defaultdict(list)
     for g in AlternativaIrcGruppo.query.filter_by(anno_scol=anno).order_by(AlternativaIrcGruppo.id):
-        esistenti.setdefault((g.giorno, g.ora), g)
+        esistenti[(g.giorno, g.ora)].append(g)
 
     creati = aggiornati = rimossi = 0
     senza_classi = []
-    for s, classi in per_slot.items():
-        g = esistenti.get(s)
-        if not g:
-            g = AlternativaIrcGruppo(anno_scol=anno, giorno=s[0], ora=s[1])
-            db.session.add(g)
-            db.session.flush()
-            creati += 1
-        else:
-            aggiornati += 1
-        attuali = {c.classe: c for c in g.classi}
-        for cl in classi - set(attuali):
-            db.session.add(AlternativaIrcGruppoClasse(id_gruppo=g.id, classe=cl))
-        for cl, riga in attuali.items():
-            if cl not in classi:
-                db.session.delete(riga)
+    aggiunte_a_diviso = []
 
-    for s, g in esistenti.items():
-        if s in per_slot:
-            continue
+    def _togli_se_vuoto(g):
+        nonlocal rimossi
+        if g.classi:
+            return
         if g.id_docente or g.da_nominare:
-            for riga in list(g.classi):
-                db.session.delete(riga)
             senza_classi.append(g)
         else:
             db.session.delete(g)
             rimossi += 1
+
+    for s, classi in per_slot.items():
+        gruppi = esistenti.get(s)
+        if not gruppi:
+            g = AlternativaIrcGruppo(anno_scol=anno, giorno=s[0], ora=s[1])
+            db.session.add(g)
+            gruppi = [g]
+            creati += 1
+        else:
+            aggiornati += len(gruppi)
+        presenti = set()
+        for g in gruppi:
+            for riga in list(g.classi):
+                if riga.classe in classi and riga.classe not in presenti:
+                    presenti.add(riga.classe)
+                else:
+                    g.classi.remove(riga)
+        for cl in sorted(classi - presenti):
+            dest = min(gruppi, key=lambda g: (sum(ades[c.classe].n_con_docente
+                                                  for c in g.classi), g.id or 0))
+            dest.classi.append(AlternativaIrcGruppoClasse(classe=cl))
+            if len(gruppi) > 1:
+                aggiunte_a_diviso.append(cl)
+        if len(gruppi) > 1:
+            for g in gruppi:
+                _togli_se_vuoto(g)
+
+    for s, gruppi in esistenti.items():
+        if s in per_slot:
+            continue
+        for g in gruppi:
+            for riga in list(g.classi):
+                g.classi.remove(riga)
+            _togli_se_vuoto(g)
     db.session.commit()
     return {'creati': creati, 'aggiornati': aggiornati, 'rimossi': rimossi,
-            'senza_classi': len(senza_classi), 'classi_senza_slot': sorted(classi_senza_slot)}
+            'senza_classi': len(senza_classi), 'classi_senza_slot': sorted(classi_senza_slot),
+            'classi_aggiunte_a_diviso': sorted(aggiunte_a_diviso)}
+
+
+# ── DIVISIONE DI UN GRUPPO NUMEROSO ───────────────────────────────────
+# Solo per classi intere (scelta di Roberto): ogni classe sta in un solo
+# gruppo dello slot e il numero di studenti resta quello delle adesioni.
+
+def gruppi_dello_slot(gruppo):
+    return (AlternativaIrcGruppo.query
+            .filter_by(anno_scol=gruppo.anno_scol, giorno=gruppo.giorno, ora=gruppo.ora)
+            .order_by(AlternativaIrcGruppo.id).all())
+
+
+def dividi_gruppo(gruppo):
+    """Crea un nuovo gruppo nello stesso slot e ci sposta circa metà degli
+    studenti (classi intere, bilanciate per numero). Il docente già
+    assegnato resta sul gruppo originale. Ritorna (ok, messaggio, nuovo)."""
+    if len(gruppo.classi) < 2:
+        return False, 'Per dividere servono almeno due classi nel gruppo.', None
+    ades = {a.classe: a.n_con_docente for a in
+            AlternativaIrcAdesione.query.filter_by(anno_scol=gruppo.anno_scol)}
+    righe = sorted(gruppo.classi, key=lambda r: (-ades.get(r.classe, 0), r.classe))
+    tot_a = tot_b = 0
+    da_spostare = []
+    for r in righe:
+        n = ades.get(r.classe, 0)
+        if tot_a <= tot_b:
+            tot_a += n
+        else:
+            tot_b += n
+            da_spostare.append(r)
+    nuovo = AlternativaIrcGruppo(anno_scol=gruppo.anno_scol, giorno=gruppo.giorno,
+                                 ora=gruppo.ora)
+    db.session.add(nuovo)
+    for r in da_spostare:
+        gruppo.classi.remove(r)
+        nuovo.classi.append(AlternativaIrcGruppoClasse(classe=r.classe))
+    db.session.commit()
+    return True, f'Gruppo diviso: {tot_a} + {tot_b} studenti. Assegna il docente al nuovo gruppo.', nuovo
+
+
+def sposta_classe(gruppo, classe, destinazione):
+    """Sposta una classe in un altro gruppo dello stesso slot. Un gruppo
+    rimasto vuoto e senza docente viene tolto. Ritorna (ok, messaggio)."""
+    if destinazione.id == gruppo.id or (destinazione.anno_scol, destinazione.giorno,
+                                        destinazione.ora) != (gruppo.anno_scol, gruppo.giorno,
+                                                              gruppo.ora):
+        return False, 'Si può spostare una classe solo fra gruppi dello stesso giorno e ora.'
+    riga = next((r for r in gruppo.classi if r.classe == classe), None)
+    if not riga:
+        return False, 'Classe non presente nel gruppo.'
+    gruppo.classi.remove(riga)
+    destinazione.classi.append(AlternativaIrcGruppoClasse(classe=classe))
+    if not gruppo.classi and not gruppo.id_docente and not gruppo.da_nominare:
+        db.session.delete(gruppo)
+    db.session.commit()
+    msg = f'Classe {label_classe(classe)} spostata.'
+    avviso = avviso_docente_assegnato(destinazione, Contesto(destinazione.anno_scol))
+    if avviso:
+        msg += f' Attenzione, il docente del gruppo di destinazione non è più compatibile: {avviso}.'
+    return True, msg
+
+
+def unisci_gruppo(gruppo):
+    """Riporta le classi del gruppo nel primo altro gruppo dello stesso slot
+    ed elimina il gruppo (con il suo docente). Ritorna (ok, messaggio)."""
+    altri = [g for g in gruppi_dello_slot(gruppo) if g.id != gruppo.id]
+    if not altri:
+        return False, 'Il gruppo non è diviso.'
+    dest = altri[0]
+    for r in list(gruppo.classi):
+        gruppo.classi.remove(r)
+        dest.classi.append(AlternativaIrcGruppoClasse(classe=r.classe))
+    db.session.delete(gruppo)
+    db.session.commit()
+    return True, 'Gruppi riuniti.'
 
 
 def n_studenti_gruppo(gruppo, adesioni=None):
@@ -337,15 +436,27 @@ def avviso_docente_assegnato(gruppo, ctx):
                                   {c.classe for c in gruppo.classi}, gruppo.id)
 
 
+def lettera_gruppo(i):
+    return chr(ord('A') + i) if i < 26 else str(i + 1)
+
+
 def gruppi_dettaglio(anno):
     ctx = Contesto(anno)
     ades = {a.classe: a for a in AlternativaIrcAdesione.query.filter_by(anno_scol=anno)}
     out = []
-    for g in AlternativaIrcGruppo.query.filter_by(anno_scol=anno).order_by(
-            AlternativaIrcGruppo.giorno, AlternativaIrcGruppo.ora).all():
+    gruppi = AlternativaIrcGruppo.query.filter_by(anno_scol=anno).order_by(
+        AlternativaIrcGruppo.giorno, AlternativaIrcGruppo.ora, AlternativaIrcGruppo.id).all()
+    per_slot = defaultdict(list)
+    for g in gruppi:
+        per_slot[(g.giorno, g.ora)].append(g)
+    for g in gruppi:
         n = n_studenti_gruppo(g, ades)
+        stessi = per_slot[(g.giorno, g.ora)]
         out.append({
             'gruppo': g,
+            # Lettera solo se lo slot è diviso fra più gruppi (A, B, …).
+            'parte': lettera_gruppo(stessi.index(g)) if len(stessi) > 1 else '',
+            'fratelli': [(x, lettera_gruppo(i)) for i, x in enumerate(stessi) if x.id != g.id],
             'classi': [label_classe(c) for c in g.classi_list],
             'n_studenti': n,
             'numeroso': n > SOGLIA_GRUPPO,
@@ -409,8 +520,8 @@ def genera_xlsx(anno):
 
     ws = wb.active
     ws.title = 'Gruppi'
-    intesta(ws, ['Giorno', 'Ora', 'Classi', 'Studenti', 'Docente', 'Stato', 'Aula'],
-            [12, 6, 38, 10, 26, 22, 14])
+    intesta(ws, ['Giorno', 'Ora', 'Classi', 'Studenti', 'Docente', 'Stato', 'Aula', 'Gruppo'],
+            [12, 6, 38, 10, 26, 22, 14, 8])
     for r in gruppi_dettaglio(anno):
         g = r['gruppo']
         if g.id_docente:
@@ -421,7 +532,7 @@ def genera_xlsx(anno):
         else:
             doc, stato = '', 'Da assegnare'
         ws.append([GIORNI[g.giorno], g.ora, ', '.join(r['classi']), r['n_studenti'],
-                   doc, stato, g.aula or ''])
+                   doc, stato, g.aula or '', r['parte']])
         for c in ws[ws.max_row]:
             c.alignment = Alignment(vertical='top', wrap_text=True)
 

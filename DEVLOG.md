@@ -2,6 +2,45 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 38 — Alternativa IRC: dividere un gruppo numeroso fra più docenti
+
+Roberto: con l'orario definitivo i gruppi potranno essere fino a 38 e un
+gruppo numeroso va diviso fra due docenti (era il "limite noto"
+dell'addendum 35: un solo gruppo per slot). Scelta presa insieme: si
+divide solo per **classi intere**, ogni classe sta in un solo gruppo
+dello slot e il numero di studenti resta quello delle adesioni (nessuna
+colonna nuova, nessuna migrazione: la tabella dei gruppi non aveva un
+vincolo di unicità su giorno/ora).
+
+**Cosa cambia** (`modules/alternativa_irc.py`, route e template dei gruppi):
+- Pulsante "Dividi in due gruppi" (con almeno due classi): crea un nuovo
+  gruppo nello stesso giorno/ora e ci sposta circa metà degli studenti,
+  bilanciando per classi intere. Il docente già assegnato resta sul
+  gruppo originale. Si può dividere ancora una parte (nessun limite fisso).
+- Nei gruppi divisi compaiono la lettera (A, B, …), i pulsanti per
+  spostare una singola classe nell'altra parte e "Riunisci".
+- `genera_gruppi()` non disfa mai una divisione: le classi tolte spariscono
+  dalla parte in cui erano, le classi nuove dello slot vanno nella parte
+  meno numerosa (con avviso), una parte rimasta vuota e senza docente
+  viene tolta, una con docente resta segnalata come prima.
+- Il vincolo "insegna nella classe" vale solo per le classi della propria
+  parte: dividendo si allarga anche la rosa dei candidati. "Già assegnato
+  a un altro gruppo alla stessa ora" impedisce lo stesso docente su due
+  parti.
+- Supplenze: nessuna modifica necessaria, già per singolo gruppo; la
+  supplenza per l'assenza del docente di una parte elenca solo le classi
+  di quella parte. Griglia settimanale con la lettera, Excel con una
+  colonna "Gruppo" in fondo.
+
+**Verifica**: 7 nuovi test (divisione bilanciata, almeno due classi,
+rigenerazione che non disfa, parte vuota tolta, sposta/riunisci,
+candidati allargati, due docenti nello stesso slot + supplenza con le
+sole classi della parte), suite completa 618 verdi, 0 fallimenti (dopo il merge con la Sessione 70).
+End-to-end via HTTP su un database nuovo in una copia isolata del
+progetto (sessione cloud Linux, nessun `database.db` reale presente né
+toccato): genera, dividi (16 + 15), sposta, griglia, Excel, riunisci,
+`PRAGMA integrity_check` ok.
+
 ## Sessione 70 — Sistemati i 4 test che fallivano da settimane
 
 Le ultime sessioni chiudevano con "stessi 4 fallimenti pre-esistenti",
@@ -28,6 +67,45 @@ nel codice dell'app:
 Nessun test saltato o disattivato. Suite completa: **611 verdi, 0
 fallimenti**. Aggiornato anche CLAUDE.md (diceva ancora 51 test).
 Sessione in sandbox Linux cloud, `database.db` reale mai toccato.
+
+## Sessione 69 addendum 37 — Server Windows: l'auto-aggiornamento ogni 15 minuti non partiva mai
+
+Roberto: sul PC Windows della scuola (ora il server principale) il codice
+non si aggiorna da solo ogni 15 minuti. Sessione in sandbox Linux (cloud),
+senza accesso al PC: diagnosi solo da codice, `aggiornamento.log` non
+ancora visto.
+
+**Cause trovate** in `aggiorna_e_riavvia_windows.ps1` (generato da
+`installa_server_windows.ps1`, passo 8b):
+1. **Lo script non si poteva nemmeno eseguire**: nella riga
+   `"... in $Cartella: aggiornamento SALTATO ..."` PowerShell legge
+   `$Cartella:` come variabile con prefisso di unità ed è un errore di
+   sintassi; l'intero file viene rifiutato prima di eseguire qualunque
+   cosa (verificato col parser di PowerShell 7.4). Il task girava ogni 15
+   minuti senza fare nulla e senza scrivere nel log. Corretto in `${Cartella}:`.
+2. Anche corretto quello, il controllo `git status --porcelain` vedeva
+   come "modifiche locali" i due file che l'installatore stesso crea nella
+   cartella (`avvia_server_windows.bat`, `aggiorna_e_riavvia_windows.ps1`,
+   non ignorati) e saltava l'aggiornamento per sempre. Ora
+   `--untracked-files=no` + i due file nel `.gitignore`.
+3. Riavvio: `Stop-ScheduledTask` chiude solo `powershell.exe`; il ciclo
+   cmd e `python.exe` potevano restare vivi sulla porta 5002. Ora si
+   fermano esplicitamente il ciclo cmd e il processo in ascolto sulla 5002.
+4. Minori: output di git nel log con la stessa codifica (prima UTF-16
+   mescolato), `git pull` fallito non riavvia, finestra nascosta.
+
+**Verifica**: parser PowerShell 7.4 su installatore e script generato (0
+errori, prima 1); script eseguito su repo git di prova con i comandi di
+Windows simulati: aggiorna con i file generati presenti, non fa nulla se
+già aggiornato, salta se c'è una modifica a un file tracciato. Non provato
+su Windows reale.
+
+**Passaggio manuale una tantum sul PC della scuola** (l'aggiornamento
+automatico è proprio ciò che è rotto, quindi il fix non arriva da solo):
+PowerShell come amministratore, `cd C:\CaronteApp`, `git pull`, poi
+`powershell -ExecutionPolicy Bypass -File installa_server_windows.ps1`
+(va rilanciato dopo il pull: la versione già in esecuzione rigenererebbe
+lo script vecchio).
 
 ## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
 

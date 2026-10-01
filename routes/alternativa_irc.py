@@ -90,7 +90,8 @@ def gruppi():
     anno = get_anno_corrente()
     return render_template('alternativa_irc/gruppi.html', anno=anno,
                            righe=air.gruppi_dettaglio(anno), livelli=air.LIVELLI,
-                           giorni=air.GIORNI, soglia=air.SOGLIA_GRUPPO)
+                           giorni=air.GIORNI, soglia=air.SOGLIA_GRUPPO,
+                           label=air.label_classe)
 
 
 @alternativa_irc_bp.route('/alternativa-irc/gruppi/genera', methods=['POST'])
@@ -101,6 +102,10 @@ def genera():
     if esito['senza_classi']:
         flash(f'{esito["senza_classi"]} gruppo/i con docente non hanno più classi in quello slot '
               f'(orario cambiato o adesioni azzerate): verifica e riassegna.', 'warning')
+    if esito['classi_aggiunte_a_diviso']:
+        flash('Classi nuove aggiunte a un gruppo diviso (nel gruppo meno numeroso dello slot): '
+              + ', '.join(air.label_classe(c) for c in esito['classi_aggiunte_a_diviso'])
+              + '. Verifica la divisione.', 'warning')
     if esito['classi_senza_slot']:
         flash('Classi con studenti ma senza ore di religione in orario: '
               + ', '.join(air.label_classe(c) for c in esito['classi_senza_slot']), 'warning')
@@ -121,6 +126,31 @@ def assegna(id):
         ok, msg = air.assegna(g)
     flash(msg, 'success' if ok else 'error')
     return redirect(url_for('alternativa_irc.gruppi') + f'#g{g.id}')
+
+
+@alternativa_irc_bp.route('/alternativa-irc/gruppi/<int:id>/dividi', methods=['POST'])
+def dividi(id):
+    g = AlternativaIrcGruppo.query.get_or_404(id)
+    ok, msg, nuovo = air.dividi_gruppo(g)
+    flash(msg, 'success' if ok else 'error')
+    return redirect(url_for('alternativa_irc.gruppi') + f'#g{(nuovo or g).id}')
+
+
+@alternativa_irc_bp.route('/alternativa-irc/gruppi/<int:id>/sposta', methods=['POST'])
+def sposta(id):
+    g = AlternativaIrcGruppo.query.get_or_404(id)
+    dest = AlternativaIrcGruppo.query.get_or_404(_int(request.form.get('destinazione')))
+    ok, msg = air.sposta_classe(g, request.form.get('classe', ''), dest)
+    flash(msg, ('warning' if 'Attenzione' in msg else 'success') if ok else 'error')
+    return redirect(url_for('alternativa_irc.gruppi') + f'#g{dest.id}')
+
+
+@alternativa_irc_bp.route('/alternativa-irc/gruppi/<int:id>/unisci', methods=['POST'])
+def unisci(id):
+    g = AlternativaIrcGruppo.query.get_or_404(id)
+    ok, msg = air.unisci_gruppo(g)
+    flash(msg, 'success' if ok else 'error')
+    return redirect(url_for('alternativa_irc.gruppi'))
 
 
 @alternativa_irc_bp.route('/alternativa-irc/orario')
