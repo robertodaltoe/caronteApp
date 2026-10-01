@@ -625,11 +625,6 @@ main.container:focus { outline: none; }
     {% endif %}
     <a href="{{ url_for('display.display') }}" target="_blank"><span class="nav-ic">{{ icon('monitor') }}</span> Display</a>
 
-    {% if puo_vedere('progetti_fse') %}
-    <a href="{{ url_for('progetti_fse.index') }}"{% if nav_area == 'progetti_fse' %} class="active"{% endif %} title="Area amministrativa isolata per i progetti finanziati da fondi strutturali europei (es. Piano Estate)">
-        <span class="nav-ic">{{ icon('layers') }}</span> Progetti FSE/FESR</a>
-    {% endif %}
-
     {# Impostazioni: menu a tendina a gruppi (modules/navigazione.py),
        cosi' Docenti, Assegnazioni, Contrattazione... sono a due clic
        senza aggiungere voci alla navbar. "Panoramica" porta alla pagina

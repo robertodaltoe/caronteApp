@@ -144,3 +144,27 @@ def test_cerca_funzioni_ignora_accenti_e_maiuscole():
     trovate = [v['label'] for v in nav.cerca_funzioni('INDISPONIBILITA ricorr', nav.FUNZIONI)]
     assert trovate == ['Indisponibilità ricorrenti']
     assert nav.cerca_funzioni('', nav.FUNZIONI) == []
+
+
+def test_progetti_fse_nel_menu_contabilita_non_in_navbar(app_reale):
+    """Progetti FSE/FESR vive nel gruppo contabile del menu Impostazioni
+    (accanto a Fondi e capitoli), non più come voce a sé in navbar; resta
+    raggiungibile da ricerca, percorso e voce di navbar attiva."""
+    from modules import navigazione as nav
+    voce = next(v for v in nav.FUNZIONI if v['endpoint'] == 'progetti_fse.index')
+    assert voce['gruppo'] == 'contrattazione'
+    assert nav.area_navbar('progetti_fse.index') == 'impostazioni'
+
+    c = _client_come(app_reale, 'dsga')
+    corpo = c.get('/dashboard').get_data(as_text=True)
+    assert 'data-area="progetti_fse"' not in corpo
+    assert 'nav_area == \'progetti_fse\'' not in corpo
+    # Dentro il menu a tendina, nel blocco "Contabilità e progetti".
+    i = corpo.index('Contabilità e progetti')
+    fine = corpo.index('nav-mega-titolo', i)
+    assert 'Progetti FSE/FESR' in corpo[i:fine]
+    # Ricerca (Ctrl+K) e pagina del modulo con voce Impostazioni attiva.
+    assert 'Progetti FSE/FESR' in c.get('/ricerca?q=fesr').get_data(as_text=True)
+    corpo = c.get('/progetti-fse').get_data(as_text=True)
+    j = corpo.index('Impostazioni</a>')
+    assert 'class="active"' in corpo[j - 900:j]
