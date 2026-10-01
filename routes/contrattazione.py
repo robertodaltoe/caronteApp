@@ -15,6 +15,7 @@ compila/aggiorna a mano (anche con l'import massivo qui sotto) — è testo
 contrattuale, non generato né trascritto in automatico da fonti esterne.
 """
 import io
+import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
 from models.contrattazione import (
@@ -220,14 +221,19 @@ def catalogo_form(id=None):
     if request.method == 'POST':
         nome = request.form.get('nome', '').strip()
         testo = request.form.get('testo_riferimento', '').strip()
+        numero = request.form.get('numero_riferimento', '').strip()
         if not nome or not testo:
             flash('Nome e testo descrittivo sono obbligatori.', 'error')
+            return redirect(request.url)
+        if not numero:
+            flash('Il numero di riferimento è obbligatorio: è quello che comparirà nella '
+                  'colonna "Rif." della lettera di incarico.', 'error')
             return redirect(request.url)
         if voce is None:
             voce = TipoIncaricoContrattazione()
             db.session.add(voce)
         voce.nome               = nome
-        voce.numero_riferimento = request.form.get('numero_riferimento', '').strip() or None
+        voce.numero_riferimento = numero
         voce.testo_riferimento  = testo
         voce.attivo             = request.form.get('attivo') == '1'
         db.session.commit()
@@ -261,19 +267,40 @@ def catalogo_importa():
     if request.method == 'POST':
         testo = request.form.get('testo', '')
         blocchi = [b.strip() for b in testo.split('\n---\n') if b.strip()]
-        creati = 0
+        # Riconosce un numero/riferimento iniziale sulla prima riga del
+        # blocco (come nel modello del Dirigente: "2 TUTOR DOCENTI...",
+        # "28 bis: REFERENTE FSL CLASSE", "31.   COORDINATORE") e lo
+        # separa dal nome — il numero compare poi nella colonna "Rif."
+        # della lettera, quindi un blocco senza numero riconoscibile
+        # viene saltato invece di creare una voce silenziosamente priva
+        # di riferimento (Roberto: "deve essere valorizzato").
+        pattern_numero = re.compile(r'^(?P<num>\d+(?:\s*bis)?)\s*[\.:\)]?\s+(?P<nome>.+)$', re.IGNORECASE)
+        creati, saltati_senza_numero, saltati_esistenti = 0, 0, 0
         for blocco in blocchi:
             righe = [r for r in blocco.split('\n') if r.strip()]
             if len(righe) < 2:
                 continue
-            nome = righe[0].strip()
+            prima_riga = righe[0].strip()
             corpo = '\n'.join(righe[1:]).strip()
-            if TipoIncaricoContrattazione.query.filter_by(nome=nome).first():
+            m = pattern_numero.match(prima_riga)
+            if not m:
+                saltati_senza_numero += 1
                 continue
-            db.session.add(TipoIncaricoContrattazione(nome=nome, testo_riferimento=corpo))
+            numero, nome = m.group('num').strip(), m.group('nome').strip()
+            if TipoIncaricoContrattazione.query.filter_by(nome=nome).first():
+                saltati_esistenti += 1
+                continue
+            db.session.add(TipoIncaricoContrattazione(nome=nome, numero_riferimento=numero,
+                                                       testo_riferimento=corpo))
             creati += 1
         db.session.commit()
-        flash(f'Importate {creati} voci nel catalogo (quelle già esistenti con lo stesso nome sono state saltate).', 'success')
+        msg = f'Importate {creati} voci nel catalogo.'
+        if saltati_esistenti:
+            msg += f' {saltati_esistenti} già esistenti (stesso nome) saltate.'
+        if saltati_senza_numero:
+            msg += (f' {saltati_senza_numero} blocco/hi saltati perché la prima riga non inizia con un '
+                    'numero (es. "1 Collaboratore DS") — aggiungi il numero e reimporta, o inseriscili a mano.')
+        flash(msg, 'success' if not saltati_senza_numero else 'warning')
         return redirect(url_for('contrattazione.catalogo'))
     return render_template('contrattazione/catalogo_importa.html')
 

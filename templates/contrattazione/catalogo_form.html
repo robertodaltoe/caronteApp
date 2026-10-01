@@ -12,8 +12,8 @@
 
 <form method="post" class="card" style="max-width:640px; padding:20px;">
     <div class="form-group">
-        <label>Numero di riferimento <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— come nel modello del Dirigente, es. "1", "28 bis"</span></label>
-        <input type="text" name="numero_riferimento" value="{{ voce.numero_riferimento or '' if voce else '' }}" style="width:100%;">
+        <label>Numero di riferimento * <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— come nel modello del Dirigente, es. "1", "28 bis": compare nella colonna "Rif." della lettera</span></label>
+        <input type="text" name="numero_riferimento" required value="{{ voce.numero_riferimento or '' if voce else '' }}" style="width:100%;">
     </div>
     <div class="form-group">
         <label>Nome dell'incarico *</label>

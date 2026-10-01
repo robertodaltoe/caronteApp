@@ -10,16 +10,20 @@
 
 <div class="card" style="max-width:720px; padding:20px; margin-bottom:16px; font-size:.84rem; color:var(--grigio);">
     Incolla un blocco per ogni tipo di incarico, separati da una riga con soltanto <code>---</code>.
-    La <b>prima riga</b> di ogni blocco è il nome (puoi includere il numero, es.
-    <code>2 TUTOR DOCENTI NEOIMMESSI</code>), le righe successive sono il testo descrittivo.
-    Le voci con un nome già presente nel catalogo vengono saltate, non sovrascritte.
+    La <b>prima riga</b> di ogni blocco deve iniziare con il numero di riferimento (es. "1", "28 bis"),
+    seguito dal nome — esattamente come nel modello del Dirigente. Le righe successive sono il testo
+    descrittivo. Un blocco la cui prima riga non inizia con un numero viene saltato, non importato senza
+    riferimento. Le voci con un nome già presente nel catalogo vengono saltate, non sovrascritte.
     <br><br>Esempio:
-    <pre style="background:#f8fafc; padding:10px; border-radius:6px; font-size:.78rem; white-space:pre-wrap;">Collaboratore DS
+    <pre style="background:#f8fafc; padding:10px; border-radius:6px; font-size:.78rem; white-space:pre-wrap;">1 Collaboratore DS
 Il docente Collaboratore sostituisce il Dirigente Scolastico in caso di assenza...
 ● gestisce, in collaborazione con la segreteria, l'orario scolastico...
 ---
-REFERENTE LEGALITA'
-Predisposizione e coordinamento dei progetti del PTOF relativi all'ambito della legalità...</pre>
+2 TUTOR DOCENTI NEOIMMESSI IN RUOLO
+Affiancamento del docente in periodo di prova...
+---
+28 bis: REFERENTE FSL CLASSE
+Cura la stesura e presentazione del progetto triennale di classe...</pre>
 </div>
 
 <form method="post" class="card" style="max-width:720px; padding:20px;">
