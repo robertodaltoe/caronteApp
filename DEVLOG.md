@@ -2,6 +2,67 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 71 — Navigazione: menu Impostazioni a gruppi, ricerca delle funzioni, percorso, scorciatoie per ruolo
+
+Roberto: "faresti delle modifiche nell'interfaccia per migliorare
+l'accessibilità alle varie sezioni/funzioni?", poi "falli tutti". Vincolo
+rispettato: nessuna voce nuova in navbar (era già troppo piena, vedi
+Sessione 69 addendum 4).
+
+**Elenco unico delle funzioni** (`modules/navigazione.py`, nuovo):
+etichetta, endpoint, gruppo, sezione permessi, sinonimi per la ricerca.
+Ne derivano tutte le novità sotto; ogni voce compare solo a chi può
+aprirla (stessa regola di `puo_vedere()`, più `ruoli=`/`permesso=` per i
+controlli hardcoded: Permessi solo DS, Importa orario DS/DSGA, Gestione
+utenti con `gestione_utenti`). Una funzione nuova va aggiunta lì per
+comparire nel menu e nella ricerca. Dati iniettati da un context
+processor di app (`_inject_navigazione` in `app.py`), protetto da
+try/except: un errore nella navigazione non blocca mai la pagina.
+
+**Cosa cambia per chi usa l'app**:
+- *Impostazioni* in navbar è ora un menu a tendina a gruppi (Anno
+  scolastico, Docenti, Contrattazione, Istituto e calendario, Sistema),
+  con "Panoramica impostazioni" in cima che porta alla pagina di prima.
+- *Ricerca delle funzioni*: scrivendo nella casella Cerca compaiono le
+  pagine corrispondenti ("aule", "lettere incarico"…), frecce + Invio per
+  aprirle; Invio senza selezione cerca nei dati come prima. Ctrl+K/Cmd+K
+  porta il cursore nella casella da qualunque pagina; a casella vuota
+  mostra le ultime 5 funzioni aperte (localStorage, per postazione).
+  Anche la pagina `/ricerca` mostra una sezione "Funzioni".
+- *Voce attiva*: la voce di navbar dell'area corrente è evidenziata (lo
+  stile `nav a.active` esisteva ma nessun template lo applicava).
+- *Percorso* sopra il contenuto ("Docenti › Anagrafica docenti"), con
+  link alla pagina principale dell'area dalle pagine di dettaglio.
+- *Scorciatoie per ruolo* in cima alla Dashboard ("Le tue sezioni",
+  `SCORCIATOIE_RUOLO`): DS report dirigente/dashboard anno/piano attività;
+  segreteria banca ore/report/bozze email/lettere di incarico;
+  collaboratore agenda/cambi turno/attività/assegnazioni.
+- *Funzioni prima difficili da raggiungere*: Assegnazioni (anche nella
+  pagina Impostazioni), Cambi turno (pulsante in Dashboard accanto ad
+  Agenda), Indisponibilità ricorrenti (nessun link prima: ora dal form
+  Nuova indisponibilità), Import banca ore dal file Excel storico (solo
+  da menu/ricerca: è l'import una tantum da `data/Banca_Ore_Docenti_v3.xlsm`,
+  non meritava un pulsante fisso). Non collegate di proposito:
+  `recupero.proposte` (sostituita dal passo "Abbina gruppi" del recupero
+  di giugno) e `attivita_ist.assegnazioni` (vecchio roster docenti-materie,
+  sostituito da Docenti ↔ Materie).
+- *Tastiera*: i menu a tendina (Attività, Orario, Impostazioni, utente)
+  erano `<a>` senza `href`, irraggiungibili col Tab — ora si aprono con
+  Invio/Spazio/Freccia giù, Esc chiude e riporta il focus, `aria-expanded`
+  aggiornato. Contorno di focus visibile (`:focus-visible`) su link e
+  pulsanti, collegamento "Vai al contenuto" e `<main>` come contenitore.
+
+**Verifica**: 7 nuovi test (`tests/test_navigazione.py`: ogni voce punta a
+un endpoint esistente, menu e funzioni prima nascoste presenti, voce
+attiva e percorso, `/ricerca` trova le funzioni anche senza accenti,
+filtro per ruolo DS/segreteria, scorciatoie diverse per ruolo), suite
+completa 625 verdi. Aperte via HTTP tutte le pagine dell'elenco su un
+database nuovo in /tmp (200, tranne i redirect attesi: Permessi per il
+DSGA, Import banca ore senza il file Excel; Backup escluso perché è un
+download), e provati menu, Ctrl+K, frecce/Invio e Tab in Chromium
+headless a 1400px e 390px. Sessione cloud Linux, nessun `database.db`
+reale presente né toccato.
+
 ## Sessione 69 addendum 38 — Alternativa IRC: dividere un gruppo numeroso fra più docenti
 
 Roberto: con l'orario definitivo i gruppi potranno essere fino a 38 e un

@@ -85,6 +85,12 @@
             <span>{{ icon('arrow') }}</span>
         </a>
         {% endif %}
+        {% if puo_vedere('assegnazioni') %}
+        <a href="{{ url_for('assegnazioni.index') }}" class="imp-link">
+            {{ icon('grid-alt') }} Assegnazioni classi
+            <span>{{ icon('arrow') }}</span>
+        </a>
+        {% endif %}
         {% if puo_vedere('incarichi') %}
         <a href="{{ url_for('incarichi.index') }}" class="imp-link">
             {{ icon('star') }} Incarichi docenti

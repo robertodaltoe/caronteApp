@@ -482,6 +482,54 @@ def create_app(avvio_con_reloader=True):
         from models.permesso_ruolo import livello_per
         return livello_per(u.ruolo, sezione) == 'visualizza'
 
+    @app.context_processor
+    def _inject_navigazione():
+        """Dati di navigazione per base.html e Dashboard, da un unico
+        elenco (modules/navigazione.py): menu Impostazioni a gruppi,
+        ricerca delle funzioni (Ctrl+K), voce di navbar attiva, percorso
+        sopra il contenuto, scorciatoie per ruolo."""
+        vuoto = {'nav_funzioni': [], 'nav_menu_impostazioni': [], 'nav_area': None,
+                 'nav_percorso': None, 'nav_scorciatoie': []}
+        from flask import g, request, url_for
+        u = getattr(g, 'utente', None)
+        if u is None:
+            return vuoto
+        try:
+            from modules import navigazione as nav
+            voci = nav.funzioni_visibili(u, puo_vedere, sola_lettura)
+            voci_url = []
+            for v in voci:
+                try:
+                    voci_url.append(dict(v, url=url_for(v['endpoint'])))
+                except Exception:
+                    continue
+            endpoint = request.endpoint or ''
+            percorso = None
+            voce = nav.voce_per_endpoint(endpoint)
+            if voce and endpoint != 'dashboard.index':
+                url_voce = next((x['url'] for x in voci_url if x['endpoint'] == voce['endpoint']), None)
+                percorso = {
+                    'gruppo': nav.GRUPPI_LABEL.get(voce['gruppo']),
+                    'label': voce['label'],
+                    # Link alla pagina principale solo se non ci si è già sopra.
+                    'url': url_voce if voce['endpoint'] != endpoint else None,
+                }
+            return {
+                'nav_funzioni': [{'l': x['label'], 'u': x['url'], 'g': nav.GRUPPI_LABEL.get(x['gruppo'], ''),
+                                  'k': nav.normalizza(x['label'] + ' ' + nav.GRUPPI_LABEL.get(x['gruppo'], '')
+                                                      + ' ' + x.get('parole', ''))}
+                                 for x in voci_url],
+                'nav_menu_impostazioni': nav.menu_impostazioni(voci_url),
+                'nav_area': nav.area_navbar(endpoint),
+                'nav_percorso': percorso,
+                'nav_scorciatoie': nav.scorciatoie(u, voci_url),
+            }
+        except Exception:
+            # La navigazione è un aiuto: un errore qui non deve mai
+            # impedire di aprire una pagina.
+            app.logger.exception('navigazione: errore nel calcolo dei menu')
+            return vuoto
+
     @app.template_global()
     def label_motivo_assenza(motivo):
         """Etichetta di un motivo Assenza per l'utente corrente — i motivi

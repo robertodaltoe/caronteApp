@@ -62,6 +62,30 @@
 </div>
 {% endif %}
 
+{# Scorciatoie per ruolo (Sessione 71, modules/navigazione.py::
+   SCORCIATOIE_RUOLO): le sezioni che quel ruolo apre più spesso,
+   filtrate dai permessi — la Dashboard è la stessa per tutti, ma DS e
+   segreteria di solito non partono dalle supplenze del giorno. #}
+{% if nav_scorciatoie %}
+<div class="scorciatoie-ruolo" role="navigation" aria-label="Scorciatoie">
+    <span class="scorciatoie-titolo">Le tue sezioni</span>
+    {% for v in nav_scorciatoie %}
+    <a href="{{ v.url }}" class="scorciatoia">{{ icon(v.icona) }} {{ v.label }}</a>
+    {% endfor %}
+</div>
+<style>
+.scorciatoie-ruolo { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    margin:0 0 18px; padding:10px 12px; background:white; border:1px solid #e5eaf0;
+    border-radius:10px; }
+.scorciatoie-titolo { font-size:.72rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--grigio); margin-right:6px; }
+.scorciatoia { display:inline-flex; align-items:center; gap:6px; padding:6px 11px;
+    border-radius:7px; background:var(--blu-light); color:var(--blu); font-size:.84rem;
+    font-weight:600; text-decoration:none; }
+.scorciatoia:hover { background:#e5eaf0; }
+</style>
+{% endif %}
+
 <!-- HEADER -->
 <div style="display:flex; align-items:center; justify-content:space-between;
             margin-bottom:20px; flex-wrap:wrap; gap:12px;">
@@ -107,6 +131,12 @@
            class="btn btn-sm" style="background:var(--viola); color:white;">
             {{ icon('calendar') }} Agenda
         </a>
+        {% if puo_vedere('cambi') %}
+        <a href="{{ url_for('cambi.lista') }}"
+           class="btn btn-sm" style="background:#e5eaf0; color:var(--blu);">
+            {{ icon('swap') }} Cambi turno
+        </a>
+        {% endif %}
     </div>
 </div>
 

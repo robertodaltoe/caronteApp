@@ -82,5 +82,23 @@ def index():
 
         n_totale = sum(len(v) for v in risultati.values())
 
+    # Pagine/funzioni dell'app che corrispondono (Sessione 71): chi
+    # scrive "aule" o "lettere incarico" trova anche la pagina, non solo
+    # i dati — stesso elenco del menu "Vai a" in navbar.
+    funzioni = []
+    if len(q) >= 2:
+        from flask import current_app, g, url_for
+        from modules import navigazione as nav
+        gl = current_app.jinja_env.globals
+        voci = nav.funzioni_visibili(getattr(g, 'utente', None),
+                                     gl['puo_vedere'], gl['sola_lettura'])
+        for v in nav.cerca_funzioni(q, voci):
+            try:
+                funzioni.append(dict(v, url=url_for(v['endpoint']),
+                                     gruppo_label=nav.GRUPPI_LABEL.get(v['gruppo'], '')))
+            except Exception:
+                continue
+        n_totale += len(funzioni)
+
     return render_template('ricerca/risultati.html',
-        q=q, risultati=risultati, n_totale=n_totale)
+        q=q, risultati=risultati, n_totale=n_totale, funzioni=funzioni)
