@@ -27,6 +27,8 @@
         <th style="padding:8px;">Docente</th>
         <th style="padding:8px; text-align:center;">N. incarichi</th>
         <th style="padding:8px; text-align:right;">Totale</th>
+        <th style="padding:8px; text-align:center;">Liquidati</th>
+        <th style="padding:8px;">Protocollo lettera</th>
         <th style="padding:8px;"></th>
     </tr></thead>
     <tbody>
@@ -35,6 +37,21 @@
             <td style="padding:8px; font-weight:600;">{{ r.docente.cognome }} {{ r.docente.nome or '' }}</td>
             <td style="padding:8px; text-align:center;">{{ r.n_incarichi }}</td>
             <td style="padding:8px; text-align:right;">{{ '%.2f'|format(r.totale) }} €</td>
+            <td style="padding:8px; text-align:center;">
+                {% if r.n_liquidati %}<span class="badge-tipo" style="background:var(--verde-bg); color:var(--verde);">{{ r.n_liquidati }}/{{ r.n_incarichi }}</span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="padding:8px;">
+                <form method="post" action="{{ url_for('contrattazione.lettera_protocollo', id_docente=r.docente.id) }}"
+                      style="display:flex; gap:4px; align-items:center;">
+                    <input type="hidden" name="anno" value="{{ anno }}">
+                    <input type="text" name="numero_protocollo" placeholder="N. prot." style="padding:3px; width:80px;"
+                           value="{{ r.protocollo.numero_protocollo if r.protocollo else '' }}">
+                    <input type="date" name="data_protocollo" style="padding:3px; width:130px;"
+                           value="{{ r.protocollo.data_protocollo.isoformat() if r.protocollo and r.protocollo.data_protocollo else '' }}">
+                    <button type="submit" class="btn btn-sm" style="background:#e5eaf0;" title="Salva protocollo">{{ icon('check') }}</button>
+                </form>
+            </td>
             <td style="padding:8px; white-space:nowrap;">
                 <a href="{{ url_for('contrattazione.lettera_genera', id_docente=r.docente.id, anno=anno) }}"
                    class="btn btn-sm" target="_blank">{{ icon('print') }} PDF</a>

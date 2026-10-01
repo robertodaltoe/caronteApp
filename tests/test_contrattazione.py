@@ -121,3 +121,58 @@ def test_catalogo_importa_salta_nomi_duplicati(app, db_session):
         assert r.status_code == 302
         assert TipoIncaricoContrattazione.query.count() == 1
         assert TipoIncaricoContrattazione.query.first().testo_riferimento == 'vecchio testo'
+
+
+def test_liquida_non_sovrascrive_il_previsto(app, db_session):
+    from routes.contrattazione import contrattazione_bp
+    if 'contrattazione' not in app.blueprints:
+        app.register_blueprint(contrattazione_bp)
+
+    with app.app_context():
+        f = FondoContrattazione(anno_scol='2026-2027', nome='FIS')
+        db.session.add(f)
+        db.session.flush()
+        cap = CapitoloContrattazione(id_fondo=f.id, nome='PCTO', importo_assegnato=1000)
+        db.session.add(cap)
+        db.session.flush()
+        d = _docente('BIANCHI')
+        asg = AssegnazioneContrattazione(id_capitolo=cap.id, id_docente=d.id,
+                                          descrizione='Tutor', importo=300, stato='comunicato')
+        db.session.add(asg)
+        db.session.commit()
+
+        c = app.test_client()
+        r = c.post(f'/contrattazione/assegnazione/{asg.id}/liquida', data={'importo_liquidato': '350'})
+        assert r.status_code == 302
+
+        db.session.refresh(asg)
+        assert asg.importo == 300          # il previsto resta inalterato
+        assert asg.importo_liquidato == 350
+        assert asg.stato == 'liquidato'
+        assert asg.data_liquidazione is not None
+        assert cap.totale_assegnato_docenti == 350  # usa il liquidato, non il previsto
+
+
+def test_protocollo_lettera_una_riga_per_docente_anno(app, db_session):
+    from routes.contrattazione import contrattazione_bp
+    from models.contrattazione import LetteraIncaricoProtocollo
+    if 'contrattazione' not in app.blueprints:
+        app.register_blueprint(contrattazione_bp)
+
+    with app.app_context():
+        d = _docente('VERDI')
+        c = app.test_client()
+        r = c.post(f'/contrattazione/lettere/{d.id}/protocollo',
+                   data={'anno': '2026-2027', 'numero_protocollo': '42',
+                         'data_protocollo': '2026-10-01'})
+        assert r.status_code == 302
+        assert LetteraIncaricoProtocollo.query.count() == 1
+
+        # Riaggiornare lo stesso docente/anno aggiorna la riga, non ne crea una seconda.
+        r = c.post(f'/contrattazione/lettere/{d.id}/protocollo',
+                   data={'anno': '2026-2027', 'numero_protocollo': '43',
+                         'data_protocollo': '2026-10-02'})
+        assert r.status_code == 302
+        assert LetteraIncaricoProtocollo.query.count() == 1
+        riga = LetteraIncaricoProtocollo.query.first()
+        assert riga.numero_protocollo == '43'

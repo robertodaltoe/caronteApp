@@ -95,7 +95,12 @@ class CapitoloContrattazione(db.Model):
 
     @property
     def totale_assegnato_docenti(self):
-        return round(sum(a.importo or 0 for a in self.assegnazioni), 2)
+        """Usa l'importo liquidato dove già noto (più vicino alla spesa
+        reale), altrimenti il previsto — così il saldo del capitolo
+        riflette le liquidazioni via via che avvengono."""
+        return round(sum(
+            (a.importo_liquidato if a.importo_liquidato is not None else a.importo) or 0
+            for a in self.assegnazioni), 2)
 
     @property
     def saldo_residuo(self):
@@ -125,8 +130,20 @@ class AssegnazioneContrattazione(db.Model):
     id_tipo_incarico = db.Column(db.Integer, db.ForeignKey('contrattazione_tipi_incarico.id'), nullable=True)
     descrizione   = db.Column(db.String(200), nullable=False)   # es. "Collaboratore del DS", "Tutor PCTO 4ALSP"
     unita         = db.Column(db.Float, nullable=True)          # es. n. ore, n. unità — solo informativo
+    # Importo PREVISTO, quello comunicato nella lettera di incarico —
+    # non viene mai sovrascritto in silenzio quando si liquida (vedi
+    # importo_liquidato sotto): Roberto lo ha chiesto esplicitamente,
+    # "potrebbe subire variazioni" e la differenza deve restare
+    # visibile, non persa riscrivendo lo stesso campo.
     importo       = db.Column(db.Float, nullable=False, default=0.0)
     stato         = db.Column(db.String(20), nullable=False, default='previsto')
+    # Valorizzati solo quando l'incarico passa a 'liquidato' (azione
+    # dedicata "Liquida", vedi routes/contrattazione.py::assegnazione_liquida):
+    # l'importo definitivo, se diverso da quello previsto, e quando.
+    # Da qui nascera' il documento "Retribuzione fondi MOF" (per ora non
+    # ancora generato: manca il modello che Roberto fornira').
+    importo_liquidato  = db.Column(db.Float, nullable=True)
+    data_liquidazione  = db.Column(db.Date, nullable=True)
     note          = db.Column(db.Text, nullable=True)
     creato_il     = db.Column(db.DateTime, default=datetime.utcnow)
     creato_da     = db.Column(db.String(80), nullable=True)
@@ -201,3 +218,29 @@ class ImpostazioniLetteraContrattazione(db.Model):
     scadenza_relazione       = db.Column(db.String(100), nullable=True)   # es. "10 maggio"
     nota_valorizzazione      = db.Column(db.Text, nullable=True)
     aggiornato_il            = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LetteraIncaricoProtocollo(db.Model):
+    """Numero/data di protocollo della lettera di incarico CUMULATIVA di
+    un docente per un anno scolastico — Roberto: "dobbiamo tenere
+    traccia dei numeri di protocollo delle lettere di assegnazione in
+    seguito alla loro elaborazione". Una riga per (docente, anno): la
+    lettera generata da routes/contrattazione.py::lettera_genera resta
+    sempre una sola per persona per anno (cumulativa di tutti i suoi
+    incarichi), quindi un solo protocollo la riguarda."""
+    __tablename__ = 'contrattazione_lettere_protocollo'
+
+    id                 = db.Column(db.Integer, primary_key=True)
+    id_docente         = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False, index=True)
+    anno_scol          = db.Column(db.String(9), nullable=False)
+    numero_protocollo  = db.Column(db.String(40), nullable=True)
+    data_protocollo    = db.Column(db.Date, nullable=True)
+    note               = db.Column(db.Text, nullable=True)
+    creato_il          = db.Column(db.DateTime, default=datetime.utcnow)
+    aggiornato_il      = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    docente = db.relationship('Docente')
+
+    __table_args__ = (
+        db.UniqueConstraint('id_docente', 'anno_scol', name='uq_contrattazione_lettera_protocollo'),
+    )

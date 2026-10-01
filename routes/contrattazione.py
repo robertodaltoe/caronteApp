@@ -18,10 +18,12 @@ import io
 import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
+from datetime import date
 from models.contrattazione import (
     FondoContrattazione, CapitoloContrattazione, AssegnazioneContrattazione,
     StoricoSpostamentoCapitolo, STATI_ASSEGNAZIONE, STATI_ASSEGNAZIONE_LABEL,
     TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione,
+    LetteraIncaricoProtocollo,
 )
 from models.docente import Docente
 from config_anno import get_anno_corrente
@@ -168,6 +170,31 @@ def assegnazione_elimina(id):
     db.session.delete(asg)
     db.session.commit()
     flash('Assegnazione eliminata.', 'warning')
+    return redirect(url_for('contrattazione.index', anno=anno))
+
+
+@contrattazione_bp.route('/contrattazione/assegnazione/<int:id>/liquida', methods=['POST'])
+def assegnazione_liquida(id):
+    """Registra l'importo DEFINITIVO di un incarico, senza sovrascrivere
+    il previsto (quello già comunicato in lettera) — Roberto: l'importo
+    previsto "potrebbe subire variazioni", la differenza deve restare
+    visibile. Da qui nascerà (quando ci sarà il modello) il documento
+    'Retribuzione fondi MOF'."""
+    asg = AssegnazioneContrattazione.query.get_or_404(id)
+    anno = asg.capitolo.fondo.anno_scol
+    importo_liq = _float(request.form.get('importo_liquidato'), None)
+    if importo_liq is None:
+        flash('Indica l\'importo liquidato.', 'error')
+        return redirect(url_for('contrattazione.index', anno=anno))
+    asg.importo_liquidato = importo_liq
+    asg.data_liquidazione = date.today()
+    asg.stato = 'liquidato'
+    db.session.commit()
+    diff = round(importo_liq - asg.importo, 2)
+    msg = f'"{asg.descrizione}" ({asg.docente.cognome}) liquidato a {importo_liq:.2f}€.'
+    if abs(diff) > 0.004:
+        msg += f' Differenza rispetto al previsto: {diff:+.2f}€.'
+    flash(msg, 'success')
     return redirect(url_for('contrattazione.index', anno=anno))
 
 
@@ -340,12 +367,36 @@ def lettere_index():
              .join(FondoContrattazione, CapitoloContrattazione.id_fondo == FondoContrattazione.id)
              .filter(FondoContrattazione.anno_scol == anno)
              .distinct().order_by(Docente.cognome).all())
+    protocolli = {p.id_docente: p for p in LetteraIncaricoProtocollo.query.filter_by(anno_scol=anno).all()}
     dettaglio = []
     for d in righe:
         assegnazioni = _assegnazioni_docente(d.id, anno)
         dettaglio.append({'docente': d, 'n_incarichi': len(assegnazioni),
-                          'totale': round(sum(a.importo for a in assegnazioni), 2)})
+                          'totale': round(sum(a.importo for a in assegnazioni), 2),
+                          'n_liquidati': sum(1 for a in assegnazioni if a.stato == 'liquidato'),
+                          'protocollo': protocolli.get(d.id)})
     return render_template('contrattazione/lettere_index.html', dettaglio=dettaglio, anno=anno)
+
+
+@contrattazione_bp.route('/contrattazione/lettere/<int:id_docente>/protocollo', methods=['POST'])
+def lettera_protocollo(id_docente):
+    """Registra prot./data della lettera di incarico cumulativa di un
+    docente per l'anno, DOPO che è stata elaborata (Roberto: "dobbiamo
+    tenere traccia dei numeri di protocollo delle lettere di
+    assegnazione")."""
+    anno = request.form.get('anno') or get_anno_corrente()
+    riga = LetteraIncaricoProtocollo.query.filter_by(id_docente=id_docente, anno_scol=anno).first()
+    numero = request.form.get('numero_protocollo', '').strip()
+    data_s = request.form.get('data_protocollo', '').strip()
+    if riga is None:
+        riga = LetteraIncaricoProtocollo(id_docente=id_docente, anno_scol=anno)
+        db.session.add(riga)
+    riga.numero_protocollo = numero or None
+    riga.data_protocollo = date.fromisoformat(data_s) if data_s else None
+    riga.note = request.form.get('note', '').strip() or None
+    db.session.commit()
+    flash('Protocollo registrato.', 'success')
+    return redirect(url_for('contrattazione.lettere_index', anno=anno))
 
 
 def _assegnazioni_docente(id_docente, anno_scol):

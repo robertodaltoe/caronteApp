@@ -108,7 +108,8 @@
                     <th style="padding:4px 6px;">Docente</th>
                     <th style="padding:4px 6px;">Incarico</th>
                     <th style="padding:4px 6px; text-align:right;">Unità</th>
-                    <th style="padding:4px 6px; text-align:right;">Importo</th>
+                    <th style="padding:4px 6px; text-align:right;">Previsto</th>
+                    <th style="padding:4px 6px; text-align:right;">Liquidato</th>
                     <th style="padding:4px 6px;">Stato</th>
                     <th style="padding:4px 6px;"></th>
                 </tr>
@@ -125,6 +126,12 @@
                     </td>
                     <td style="padding:4px 6px; text-align:right;">{{ a.unita if a.unita is not none else '—' }}</td>
                     <td style="padding:4px 6px; text-align:right; font-weight:600;">{{ '%.2f'|format(a.importo) }}€</td>
+                    <td style="padding:4px 6px; text-align:right;">
+                        {% if a.importo_liquidato is not none %}
+                        <span style="font-weight:600; color:{{ 'var(--rosso)' if (a.importo_liquidato - a.importo)|abs > 0.004 else 'var(--verde)' }};">
+                            {{ '%.2f'|format(a.importo_liquidato) }}€</span>
+                        {% else %}—{% endif %}
+                    </td>
                     <td style="padding:4px 6px;">
                         <span class="badge-tipo" style="background:#e5eaf0;">{{ stati_label.get(a.stato, a.stato) if stati_label is defined else a.stato }}</span>
                     </td>
@@ -134,6 +141,9 @@
                         <button type="button" title="Sposta in un altro capitolo" style="background:none; border:none; cursor:pointer; color:var(--bronzo);"
                                 onclick="document.getElementById('sposta-{{ a.id }}').style.display='flex'">
                             {{ icon('swap') }}</button>
+                        <button type="button" title="Liquida (importo definitivo)" style="background:none; border:none; cursor:pointer; color:var(--verde);"
+                                onclick="document.getElementById('liquida-{{ a.id }}').style.display='flex'">
+                            {{ icon('check') }}</button>
                         <form method="post" action="{{ url_for('contrattazione.assegnazione_elimina', id=a.id) }}"
                               style="display:inline; margin:0;" onsubmit="return confirm('Eliminare questa assegnazione?')">
                             <button type="submit" style="background:none; border:none; cursor:pointer; color:var(--rosso);">{{ icon('close') }}</button>
@@ -151,6 +161,15 @@
                                 </select>
                                 <input type="text" name="motivo" placeholder="Motivo (facoltativo)" style="padding:3px; width:140px;">
                                 <button type="submit" class="btn btn-sm">{{ icon('check') }}</button>
+                            </form>
+                        </div>
+                        <div id="liquida-{{ a.id }}" style="display:none; gap:6px; margin-top:6px; align-items:center;">
+                            <form method="post" action="{{ url_for('contrattazione.assegnazione_liquida', id=a.id) }}"
+                                  style="display:flex; gap:6px; align-items:center;">
+                                <input type="text" name="importo_liquidato" placeholder="Importo liquidato"
+                                       value="{{ a.importo_liquidato if a.importo_liquidato is not none else a.importo }}"
+                                       style="padding:3px; width:110px;">
+                                <button type="submit" class="btn btn-sm" style="background:var(--verde-bg); color:var(--verde);">{{ icon('check') }}</button>
                             </form>
                         </div>
                     </td>
