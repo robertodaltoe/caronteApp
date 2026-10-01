@@ -192,6 +192,26 @@
 {% endif %}
 
 {# ── ISTITUTO ────────────────────────────────────────────────────── #}
+{% if puo_vedere('contrattazione') %}
+<div class="sez-card">
+    <div class="sez-title">{{ icon('coin') }} Contrattazione integrativa</div>
+    <div class="sez-desc">Economie, fondi (FIS, FMOF...), capitoli, assegnazioni ai docenti e al
+        personale ATA, lettere di incarico — solo segreteria e DSGA.</div>
+    <a href="{{ url_for('contrattazione.index') }}" class="imp-link">
+        {{ icon('coin') }} Fondi e capitoli <span>{{ icon('arrow') }}</span>
+    </a>
+    <a href="{{ url_for('contrattazione.lettere_index') }}" class="imp-link">
+        {{ icon('mail') }} Lettere di incarico <span>{{ icon('arrow') }}</span>
+    </a>
+    <a href="{{ url_for('contrattazione.catalogo') }}" class="imp-link">
+        {{ icon('list') }} Catalogo incarichi <span>{{ icon('arrow') }}</span>
+    </a>
+    <a href="{{ url_for('contrattazione.ata_lista') }}" class="imp-link">
+        {{ icon('person') }} Personale ATA <span>{{ icon('arrow') }}</span>
+    </a>
+</div>
+{% endif %}
+
 {% if puo_vedere('istituto') or puo_vedere('tipi_incarico') %}
 <div class="sez-card">
     <div class="sez-title">{{ icon('building') }} Istituto</div>

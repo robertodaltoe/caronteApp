@@ -426,9 +426,11 @@ def create_app(avvio_con_reloader=True):
         _migra_indici_fk_calde()
         _seed_dipartimenti_materie()
         _seed_sospensioni()
-        from models.permesso_ruolo import _seed_permessi_ruolo, _migra_split_sezioni_permessi
+        from models.permesso_ruolo import (_seed_permessi_ruolo, _migra_split_sezioni_permessi,
+            _migra_contrattazione_solo_segreteria)
         _seed_permessi_ruolo()
         _migra_split_sezioni_permessi()
+        _migra_contrattazione_solo_segreteria()
         _backup_automatico(base_dir)
         _pulizia_log(base_dir)
 

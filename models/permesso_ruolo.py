@@ -133,7 +133,10 @@ DEFAULT_MATRICE = {
     'progetti_fse':            {'ds': 'modifica',   'collaboratore': 'modifica',   'segreteria': 'modifica'},
     'sostituzioni':            {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'esclusa'},
     'alternativa_irc':         {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
-    'contrattazione':          {'ds': 'visualizza', 'collaboratore': 'esclusa',    'segreteria': 'modifica'},
+    # Solo segreteria (e DSGA, che ha sempre accesso pieno a prescindere
+    # da questa matrice) — Roberto: niente ds/collaboratore qui, e non
+    # in navbar ma dentro Impostazioni (vedi templates/impostazioni/index.html).
+    'contrattazione':          {'ds': 'esclusa',    'collaboratore': 'esclusa',    'segreteria': 'modifica'},
 }
 
 # Sezioni nate da uno scorporo di una sezione più ampia (Sessione 53):
@@ -317,6 +320,23 @@ def _migra_split_sezioni_permessi():
         db.session.commit()
         invalida_cache()
         print("Migrazione: sezioni permessi scorporate (Sessione 53) popolate.")
+
+
+def _migra_contrattazione_solo_segreteria():
+    """Correzione del default iniziale di 'contrattazione': seminato per
+    errore con 'ds': 'visualizza' (quindi visibile anche in navbar al
+    Dirigente), mentre Roberto ha chiesto esplicitamente che resti
+    visibile solo a segreteria (e DSGA, che ha sempre accesso pieno a
+    prescindere da questa matrice) — niente navbar, solo dentro
+    Impostazioni. Aggiorna la riga SOLO se è ancora al vecchio default
+    mai toccato a mano: se il DS l'avesse già cambiata via
+    /impostazioni/permessi, quel valore resta quello che ha scelto."""
+    riga = PermessoRuolo.query.filter_by(ruolo='ds', sezione='contrattazione').first()
+    if riga and riga.livello == 'visualizza':
+        riga.livello = 'esclusa'
+        db.session.commit()
+        invalida_cache()
+        print("Migrazione: 'contrattazione' tolta dalla vista del Dirigente (resta a segreteria/DSGA).")
 
 
 def invalida_cache():
