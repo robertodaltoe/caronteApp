@@ -40,3 +40,7 @@ nohup.out
 .vscode/
 .idea/
 *.swp
+
+# Generati da installa_server_windows.ps1 nella cartella del server
+avvia_server_windows.bat
+aggiorna_e_riavvia_windows.ps1

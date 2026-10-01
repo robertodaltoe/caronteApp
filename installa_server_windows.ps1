@@ -229,7 +229,7 @@ $aggiornaPath = Join-Path $Cartella "aggiorna_e_riavvia_windows.ps1"
 @'
 param([string]$Cartella = "C:\CaronteApp")
 $log = Join-Path $Cartella "aggiornamento.log"
-function Scrivi($t) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $t" | Add-Content -Path $log }
+function Scrivi($t) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $t" | Add-Content -Path $log -Encoding UTF8 }
 
 Push-Location $Cartella
 try {
@@ -239,15 +239,46 @@ try {
     if ($locale -eq $remoto) {
         exit 0   # nessuna novita': niente da scrivere nel log ad ogni giro
     }
-    if (git status --porcelain) {
-        Scrivi "Trovate modifiche locali non previste in $Cartella: aggiornamento SALTATO per sicurezza. Verificare a mano."
+    # Solo i file gia' tracciati da git contano come "modifiche locali":
+    # questo stesso script e avvia_server_windows.bat vengono generati
+    # dall'installatore dentro la cartella e risulterebbero "file nuovi"
+    # (??), bloccando l'aggiornamento a ogni giro per sempre (era il
+    # motivo per cui il server non si aggiornava mai da solo).
+    if (git status --porcelain --untracked-files=no) {
+        Scrivi "Trovate modifiche locali non previste in ${Cartella}: aggiornamento SALTATO per sicurezza. Verificare a mano."
         exit 1
     }
     Scrivi "Nuova versione disponibile ($($locale.Substring(0,7)) -> $($remoto.Substring(0,7))): aggiorno."
-    git pull --ff-only *>> $log
-    & "venv\Scripts\python.exe" -m pip install -r requirements.txt --quiet
+    # Output di git passato da Scrivi (stessa codifica del resto del log:
+    # con *>> Windows PowerShell scriveva in UTF-16 e il log diventava
+    # illeggibile).
+    git pull --ff-only 2>&1 | ForEach-Object { Scrivi "  git: $_" }
+    if ($LASTEXITCODE -ne 0) {
+        Scrivi "git pull non riuscito: server NON riavviato, resta sulla versione precedente."
+        exit 1
+    }
+    & "venv\Scripts\python.exe" -m pip install -r requirements.txt --quiet 2>&1 | Out-Null
+
+    # Riavvio. Stop-ScheduledTask chiude solo powershell.exe: il ciclo
+    # cmd di avvia_server_windows.bat e python.exe possono sopravvivere
+    # e tenere occupata la porta 5002, cosi' il nuovo avvio fallisce.
+    # Prima si ferma il ciclo cmd (altrimenti rilancerebbe python), poi
+    # il processo in ascolto sulla 5002 (il processo padre del reloader
+    # Werkzeug esce da solo quando il figlio termina).
     Stop-ScheduledTask -TaskName "CaronteApp Server" -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
+    Get-CimInstance Win32_Process -Filter "Name = 'cmd.exe'" |
+        Where-Object { $_.CommandLine -like '*avvia_server_windows.bat*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    for ($i = 0; $i -lt 15; $i++) {
+        $pids = Get-NetTCPConnection -LocalPort 5002 -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+        if (-not $pids) { break }
+        $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+        Start-Sleep -Seconds 1
+    }
+    if (Get-NetTCPConnection -LocalPort 5002 -State Listen -ErrorAction SilentlyContinue) {
+        Scrivi "La porta 5002 e' ancora occupata dopo l'arresto: il riavvio potrebbe non riuscire. Verificare a mano."
+    }
     Start-ScheduledTask -TaskName "CaronteApp Server"
     Scrivi "Codice aggiornato e server riavviato."
 } catch {
@@ -264,7 +295,7 @@ if (Get-ScheduledTask -TaskName $nomeTaskUpdate -ErrorAction SilentlyContinue) {
     Unregister-ScheduledTask -TaskName $nomeTaskUpdate -Confirm:$false
 }
 
-$azioneUpd   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$aggiornaPath`" -Cartella `"$Cartella`"" -WorkingDirectory $Cartella
+$azioneUpd   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$aggiornaPath`" -Cartella `"$Cartella`"" -WorkingDirectory $Cartella
 $triggerUpd  = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration (New-TimeSpan -Days 3650)
 $principalUpd = New-ScheduledTaskPrincipal -UserId $utenteServer -LogonType Interactive -RunLevel Highest
 
