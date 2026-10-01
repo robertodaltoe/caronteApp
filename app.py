@@ -408,7 +408,8 @@ def create_app(avvio_con_reloader=True):
         from models.progetto_fse import (ProgettoFSE, ModuloFSE, IncaricoFSE,  # noqa
             SessioneFSE, PresenzaFSE, DocumentoFSE)
         from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
-            AssegnazioneContrattazione, StoricoSpostamentoCapitolo)
+            AssegnazioneContrattazione, StoricoSpostamentoCapitolo,
+            TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione)
         from models.sostituzione_docente import (SostituzioneDocente,  # noqa
             SostituzioneOrarioSlot, SostituzioneEventoSwap)
         from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
@@ -643,6 +644,7 @@ def _auto_migrate():
         ('orario_docenti', 'data_inizio_validita', 'DATE', None),
         ('orario_docenti', 'data_fine_validita',   'DATE', None),
         ('indisponibilita', 'genera_supplenza', 'BOOLEAN', 0),
+        ('contrattazione_assegnazioni', 'id_tipo_incarico', 'INTEGER', None),
     ]
 
     with db.engine.connect() as conn:

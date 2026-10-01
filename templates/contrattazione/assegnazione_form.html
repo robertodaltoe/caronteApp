@@ -26,8 +26,19 @@
         </select>
     </div>
     <div class="form-group">
+        <label>Tipo di incarico (catalogo) <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— facoltativo, serve a riportare il testo descrittivo nella lettera</span></label>
+        <select id="sel-tipo-incarico" name="id_tipo_incarico" style="width:100%;" onchange="autofillDescrizione()">
+            <option value="">— nessuno / testo libero —</option>
+            {% for v in catalogo %}
+            <option value="{{ v.id }}" data-nome="{{ v.nome }}"
+                    {% if asg and asg.id_tipo_incarico == v.id %}selected{% endif %}>
+                {{ v.numero_riferimento ~ ' — ' if v.numero_riferimento else '' }}{{ v.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
         <label>Descrizione dell'incarico *</label>
-        <input type="text" name="descrizione" required value="{{ asg.descrizione if asg else '' }}"
+        <input type="text" id="inp-descrizione" name="descrizione" required value="{{ asg.descrizione if asg else '' }}"
                placeholder="Es. Collaboratore del DS, Tutor PCTO 4ALSP" style="width:100%;">
     </div>
     <div class="form-group">
@@ -69,5 +80,16 @@
     </ul>
 </div>
 {% endif %}
+
+<script>
+function autofillDescrizione() {
+    const sel = document.getElementById('sel-tipo-incarico');
+    const inp = document.getElementById('inp-descrizione');
+    const opt = sel.options[sel.selectedIndex];
+    if (opt && opt.dataset.nome && !inp.value.trim()) {
+        inp.value = opt.dataset.nome;
+    }
+}
+</script>
 
 {% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Lettere di incarico{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('mail') }} Lettere di incarico — {{ anno }}</h1>
+        <p style="font-size:.82rem; color:var(--grigio); max-width:70ch;">
+            Una lettera per destinatario, cumulativa di tutti gli incarichi di contrattazione assegnati
+            nell'anno.
+        </p>
+    </div>
+    <a href="{{ url_for('contrattazione.impostazioni_lettera', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;">
+        {{ icon('gear') }} Impostazioni lettera</a>
+</div>
+<p style="font-size:.78rem; margin-bottom:14px;"><a href="{{ url_for('contrattazione.index', anno=anno) }}">← Torna alla contrattazione</a></p>
+
+{% if not dettaglio %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessun docente ha ancora un'assegnazione per l'anno {{ anno }}.
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:hidden;">
+<table style="width:100%; border-collapse:collapse;">
+    <thead><tr style="background:#f8fafc; text-align:left;">
+        <th style="padding:8px;">Docente</th>
+        <th style="padding:8px; text-align:center;">N. incarichi</th>
+        <th style="padding:8px; text-align:right;">Totale</th>
+        <th style="padding:8px;"></th>
+    </tr></thead>
+    <tbody>
+    {% for r in dettaglio %}
+        <tr style="border-top:1px solid #f1f3f5;">
+            <td style="padding:8px; font-weight:600;">{{ r.docente.cognome }} {{ r.docente.nome or '' }}</td>
+            <td style="padding:8px; text-align:center;">{{ r.n_incarichi }}</td>
+            <td style="padding:8px; text-align:right;">{{ '%.2f'|format(r.totale) }} €</td>
+            <td style="padding:8px; white-space:nowrap;">
+                <a href="{{ url_for('contrattazione.lettera_genera', id_docente=r.docente.id, anno=anno) }}"
+                   class="btn btn-sm" target="_blank">{{ icon('print') }} PDF</a>
+                <a href="{{ url_for('contrattazione.lettera_genera', id_docente=r.docente.id, anno=anno, formato='docx') }}"
+                   class="btn btn-sm" style="background:#e5eaf0;">{{ icon('download') }} Word</a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -66,7 +66,8 @@ def app():
         from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
             AlternativaIrcDisponibilita, AlternativaIrcGruppo, AlternativaIrcGruppoClasse)
         from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
-            AssegnazioneContrattazione, StoricoSpostamentoCapitolo)
+            AssegnazioneContrattazione, StoricoSpostamentoCapitolo,
+            TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione)
         from models.indisponibilita_ricorrente import IndisponibilitaRicorrente  # noqa
         db.create_all()
         yield app

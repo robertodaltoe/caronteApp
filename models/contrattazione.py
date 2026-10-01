@@ -118,6 +118,11 @@ class AssegnazioneContrattazione(db.Model):
     id            = db.Column(db.Integer, primary_key=True)
     id_capitolo   = db.Column(db.Integer, db.ForeignKey('contrattazione_capitoli.id'), nullable=False, index=True)
     id_docente    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False, index=True)
+    # Riferimento al catalogo (models.TipoIncaricoContrattazione) per
+    # recuperare il testo descrittivo esteso nella lettera di incarico —
+    # nullable: un'assegnazione può restare solo testo libero se non c'è
+    # ancora una voce di catalogo corrispondente.
+    id_tipo_incarico = db.Column(db.Integer, db.ForeignKey('contrattazione_tipi_incarico.id'), nullable=True)
     descrizione   = db.Column(db.String(200), nullable=False)   # es. "Collaboratore del DS", "Tutor PCTO 4ALSP"
     unita         = db.Column(db.Float, nullable=True)          # es. n. ore, n. unità — solo informativo
     importo       = db.Column(db.Float, nullable=False, default=0.0)
@@ -128,6 +133,7 @@ class AssegnazioneContrattazione(db.Model):
     modificato_il = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     docente = db.relationship('Docente')
+    tipo_incarico = db.relationship('TipoIncaricoContrattazione')
     storico_spostamenti = db.relationship('StoricoSpostamentoCapitolo',
                                            backref='assegnazione', cascade='all, delete-orphan',
                                            lazy=True, order_by='StoricoSpostamentoCapitolo.data.desc()')
@@ -151,3 +157,47 @@ class StoricoSpostamentoCapitolo(db.Model):
 
     capitolo_precedente = db.relationship('CapitoloContrattazione', foreign_keys=[id_capitolo_precedente])
     capitolo_nuovo      = db.relationship('CapitoloContrattazione', foreign_keys=[id_capitolo_nuovo])
+
+
+class TipoIncaricoContrattazione(db.Model):
+    """Catalogo dei tipi di incarico, con il testo descrittivo esteso
+    ('mansionario') che la lettera di incarico riporta nella sezione
+    'Elenco descrittivo attività' — SOLO per gli incarichi davvero
+    assegnati a qualcuno, mai l'intero catalogo (Roberto: "nella tabella
+    dobbiamo riportare solo i punti relativi agli incarichi che
+    effettivamente andremo ad assegnare").
+
+    Gestito a mano dalla segreteria (anche con l'import massivo da testo
+    incollato, vedi routes/contrattazione.py::catalogo_importa): il
+    testo è materia legale/contrattuale, non lo si genera né lo si
+    trascrive in automatico da fonti esterne.
+    """
+    __tablename__ = 'contrattazione_tipi_incarico'
+
+    id                  = db.Column(db.Integer, primary_key=True)
+    numero_riferimento  = db.Column(db.String(20), nullable=True)   # es. "1", "2", "28 bis" — come nel modello del DS
+    nome                = db.Column(db.String(150), nullable=False)
+    testo_riferimento   = db.Column(db.Text, nullable=False)
+    attivo              = db.Column(db.Boolean, default=True)
+    creato_il           = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<TipoIncaricoContrattazione {self.nome}>'
+
+
+class ImpostazioniLetteraContrattazione(db.Model):
+    """Riferimenti normativi/anno che cambiano di anno in anno nella
+    lettera di incarico (VISTI, delibere del Collegio, scadenza della
+    relazione finale) — una riga per anno scolastico, compilata dalla
+    segreteria. I VISTI di legge nazionale (d.lgs. 165/2001, DPR
+    275/1999) non cambiano quasi mai: restano fissi nel template."""
+    __tablename__ = 'contrattazione_impostazioni_lettera'
+
+    id                       = db.Column(db.Integer, primary_key=True)
+    anno_scol                = db.Column(db.String(9), nullable=False, unique=True)
+    riferimento_ccnl         = db.Column(db.String(200), nullable=True)
+    riferimento_ptof         = db.Column(db.String(200), nullable=True)
+    riferimento_delibere     = db.Column(db.Text, nullable=True)
+    scadenza_relazione       = db.Column(db.String(100), nullable=True)   # es. "10 maggio"
+    nota_valorizzazione      = db.Column(db.Text, nullable=True)
+    aggiornato_il            = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

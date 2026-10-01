@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Lettera di incarico — {{ docente.cognome }} {{ docente.nome or '' }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+<style>
+    .elenco-descrittivo h2 { font-size: 11px; font-weight: 700; margin: 14px 0 3px; }
+    .elenco-descrittivo p { font-size: 10px; margin: 0 0 10px; white-space: pre-line; }
+    table.tabella-incarichi td.tot, table.tabella-incarichi th.tot { text-align: right; }
+    .tr-totale td { font-weight: 700; border-top: 2px solid #333 !important; }
+</style>
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+
+<div class="protocollo">Chiavenna, prot. e data (fare rif. alla segnatura)</div>
+<div style="margin: 10px 0 10px 50%;">Al/alla prof./ssa<br>{{ docente.cognome }} {{ docente.nome or '' }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> Lettera di incarico — a.s. {{ anno_scol }} — compensi previsti a carico della
+contrattazione integrativa d'istituto.
+</div>
+
+<div class="qualifica">IL DIRIGENTE SCOLASTICO</div>
+
+<p>VISTO il d.lgs. 165/2001, Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche;</p>
+<p>VISTO il DPR 275/1999, Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche;</p>
+<p>VISTO {{ impostazioni.riferimento_ccnl if impostazioni and impostazioni.riferimento_ccnl else 'il CCNL comparto "Istruzione e Ricerca" 2019-2021 del 18 gennaio 2024' }};</p>
+<p>VISTO il PTOF di Istituto {{ impostazioni.riferimento_ptof if impostazioni and impostazioni.riferimento_ptof else ('a.s. ' ~ anno_scol) }};</p>
+<p>VISTE {{ impostazioni.riferimento_delibere if impostazioni and impostazioni.riferimento_delibere else '[delibere del Collegio dei docenti da indicare]' }};</p>
+<p>CONSIDERATA la disponibilità ad assumere gli incarichi di seguito indicati per l'a.s. {{ anno_scol }};</p>
+
+<div class="atto">INCARICA</div>
+
+<p>la S.V. allo svolgimento, per l'a.s. {{ anno_scol }}, delle seguenti attività, per le quali si riporta il
+compenso previsto salvo diversa determinazione del contratto integrativo di istituto, della certificazione
+e della relativa clausola di salvaguardia:</p>
+
+<table class="tabella-incarichi">
+    <tr><th>Incarico</th><th style="width:70px;">Rif.</th><th class="tot" style="width:110px;">Compenso previsto</th></tr>
+    {% for a in assegnazioni %}
+    <tr>
+        <td>{{ a.descrizione }}</td>
+        <td class="num">{{ a.tipo_incarico.numero_riferimento if a.tipo_incarico and a.tipo_incarico.numero_riferimento else '—' }}</td>
+        <td class="tot">{{ '%.2f'|format(a.importo) }} €</td>
+    </tr>
+    {% endfor %}
+    <tr class="tr-totale"><td colspan="2">TOTALE</td><td class="tot">{{ '%.2f'|format(totale) }} €</td></tr>
+</table>
+
+{% if voci_descrittive %}
+<div class="elenco-descrittivo">
+    <p style="font-weight:700; margin-bottom:6px;">Elenco descrittivo attività</p>
+    {% for v in voci_descrittive %}
+    <h2>{% if v.numero_riferimento %}{{ v.numero_riferimento }}. {% endif %}{{ v.nome }}</h2>
+    <p>{{ v.testo_riferimento }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<p>La S.V., al termine dell'a.s. {{ anno_scol }}, entro il
+{{ impostazioni.scadenza_relazione if impostazioni and impostazioni.scadenza_relazione else '10 maggio' }},
+a seguito di circolare del Dirigente, presenterà dettagliata relazione sulla base dello schema di
+rendicontazione fornito dalla segreteria.</p>
+
+{% if impostazioni and impostazioni.nota_valorizzazione %}
+<p>{{ impostazioni.nota_valorizzazione }}</p>
+{% endif %}
+
+<p style="margin-top:10px; font-style:italic;">
+I compensi sopra indicati sono provvisori e potranno subire variazioni in esito alla conclusione della
+contrattazione integrativa d'istituto e all'assegnazione definitiva del Fondo per il Miglioramento
+dell'Offerta Formativa (FMOF).
+</p>
+
+<div class="firma">{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Firma digitale ai sensi del D.Lgs. 82/2005</div>
+
+</body>
+</html>

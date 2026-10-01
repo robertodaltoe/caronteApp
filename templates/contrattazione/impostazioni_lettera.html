@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Impostazioni lettera di incarico{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('gear') }} Impostazioni lettera — {{ anno }}</h1>
+<p style="font-size:.78rem; color:var(--grigio); margin-bottom:16px;">
+    <a href="{{ url_for('contrattazione.index', anno=anno) }}">← Torna alla contrattazione</a>
+</p>
+<p style="font-size:.82rem; color:var(--grigio); max-width:70ch; margin-bottom:16px;">
+    Riferimenti che cambiano ogni anno scolastico nella lettera di incarico (VISTI, delibere del
+    Collegio, scadenza della relazione finale). I riferimenti normativi nazionali (d.lgs. 165/2001,
+    DPR 275/1999) restano fissi e non vanno inseriti qui.
+</p>
+
+<form method="post" class="card" style="max-width:640px; padding:20px;">
+    <div class="form-group">
+        <label>CCNL di riferimento</label>
+        <input type="text" name="riferimento_ccnl" value="{{ imp.riferimento_ccnl or '' if imp else '' }}"
+               placeholder='il CCNL comparto "Istruzione e Ricerca" 2019-2021 del 18 gennaio 2024' style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>PTOF di riferimento</label>
+        <input type="text" name="riferimento_ptof" value="{{ imp.riferimento_ptof or '' if imp else '' }}"
+               placeholder="a.s. 2025-28" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Delibere del Collegio docenti *</label>
+        <textarea name="riferimento_delibere" rows="3" style="width:100%; box-sizing:border-box;"
+                  placeholder="le delibere n. 6 e 7 del 01/09/2025 del Collegio dei docenti sull'individuazione aree del PTOF e funzioni strumentali e sulla costituzione delle commissioni">{{ imp.riferimento_delibere or '' if imp else '' }}</textarea>
+        <div style="font-size:.74rem; color:var(--giallo); margin-top:4px;">
+            {{ icon('warning') }} Finché non lo compili, la lettera mostra un segnaposto al posto delle delibere.
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Scadenza relazione finale</label>
+        <input type="text" name="scadenza_relazione" value="{{ imp.scadenza_relazione or '' if imp else '' }}"
+               placeholder="10 maggio" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Nota valorizzazione <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— facoltativa</span></label>
+        <textarea name="nota_valorizzazione" rows="3" style="width:100%; box-sizing:border-box;">{{ imp.nota_valorizzazione or '' if imp else '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+</form>
+
+{% endblock %}

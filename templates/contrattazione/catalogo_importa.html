@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Importa catalogo{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('download') }} Importa voci nel catalogo</h1>
+<p style="font-size:.78rem; color:var(--grigio); margin-bottom:16px;">
+    <a href="{{ url_for('contrattazione.catalogo') }}">← Torna al catalogo</a>
+</p>
+
+<div class="card" style="max-width:720px; padding:20px; margin-bottom:16px; font-size:.84rem; color:var(--grigio);">
+    Incolla un blocco per ogni tipo di incarico, separati da una riga con soltanto <code>---</code>.
+    La <b>prima riga</b> di ogni blocco è il nome (puoi includere il numero, es.
+    <code>2 TUTOR DOCENTI NEOIMMESSI</code>), le righe successive sono il testo descrittivo.
+    Le voci con un nome già presente nel catalogo vengono saltate, non sovrascritte.
+    <br><br>Esempio:
+    <pre style="background:#f8fafc; padding:10px; border-radius:6px; font-size:.78rem; white-space:pre-wrap;">Collaboratore DS
+Il docente Collaboratore sostituisce il Dirigente Scolastico in caso di assenza...
+● gestisce, in collaborazione con la segreteria, l'orario scolastico...
+---
+REFERENTE LEGALITA'
+Predisposizione e coordinamento dei progetti del PTOF relativi all'ambito della legalità...</pre>
+</div>
+
+<form method="post" class="card" style="max-width:720px; padding:20px;">
+    <div class="form-group">
+        <label>Testo da importare *</label>
+        <textarea name="testo" rows="18" required style="width:100%; box-sizing:border-box; font-family:inherit;"
+                  placeholder="Incolla qui i blocchi separati da ---"></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Importa</button>
+</form>
+
+{% endblock %}

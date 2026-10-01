@@ -107,3 +107,17 @@ def test_eliminare_fondo_elimina_a_cascata(app, db_session):
         db.session.commit()
         assert CapitoloContrattazione.query.count() == 0
         assert AssegnazioneContrattazione.query.count() == 0
+
+
+def test_catalogo_importa_salta_nomi_duplicati(app, db_session):
+    from models.contrattazione import TipoIncaricoContrattazione
+
+    with app.app_context():
+        db.session.add(TipoIncaricoContrattazione(nome='Collaboratore DS', testo_riferimento='vecchio testo'))
+        db.session.commit()
+        c = app.test_client()
+        r = c.post('/contrattazione/catalogo/importa',
+                   data={'testo': 'Collaboratore DS\nnuovo testo che non deve sostituire.'})
+        assert r.status_code == 302
+        assert TipoIncaricoContrattazione.query.count() == 1
+        assert TipoIncaricoContrattazione.query.first().testo_riferimento == 'vecchio testo'

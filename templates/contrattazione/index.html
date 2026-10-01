@@ -21,6 +21,10 @@
                 {% endfor %}
             </select>
         </form>
+        <a href="{{ url_for('contrattazione.lettere_index', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;">
+            {{ icon('mail') }} Lettere di incarico</a>
+        <a href="{{ url_for('contrattazione.catalogo') }}" class="btn btn-sm" style="background:#e5eaf0;">
+            {{ icon('list') }} Catalogo incarichi</a>
         <a href="{{ url_for('contrattazione.fondo_form') }}?anno_scol={{ anno }}" class="btn btn-success">
             {{ icon('plus') }} Nuovo fondo
         </a>
