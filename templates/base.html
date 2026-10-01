@@ -582,6 +582,11 @@
         <span class="nav-ic">{{ icon('layers') }}</span> Progetti FSE/FESR</a>
     {% endif %}
 
+    {% if puo_vedere('contrattazione') %}
+    <a href="{{ url_for('contrattazione.index') }}" title="Economie, fondi, capitoli e assegnazioni della contrattazione integrativa d'istituto">
+        <span class="nav-ic">{{ icon('coin') }}</span> Contrattazione</a>
+    {% endif %}
+
     <a href="{{ url_for('impostazioni.index') }}"><span class="nav-ic">{{ icon('gear') }}</span> Impostazioni</a>
     <a href="{{ url_for('guida.index') }}"><span class="nav-ic">{{ icon('help') }}</span> Guida</a>
 

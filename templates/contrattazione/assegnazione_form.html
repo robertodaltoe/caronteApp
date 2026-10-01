@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica assegnazione' if asg else 'Nuova assegnazione' }}{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.3rem; color:var(--blu);">
+    {{ icon('person') }} {{ 'Modifica assegnazione' if asg else 'Nuova assegnazione' }} — {{ capitolo.nome }}
+</h1>
+<p style="font-size:.78rem; color:var(--grigio); margin-bottom:10px;">
+    <a href="{{ url_for('contrattazione.index', anno=capitolo.fondo.anno_scol) }}">← Torna alla contrattazione</a>
+</p>
+<p style="font-size:.82rem; color:var(--grigio); margin-bottom:16px;">
+    Residuo attuale del capitolo: <b style="color:{{ 'var(--rosso)' if capitolo.sforato else 'var(--verde)' }};">
+        {{ '%.2f'|format(capitolo.saldo_residuo) }}€</b>
+</p>
+
+<form method="post" class="card" style="max-width:560px; padding:20px;">
+    <div class="form-group">
+        <label>Docente *</label>
+        <select name="id_docente" required style="width:100%;">
+            <option value="">— scegli —</option>
+            {% for d in docenti %}
+            <option value="{{ d.id }}" {% if asg and asg.id_docente == d.id %}selected{% endif %}>
+                {{ d.cognome }} {{ d.nome or '' }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Descrizione dell'incarico *</label>
+        <input type="text" name="descrizione" required value="{{ asg.descrizione if asg else '' }}"
+               placeholder="Es. Collaboratore del DS, Tutor PCTO 4ALSP" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Unità <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— es. n. ore, n. alunni: solo informativo</span></label>
+        <input type="text" name="unita" value="{{ asg.unita if asg and asg.unita is not none else '' }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Importo (€) *</label>
+        <input type="text" name="importo" required value="{{ asg.importo if asg else 0 }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Stato</label>
+        <select name="stato" style="width:100%;">
+            {% for val, label in stati %}
+            <option value="{{ val }}" {% if (asg.stato if asg else 'previsto') == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Note</label>
+        <textarea name="note" rows="3" style="width:100%; box-sizing:border-box;">{{ asg.note or '' if asg else '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+</form>
+
+{% if asg and asg.storico_spostamenti %}
+<div class="card" style="max-width:560px; margin-top:16px; padding:16px 20px;">
+    <h2 style="font-size:1rem; color:var(--blu); margin-bottom:10px;">{{ icon('swap') }} Storico spostamenti</h2>
+    <ul style="margin:0; padding-left:18px; font-size:.84rem;">
+        {% for s in asg.storico_spostamenti %}
+        <li style="margin-bottom:6px;">
+            {{ s.data.strftime('%d/%m/%Y %H:%M') }} —
+            da "{{ s.capitolo_precedente.nome if s.capitolo_precedente else '—' }}"
+            a "{{ s.capitolo_nuovo.nome if s.capitolo_nuovo else '—' }}"
+            ({{ '%.2f'|format(s.importo_al_momento) }}€){% if s.utente %}, {{ s.utente }}{% endif %}
+            {% if s.motivo %}— {{ s.motivo }}{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% endblock %}

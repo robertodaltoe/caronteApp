@@ -238,6 +238,8 @@ def create_app(avvio_con_reloader=True):
     app.register_blueprint(piano_personale_bp)
     from routes.progetti_fse import progetti_fse_bp
     app.register_blueprint(progetti_fse_bp)
+    from routes.contrattazione import contrattazione_bp
+    app.register_blueprint(contrattazione_bp)
     from routes.sostituzioni import sostituzioni_bp
     from routes.alternativa_irc import alternativa_irc_bp
     app.register_blueprint(sostituzioni_bp)
@@ -405,6 +407,8 @@ def create_app(avvio_con_reloader=True):
         from models.generatore_cdc import VincoloOrarioClasse, VincoloGeneratoreCdc  # noqa
         from models.progetto_fse import (ProgettoFSE, ModuloFSE, IncaricoFSE,  # noqa
             SessioneFSE, PresenzaFSE, DocumentoFSE)
+        from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
+            AssegnazioneContrattazione, StoricoSpostamentoCapitolo)
         from models.sostituzione_docente import (SostituzioneDocente,  # noqa
             SostituzioneOrarioSlot, SostituzioneEventoSwap)
         from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa

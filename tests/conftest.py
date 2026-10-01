@@ -65,6 +65,8 @@ def app():
         from models.sync_tombstone import SyncTombstone  # noqa
         from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
             AlternativaIrcDisponibilita, AlternativaIrcGruppo, AlternativaIrcGruppoClasse)
+        from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
+            AssegnazioneContrattazione, StoricoSpostamentoCapitolo)
         from models.indisponibilita_ricorrente import IndisponibilitaRicorrente  # noqa
         db.create_all()
         yield app

@@ -58,6 +58,7 @@ SEZIONI = [
     ('progetti_fse',           'Progetti FSE/FESR'),
     ('sostituzioni',           'Sostituzione docenti (temporanea/definitiva)'),
     ('alternativa_irc',        'Attività alternativa all\'IRC'),
+    ('contrattazione',         'Contrattazione integrativa'),
 ]
 SEZIONI_LABEL = dict(SEZIONI)
 
@@ -76,6 +77,7 @@ SEZIONI_GRUPPI = [
     ('Istituto e calendario', ['calendario', 'istituto']),
     ('Assegnazioni', ['assegnazioni', 'aule', 'sostituzioni']),
     ('Progetti FSE/FESR', ['progetti_fse']),
+    ('Contrattazione integrativa', ['contrattazione']),
 ]
 
 RUOLI_CONFIGURABILI = [
@@ -131,6 +133,7 @@ DEFAULT_MATRICE = {
     'progetti_fse':            {'ds': 'modifica',   'collaboratore': 'modifica',   'segreteria': 'modifica'},
     'sostituzioni':            {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'esclusa'},
     'alternativa_irc':         {'ds': 'visualizza', 'collaboratore': 'modifica',   'segreteria': 'visualizza'},
+    'contrattazione':          {'ds': 'visualizza', 'collaboratore': 'esclusa',    'segreteria': 'modifica'},
 }
 
 # Sezioni nate da uno scorporo di una sezione più ampia (Sessione 53):
@@ -213,6 +216,7 @@ BLUEPRINT_SEZIONE = {
     'progetti_fse':       'progetti_fse',
     'sostituzioni':       'sostituzioni',
     'alternativa_irc':    'alternativa_irc',
+    'contrattazione':     'contrattazione',
 }
 ENDPOINT_SEZIONE = {
     'attivita_ist.dipartimenti':                 'dipartimenti',
@@ -302,7 +306,7 @@ def _migra_split_sezioni_permessi():
     # dal default, come per una sezione mai vista prima da questa
     # installazione ('orario_globale', Sessione 53; 'piano_personale',
     # Sessione 57).
-    for sezione in ('orario_globale', 'piano_personale', 'progetti_fse', 'alternativa_irc'):
+    for sezione in ('orario_globale', 'piano_personale', 'progetti_fse', 'alternativa_irc', 'contrattazione'):
         for ruolo, _ in RUOLI_CONFIGURABILI:
             if not PermessoRuolo.query.filter_by(ruolo=ruolo, sezione=sezione).first():
                 db.session.add(PermessoRuolo(ruolo=ruolo, sezione=sezione,

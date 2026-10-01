@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica fondo' if fondo else 'Nuovo fondo' }}{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.3rem; color:var(--blu);">
+    {{ icon('coin') }} {{ 'Modifica fondo' if fondo else 'Nuovo fondo' }}
+</h1>
+<p style="font-size:.78rem; color:var(--grigio); margin-bottom:16px;">
+    <a href="{{ url_for('contrattazione.index', anno=anno) }}">← Torna alla contrattazione</a>
+</p>
+
+<form method="post" class="card" style="max-width:560px; padding:20px;">
+    <div class="form-group">
+        <label>Anno scolastico *</label>
+        <input type="text" name="anno_scol" required value="{{ fondo.anno_scol if fondo else anno }}"
+               placeholder="2026-2027" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Nome del fondo *</label>
+        <input type="text" name="nome" required value="{{ fondo.nome if fondo else '' }}"
+               placeholder="Es. FMOF, FIS, Altri fondi" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Economie pregresse (€)</label>
+        <input type="text" name="economie_pregresse" value="{{ fondo.economie_pregresse if fondo else 0 }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Importo assegnato quest'anno (€)</label>
+        <input type="text" name="importo_assegnato" value="{{ fondo.importo_assegnato if fondo else 0 }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Quota DSGA (€) <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— solo se si applica a questo fondo</span></label>
+        <input type="text" name="quota_dsga" value="{{ fondo.quota_dsga if fondo else 0 }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Note</label>
+        <textarea name="note" rows="3" style="width:100%; box-sizing:border-box;">{{ fondo.note or '' if fondo else '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+</form>
+
+{% endblock %}
