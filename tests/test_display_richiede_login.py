@@ -65,14 +65,24 @@ def test_display_senza_login_reindirizza_al_login(app_reale):
 
 
 def test_display_con_login_normale_e_raggiungibile(app_reale):
+    from models import db
     from models.utente import Utente
     with app_reale.app_context():
-        u = Utente.query.filter_by(username='ds').first()
+        # Su un database vuoto (nessun database.db da copiare) l'utente
+        # 'ds' non esiste: lo crea sulla copia, come fa il test sotto
+        # per il monitor.
+        u = Utente.query.filter_by(username='ds', attivo=True).first()
+        if not u:
+            u = Utente(username='ds', nome='Dirigente', ruolo='ds')
+            u.set_pin('0000')
+            db.session.add(u)
+            db.session.commit()
+        id_utente, ruolo = u.id, u.ruolo
 
     with app_reale.test_client() as c:
         with c.session_transaction() as sess:
-            sess['utente_id'] = u.id
-            sess['ruolo'] = u.ruolo
+            sess['utente_id'] = id_utente
+            sess['ruolo'] = ruolo
         r = c.get('/display')
         assert r.status_code == 200
 

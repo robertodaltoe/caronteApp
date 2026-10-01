@@ -2,6 +2,33 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 70 — Sistemati i 4 test che fallivano da settimane
+
+Le ultime sessioni chiudevano con "stessi 4 fallimenti pre-esistenti",
+mai indagati. Eseguita la suite in sandbox Linux (cloud, senza
+`database.db`): 607 verdi, 4 rossi. Due cause, entrambe nei test, non
+nel codice dell'app:
+
+- **Test dipendenti dal `database.db` reale** (3 test):
+  `test_display_richiede_login.py::test_display_con_login_normale_e_raggiungibile`
+  cercava l'utente `ds`, e i due test di `test_docente_nuovo_render.py`
+  contavano sul bypass del login, che simula l'utente `dsga`. Senza un
+  database reale da copiare la copia è vuota: utente `None` (crash) o
+  redirect 302 a `/login`. Ora le fixture creano l'utente sulla copia
+  solo se manca (stesso schema già usato per `monitor_sala_docenti`).
+- **Date fisse superate dal calendario** (1 test):
+  `test_sostituzione_docente.py::test_termina_sostituzione_ripristina_orario_e_partecipanti`
+  usava un CdC al 16/9/2026, ma il modulo scambia i partecipanti solo
+  per eventi con data >= oggi — già notato nell'addendum 21, mai
+  corretto. Ora le date sono relative a oggi (`_lunedi_futuro()`);
+  stessa correzione per lo scrutinio fisso al 14/12/2026 di
+  `test_definitiva_iscrive_sostituto_a_eventi_futuri_della_classe`, che
+  sarebbe diventato rosso a metà dicembre.
+
+Nessun test saltato o disattivato. Suite completa: **611 verdi, 0
+fallimenti**. Aggiornato anche CLAUDE.md (diceva ancora 51 test).
+Sessione in sandbox Linux cloud, `database.db` reale mai toccato.
+
 ## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
 
 Roberto, dopo l'addendum 35: il punto critico è che l'assenza del docente
