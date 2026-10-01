@@ -5,6 +5,23 @@
 <title>Lettera di incarico — {{ docente.cognome }} {{ docente.nome or '' }}</title>
 {% include 'progetti_fse/documenti/_stile_decreto.html' %}
 <style>
+    /* _stile_decreto.html riserva un margine pensato per i documenti FSE
+       (intestazione alta fino a 7,6cm, 4,6cm in fondo per il banner UE
+       su OGNI pagina) — qui non c'e' nessun banner UE e l'intestazione
+       e' piu' bassa (circa 5,6cm a 17cm di larghezza): tenere quei
+       margini spreca ~6cm di pagina e basta a far traboccare la firma
+       su una seconda pagina quasi vuota anche per una lettera breve
+       (visto con Roberto). Si sovrascrive qui il solo @page, il resto
+       degli stili (tabella, oggetto, firma...) resta quello condiviso.
+    */
+    @page {
+        size: A4;
+        margin: 2.4cm 2cm 2.4cm 2cm;
+    }
+    @page :first {
+        margin-top: 6.2cm;
+        @top-center { content: element(intestazione); }
+    }
     .elenco-descrittivo h2 { font-size: 11px; font-weight: 700; margin: 14px 0 3px; }
     .elenco-descrittivo p { font-size: 10px; margin: 0 0 10px; white-space: pre-line; }
     table.tabella-incarichi td.tot, table.tabella-incarichi th.tot { text-align: right; }
