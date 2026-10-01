@@ -655,6 +655,7 @@ def _auto_migrate():
         ('contrattazione_impostazioni_lettera', 'riferimento_piano_attivita_ata', 'VARCHAR(200)', None),
         ('contrattazione_impostazioni_lettera', 'riferimento_piano_lavoro_ata', 'VARCHAR(200)', None),
         ('contrattazione_impostazioni_lettera', 'data_contratto_integrativo', 'DATE', None),
+        ('tipi_incarico', 'id_tipo_incarico_contrattazione', 'INTEGER', None),
     ]
 
     with db.engine.connect() as conn:

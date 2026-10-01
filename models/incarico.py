@@ -31,9 +31,22 @@ class TipoIncarico(db.Model):
     importo_default = db.Column(db.Float, nullable=True)
     attivo          = db.Column(db.Boolean, default=True)
     ordine          = db.Column(db.Integer, default=0)
+    # Collegamento facoltativo, caso per caso, alla voce corrispondente
+    # del catalogo della contrattazione integrativa (vedi
+    # models.contrattazione.TipoIncaricoContrattazione) — NON tutti i
+    # tipi di incarico passano dalla contrattazione (es. "Vicepreside"),
+    # quindi resta un'opzione libera da impostare dove serve, non un
+    # collegamento automatico/obbligatorio (Roberto, confermato: "lasciamolo
+    # come opzione libera, caso per caso"). Quando impostato, le nomine
+    # di questo tipo possono essere "importate" in Contrattazione invece
+    # di essere ridigitate a mano — vedi routes/contrattazione.py::
+    # capitolo_importa_incarichi.
+    id_tipo_incarico_contrattazione = db.Column(
+        db.Integer, db.ForeignKey('contrattazione_tipi_incarico.id'), nullable=True)
 
     nomine = db.relationship('IncaricaDocente', back_populates='tipo',
                              lazy='dynamic')
+    tipo_incarico_contrattazione = db.relationship('TipoIncaricoContrattazione')
 
     def __repr__(self):
         return f'<TipoIncarico {self.nome}>'

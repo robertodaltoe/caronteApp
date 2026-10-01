@@ -237,6 +237,70 @@ def assegnazione_sposta(id):
     return redirect(url_for('contrattazione.index', anno=nuovo_capitolo.fondo.anno_scol))
 
 
+@contrattazione_bp.route('/contrattazione/capitolo/<int:id_capitolo>/importa_incarichi', methods=['GET', 'POST'])
+def capitolo_importa_incarichi(id_capitolo):
+    """Importa in un capitolo le nomine già fatte in Piano Attività
+    (IncaricaDocente) per i TipoIncarico collegati a una voce del
+    catalogo contrattazione (collegamento opzionale, caso per caso —
+    vedi models/incarico.py::TipoIncarico.id_tipo_incarico_contrattazione,
+    Roberto confermato). Evita di ridigitare a mano incarichi che
+    esistono già in anagrafica didattica (es. Coordinatore di classe)."""
+    from models.incarico import IncaricaDocente, TipoIncarico
+    capitolo = CapitoloContrattazione.query.get_or_404(id_capitolo)
+    anno = capitolo.fondo.anno_scol
+
+    nomine = (IncaricaDocente.query
+              .join(TipoIncarico)
+              .filter(IncaricaDocente.anno_scol == anno,
+                      TipoIncarico.id_tipo_incarico_contrattazione.isnot(None))
+              .order_by(TipoIncarico.nome)
+              .all())
+
+    # Già importate per questo docente+voce di catalogo in un capitolo
+    # qualunque dello stesso fondo — non si tiene un legame diretto tra
+    # AssegnazioneContrattazione e IncaricaDocente, quindi il controllo
+    # duplicati si basa sulla stessa chiave logica (docente + voce
+    # catalogo) già usata altrove nel progetto per evitare doppioni.
+    esistenti = {
+        (a.id_docente, a.id_tipo_incarico)
+        for a in AssegnazioneContrattazione.query
+            .join(CapitoloContrattazione)
+            .filter(CapitoloContrattazione.id_fondo == capitolo.id_fondo,
+                    AssegnazioneContrattazione.id_docente.isnot(None))
+            .all()
+    }
+    candidate = [n for n in nomine
+                 if (n.id_docente, n.tipo.id_tipo_incarico_contrattazione) not in esistenti]
+
+    if request.method == 'POST':
+        ids = request.form.getlist('nomina_id', type=int)
+        importate = 0
+        for n in candidate:
+            if n.id not in ids:
+                continue
+            voce = n.tipo.tipo_incarico_contrattazione
+            db.session.add(AssegnazioneContrattazione(
+                id_capitolo=capitolo.id,
+                id_docente=n.id_docente,
+                id_tipo_incarico=voce.id,
+                descrizione=voce.nome,
+                unita=n.ore,
+                importo=n.importo or 0.0,
+                stato='previsto',
+                creato_da=_utente_corrente(),
+            ))
+            importate += 1
+        db.session.commit()
+        if importate:
+            flash(f'{importate} incarico/hi importato/i da Piano Attività in "{capitolo.nome}".', 'success')
+        else:
+            flash('Nessun incarico selezionato.', 'warning')
+        return redirect(url_for('contrattazione.index', anno=anno))
+
+    return render_template('contrattazione/importa_incarichi.html',
+                           capitolo=capitolo, candidate=candidate)
+
+
 # ── Personale ATA (anagrafica minima, solo per le assegnazioni qui) ────────
 
 @contrattazione_bp.route('/contrattazione/ata')

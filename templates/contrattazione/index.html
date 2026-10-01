@@ -93,6 +93,9 @@
             <div style="display:flex; gap:6px;">
                 <a href="{{ url_for('contrattazione.assegnazione_form', id_capitolo=cap.id) }}" class="btn btn-sm">
                     {{ icon('plus') }} Destinatario</a>
+                <a href="{{ url_for('contrattazione.capitolo_importa_incarichi', id_capitolo=cap.id) }}" class="btn btn-sm" style="background:#e5eaf0;"
+                   title="Importa da incarichi già assegnati in Piano Attività">
+                    {{ icon('swap') }} Importa</a>
                 <a href="{{ url_for('contrattazione.capitolo_form', id=cap.id) }}" class="btn btn-sm" style="background:#e5eaf0;">
                     {{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('contrattazione.capitolo_elimina', id=cap.id) }}"

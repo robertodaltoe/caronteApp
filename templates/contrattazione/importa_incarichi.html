@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Importa da incarichi già assegnati{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.3rem; color:var(--blu);">
+    {{ icon('swap') }} Importa da incarichi già assegnati — {{ capitolo.nome }}
+</h1>
+<p style="font-size:.78rem; color:var(--grigio); margin-bottom:16px;">
+    <a href="{{ url_for('contrattazione.index', anno=capitolo.fondo.anno_scol) }}">← Torna alla contrattazione</a>
+</p>
+<p style="font-size:.82rem; color:var(--grigio); max-width:70ch; margin-bottom:16px;">
+    Nomine fatte in <a href="{{ url_for('incarichi.index', anno=capitolo.fondo.anno_scol) }}">Piano Attività</a>
+    il cui tipo incarico è collegato a una voce del catalogo contrattazione (collegamento facoltativo,
+    impostabile in <a href="{{ url_for('incarichi.tipi') }}">Tipi di incarico</a>). Seleziona quelle da
+    aggiungere qui come assegnazione, con descrizione e importo pre-compilati dalla voce di catalogo
+    collegata — da rivedere comunque prima di salvare.
+</p>
+
+{% if not candidate %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
+    Nessuna nomina da importare: o nessun tipo incarico è collegato al catalogo contrattazione,
+    o tutte le nomine collegate sono già state importate per questo fondo.
+</div>
+{% else %}
+<form method="post" class="card" style="padding:0; overflow:hidden;">
+<table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+    <thead><tr style="background:#f8fafc; text-align:left;">
+        <th style="padding:8px; width:30px;"><input type="checkbox" onclick="document.querySelectorAll('.riga-nomina').forEach(c=>c.checked=this.checked)"></th>
+        <th style="padding:8px;">Docente</th>
+        <th style="padding:8px;">Tipo incarico (Piano Attività)</th>
+        <th style="padding:8px;">Voce catalogo contrattazione</th>
+        <th style="padding:8px;">Contesto</th>
+        <th style="padding:8px; text-align:right;">Ore</th>
+        <th style="padding:8px; text-align:right;">Importo</th>
+    </tr></thead>
+    <tbody>
+    {% for n in candidate %}
+        <tr style="border-top:1px solid #f1f3f5;">
+            <td style="padding:8px;"><input class="riga-nomina" type="checkbox" name="nomina_id" value="{{ n.id }}"></td>
+            <td style="padding:8px; font-weight:600;">{{ n.docente.cognome }} {{ n.docente.nome }}</td>
+            <td style="padding:8px;">{{ n.tipo.nome }}</td>
+            <td style="padding:8px;">{{ n.tipo.tipo_incarico_contrattazione.nome }}</td>
+            <td style="padding:8px; color:var(--grigio); font-size:.78rem;">{{ n.label_classe or (n.dipartimento.nome if n.dipartimento else '—') }}</td>
+            <td style="padding:8px; text-align:right;">{{ n.ore or '—' }}</td>
+            <td style="padding:8px; text-align:right;">{{ '%.2f €'|format(n.importo) if n.importo else '—' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<div style="padding:12px 16px; border-top:1px solid #f1f3f5;">
+    <button type="submit" class="btn btn-success btn-sm">{{ icon('check') }} Importa selezionati</button>
+</div>
+</form>
+{% endif %}
+
+{% endblock %}

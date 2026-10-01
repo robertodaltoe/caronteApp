@@ -5,6 +5,7 @@ from models.incarico import TipoIncarico, IncaricaDocente, CategoriaIncarico
 from models.docente import Docente
 from models.materia import Dipartimento
 from models.piano_studi import ClasseSezione
+from models.contrattazione import TipoIncaricoContrattazione
 from config_anno import get_anno_corrente
 
 incarichi_bp = Blueprint('incarichi', __name__)
@@ -179,9 +180,11 @@ def tipi():
     tipi_list = TipoIncarico.query.order_by(
         TipoIncarico.ordine, TipoIncarico.nome).all()
     cat_label, cat_color, categorie = _cat_map()
+    voci_contrattazione = TipoIncaricoContrattazione.query.filter_by(
+        attivo=True).order_by(TipoIncaricoContrattazione.nome).all()
     return render_template('incarichi/tipi.html',
         tipi=tipi_list, cat_label=cat_label, cat_color=cat_color,
-        categorie=categorie)
+        categorie=categorie, voci_contrattazione=voci_contrattazione)
 
 
 @incarichi_bp.route('/incarichi/tipi/salva', methods=['POST'])
@@ -193,6 +196,7 @@ def salva_tipo():
     comp    = request.form.get('compenso_tipo', '').strip() or None
     imp     = request.form.get('importo_default', type=float)
     ordine  = request.form.get('ordine', type=int) or 0
+    id_tic  = request.form.get('id_tipo_incarico_contrattazione', type=int)
 
     if not nome:
         flash('Il nome è obbligatorio.', 'danger')
@@ -202,11 +206,13 @@ def salva_tipo():
         t = db.session.get(TipoIncarico, id_t)
         t.nome=nome; t.categoria=cat; t.collegato_a=coll
         t.compenso_tipo=comp; t.importo_default=imp; t.ordine=ordine
+        t.id_tipo_incarico_contrattazione = id_tic
     else:
         db.session.add(TipoIncarico(
             nome=nome, categoria=cat, collegato_a=coll,
             compenso_tipo=comp, importo_default=imp,
-            attivo=True, ordine=ordine))
+            attivo=True, ordine=ordine,
+            id_tipo_incarico_contrattazione=id_tic))
     db.session.commit()
     flash('Tipo incarico salvato.', 'success')
     return redirect(url_for('incarichi.tipi'))
