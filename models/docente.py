@@ -29,12 +29,18 @@ def _colloqui_label(giorno, ora_inizio, ora_fine, breve=False):
 #                            se rientra nell'art. 37 CCNL, viene prorogata
 #                            d'ufficio dal termine delle lezioni fino al
 #                            giorno conclusivo degli scrutini (GS).
+#   - valore 'suppl_breve' -> supplente temporaneo che sostituisce un
+#                            docente assente (es. malattia) per un breve
+#                            periodo (1-3 mesi), con termine legato al
+#                            rientro del titolare: non è in servizio a
+#                            luglio/agosto (resta fuori da CONTRATTI_OK).
 TIPO_CONTRATTO_LABELS = {
     'TI':            'TI — Indeterminato',
     'IRC':           'IRC — Religione',
     'TD_annuale':    'TD annuale',
     'TD_GS':         'TD 30 giugno',
     'supplente':     'TD fino a GS',
+    'suppl_breve':   'Contratto Suppl. Breve',
     'potenziamento': 'Potenziamento',
 }
 
@@ -46,6 +52,7 @@ TIPO_CONTRATTO_LABELS_BREVI = {
     'TD_annuale':    'TD ann.',
     'TD_GS':         'TD 30/6',
     'supplente':     'TD-GS',
+    'suppl_breve':   'Suppl. br.',
     'potenziamento': 'Pot.',
 }
 
