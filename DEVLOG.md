@@ -2,6 +2,28 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 72 — Nuovo tipo di contratto "Contratto Suppl. Breve"
+
+Roberto: tra i tipi di contratto (Impostazione anno → Docenti anno e
+anagrafica docente) mancava quello del supplente temporaneo che
+sostituisce un docente in malattia per 1, 2 o 3 mesi.
+
+Aggiunto il valore `suppl_breve` (etichetta "Contratto Suppl. Breve",
+breve "Suppl. br.") in `TIPO_CONTRATTO_LABELS`/`_BREVI` di
+`models/docente.py`, unica fonte di verità: anagrafica docente, elenco
+docenti, selettore "Contratto <anno>" in Docenti anno, export e
+banca ore lo prendono già da lì. Unico punto con l'elenco scritto a
+mano: il selettore "Aggiungi docente" in
+`templates/impostazione_anno/docenti_anno.html`, aggiornato.
+
+Comportamento: nessun valore esistente cambia. Il nuovo tipo resta
+fuori da `CONTRATTI_OK` (come `supplente`/`TD_GS`), quindi non risulta
+in servizio a luglio/agosto (eventi, prove di recupero); non conta come
+TI nei riepiloghi. Nessuna migrazione: `tipo_contratto` è una stringa
+libera (VARCHAR 30 / 20 su `docente_contratto_anno`). Sessione svolta in
+sandbox Linux (cloud), nessun accesso a `database.db`. Test:
+`tests/test_contratto_suppl_breve.py`; suite completa 630 verdi.
+
 ## Sessione 71 — Navigazione: menu Impostazioni a gruppi, ricerca delle funzioni, percorso, scorciatoie per ruolo
 
 Roberto: "faresti delle modifiche nell'interfaccia per migliorare
