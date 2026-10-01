@@ -261,6 +261,14 @@ class ImpostazioniLetteraContrattazione(db.Model):
     riferimento_delibere     = db.Column(db.Text, nullable=True)
     scadenza_relazione       = db.Column(db.String(100), nullable=True)   # es. "10 maggio"
     nota_valorizzazione      = db.Column(db.Text, nullable=True)
+    # Solo per la lettera al personale ATA (vedi "modello nomina ATA 2.docx"):
+    # VISTA l'adozione del Piano delle attività ATA / VISTO il Piano di
+    # lavoro ATA — due protocolli distinti da quelli del Collegio docenti.
+    riferimento_piano_attivita_ata = db.Column(db.String(200), nullable=True)
+    riferimento_piano_lavoro_ata   = db.Column(db.String(200), nullable=True)
+    # Solo per "Retribuzione fondi MOF" (vedi "MODELLO RETRIBUZIONE FONDI
+    # MOF.docx"): data di sottoscrizione del contratto integrativo d'istituto.
+    data_contratto_integrativo = db.Column(db.Date, nullable=True)
     aggiornato_il            = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

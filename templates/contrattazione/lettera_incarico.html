@@ -26,6 +26,10 @@
     .elenco-descrittivo p { font-size: 10px; margin: 0 0 10px; white-space: pre-line; }
     table.tabella-incarichi td.tot, table.tabella-incarichi th.tot { text-align: right; }
     .tr-totale td { font-weight: 700; border-top: 2px solid #333 !important; }
+    table.elenco-tabella { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 9.5px; }
+    table.elenco-tabella th, table.elenco-tabella td { border: 1px solid #999; padding: 4px 6px; text-align: left; vertical-align: top; }
+    table.elenco-tabella th { background: #eee; font-weight: 700; }
+    table.elenco-tabella td.num { text-align: center; width: 50px; }
 </style>
 </head>
 <body>
@@ -42,6 +46,23 @@ contrattazione integrativa d'istituto.
 
 <div class="qualifica">IL DIRIGENTE SCOLASTICO</div>
 
+{% if tipo_destinatario == 'ata' %}
+<p>VISTO il D. Lgs. 165/2001 sulle Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche;</p>
+<p>VISTO il DPR 275/1999 sulle Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche;</p>
+<p>VISTO {{ impostazioni.riferimento_ccnl if impostazioni and impostazioni.riferimento_ccnl else 'il CCNL comparto "Istruzione e Ricerca" 2019-2021 del 18 gennaio 2024' }};</p>
+<p>VISTO il PTOF di Istituto {{ impostazioni.riferimento_ptof if impostazioni and impostazioni.riferimento_ptof else ('a.s. ' ~ anno_scol) }};</p>
+<p>VISTA l'adozione del Piano delle attività del personale ATA a.s. {{ anno_scol }}
+{{ '– ' ~ impostazioni.riferimento_piano_attivita_ata if impostazioni and impostazioni.riferimento_piano_attivita_ata else '[protocollo da indicare]' }};</p>
+<p>VISTO il Piano di lavoro del Personale ATA
+{{ 'trasmesso con ' ~ impostazioni.riferimento_piano_lavoro_ata if impostazioni and impostazioni.riferimento_piano_lavoro_ata else '[protocollo da indicare]' }};</p>
+<p>CONSIDERATA la disponibilità della S.V. ad assumere gli incarichi riportati in tabella per l'a.s. {{ anno_scol }};</p>
+
+<div class="atto">INCARICA</div>
+
+<p>la S.V. allo svolgimento delle seguenti attività riportate in tabella. Le attività saranno retribuite
+secondo quanto riportato in tabella, fatto salvo diversa determinazione del contratto integrativo di
+istituto dell'a.s. {{ anno_scol }}, della certificazione e della relativa clausola di salvaguardia.</p>
+{% else %}
 <p>VISTO il d.lgs. 165/2001, Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche;</p>
 <p>VISTO il DPR 275/1999, Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche;</p>
 <p>VISTO {{ impostazioni.riferimento_ccnl if impostazioni and impostazioni.riferimento_ccnl else 'il CCNL comparto "Istruzione e Ricerca" 2019-2021 del 18 gennaio 2024' }};</p>
@@ -54,6 +75,7 @@ contrattazione integrativa d'istituto.
 <p>la S.V. allo svolgimento, per l'a.s. {{ anno_scol }}, delle seguenti attività, per le quali si riporta il
 compenso previsto salvo diversa determinazione del contratto integrativo di istituto, della certificazione
 e della relativa clausola di salvaguardia:</p>
+{% endif %}
 
 <table class="tabella-incarichi">
     <tr><th>Incarico</th><th style="width:70px;">Rif.</th><th class="tot" style="width:140px;">Compenso previsto omnicomprensivo</th></tr>
@@ -69,14 +91,35 @@ e della relativa clausola di salvaguardia:</p>
 
 {% if voci_descrittive %}
 <div class="elenco-descrittivo">
+    {% if tipo_destinatario == 'ata' %}
+    <p style="font-weight:700; margin-bottom:6px;">Le attività previste per la funzione di cui agli incarichi sono:</p>
+    <table class="elenco-tabella">
+        <tr><th class="num">Punto</th><th>Compiti</th></tr>
+        {% for v in voci_descrittive %}
+        <tr><td class="num">{{ v.numero_riferimento or '—' }}</td><td>{{ v.testo_riferimento }}</td></tr>
+        {% endfor %}
+    </table>
+    {% else %}
     <p style="font-weight:700; margin-bottom:6px;">Elenco descrittivo attività</p>
     {% for v in voci_descrittive %}
     <h2>{% if v.numero_riferimento %}{{ v.numero_riferimento }}. {% endif %}{{ v.nome }}</h2>
     <p>{{ v.testo_riferimento }}</p>
     {% endfor %}
+    {% endif %}
 </div>
 {% endif %}
 
+{% if tipo_destinatario == 'ata' %}
+<p>Ai fini dell'erogazione del compenso, entro il
+{{ impostazioni.scadenza_relazione if impostazioni and impostazioni.scadenza_relazione else '10 maggio' }}
+e comunque previa pubblicazione di apposita circolare del Dirigente, la S.V. avrà cura di redigere un
+elenco delle attività svolte sulla base dello schema di rendicontazione che sarà fornito dalla segreteria.</p>
+<p>Il compenso relativo agli incarichi attribuiti al personale ATA sarà corrisposto previa verifica del
+raggiungimento degli obiettivi previsti.</p>
+{% if impostazioni and impostazioni.nota_valorizzazione %}
+<p>{{ impostazioni.nota_valorizzazione }}</p>
+{% endif %}
+{% else %}
 <p>La S.V., al termine dell'a.s. {{ anno_scol }}, entro il
 {{ impostazioni.scadenza_relazione if impostazioni and impostazioni.scadenza_relazione else '10 maggio' }},
 a seguito di circolare del Dirigente, presenterà dettagliata relazione sulla base dello schema di
@@ -84,6 +127,7 @@ rendicontazione fornito dalla segreteria.</p>
 
 {% if impostazioni and impostazioni.nota_valorizzazione %}
 <p>{{ impostazioni.nota_valorizzazione }}</p>
+{% endif %}
 {% endif %}
 
 <p style="margin-top:10px; font-style:italic;">

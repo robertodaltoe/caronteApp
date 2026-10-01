@@ -56,9 +56,16 @@
             </td>
             <td style="padding:8px; white-space:nowrap;">
                 <a href="{{ url_for('contrattazione.lettera_genera', tipo=r.tipo, id_persona=r.persona.id, anno=anno) }}"
-                   class="btn btn-sm" target="_blank">{{ icon('print') }} PDF</a>
+                   class="btn btn-sm" target="_blank" title="Lettera di incarico (PDF)">{{ icon('print') }} Lettera</a>
                 <a href="{{ url_for('contrattazione.lettera_genera', tipo=r.tipo, id_persona=r.persona.id, anno=anno, formato='docx') }}"
-                   class="btn btn-sm" style="background:#e5eaf0;">{{ icon('download') }} Word</a>
+                   class="btn btn-sm" style="background:#e5eaf0;" title="Lettera di incarico (Word)">{{ icon('download') }}</a>
+                {% if r.n_liquidati %}
+                <a href="{{ url_for('contrattazione.retribuzione_genera', tipo=r.tipo, id_persona=r.persona.id, anno=anno) }}"
+                   class="btn btn-sm" target="_blank" style="background:var(--verde-bg); color:var(--verde);"
+                   title="Retribuzione fondi MOF (PDF) — solo incarichi liquidati">{{ icon('coin') }} Retribuzione</a>
+                <a href="{{ url_for('contrattazione.retribuzione_genera', tipo=r.tipo, id_persona=r.persona.id, anno=anno, formato='docx') }}"
+                   class="btn btn-sm" style="background:#e5eaf0;" title="Retribuzione fondi MOF (Word)">{{ icon('download') }}</a>
+                {% endif %}
             </td>
         </tr>
     {% endfor %}

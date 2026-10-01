@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Retribuzione fondi MOF — {{ destinatario.cognome }} {{ destinatario.nome or '' }}</title>
+{% include 'progetti_fse/documenti/_stile_decreto.html' %}
+<style>
+    /* Stesso motivo di lettera_incarico.html: niente banner UE qui,
+       i margini di _stile_decreto.html (pensati per i documenti FSE)
+       sprecherebbero pagina inutilmente. */
+    @page {
+        size: A4;
+        margin: 2.4cm 2cm 2.4cm 2cm;
+    }
+    @page :first {
+        margin-top: 6.2cm;
+        @top-center { content: element(intestazione); }
+    }
+    table.tabella-incarichi td.tot, table.tabella-incarichi th.tot { text-align: right; }
+    .tr-totale td { font-weight: 700; border-top: 2px solid #333 !important; }
+</style>
+</head>
+<body>
+
+{% include 'progetti_fse/documenti/_intestazione.html' %}
+
+<div class="protocollo">Chiavenna, prot. e data (fare rif. alla segnatura)</div>
+<div style="margin: 10px 0 10px 50%;">{{ 'Al/alla prof./ssa' if tipo_destinatario == 'docente' else 'Al/alla Sig./Sig.ra' }}<br>{{ destinatario.cognome }} {{ destinatario.nome or '' }}</div>
+
+<div class="oggetto">
+<b>Oggetto:</b> Comunicazione compensi incarichi accessori — FIS, a.s. {{ anno_scol }}.
+</div>
+
+<div class="qualifica">IL DIRIGENTE SCOLASTICO</div>
+
+<p>VISTO il contratto integrativo d'istituto
+{{ 'sottoscritto in data ' ~ impostazioni.data_contratto_integrativo.strftime('%d/%m/%Y') if impostazioni and impostazioni.data_contratto_integrativo else '[data sottoscrizione da indicare]' }};</p>
+<p>VISTI gli incarichi conferiti alla S.V.;</p>
+<p>CONSIDERATA la disponibilità nello svolgimento degli stessi;</p>
+<p>VISTA la rendicontazione delle attività svolte;</p>
+
+<div class="atto">COMUNICA</div>
+
+<p>l'ammontare degli importi liquidati alla S.V.:</p>
+
+<table class="tabella-incarichi">
+    <tr><th>Incarico</th><th class="tot" style="width:160px;">Compenso liquidato omnicomprensivo</th></tr>
+    {% for a in assegnazioni %}
+    <tr>
+        <td>{{ a.descrizione }}</td>
+        <td class="tot">{{ '%.2f'|format(a.importo_liquidato) }} €</td>
+    </tr>
+    {% endfor %}
+    <tr class="tr-totale"><td>TOTALE</td><td class="tot">{{ '%.2f'|format(totale) }} €</td></tr>
+</table>
+
+<div class="firma">IL DIRIGENTE SCOLASTICO<br>{{ ds_titolo }} {{ ds_nome }}</div>
+<div class="firma-nota">Firma digitale ai sensi del D.Lgs. 82/2005</div>
+
+</body>
+</html>

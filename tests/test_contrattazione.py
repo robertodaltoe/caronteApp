@@ -264,3 +264,34 @@ def test_ata_non_eliminabile_se_ha_assegnazioni(app, db_session):
         r = c.post(f'/contrattazione/ata/{ata.id}/elimina')
         assert r.status_code == 302
         assert PersonaleAta.query.get(ata.id) is not None  # non eliminato
+
+
+def test_retribuzione_mof_solo_liquidati(app, db_session):
+    from models.contrattazione import PersonaleAta
+    from routes.contrattazione import contrattazione_bp, _assegnazioni_beneficiario
+    if 'contrattazione' not in app.blueprints:
+        app.register_blueprint(contrattazione_bp)
+
+    with app.app_context():
+        f = FondoContrattazione(anno_scol='2026-2027', nome='FIS')
+        db.session.add(f)
+        db.session.flush()
+        cap = CapitoloContrattazione(id_fondo=f.id, nome='Incarichi specifici', importo_assegnato=1000)
+        db.session.add(cap)
+        ata = PersonaleAta(cognome='ROSSI', nome='Anna')
+        db.session.add(ata)
+        db.session.flush()
+        a1 = AssegnazioneContrattazione(id_capitolo=cap.id, id_personale_ata=ata.id,
+                                         descrizione='Primo soccorso', importo=200, stato='previsto')
+        a2 = AssegnazioneContrattazione(id_capitolo=cap.id, id_personale_ata=ata.id,
+                                         descrizione='Esami di Stato', importo=100, stato='previsto')
+        db.session.add_all([a1, a2])
+        db.session.commit()
+
+        c = app.test_client()
+        c.post(f'/contrattazione/assegnazione/{a1.id}/liquida', data={'importo_liquidato': '250'})
+
+        # Solo l'incarico liquidato entra nel documento, non quello ancora previsto.
+        liquidati = [a for a in _assegnazioni_beneficiario('ata', ata.id, '2026-2027') if a.stato == 'liquidato']
+        assert len(liquidati) == 1
+        assert liquidati[0].importo_liquidato == 250

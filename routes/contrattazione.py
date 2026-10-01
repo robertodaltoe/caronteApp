@@ -390,6 +390,10 @@ def impostazioni_lettera():
         imp.riferimento_delibere = request.form.get('riferimento_delibere', '').strip() or None
         imp.scadenza_relazione   = request.form.get('scadenza_relazione', '').strip() or None
         imp.nota_valorizzazione  = request.form.get('nota_valorizzazione', '').strip() or None
+        imp.riferimento_piano_attivita_ata = request.form.get('riferimento_piano_attivita_ata', '').strip() or None
+        imp.riferimento_piano_lavoro_ata   = request.form.get('riferimento_piano_lavoro_ata', '').strip() or None
+        data_ci = request.form.get('data_contratto_integrativo', '').strip()
+        imp.data_contratto_integrativo = date.fromisoformat(data_ci) if data_ci else None
         db.session.commit()
         flash('Impostazioni della lettera di incarico salvate.', 'success')
         return redirect(url_for('contrattazione.impostazioni_lettera', anno=anno))
@@ -497,4 +501,35 @@ def lettera_genera(tipo, id_persona):
         data_generazione=__import__('datetime').date.today(),
         **_contesto_istituto())
     nome_file = f'Lettera_incarico_{persona.cognome}_{anno}'.replace(' ', '_')
+    return _rendi_documento(html_content, nome_file, formato=formato)
+
+
+@contrattazione_bp.route('/contrattazione/retribuzione/<tipo>/<int:id_persona>')
+def retribuzione_genera(tipo, id_persona):
+    """'Retribuzione fondi MOF' ('MODELLO RETRIBUZIONE FONDI MOF.docx'):
+    comunica gli importi LIQUIDATI (non quelli previsti) — solo le
+    assegnazioni già passate per l'azione "Liquida" (vedi
+    assegnazione_liquida). Cumulativa per persona/anno, come la lettera
+    di incarico."""
+    from routes.progetti_fse import _contesto_istituto, _rendi_documento
+    if tipo not in ('docente', 'ata'):
+        flash('Tipo destinatario non valido.', 'error')
+        return redirect(url_for('contrattazione.lettere_index'))
+    anno = request.args.get('anno') or get_anno_corrente()
+    modello = Docente if tipo == 'docente' else PersonaleAta
+    persona = modello.query.get_or_404(id_persona)
+    assegnazioni = [a for a in _assegnazioni_beneficiario(tipo, id_persona, anno) if a.stato == 'liquidato']
+    if not assegnazioni:
+        flash(f'{persona.cognome} non ha incarichi liquidati per l\'anno {anno}.', 'error')
+        return redirect(url_for('contrattazione.lettere_index', anno=anno))
+    imp = ImpostazioniLetteraContrattazione.query.filter_by(anno_scol=anno).first()
+
+    totale = round(sum(a.importo_liquidato for a in assegnazioni), 2)
+    formato = 'docx' if request.args.get('formato') == 'docx' else 'pdf'
+    html_content = render_template('contrattazione/retribuzione_mof.html',
+        destinatario=persona, tipo_destinatario=tipo, anno_scol=anno,
+        assegnazioni=assegnazioni, totale=totale, impostazioni=imp,
+        data_generazione=__import__('datetime').date.today(),
+        **_contesto_istituto())
+    nome_file = f'Retribuzione_fondi_MOF_{anno}_{persona.cognome}'.replace(' ', '_')
     return _rendi_documento(html_content, nome_file, formato=formato)

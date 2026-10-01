@@ -652,6 +652,9 @@ def _auto_migrate():
         ('contrattazione_assegnazioni', 'id_tipo_incarico', 'INTEGER', None),
         ('contrattazione_assegnazioni', 'importo_liquidato', 'FLOAT', None),
         ('contrattazione_assegnazioni', 'data_liquidazione', 'DATE', None),
+        ('contrattazione_impostazioni_lettera', 'riferimento_piano_attivita_ata', 'VARCHAR(200)', None),
+        ('contrattazione_impostazioni_lettera', 'riferimento_piano_lavoro_ata', 'VARCHAR(200)', None),
+        ('contrattazione_impostazioni_lettera', 'data_contratto_integrativo', 'DATE', None),
     ]
 
     with db.engine.connect() as conn:
