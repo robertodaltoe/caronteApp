@@ -2,7 +2,7 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
-## Sessione 69 addendum 37 — Alternativa IRC: dividere un gruppo numeroso fra più docenti
+## Sessione 69 addendum 38 — Alternativa IRC: dividere un gruppo numeroso fra più docenti
 
 Roberto: con l'orario definitivo i gruppi potranno essere fino a 38 e un
 gruppo numeroso va diviso fra due docenti (era il "limite noto"
@@ -40,6 +40,44 @@ End-to-end via HTTP su un database nuovo in una copia isolata del
 progetto (sessione cloud Linux, nessun `database.db` reale presente né
 toccato): genera, dividi (16 + 15), sposta, griglia, Excel, riunisci,
 `PRAGMA integrity_check` ok.
+## Sessione 69 addendum 37 — Server Windows: l'auto-aggiornamento ogni 15 minuti non partiva mai
+
+Roberto: sul PC Windows della scuola (ora il server principale) il codice
+non si aggiorna da solo ogni 15 minuti. Sessione in sandbox Linux (cloud),
+senza accesso al PC: diagnosi solo da codice, `aggiornamento.log` non
+ancora visto.
+
+**Cause trovate** in `aggiorna_e_riavvia_windows.ps1` (generato da
+`installa_server_windows.ps1`, passo 8b):
+1. **Lo script non si poteva nemmeno eseguire**: nella riga
+   `"... in $Cartella: aggiornamento SALTATO ..."` PowerShell legge
+   `$Cartella:` come variabile con prefisso di unità ed è un errore di
+   sintassi; l'intero file viene rifiutato prima di eseguire qualunque
+   cosa (verificato col parser di PowerShell 7.4). Il task girava ogni 15
+   minuti senza fare nulla e senza scrivere nel log. Corretto in `${Cartella}:`.
+2. Anche corretto quello, il controllo `git status --porcelain` vedeva
+   come "modifiche locali" i due file che l'installatore stesso crea nella
+   cartella (`avvia_server_windows.bat`, `aggiorna_e_riavvia_windows.ps1`,
+   non ignorati) e saltava l'aggiornamento per sempre. Ora
+   `--untracked-files=no` + i due file nel `.gitignore`.
+3. Riavvio: `Stop-ScheduledTask` chiude solo `powershell.exe`; il ciclo
+   cmd e `python.exe` potevano restare vivi sulla porta 5002. Ora si
+   fermano esplicitamente il ciclo cmd e il processo in ascolto sulla 5002.
+4. Minori: output di git nel log con la stessa codifica (prima UTF-16
+   mescolato), `git pull` fallito non riavvia, finestra nascosta.
+
+**Verifica**: parser PowerShell 7.4 su installatore e script generato (0
+errori, prima 1); script eseguito su repo git di prova con i comandi di
+Windows simulati: aggiorna con i file generati presenti, non fa nulla se
+già aggiornato, salta se c'è una modifica a un file tracciato. Non provato
+su Windows reale.
+
+**Passaggio manuale una tantum sul PC della scuola** (l'aggiornamento
+automatico è proprio ciò che è rotto, quindi il fix non arriva da solo):
+PowerShell come amministratore, `cd C:\CaronteApp`, `git pull`, poi
+`powershell -ExecutionPolicy Bypass -File installa_server_windows.ps1`
+(va rilanciato dopo il pull: la versione già in esecuzione rigenererebbe
+lo script vecchio).
 
 ## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
 
