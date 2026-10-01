@@ -2,44 +2,32 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
-## Sessione 69 addendum 37 — Server Windows: l'auto-aggiornamento ogni 15 minuti non partiva mai
+## Sessione 70 — Sistemati i 4 test che fallivano da settimane
 
-Roberto: sul PC Windows della scuola (ora il server principale) il codice
-non si aggiorna da solo ogni 15 minuti. Sessione in sandbox Linux (cloud),
-senza accesso al PC: diagnosi solo da codice, `aggiornamento.log` non
-ancora visto.
+Le ultime sessioni chiudevano con "stessi 4 fallimenti pre-esistenti",
+mai indagati. Eseguita la suite in sandbox Linux (cloud, senza
+`database.db`): 607 verdi, 4 rossi. Due cause, entrambe nei test, non
+nel codice dell'app:
 
-**Cause trovate** in `aggiorna_e_riavvia_windows.ps1` (generato da
-`installa_server_windows.ps1`, passo 8b):
-1. **Lo script non si poteva nemmeno eseguire**: nella riga
-   `"... in $Cartella: aggiornamento SALTATO ..."` PowerShell legge
-   `$Cartella:` come variabile con prefisso di unità ed è un errore di
-   sintassi; l'intero file viene rifiutato prima di eseguire qualunque
-   cosa (verificato col parser di PowerShell 7.4). Il task girava ogni 15
-   minuti senza fare nulla e senza scrivere nel log. Corretto in `${Cartella}:`.
-2. Anche corretto quello, il controllo `git status --porcelain` vedeva
-   come "modifiche locali" i due file che l'installatore stesso crea nella
-   cartella (`avvia_server_windows.bat`, `aggiorna_e_riavvia_windows.ps1`,
-   non ignorati) e saltava l'aggiornamento per sempre. Ora
-   `--untracked-files=no` + i due file nel `.gitignore`.
-3. Riavvio: `Stop-ScheduledTask` chiude solo `powershell.exe`; il ciclo
-   cmd e `python.exe` potevano restare vivi sulla porta 5002. Ora si
-   fermano esplicitamente il ciclo cmd e il processo in ascolto sulla 5002.
-4. Minori: output di git nel log con la stessa codifica (prima UTF-16
-   mescolato), `git pull` fallito non riavvia, finestra nascosta.
+- **Test dipendenti dal `database.db` reale** (3 test):
+  `test_display_richiede_login.py::test_display_con_login_normale_e_raggiungibile`
+  cercava l'utente `ds`, e i due test di `test_docente_nuovo_render.py`
+  contavano sul bypass del login, che simula l'utente `dsga`. Senza un
+  database reale da copiare la copia è vuota: utente `None` (crash) o
+  redirect 302 a `/login`. Ora le fixture creano l'utente sulla copia
+  solo se manca (stesso schema già usato per `monitor_sala_docenti`).
+- **Date fisse superate dal calendario** (1 test):
+  `test_sostituzione_docente.py::test_termina_sostituzione_ripristina_orario_e_partecipanti`
+  usava un CdC al 16/9/2026, ma il modulo scambia i partecipanti solo
+  per eventi con data >= oggi — già notato nell'addendum 21, mai
+  corretto. Ora le date sono relative a oggi (`_lunedi_futuro()`);
+  stessa correzione per lo scrutinio fisso al 14/12/2026 di
+  `test_definitiva_iscrive_sostituto_a_eventi_futuri_della_classe`, che
+  sarebbe diventato rosso a metà dicembre.
 
-**Verifica**: parser PowerShell 7.4 su installatore e script generato (0
-errori, prima 1); script eseguito su repo git di prova con i comandi di
-Windows simulati: aggiorna con i file generati presenti, non fa nulla se
-già aggiornato, salta se c'è una modifica a un file tracciato. Non provato
-su Windows reale.
-
-**Passaggio manuale una tantum sul PC della scuola** (l'aggiornamento
-automatico è proprio ciò che è rotto, quindi il fix non arriva da solo):
-PowerShell come amministratore, `cd C:\CaronteApp`, `git pull`, poi
-`powershell -ExecutionPolicy Bypass -File installa_server_windows.ps1`
-(va rilanciato dopo il pull: la versione già in esecuzione rigenererebbe
-lo script vecchio).
+Nessun test saltato o disattivato. Suite completa: **611 verdi, 0
+fallimenti**. Aggiornato anche CLAUDE.md (diceva ancora 51 test).
+Sessione in sandbox Linux cloud, `database.db` reale mai toccato.
 
 ## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
 
