@@ -35,11 +35,39 @@ vincolo di unicità su giorno/ora).
 **Verifica**: 7 nuovi test (divisione bilanciata, almeno due classi,
 rigenerazione che non disfa, parte vuota tolta, sposta/riunisci,
 candidati allargati, due docenti nello stesso slot + supplenza con le
-sole classi della parte), suite 614 verdi (stessi 4 pre-esistenti).
+sole classi della parte), suite completa 618 verdi, 0 fallimenti (dopo il merge con la Sessione 70).
 End-to-end via HTTP su un database nuovo in una copia isolata del
 progetto (sessione cloud Linux, nessun `database.db` reale presente né
 toccato): genera, dividi (16 + 15), sposta, griglia, Excel, riunisci,
 `PRAGMA integrity_check` ok.
+
+## Sessione 70 — Sistemati i 4 test che fallivano da settimane
+
+Le ultime sessioni chiudevano con "stessi 4 fallimenti pre-esistenti",
+mai indagati. Eseguita la suite in sandbox Linux (cloud, senza
+`database.db`): 607 verdi, 4 rossi. Due cause, entrambe nei test, non
+nel codice dell'app:
+
+- **Test dipendenti dal `database.db` reale** (3 test):
+  `test_display_richiede_login.py::test_display_con_login_normale_e_raggiungibile`
+  cercava l'utente `ds`, e i due test di `test_docente_nuovo_render.py`
+  contavano sul bypass del login, che simula l'utente `dsga`. Senza un
+  database reale da copiare la copia è vuota: utente `None` (crash) o
+  redirect 302 a `/login`. Ora le fixture creano l'utente sulla copia
+  solo se manca (stesso schema già usato per `monitor_sala_docenti`).
+- **Date fisse superate dal calendario** (1 test):
+  `test_sostituzione_docente.py::test_termina_sostituzione_ripristina_orario_e_partecipanti`
+  usava un CdC al 16/9/2026, ma il modulo scambia i partecipanti solo
+  per eventi con data >= oggi — già notato nell'addendum 21, mai
+  corretto. Ora le date sono relative a oggi (`_lunedi_futuro()`);
+  stessa correzione per lo scrutinio fisso al 14/12/2026 di
+  `test_definitiva_iscrive_sostituto_a_eventi_futuri_della_classe`, che
+  sarebbe diventato rosso a metà dicembre.
+
+Nessun test saltato o disattivato. Suite completa: **611 verdi, 0
+fallimenti**. Aggiornato anche CLAUDE.md (diceva ancora 51 test).
+Sessione in sandbox Linux cloud, `database.db` reale mai toccato.
+
 ## Sessione 69 addendum 37 — Server Windows: l'auto-aggiornamento ogni 15 minuti non partiva mai
 
 Roberto: sul PC Windows della scuola (ora il server principale) il codice
