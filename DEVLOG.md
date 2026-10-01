@@ -2,6 +2,45 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 69 addendum 37 — Alternativa IRC: dividere un gruppo numeroso fra più docenti
+
+Roberto: con l'orario definitivo i gruppi potranno essere fino a 38 e un
+gruppo numeroso va diviso fra due docenti (era il "limite noto"
+dell'addendum 35: un solo gruppo per slot). Scelta presa insieme: si
+divide solo per **classi intere**, ogni classe sta in un solo gruppo
+dello slot e il numero di studenti resta quello delle adesioni (nessuna
+colonna nuova, nessuna migrazione: la tabella dei gruppi non aveva un
+vincolo di unicità su giorno/ora).
+
+**Cosa cambia** (`modules/alternativa_irc.py`, route e template dei gruppi):
+- Pulsante "Dividi in due gruppi" (con almeno due classi): crea un nuovo
+  gruppo nello stesso giorno/ora e ci sposta circa metà degli studenti,
+  bilanciando per classi intere. Il docente già assegnato resta sul
+  gruppo originale. Si può dividere ancora una parte (nessun limite fisso).
+- Nei gruppi divisi compaiono la lettera (A, B, …), i pulsanti per
+  spostare una singola classe nell'altra parte e "Riunisci".
+- `genera_gruppi()` non disfa mai una divisione: le classi tolte spariscono
+  dalla parte in cui erano, le classi nuove dello slot vanno nella parte
+  meno numerosa (con avviso), una parte rimasta vuota e senza docente
+  viene tolta, una con docente resta segnalata come prima.
+- Il vincolo "insegna nella classe" vale solo per le classi della propria
+  parte: dividendo si allarga anche la rosa dei candidati. "Già assegnato
+  a un altro gruppo alla stessa ora" impedisce lo stesso docente su due
+  parti.
+- Supplenze: nessuna modifica necessaria, già per singolo gruppo; la
+  supplenza per l'assenza del docente di una parte elenca solo le classi
+  di quella parte. Griglia settimanale con la lettera, Excel con una
+  colonna "Gruppo" in fondo.
+
+**Verifica**: 7 nuovi test (divisione bilanciata, almeno due classi,
+rigenerazione che non disfa, parte vuota tolta, sposta/riunisci,
+candidati allargati, due docenti nello stesso slot + supplenza con le
+sole classi della parte), suite 614 verdi (stessi 4 pre-esistenti).
+End-to-end via HTTP su un database nuovo in una copia isolata del
+progetto (sessione cloud Linux, nessun `database.db` reale presente né
+toccato): genera, dividi (16 + 15), sposta, griglia, Excel, riunisci,
+`PRAGMA integrity_check` ok.
+
 ## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
 
 Roberto, dopo l'addendum 35: il punto critico è che l'assenza del docente
