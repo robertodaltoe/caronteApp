@@ -410,7 +410,7 @@ def create_app(avvio_con_reloader=True):
         from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
             AssegnazioneContrattazione, StoricoSpostamentoCapitolo,
             TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione,
-            LetteraIncaricoProtocollo)
+            LetteraIncaricoProtocollo, PersonaleAta)
         from models.sostituzione_docente import (SostituzioneDocente,  # noqa
             SostituzioneOrarioSlot, SostituzioneEventoSwap)
         from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
@@ -420,6 +420,8 @@ def create_app(avvio_con_reloader=True):
         _auto_migrate()
         _migra_vincolo_aule()
         _migra_codici_classi_concorso()
+        _migra_contrattazione_assegnazioni_ata()
+        _migra_contrattazione_protocollo_ata()
         _backfill_anno_scol_banca_ore()
         _migra_indici_fk_calde()
         _seed_dipartimenti_materie()
@@ -751,6 +753,121 @@ def _migra_vincolo_aule():
         conn.execute(text("ALTER TABLE aule_new RENAME TO aule"))
         conn.commit()
         print("Migrazione: vincolo tabella 'aule' corretto a UNIQUE(anno_scol, classe).")
+
+
+def _migra_contrattazione_assegnazioni_ata():
+    """
+    Permette di assegnare un incarico di contrattazione anche al
+    personale ATA (models.PersonaleAta), non solo ai docenti.
+
+    'contrattazione_assegnazioni' è stata creata con id_docente
+    NOT NULL — SQLite non permette di togliere un NOT NULL con ALTER
+    TABLE, quindi va ricreata (stesso pattern di _migra_vincolo_aule):
+    id_docente diventa nullable, si aggiunge id_personale_ata e il
+    vincolo CHECK che impone esattamente uno dei due. Idempotente: se
+    id_docente è già nullable non fa nulla. Tutte le righe esistenti
+    hanno id_docente valorizzato (l'assegnazione all'ATA non esisteva
+    prima), quindi restano valide per il nuovo vincolo.
+    """
+    from sqlalchemy import text
+
+    with db.engine.connect() as conn:
+        row = conn.execute(text(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='contrattazione_assegnazioni'"
+        )).fetchone()
+        if not row or not row[0]:
+            return  # tabella non ancora creata (db.create_all() la crea già giusta)
+
+        if 'id_docente INTEGER NOT NULL' not in row[0]:
+            return  # già migrata
+
+        conn.execute(text("DROP TABLE IF EXISTS contrattazione_assegnazioni_new"))
+        conn.execute(text("""
+            CREATE TABLE contrattazione_assegnazioni_new (
+                id INTEGER NOT NULL,
+                id_capitolo INTEGER NOT NULL,
+                id_docente INTEGER,
+                id_personale_ata INTEGER,
+                id_tipo_incarico INTEGER,
+                descrizione VARCHAR(200) NOT NULL,
+                unita FLOAT,
+                importo FLOAT NOT NULL,
+                stato VARCHAR(20) NOT NULL,
+                importo_liquidato FLOAT,
+                data_liquidazione DATE,
+                note TEXT,
+                creato_il DATETIME,
+                creato_da VARCHAR(80),
+                modificato_il DATETIME,
+                PRIMARY KEY (id),
+                FOREIGN KEY(id_capitolo) REFERENCES contrattazione_capitoli (id),
+                FOREIGN KEY(id_docente) REFERENCES docenti (id),
+                FOREIGN KEY(id_personale_ata) REFERENCES personale_ata (id),
+                FOREIGN KEY(id_tipo_incarico) REFERENCES contrattazione_tipi_incarico (id),
+                CONSTRAINT ck_contrattazione_assegnazione_beneficiario
+                    CHECK ((id_docente IS NOT NULL) OR (id_personale_ata IS NOT NULL))
+            )
+        """))
+        cols = [r[1] for r in conn.execute(text("PRAGMA table_info(contrattazione_assegnazioni)"))]
+        comuni = ', '.join(c for c in cols)
+        conn.execute(text(
+            f"INSERT INTO contrattazione_assegnazioni_new ({comuni}) "
+            f"SELECT {comuni} FROM contrattazione_assegnazioni"
+        ))
+        conn.execute(text("DROP TABLE contrattazione_assegnazioni"))
+        conn.execute(text("ALTER TABLE contrattazione_assegnazioni_new RENAME TO contrattazione_assegnazioni"))
+        conn.commit()
+        print("Migrazione: 'contrattazione_assegnazioni' ora accetta anche il personale ATA.")
+
+
+def _migra_contrattazione_protocollo_ata():
+    """Stesso motivo e stesso pattern di _migra_contrattazione_assegnazioni_ata():
+    il protocollo della lettera di incarico deve poter riguardare anche
+    il personale ATA, non solo i docenti."""
+    from sqlalchemy import text
+
+    with db.engine.connect() as conn:
+        row = conn.execute(text(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='contrattazione_lettere_protocollo'"
+        )).fetchone()
+        if not row or not row[0]:
+            return
+
+        if 'id_docente INTEGER NOT NULL' not in row[0]:
+            return  # già migrata
+
+        conn.execute(text("DROP TABLE IF EXISTS contrattazione_lettere_protocollo_new"))
+        conn.execute(text("""
+            CREATE TABLE contrattazione_lettere_protocollo_new (
+                id INTEGER NOT NULL,
+                id_docente INTEGER,
+                id_personale_ata INTEGER,
+                anno_scol VARCHAR(9) NOT NULL,
+                numero_protocollo VARCHAR(40),
+                data_protocollo DATE,
+                note TEXT,
+                creato_il DATETIME,
+                aggiornato_il DATETIME,
+                PRIMARY KEY (id),
+                FOREIGN KEY(id_docente) REFERENCES docenti (id),
+                FOREIGN KEY(id_personale_ata) REFERENCES personale_ata (id),
+                CONSTRAINT uq_contrattazione_lettera_protocollo_docente UNIQUE (id_docente, anno_scol),
+                CONSTRAINT uq_contrattazione_lettera_protocollo_ata UNIQUE (id_personale_ata, anno_scol),
+                CONSTRAINT ck_contrattazione_lettera_protocollo_beneficiario
+                    CHECK ((id_docente IS NOT NULL) OR (id_personale_ata IS NOT NULL))
+            )
+        """))
+        cols = [r[1] for r in conn.execute(text("PRAGMA table_info(contrattazione_lettere_protocollo)"))]
+        comuni = ', '.join(cols)
+        conn.execute(text(
+            f"INSERT INTO contrattazione_lettere_protocollo_new ({comuni}) "
+            f"SELECT {comuni} FROM contrattazione_lettere_protocollo"
+        ))
+        conn.execute(text("DROP TABLE contrattazione_lettere_protocollo"))
+        conn.execute(text(
+            "ALTER TABLE contrattazione_lettere_protocollo_new RENAME TO contrattazione_lettere_protocollo"))
+        conn.commit()
+        print("Migrazione: protocollo lettera di incarico ora accetta anche il personale ATA.")
 
 
 def _migra_codici_classi_concorso():

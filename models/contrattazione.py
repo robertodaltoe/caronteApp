@@ -115,14 +115,37 @@ class CapitoloContrattazione(db.Model):
         return self.saldo_residuo < -0.004  # tolleranza arrotondamento
 
 
+class PersonaleAta(db.Model):
+    """Anagrafica minima del personale ATA, SOLO per poter assegnare
+    incarichi di contrattazione a chi non è un docente (Docente è un
+    modello pensato per l'orario/le lezioni, non adatto all'ATA) —
+    Roberto: "l'inserimento è finalizzato alla sola assegnazione degli
+    incarichi in questa parte di Caronte", niente orario/assenze/altro
+    per queste persone, solo nome e cognome per comparire nelle
+    assegnazioni e nella lettera di incarico."""
+    __tablename__ = 'personale_ata'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    cognome   = db.Column(db.String(60), nullable=False)
+    nome      = db.Column(db.String(60), nullable=True)
+    attivo    = db.Column(db.Boolean, default=True)
+    note      = db.Column(db.String(200), nullable=True)
+    creato_il = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<PersonaleAta {self.cognome} {self.nome or ""}>'
+
+
 class AssegnazioneContrattazione(db.Model):
-    """Importo assegnato a un docente dentro un capitolo — la riga da
+    """Importo assegnato a un docente O a un ATA (esattamente uno dei
+    due, vedi il vincolo CHECK sotto) dentro un capitolo — la riga da
     cui nasce (in futuro) la lettera di incarico."""
     __tablename__ = 'contrattazione_assegnazioni'
 
     id            = db.Column(db.Integer, primary_key=True)
     id_capitolo   = db.Column(db.Integer, db.ForeignKey('contrattazione_capitoli.id'), nullable=False, index=True)
-    id_docente    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False, index=True)
+    id_docente    = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True, index=True)
+    id_personale_ata = db.Column(db.Integer, db.ForeignKey('personale_ata.id'), nullable=True, index=True)
     # Riferimento al catalogo (models.TipoIncaricoContrattazione) per
     # recuperare il testo descrittivo esteso nella lettera di incarico —
     # nullable: un'assegnazione può restare solo testo libero se non c'è
@@ -150,10 +173,31 @@ class AssegnazioneContrattazione(db.Model):
     modificato_il = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     docente = db.relationship('Docente')
+    personale_ata = db.relationship('PersonaleAta')
     tipo_incarico = db.relationship('TipoIncaricoContrattazione')
     storico_spostamenti = db.relationship('StoricoSpostamentoCapitolo',
                                            backref='assegnazione', cascade='all, delete-orphan',
                                            lazy=True, order_by='StoricoSpostamentoCapitolo.data.desc()')
+
+    __table_args__ = (
+        db.CheckConstraint('(id_docente IS NOT NULL) OR (id_personale_ata IS NOT NULL)',
+                           name='ck_contrattazione_assegnazione_beneficiario'),
+    )
+
+    @property
+    def beneficiario(self):
+        """Il Docente o il PersonaleAta a cui è assegnato l'incarico —
+        esattamente uno dei due, mai nessuno (vincolo CHECK sopra)."""
+        return self.docente if self.id_docente else self.personale_ata
+
+    @property
+    def beneficiario_tipo(self):
+        return 'docente' if self.id_docente else 'ata'
+
+    @property
+    def beneficiario_nome_completo(self):
+        b = self.beneficiario
+        return f'{b.cognome} {b.nome or ""}'.strip() if b else '—'
 
 
 class StoricoSpostamentoCapitolo(db.Model):
@@ -231,7 +275,8 @@ class LetteraIncaricoProtocollo(db.Model):
     __tablename__ = 'contrattazione_lettere_protocollo'
 
     id                 = db.Column(db.Integer, primary_key=True)
-    id_docente         = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=False, index=True)
+    id_docente         = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True, index=True)
+    id_personale_ata   = db.Column(db.Integer, db.ForeignKey('personale_ata.id'), nullable=True, index=True)
     anno_scol          = db.Column(db.String(9), nullable=False)
     numero_protocollo  = db.Column(db.String(40), nullable=True)
     data_protocollo    = db.Column(db.Date, nullable=True)
@@ -240,7 +285,20 @@ class LetteraIncaricoProtocollo(db.Model):
     aggiornato_il      = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     docente = db.relationship('Docente')
+    personale_ata = db.relationship('PersonaleAta')
 
+    # Due UNIQUE separati invece di uno solo su entrambe le colonne:
+    # SQLite (come lo standard SQL) non considera duplicati due NULL,
+    # quindi ciascun vincolo di fatto si applica solo alle righe del
+    # proprio tipo (docente con id_personale_ata sempre NULL, e
+    # viceversa) — stesso principio del CHECK su AssegnazioneContrattazione.
     __table_args__ = (
-        db.UniqueConstraint('id_docente', 'anno_scol', name='uq_contrattazione_lettera_protocollo'),
+        db.UniqueConstraint('id_docente', 'anno_scol', name='uq_contrattazione_lettera_protocollo_docente'),
+        db.UniqueConstraint('id_personale_ata', 'anno_scol', name='uq_contrattazione_lettera_protocollo_ata'),
+        db.CheckConstraint('(id_docente IS NOT NULL) OR (id_personale_ata IS NOT NULL)',
+                           name='ck_contrattazione_lettera_protocollo_beneficiario'),
     )
+
+    @property
+    def beneficiario(self):
+        return self.docente if self.id_docente else self.personale_ata

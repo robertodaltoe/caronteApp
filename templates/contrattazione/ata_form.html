@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ 'Modifica ATA' if persona else 'Nuovo ATA' }}{% endblock %}
+{% block content %}
+
+<h1 style="font-size:1.3rem; color:var(--blu);">
+    {{ icon('person') }} {{ 'Modifica' if persona else 'Nuovo/a' }} — Personale ATA
+</h1>
+<p style="font-size:.78rem; color:var(--grigio); margin-bottom:16px;">
+    <a href="{{ url_for('contrattazione.ata_lista') }}">← Torna al personale ATA</a>
+</p>
+
+<form method="post" class="card" style="max-width:480px; padding:20px;">
+    <div class="form-group">
+        <label>Cognome *</label>
+        <input type="text" name="cognome" required value="{{ persona.cognome if persona else '' }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Nome</label>
+        <input type="text" name="nome" value="{{ persona.nome or '' if persona else '' }}" style="width:100%;">
+    </div>
+    <div class="form-group">
+        <label>Note</label>
+        <textarea name="note" rows="3" style="width:100%; box-sizing:border-box;">{{ persona.note or '' if persona else '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" name="attivo" value="1" {% if not persona or persona.attivo %}checked{% endif %}>
+            Attivo (selezionabile per le nuove assegnazioni)
+        </label>
+    </div>
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Salva</button>
+</form>
+
+{% endblock %}

@@ -23,7 +23,7 @@ from models.contrattazione import (
     FondoContrattazione, CapitoloContrattazione, AssegnazioneContrattazione,
     StoricoSpostamentoCapitolo, STATI_ASSEGNAZIONE, STATI_ASSEGNAZIONE_LABEL,
     TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione,
-    LetteraIncaricoProtocollo,
+    LetteraIncaricoProtocollo, PersonaleAta,
 )
 from models.docente import Docente
 from config_anno import get_anno_corrente
@@ -136,17 +136,21 @@ def assegnazione_form(id_capitolo=None, id=None):
     asg = AssegnazioneContrattazione.query.get_or_404(id) if id else None
     capitolo = asg.capitolo if asg else CapitoloContrattazione.query.get_or_404(id_capitolo)
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+    ata = PersonaleAta.query.filter_by(attivo=True).order_by(PersonaleAta.cognome).all()
     catalogo = TipoIncaricoContrattazione.query.filter_by(attivo=True).order_by(TipoIncaricoContrattazione.nome).all()
     if request.method == 'POST':
-        id_doc = request.form.get('id_docente', type=int)
+        tipo_beneficiario = request.form.get('tipo_beneficiario', 'docente')
+        id_doc = request.form.get('id_docente', type=int) if tipo_beneficiario == 'docente' else None
+        id_ata = request.form.get('id_personale_ata', type=int) if tipo_beneficiario == 'ata' else None
         descrizione = request.form.get('descrizione', '').strip()
-        if not id_doc or not descrizione:
-            flash('Docente e descrizione dell\'incarico sono obbligatori.', 'error')
+        if not (id_doc or id_ata) or not descrizione:
+            flash('Destinatario e descrizione dell\'incarico sono obbligatori.', 'error')
             return redirect(request.url)
         if asg is None:
             asg = AssegnazioneContrattazione(id_capitolo=capitolo.id, creato_da=_utente_corrente())
             db.session.add(asg)
-        asg.id_docente  = id_doc
+        asg.id_docente       = id_doc
+        asg.id_personale_ata = id_ata
         asg.id_tipo_incarico = request.form.get('id_tipo_incarico', type=int) or None
         asg.descrizione = descrizione
         asg.unita       = _float(request.form.get('unita'), None) if request.form.get('unita') else None
@@ -160,7 +164,7 @@ def assegnazione_form(id_capitolo=None, id=None):
         flash('Assegnazione salvata.', 'success')
         return redirect(url_for('contrattazione.index', anno=capitolo.fondo.anno_scol))
     return render_template('contrattazione/assegnazione_form.html', asg=asg, capitolo=capitolo,
-                           docenti=docenti, stati=STATI_ASSEGNAZIONE, catalogo=catalogo)
+                           docenti=docenti, ata=ata, stati=STATI_ASSEGNAZIONE, catalogo=catalogo)
 
 
 @contrattazione_bp.route('/contrattazione/assegnazione/<int:id>/elimina', methods=['POST'])
@@ -191,7 +195,7 @@ def assegnazione_liquida(id):
     asg.stato = 'liquidato'
     db.session.commit()
     diff = round(importo_liq - asg.importo, 2)
-    msg = f'"{asg.descrizione}" ({asg.docente.cognome}) liquidato a {importo_liq:.2f}€.'
+    msg = f'"{asg.descrizione}" ({asg.beneficiario_nome_completo}) liquidato a {importo_liq:.2f}€.'
     if abs(diff) > 0.004:
         msg += f' Differenza rispetto al previsto: {diff:+.2f}€.'
     flash(msg, 'success')
@@ -231,6 +235,50 @@ def assegnazione_sposta(id):
     else:
         flash(f'Assegnazione spostata da "{vecchio_capitolo.nome}" a "{nuovo_capitolo.nome}".', 'success')
     return redirect(url_for('contrattazione.index', anno=nuovo_capitolo.fondo.anno_scol))
+
+
+# ── Personale ATA (anagrafica minima, solo per le assegnazioni qui) ────────
+
+@contrattazione_bp.route('/contrattazione/ata')
+def ata_lista():
+    persone = PersonaleAta.query.order_by(PersonaleAta.cognome).all()
+    return render_template('contrattazione/ata_lista.html', persone=persone)
+
+
+@contrattazione_bp.route('/contrattazione/ata/nuovo', methods=['GET', 'POST'])
+@contrattazione_bp.route('/contrattazione/ata/<int:id>/modifica', methods=['GET', 'POST'])
+def ata_form(id=None):
+    persona = PersonaleAta.query.get_or_404(id) if id else None
+    if request.method == 'POST':
+        cognome = request.form.get('cognome', '').strip()
+        if not cognome:
+            flash('Il cognome è obbligatorio.', 'error')
+            return redirect(request.url)
+        if persona is None:
+            persona = PersonaleAta()
+            db.session.add(persona)
+        persona.cognome = cognome
+        persona.nome    = request.form.get('nome', '').strip() or None
+        persona.attivo  = request.form.get('attivo') == '1'
+        persona.note    = request.form.get('note', '').strip() or None
+        db.session.commit()
+        flash(f'{persona.cognome} salvato/a.', 'success')
+        return redirect(url_for('contrattazione.ata_lista'))
+    return render_template('contrattazione/ata_form.html', persona=persona)
+
+
+@contrattazione_bp.route('/contrattazione/ata/<int:id>/elimina', methods=['POST'])
+def ata_elimina(id):
+    persona = PersonaleAta.query.get_or_404(id)
+    in_uso = AssegnazioneContrattazione.query.filter_by(id_personale_ata=id).count()
+    if in_uso:
+        flash(f'{persona.cognome} ha {in_uso} assegnazione/i di contrattazione: non può essere '
+              'eliminato/a. Elimina prima le assegnazioni, o disattivalo/a modificandolo/a.', 'error')
+        return redirect(url_for('contrattazione.ata_lista'))
+    db.session.delete(persona)
+    db.session.commit()
+    flash(f'{persona.cognome} eliminato/a.', 'warning')
+    return redirect(url_for('contrattazione.ata_lista'))
 
 
 # ── Catalogo tipi di incarico (testo descrittivo per la lettera) ───────────
@@ -352,39 +400,51 @@ def impostazioni_lettera():
 
 @contrattazione_bp.route('/contrattazione/lettere')
 def lettere_index():
-    """Un docente per riga, con il totale degli incarichi/importi
-    dell'anno — solo chi ha almeno un'assegnazione (Roberto: la lettera
-    è cumulativa di tutti gli incarichi assegnati a quella persona)."""
+    """Una riga per destinatario (docente o ATA), con il totale degli
+    incarichi/importi dell'anno — solo chi ha almeno un'assegnazione
+    (Roberto: la lettera è cumulativa di tutti gli incarichi assegnati
+    a quella persona)."""
     anno = request.args.get('anno') or get_anno_corrente()
-    righe = (db.session.query(Docente)
-             .join(AssegnazioneContrattazione, AssegnazioneContrattazione.id_docente == Docente.id)
-             .join(CapitoloContrattazione, AssegnazioneContrattazione.id_capitolo == CapitoloContrattazione.id)
-             .join(FondoContrattazione, CapitoloContrattazione.id_fondo == FondoContrattazione.id)
-             .filter(FondoContrattazione.anno_scol == anno)
-             .distinct().order_by(Docente.cognome).all())
-    protocolli = {p.id_docente: p for p in LetteraIncaricoProtocollo.query.filter_by(anno_scol=anno).all()}
+
+    def _righe(modello, campo_id):
+        return (db.session.query(modello)
+                .join(AssegnazioneContrattazione, campo_id == modello.id)
+                .join(CapitoloContrattazione, AssegnazioneContrattazione.id_capitolo == CapitoloContrattazione.id)
+                .join(FondoContrattazione, CapitoloContrattazione.id_fondo == FondoContrattazione.id)
+                .filter(FondoContrattazione.anno_scol == anno)
+                .distinct().order_by(modello.cognome).all())
+
+    protocolli = {(p.id_docente, 'docente') if p.id_docente else (p.id_personale_ata, 'ata'): p
+                  for p in LetteraIncaricoProtocollo.query.filter_by(anno_scol=anno).all()}
     dettaglio = []
-    for d in righe:
-        assegnazioni = _assegnazioni_docente(d.id, anno)
-        dettaglio.append({'docente': d, 'n_incarichi': len(assegnazioni),
-                          'totale': round(sum(a.importo for a in assegnazioni), 2),
-                          'n_liquidati': sum(1 for a in assegnazioni if a.stato == 'liquidato'),
-                          'protocollo': protocolli.get(d.id)})
+    for tipo, modello, campo_id in (('docente', Docente, AssegnazioneContrattazione.id_docente),
+                                     ('ata', PersonaleAta, AssegnazioneContrattazione.id_personale_ata)):
+        for persona in _righe(modello, campo_id):
+            assegnazioni = _assegnazioni_beneficiario(tipo, persona.id, anno)
+            dettaglio.append({'tipo': tipo, 'persona': persona, 'n_incarichi': len(assegnazioni),
+                              'totale': round(sum(a.importo for a in assegnazioni), 2),
+                              'n_liquidati': sum(1 for a in assegnazioni if a.stato == 'liquidato'),
+                              'protocollo': protocolli.get((persona.id, tipo))})
+    dettaglio.sort(key=lambda r: r['persona'].cognome)
     return render_template('contrattazione/lettere_index.html', dettaglio=dettaglio, anno=anno)
 
 
-@contrattazione_bp.route('/contrattazione/lettere/<int:id_docente>/protocollo', methods=['POST'])
-def lettera_protocollo(id_docente):
+@contrattazione_bp.route('/contrattazione/lettere/<tipo>/<int:id_persona>/protocollo', methods=['POST'])
+def lettera_protocollo(tipo, id_persona):
     """Registra prot./data della lettera di incarico cumulativa di un
-    docente per l'anno, DOPO che è stata elaborata (Roberto: "dobbiamo
-    tenere traccia dei numeri di protocollo delle lettere di
+    docente/ATA per l'anno, DOPO che è stata elaborata (Roberto:
+    "dobbiamo tenere traccia dei numeri di protocollo delle lettere di
     assegnazione")."""
+    if tipo not in ('docente', 'ata'):
+        flash('Tipo destinatario non valido.', 'error')
+        return redirect(url_for('contrattazione.lettere_index'))
     anno = request.form.get('anno') or get_anno_corrente()
-    riga = LetteraIncaricoProtocollo.query.filter_by(id_docente=id_docente, anno_scol=anno).first()
+    filtro = {'id_docente': id_persona} if tipo == 'docente' else {'id_personale_ata': id_persona}
+    riga = LetteraIncaricoProtocollo.query.filter_by(anno_scol=anno, **filtro).first()
     numero = request.form.get('numero_protocollo', '').strip()
     data_s = request.form.get('data_protocollo', '').strip()
     if riga is None:
-        riga = LetteraIncaricoProtocollo(id_docente=id_docente, anno_scol=anno)
+        riga = LetteraIncaricoProtocollo(anno_scol=anno, **filtro)
         db.session.add(riga)
     riga.numero_protocollo = numero or None
     riga.data_protocollo = date.fromisoformat(data_s) if data_s else None
@@ -394,28 +454,32 @@ def lettera_protocollo(id_docente):
     return redirect(url_for('contrattazione.lettere_index', anno=anno))
 
 
-def _assegnazioni_docente(id_docente, anno_scol):
+def _assegnazioni_beneficiario(tipo, id_persona, anno_scol):
+    campo = AssegnazioneContrattazione.id_docente if tipo == 'docente' else AssegnazioneContrattazione.id_personale_ata
     return (AssegnazioneContrattazione.query
             .join(CapitoloContrattazione, AssegnazioneContrattazione.id_capitolo == CapitoloContrattazione.id)
             .join(FondoContrattazione, CapitoloContrattazione.id_fondo == FondoContrattazione.id)
-            .filter(AssegnazioneContrattazione.id_docente == id_docente,
-                    FondoContrattazione.anno_scol == anno_scol)
+            .filter(campo == id_persona, FondoContrattazione.anno_scol == anno_scol)
             .order_by(AssegnazioneContrattazione.id).all())
 
 
-@contrattazione_bp.route('/contrattazione/lettere/<int:id_docente>')
-def lettera_genera(id_docente):
+@contrattazione_bp.route('/contrattazione/lettere/<tipo>/<int:id_persona>')
+def lettera_genera(tipo, id_persona):
     from routes.progetti_fse import _contesto_istituto, _rendi_documento
+    if tipo not in ('docente', 'ata'):
+        flash('Tipo destinatario non valido.', 'error')
+        return redirect(url_for('contrattazione.lettere_index'))
     anno = request.args.get('anno') or get_anno_corrente()
-    docente = Docente.query.get_or_404(id_docente)
-    assegnazioni = _assegnazioni_docente(id_docente, anno)
+    modello = Docente if tipo == 'docente' else PersonaleAta
+    persona = modello.query.get_or_404(id_persona)
+    assegnazioni = _assegnazioni_beneficiario(tipo, id_persona, anno)
     if not assegnazioni:
-        flash(f'{docente.cognome} non ha incarichi di contrattazione per l\'anno {anno}.', 'error')
+        flash(f'{persona.cognome} non ha incarichi di contrattazione per l\'anno {anno}.', 'error')
         return redirect(url_for('contrattazione.lettere_index', anno=anno))
     imp = ImpostazioniLetteraContrattazione.query.filter_by(anno_scol=anno).first()
 
     # Elenco descrittivo: solo i tipi di incarico davvero assegnati a
-    # QUESTO docente, deduplicati (se ha due assegnazioni dello stesso
+    # QUESTA persona, deduplicati (se ha due assegnazioni dello stesso
     # tipo, il testo compare una sola volta) — mai l'intero catalogo.
     visti = []
     seen = set()
@@ -427,9 +491,10 @@ def lettera_genera(id_docente):
     totale = round(sum(a.importo for a in assegnazioni), 2)
     formato = 'docx' if request.args.get('formato') == 'docx' else 'pdf'
     html_content = render_template('contrattazione/lettera_incarico.html',
-        docente=docente, anno_scol=anno, assegnazioni=assegnazioni, totale=totale,
+        destinatario=persona, tipo_destinatario=tipo, anno_scol=anno,
+        assegnazioni=assegnazioni, totale=totale,
         voci_descrittive=visti, impostazioni=imp,
         data_generazione=__import__('datetime').date.today(),
         **_contesto_istituto())
-    nome_file = f'Lettera_incarico_{docente.cognome}_{anno}'.replace(' ', '_')
+    nome_file = f'Lettera_incarico_{persona.cognome}_{anno}'.replace(' ', '_')
     return _rendi_documento(html_content, nome_file, formato=formato)

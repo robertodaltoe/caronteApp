@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Personale ATA{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('person') }} Personale ATA</h1>
+        <p style="font-size:.82rem; color:var(--grigio); max-width:70ch;">
+            Anagrafica minima, solo per poter assegnare incarichi di contrattazione al personale ATA —
+            niente orario, assenze o altro: solo nome e cognome.
+        </p>
+    </div>
+    <a href="{{ url_for('contrattazione.ata_form') }}" class="btn btn-success">{{ icon('plus') }} Nuovo/a</a>
+</div>
+<p style="font-size:.78rem; margin-bottom:14px;"><a href="{{ url_for('contrattazione.index') }}">← Torna alla contrattazione</a></p>
+
+{% if not persone %}
+<div class="card" style="text-align:center; padding:40px; color:var(--grigio);">Nessun ATA censito.</div>
+{% else %}
+<div class="card" style="padding:0; overflow:hidden;">
+<table style="width:100%; border-collapse:collapse;">
+    <thead><tr style="background:#f8fafc; text-align:left;">
+        <th style="padding:8px;">Cognome</th>
+        <th style="padding:8px;">Nome</th>
+        <th style="padding:8px;">Stato</th>
+        <th style="padding:8px;">Note</th>
+        <th style="padding:8px;"></th>
+    </tr></thead>
+    <tbody>
+    {% for p in persone %}
+        <tr style="border-top:1px solid #f1f3f5;">
+            <td style="padding:8px; font-weight:600;">{{ p.cognome }}</td>
+            <td style="padding:8px;">{{ p.nome or '—' }}</td>
+            <td style="padding:8px;">
+                {% if p.attivo %}<span class="badge-tipo" style="background:var(--verde-bg); color:var(--verde);">Attivo</span>
+                {% else %}<span class="badge-tipo" style="background:#e5eaf0;">Disattivato</span>{% endif %}
+            </td>
+            <td style="padding:8px; color:var(--grigio); font-size:.82rem;">{{ p.note or '' }}</td>
+            <td style="padding:8px; white-space:nowrap;">
+                <a href="{{ url_for('contrattazione.ata_form', id=p.id) }}" style="color:var(--bronzo);">{{ icon('edit') }}</a>
+                <form method="post" action="{{ url_for('contrattazione.ata_elimina', id=p.id) }}" style="display:inline;"
+                      onsubmit="return confirm('Eliminare {{ p.cognome }}?')">
+                    <button type="submit" style="background:none; border:none; cursor:pointer; color:var(--rosso);">{{ icon('close') }}</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% endblock %}

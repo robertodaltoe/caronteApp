@@ -25,6 +25,8 @@
             {{ icon('mail') }} Lettere di incarico</a>
         <a href="{{ url_for('contrattazione.catalogo') }}" class="btn btn-sm" style="background:#e5eaf0;">
             {{ icon('list') }} Catalogo incarichi</a>
+        <a href="{{ url_for('contrattazione.ata_lista') }}" class="btn btn-sm" style="background:#e5eaf0;">
+            {{ icon('person') }} Personale ATA</a>
         <a href="{{ url_for('contrattazione.fondo_form') }}?anno_scol={{ anno }}" class="btn btn-success">
             {{ icon('plus') }} Nuovo fondo
         </a>
@@ -90,7 +92,7 @@
             </div>
             <div style="display:flex; gap:6px;">
                 <a href="{{ url_for('contrattazione.assegnazione_form', id_capitolo=cap.id) }}" class="btn btn-sm">
-                    {{ icon('plus') }} Docente</a>
+                    {{ icon('plus') }} Destinatario</a>
                 <a href="{{ url_for('contrattazione.capitolo_form', id=cap.id) }}" class="btn btn-sm" style="background:#e5eaf0;">
                     {{ icon('edit') }}</a>
                 <form method="post" action="{{ url_for('contrattazione.capitolo_elimina', id=cap.id) }}"
@@ -105,7 +107,7 @@
         <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:.84rem;">
             <thead>
                 <tr style="color:var(--grigio); text-align:left;">
-                    <th style="padding:4px 6px;">Docente</th>
+                    <th style="padding:4px 6px;">Destinatario</th>
                     <th style="padding:4px 6px;">Incarico</th>
                     <th style="padding:4px 6px; text-align:right;">Unità</th>
                     <th style="padding:4px 6px; text-align:right;">Previsto</th>
@@ -117,7 +119,7 @@
             <tbody>
                 {% for a in cap.assegnazioni %}
                 <tr style="border-top:1px solid #f1f3f5;">
-                    <td style="padding:4px 6px;">{{ a.docente.cognome }} {{ a.docente.nome or '' }}</td>
+                    <td style="padding:4px 6px;">{{ a.beneficiario_nome_completo }} {% if a.beneficiario_tipo == 'ata' %}<span class="badge-tipo" style="background:#e5eaf0; font-size:.68rem;">ATA</span>{% endif %}</td>
                     <td style="padding:4px 6px;">{{ a.descrizione }}
                         {% if a.storico_spostamenti %}
                         <span title="Spostata {{ a.storico_spostamenti|length }} volta/e" style="color:var(--bronzo); font-size:.75rem;">

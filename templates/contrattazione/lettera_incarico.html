@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Lettera di incarico — {{ docente.cognome }} {{ docente.nome or '' }}</title>
+<title>Lettera di incarico — {{ destinatario.cognome }} {{ destinatario.nome or '' }}</title>
 {% include 'progetti_fse/documenti/_stile_decreto.html' %}
 <style>
     /* _stile_decreto.html riserva un margine pensato per i documenti FSE
@@ -33,7 +33,7 @@
 {% include 'progetti_fse/documenti/_intestazione.html' %}
 
 <div class="protocollo">Chiavenna, prot. e data (fare rif. alla segnatura)</div>
-<div style="margin: 10px 0 10px 50%;">Al/alla prof./ssa<br>{{ docente.cognome }} {{ docente.nome or '' }}</div>
+<div style="margin: 10px 0 10px 50%;">{{ 'Al/alla prof./ssa' if tipo_destinatario == 'docente' else 'Al/alla Sig./Sig.ra' }}<br>{{ destinatario.cognome }} {{ destinatario.nome or '' }}</div>
 
 <div class="oggetto">
 <b>Oggetto:</b> Lettera di incarico — a.s. {{ anno_scol }} — compensi previsti a carico della

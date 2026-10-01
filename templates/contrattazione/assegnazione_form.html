@@ -16,14 +16,36 @@
 
 <form method="post" class="card" style="max-width:560px; padding:20px;">
     <div class="form-group">
-        <label>Docente *</label>
-        <select name="id_docente" required style="width:100%;">
-            <option value="">— scegli —</option>
+        <label>Destinatario *</label>
+        <div style="display:flex; gap:14px; margin-bottom:6px;">
+            <label style="font-weight:400; display:flex; align-items:center; gap:4px;">
+                <input type="radio" name="tipo_beneficiario" value="docente" id="radio-docente"
+                       onchange="aggiornaBeneficiario()" {% if not asg or asg.id_docente %}checked{% endif %}>
+                Docente</label>
+            <label style="font-weight:400; display:flex; align-items:center; gap:4px;">
+                <input type="radio" name="tipo_beneficiario" value="ata" id="radio-ata"
+                       onchange="aggiornaBeneficiario()" {% if asg and asg.id_personale_ata %}checked{% endif %}>
+                Personale ATA</label>
+        </div>
+        <select name="id_docente" id="sel-docente" style="width:100%;">
+            <option value="">— scegli il docente —</option>
             {% for d in docenti %}
             <option value="{{ d.id }}" {% if asg and asg.id_docente == d.id %}selected{% endif %}>
                 {{ d.cognome }} {{ d.nome or '' }}</option>
             {% endfor %}
         </select>
+        <select name="id_personale_ata" id="sel-ata" style="width:100%; display:none;">
+            <option value="">— scegli l'ATA —</option>
+            {% for p in ata %}
+            <option value="{{ p.id }}" {% if asg and asg.id_personale_ata == p.id %}selected{% endif %}>
+                {{ p.cognome }} {{ p.nome or '' }}</option>
+            {% endfor %}
+        </select>
+        {% if not ata %}
+        <div style="font-size:.74rem; color:var(--grigio); margin-top:4px;">
+            Nessun ATA censito — <a href="{{ url_for('contrattazione.ata_form') }}">aggiungilo qui</a>.
+        </div>
+        {% endif %}
     </div>
     <div class="form-group">
         <label>Tipo di incarico (catalogo) <span style="font-weight:400; color:var(--grigio); font-size:.78rem;">— facoltativo, serve a riportare il testo descrittivo nella lettera</span></label>
@@ -90,6 +112,12 @@ function autofillDescrizione() {
         inp.value = opt.dataset.nome;
     }
 }
+function aggiornaBeneficiario() {
+    const isAta = document.getElementById('radio-ata').checked;
+    document.getElementById('sel-docente').style.display = isAta ? 'none' : 'block';
+    document.getElementById('sel-ata').style.display = isAta ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', aggiornaBeneficiario);
 </script>
 
 {% endblock %}

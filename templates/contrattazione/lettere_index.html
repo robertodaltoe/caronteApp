@@ -18,13 +18,13 @@
 
 {% if not dettaglio %}
 <div class="card" style="text-align:center; padding:40px; color:var(--grigio);">
-    Nessun docente ha ancora un'assegnazione per l'anno {{ anno }}.
+    Nessuno ha ancora un'assegnazione per l'anno {{ anno }}.
 </div>
 {% else %}
 <div class="card" style="padding:0; overflow:hidden;">
 <table style="width:100%; border-collapse:collapse;">
     <thead><tr style="background:#f8fafc; text-align:left;">
-        <th style="padding:8px;">Docente</th>
+        <th style="padding:8px;">Destinatario</th>
         <th style="padding:8px; text-align:center;">N. incarichi</th>
         <th style="padding:8px; text-align:right;">Totale</th>
         <th style="padding:8px; text-align:center;">Liquidati</th>
@@ -34,7 +34,9 @@
     <tbody>
     {% for r in dettaglio %}
         <tr style="border-top:1px solid #f1f3f5;">
-            <td style="padding:8px; font-weight:600;">{{ r.docente.cognome }} {{ r.docente.nome or '' }}</td>
+            <td style="padding:8px; font-weight:600;">{{ r.persona.cognome }} {{ r.persona.nome or '' }}
+                {% if r.tipo == 'ata' %}<span class="badge-tipo" style="background:#e5eaf0; font-size:.68rem;">ATA</span>{% endif %}
+            </td>
             <td style="padding:8px; text-align:center;">{{ r.n_incarichi }}</td>
             <td style="padding:8px; text-align:right;">{{ '%.2f'|format(r.totale) }} €</td>
             <td style="padding:8px; text-align:center;">
@@ -42,7 +44,7 @@
                 {% else %}—{% endif %}
             </td>
             <td style="padding:8px;">
-                <form method="post" action="{{ url_for('contrattazione.lettera_protocollo', id_docente=r.docente.id) }}"
+                <form method="post" action="{{ url_for('contrattazione.lettera_protocollo', tipo=r.tipo, id_persona=r.persona.id) }}"
                       style="display:flex; gap:4px; align-items:center;">
                     <input type="hidden" name="anno" value="{{ anno }}">
                     <input type="text" name="numero_protocollo" placeholder="N. prot." style="padding:3px; width:80px;"
@@ -53,9 +55,9 @@
                 </form>
             </td>
             <td style="padding:8px; white-space:nowrap;">
-                <a href="{{ url_for('contrattazione.lettera_genera', id_docente=r.docente.id, anno=anno) }}"
+                <a href="{{ url_for('contrattazione.lettera_genera', tipo=r.tipo, id_persona=r.persona.id, anno=anno) }}"
                    class="btn btn-sm" target="_blank">{{ icon('print') }} PDF</a>
-                <a href="{{ url_for('contrattazione.lettera_genera', id_docente=r.docente.id, anno=anno, formato='docx') }}"
+                <a href="{{ url_for('contrattazione.lettera_genera', tipo=r.tipo, id_persona=r.persona.id, anno=anno, formato='docx') }}"
                    class="btn btn-sm" style="background:#e5eaf0;">{{ icon('download') }} Word</a>
             </td>
         </tr>

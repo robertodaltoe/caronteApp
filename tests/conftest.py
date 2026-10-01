@@ -68,7 +68,7 @@ def app():
         from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
             AssegnazioneContrattazione, StoricoSpostamentoCapitolo,
             TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione,
-            LetteraIncaricoProtocollo)
+            LetteraIncaricoProtocollo, PersonaleAta)
         from models.indisponibilita_ricorrente import IndisponibilitaRicorrente  # noqa
         db.create_all()
         yield app

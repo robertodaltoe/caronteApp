@@ -162,14 +162,14 @@ def test_protocollo_lettera_una_riga_per_docente_anno(app, db_session):
     with app.app_context():
         d = _docente('VERDI')
         c = app.test_client()
-        r = c.post(f'/contrattazione/lettere/{d.id}/protocollo',
+        r = c.post(f'/contrattazione/lettere/docente/{d.id}/protocollo',
                    data={'anno': '2026-2027', 'numero_protocollo': '42',
                          'data_protocollo': '2026-10-01'})
         assert r.status_code == 302
         assert LetteraIncaricoProtocollo.query.count() == 1
 
         # Riaggiornare lo stesso docente/anno aggiorna la riga, non ne crea una seconda.
-        r = c.post(f'/contrattazione/lettere/{d.id}/protocollo',
+        r = c.post(f'/contrattazione/lettere/docente/{d.id}/protocollo',
                    data={'anno': '2026-2027', 'numero_protocollo': '43',
                          'data_protocollo': '2026-10-02'})
         assert r.status_code == 302
@@ -204,3 +204,63 @@ def test_catalogo_form_senza_numero_si_salva(app, db_session):
         assert r.status_code == 302
         voce = TipoIncaricoContrattazione.query.filter_by(nome='Referente orientamento').first()
         assert voce is not None and voce.numero_riferimento is None
+
+
+def test_assegnazione_a_personale_ata(app, db_session):
+    from models.contrattazione import PersonaleAta
+    from routes.contrattazione import contrattazione_bp
+    if 'contrattazione' not in app.blueprints:
+        app.register_blueprint(contrattazione_bp)
+
+    with app.app_context():
+        f = FondoContrattazione(anno_scol='2026-2027', nome='FIS')
+        db.session.add(f)
+        db.session.flush()
+        cap = CapitoloContrattazione(id_fondo=f.id, nome='Incarichi specifici', importo_assegnato=1000)
+        db.session.add(cap)
+        ata = PersonaleAta(cognome='PEPE', nome='Giusy')
+        db.session.add(ata)
+        db.session.commit()
+
+        c = app.test_client()
+        r = c.post(f'/contrattazione/capitolo/{cap.id}/assegnazione/nuova', data={
+            'tipo_beneficiario': 'ata', 'id_personale_ata': str(ata.id),
+            'descrizione': 'Primo soccorso', 'importo': '300', 'stato': 'previsto',
+        })
+        assert r.status_code == 302
+
+        asg = AssegnazioneContrattazione.query.filter_by(id_personale_ata=ata.id).first()
+        assert asg is not None
+        assert asg.id_docente is None
+        assert asg.beneficiario_tipo == 'ata'
+        assert asg.beneficiario_nome_completo == 'PEPE Giusy'
+
+        from routes.contrattazione import _assegnazioni_beneficiario
+        assegnazioni = _assegnazioni_beneficiario('ata', ata.id, '2026-2027')
+        assert len(assegnazioni) == 1
+        assert assegnazioni[0].importo == 300
+
+
+def test_ata_non_eliminabile_se_ha_assegnazioni(app, db_session):
+    from models.contrattazione import PersonaleAta
+    from routes.contrattazione import contrattazione_bp
+    if 'contrattazione' not in app.blueprints:
+        app.register_blueprint(contrattazione_bp)
+
+    with app.app_context():
+        f = FondoContrattazione(anno_scol='2026-2027', nome='FIS')
+        db.session.add(f)
+        db.session.flush()
+        cap = CapitoloContrattazione(id_fondo=f.id, nome='Cap', importo_assegnato=100)
+        db.session.add(cap)
+        ata = PersonaleAta(cognome='NICOLIELLO')
+        db.session.add(ata)
+        db.session.flush()
+        db.session.add(AssegnazioneContrattazione(id_capitolo=cap.id, id_personale_ata=ata.id,
+                                                    descrizione='Assistenza', importo=150))
+        db.session.commit()
+
+        c = app.test_client()
+        r = c.post(f'/contrattazione/ata/{ata.id}/elimina')
+        assert r.status_code == 302
+        assert PersonaleAta.query.get(ata.id) is not None  # non eliminato
