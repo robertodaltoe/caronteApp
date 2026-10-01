@@ -70,19 +70,40 @@
 <div class="scorciatoie-ruolo" role="navigation" aria-label="Scorciatoie">
     <span class="scorciatoie-titolo">Le tue sezioni</span>
     {% for v in nav_scorciatoie %}
-    <a href="{{ v.url }}" class="scorciatoia">{{ icon(v.icona) }} {{ v.label }}</a>
+    <a href="{{ v.url }}" class="scorciatoia" title="{{ v.label }}">{{ icon(v.icona, 14) }} {{ v.label }}</a>
     {% endfor %}
 </div>
+<script>
+(function () {
+    // Sfuma il bordo destro solo quando le chip non ci stanno tutte,
+    // così si capisce che la riga continua scorrendo.
+    var r = document.querySelector('.scorciatoie-ruolo');
+    if (!r) return;
+    function aggiorna() {
+        r.classList.toggle('scorre', r.scrollWidth > r.clientWidth + 1);
+        r.classList.toggle('in-fondo', r.scrollLeft + r.clientWidth >= r.scrollWidth - 1);
+    }
+    r.addEventListener('scroll', aggiorna, {passive: true});
+    window.addEventListener('resize', aggiorna);
+    aggiorna();
+})();
+</script>
+{# Una sola riga: chip compatte che non vanno a capo; se lo schermo è
+   troppo stretto per tutte (telefono), la riga scorre in orizzontale
+   invece di occupare due righe. #}
 <style>
-.scorciatoie-ruolo { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    margin:0 0 18px; padding:10px 12px; background:white; border:1px solid #e5eaf0;
-    border-radius:10px; }
-.scorciatoie-titolo { font-size:.72rem; font-weight:700; text-transform:uppercase;
-    letter-spacing:.05em; color:var(--grigio); margin-right:6px; }
-.scorciatoia { display:inline-flex; align-items:center; gap:6px; padding:6px 11px;
-    border-radius:7px; background:var(--blu-light); color:var(--blu); font-size:.84rem;
-    font-weight:600; text-decoration:none; }
+.scorciatoie-ruolo { display:flex; flex-wrap:nowrap; gap:5px; align-items:center;
+    margin:0 0 18px; padding:7px 10px; background:white; border:1px solid #e5eaf0;
+    border-radius:10px; overflow-x:auto; scrollbar-width:thin; }
+.scorciatoie-titolo { flex:none; font-size:.66rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--grigio); margin-right:4px; white-space:nowrap; }
+.scorciatoia { flex:none; display:inline-flex; align-items:center; gap:4px; padding:3px 8px;
+    border-radius:6px; background:var(--blu-light); color:var(--blu); font-size:.76rem;
+    font-weight:600; text-decoration:none; white-space:nowrap; }
 .scorciatoia:hover { background:#e5eaf0; }
+.scorciatoie-ruolo.scorre { -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 36px), transparent);
+    mask-image:linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.scorciatoie-ruolo.scorre.in-fondo { -webkit-mask-image:none; mask-image:none; }
 </style>
 {% endif %}
 
