@@ -13,13 +13,14 @@
     Un gruppo per ogni slot in cui classi con studenti da seguire hanno religione. Il docente scelto
     resta lo stesso per tutto l'anno. Elenco in ordine di priorità della circolare; chi insegna
     nelle classi del gruppo, ha un impegno in quell'ora, è presso un'altra scuola o ha
-    un'indisponibilità fissa non compare.
+    un'indisponibilità fissa non compare. Un gruppo numeroso si può dividere fra due docenti
+    (per classi intere): ogni parte ha il proprio docente.
 </p>
 {% for r in righe %}
 {% set g = r.gruppo %}
 <div class="card" id="g{{ g.id }}" style="padding:14px 16px; margin-bottom:12px; max-width:900px; border-left:4px solid {{ 'var(--verde)' if g.id_docente else ('#d97706' if g.da_nominare else 'var(--rosso)') }};">
     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-        <div><b>{{ giorni[g.giorno] }} · {{ g.ora }}ª ora</b>
+        <div><b>{{ giorni[g.giorno] }} · {{ g.ora }}ª ora{% if r.parte %} · gruppo {{ r.parte }}{% endif %}</b>
             <span style="color:var(--grigio); font-size:.85rem;"> — {{ r.classi|join(', ') }}</span></div>
         <div style="font-size:.85rem;"><b>{{ r.n_studenti }}</b> studenti
             {% if r.numeroso %}<span style="color:var(--rosso);"> ⚠ gruppo numeroso (oltre {{ soglia }})</span>{% endif %}</div>
@@ -52,6 +53,28 @@
         <div style="flex:1; min-width:140px;"><label style="font-size:.75rem;">Note</label><br><input type="text" name="note" value="{{ g.note or '' }}" maxlength="200" style="width:100%;"></div>
         <button class="btn btn-sm btn-success" type="submit">Salva</button>
     </form>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; font-size:.78rem;">
+        {% if g.classi|length > 1 %}
+        <form method="post" action="{{ url_for('alternativa_irc.dividi', id=g.id) }}" style="margin:0;">
+            <button class="btn btn-sm" type="submit" title="Crea un secondo gruppo nella stessa ora con circa metà degli studenti (classi intere)">Dividi in due gruppi</button>
+        </form>
+        {% endif %}
+        {% for f, lettera in r.fratelli %}
+        {% for cl in g.classi_list %}
+        <form method="post" action="{{ url_for('alternativa_irc.sposta', id=g.id) }}" style="margin:0;">
+            <input type="hidden" name="classe" value="{{ cl }}">
+            <input type="hidden" name="destinazione" value="{{ f.id }}">
+            <button class="btn btn-sm" type="submit">{{ label(cl) }} → gruppo {{ lettera }}</button>
+        </form>
+        {% endfor %}
+        {% endfor %}
+        {% if r.fratelli %}
+        <form method="post" action="{{ url_for('alternativa_irc.unisci', id=g.id) }}" style="margin:0;"
+              onsubmit="return confirm('Riunire questo gruppo con il gruppo {{ r.fratelli[0][1] }}?{% if g.id_docente %} Il docente assegnato a questo gruppo viene tolto.{% endif %}');">
+            <button class="btn btn-sm" type="submit">Riunisci con il gruppo {{ r.fratelli[0][1] }}</button>
+        </form>
+        {% endif %}
+    </div>
     {% if r.cand.esclusi %}
     <details style="margin-top:8px; font-size:.78rem; color:var(--grigio);">
         <summary>{{ r.cand.esclusi|length }} docente/i con disponibilità non proponibili</summary>

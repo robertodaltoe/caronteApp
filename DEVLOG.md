@@ -2,6 +2,242 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 74 — Progetti FSE/FESR spostato nell'area contabile
+
+Roberto: "Progetti FSE/FESR" può non stare in navbar e stare nella stessa
+area delle cose contabili, perché è più affine a quello.
+
+Voce tolta dalla navbar (`templates/base.html`) e spostata nel gruppo
+contabile del menu Impostazioni (`modules/navigazione.py`: gruppo
+`contrattazione`, ora intitolato "Contabilità e progetti", accanto a
+Fondi e capitoli / Lettere / Catalogo / Personale ATA; gruppo `fse`
+eliminato). Stessa cosa nella pagina Impostazioni (scheda "Contabilità e
+progetti", visibile anche a chi ha solo `progetti_fse`). Invariati pagine,
+permessi (`progetti_fse`) e blueprint. Restano ricerca/Ctrl+K, percorso
+sopra il titolo ("Contabilità e progetti › Progetti FSE/FESR") e voce
+Impostazioni evidenziata nelle pagine FSE. Nuovo test in
+`tests/test_navigazione.py`.
+
+Verificato in Chromium headless su DB temporaneo (ds, dsga, segreteria,
+collaboratore, 1440 e 390px): nessuna voce FSE fuori dal menu, voce
+presente nel menu a tendina, Impostazioni attiva. Sandbox Linux (cloud),
+nessun accesso a `database.db`. Suite completa 631 verdi.
+
+## Sessione 73 — Dashboard: "Le tue sezioni" su una sola riga
+
+Roberto: la riga "Le tue sezioni" in Dashboard (Sessione 71) andava a
+capo con una chip sola sulla seconda riga, brutta da vedere; meglio una
+riga sola con chip più piccole.
+
+Solo `templates/dashboard.html` (CSS/markup della riga): chip compatte
+(font .76rem, padding 3px 8px, icona 14px), `flex-wrap:nowrap` e
+`white-space:nowrap`. Se lo schermo è troppo stretto per tutte (sotto
+~1100px per DS/DSGA, telefono per tutti) la riga scorre in orizzontale
+e il bordo destro sfuma (classe `scorre` messa da un piccolo script),
+così si capisce che continua. Nessuna scorciatoia tolta.
+
+Verificato in Chromium headless su DB temporaneo per ds, segreteria,
+collaboratore e dsga a 1440/1280/1024/390px: prima la DSGA (7 chip)
+andava su 2 righe anche a 1440px e DS/collaboratore a 1024px; dopo
+sempre una riga (altezza 54/92px → 40px), nessuno scroll orizzontale
+della pagina. Sandbox Linux (cloud), nessun accesso a `database.db`.
+Suite completa 630 verdi.
+
+## Sessione 72 — Nuovo tipo di contratto "Contratto Suppl. Breve"
+
+Roberto: tra i tipi di contratto (Impostazione anno → Docenti anno e
+anagrafica docente) mancava quello del supplente temporaneo che
+sostituisce un docente in malattia per 1, 2 o 3 mesi.
+
+Aggiunto il valore `suppl_breve` (etichetta "Contratto Suppl. Breve",
+breve "Suppl. br.") in `TIPO_CONTRATTO_LABELS`/`_BREVI` di
+`models/docente.py`, unica fonte di verità: anagrafica docente, elenco
+docenti, selettore "Contratto <anno>" in Docenti anno, export e
+banca ore lo prendono già da lì. Unico punto con l'elenco scritto a
+mano: il selettore "Aggiungi docente" in
+`templates/impostazione_anno/docenti_anno.html`, aggiornato.
+
+Comportamento: nessun valore esistente cambia. Il nuovo tipo resta
+fuori da `CONTRATTI_OK` (come `supplente`/`TD_GS`), quindi non risulta
+in servizio a luglio/agosto (eventi, prove di recupero); non conta come
+TI nei riepiloghi. Nessuna migrazione: `tipo_contratto` è una stringa
+libera (VARCHAR 30 / 20 su `docente_contratto_anno`). Sessione svolta in
+sandbox Linux (cloud), nessun accesso a `database.db`. Test:
+`tests/test_contratto_suppl_breve.py`; suite completa 630 verdi.
+
+## Sessione 71 — Navigazione: menu Impostazioni a gruppi, ricerca delle funzioni, percorso, scorciatoie per ruolo
+
+Roberto: "faresti delle modifiche nell'interfaccia per migliorare
+l'accessibilità alle varie sezioni/funzioni?", poi "falli tutti". Vincolo
+rispettato: nessuna voce nuova in navbar (era già troppo piena, vedi
+Sessione 69 addendum 4).
+
+**Elenco unico delle funzioni** (`modules/navigazione.py`, nuovo):
+etichetta, endpoint, gruppo, sezione permessi, sinonimi per la ricerca.
+Ne derivano tutte le novità sotto; ogni voce compare solo a chi può
+aprirla (stessa regola di `puo_vedere()`, più `ruoli=`/`permesso=` per i
+controlli hardcoded: Permessi solo DS, Importa orario DS/DSGA, Gestione
+utenti con `gestione_utenti`). Una funzione nuova va aggiunta lì per
+comparire nel menu e nella ricerca. Dati iniettati da un context
+processor di app (`_inject_navigazione` in `app.py`), protetto da
+try/except: un errore nella navigazione non blocca mai la pagina.
+
+**Cosa cambia per chi usa l'app**:
+- *Impostazioni* in navbar è ora un menu a tendina a gruppi (Anno
+  scolastico, Docenti, Contrattazione, Istituto e calendario, Sistema),
+  con "Panoramica impostazioni" in cima che porta alla pagina di prima.
+- *Ricerca delle funzioni*: scrivendo nella casella Cerca compaiono le
+  pagine corrispondenti ("aule", "lettere incarico"…), frecce + Invio per
+  aprirle; Invio senza selezione cerca nei dati come prima. Ctrl+K/Cmd+K
+  porta il cursore nella casella da qualunque pagina; a casella vuota
+  mostra le ultime 5 funzioni aperte (localStorage, per postazione).
+  Anche la pagina `/ricerca` mostra una sezione "Funzioni".
+- *Voce attiva*: la voce di navbar dell'area corrente è evidenziata (lo
+  stile `nav a.active` esisteva ma nessun template lo applicava).
+- *Percorso* sopra il contenuto ("Docenti › Anagrafica docenti"), con
+  link alla pagina principale dell'area dalle pagine di dettaglio.
+- *Scorciatoie per ruolo* in cima alla Dashboard ("Le tue sezioni",
+  `SCORCIATOIE_RUOLO`): DS report dirigente/dashboard anno/piano attività;
+  segreteria banca ore/report/bozze email/lettere di incarico;
+  collaboratore agenda/cambi turno/attività/assegnazioni.
+- *Funzioni prima difficili da raggiungere*: Assegnazioni (anche nella
+  pagina Impostazioni), Cambi turno (pulsante in Dashboard accanto ad
+  Agenda), Indisponibilità ricorrenti (nessun link prima: ora dal form
+  Nuova indisponibilità). Non collegate di proposito:
+  `recupero.proposte` (sostituita dal passo "Abbina gruppi" del recupero
+  di giugno) e `attivita_ist.assegnazioni` (vecchio roster docenti-materie,
+  sostituito da Docenti ↔ Materie).
+- *Tastiera*: i menu a tendina (Attività, Orario, Impostazioni, utente)
+  erano `<a>` senza `href`, irraggiungibili col Tab — ora si aprono con
+  Invio/Spazio/Freccia giù, Esc chiude e riporta il focus, `aria-expanded`
+  aggiornato. Contorno di focus visibile (`:focus-visible`) su link e
+  pulsanti, collegamento "Vai al contenuto" e `<main>` come contenitore.
+- *Import banca ore eliminato* (Roberto: "sezione vecchia, può essere
+  eliminata se non crea mancanze"): tolti `routes/import_banca_ore.py`,
+  `templates/import_banca_ore.html`, la registrazione del blueprint e la
+  sezione permessi `import_banca_ore` (SEZIONI, gruppi, DEFAULT_MATRICE,
+  SPLIT_DA, BLUEPRINT_SEZIONE). Resta `modules/import_banca_ore.py`: lo
+  usano ancora `report.export_excel` e `modules/export_excel_sett.py`. Le
+  eventuali righe `import_banca_ore` già salvate in `permessi_ruolo` sul DB
+  reale restano lì inerti (la pagina Permessi elenca solo SEZIONI): nessuna
+  scrittura sul DB per toglierle. `/import/banca-ore` ora risponde 404.
+
+**Verifica**: 7 nuovi test (`tests/test_navigazione.py`: ogni voce punta a
+un endpoint esistente, menu e funzioni prima nascoste presenti, voce
+attiva e percorso, `/ricerca` trova le funzioni anche senza accenti,
+filtro per ruolo DS/segreteria, scorciatoie diverse per ruolo), suite
+completa 625 verdi. Aperte via HTTP tutte le pagine dell'elenco su un
+database nuovo in /tmp (200, tranne i redirect attesi: Permessi per il
+DSGA, Import banca ore senza il file Excel; Backup escluso perché è un
+download), e provati menu, Ctrl+K, frecce/Invio e Tab in Chromium
+headless a 1400px e 390px. Sessione cloud Linux, nessun `database.db`
+reale presente né toccato.
+
+## Sessione 69 addendum 38 — Alternativa IRC: dividere un gruppo numeroso fra più docenti
+
+Roberto: con l'orario definitivo i gruppi potranno essere fino a 38 e un
+gruppo numeroso va diviso fra due docenti (era il "limite noto"
+dell'addendum 35: un solo gruppo per slot). Scelta presa insieme: si
+divide solo per **classi intere**, ogni classe sta in un solo gruppo
+dello slot e il numero di studenti resta quello delle adesioni (nessuna
+colonna nuova, nessuna migrazione: la tabella dei gruppi non aveva un
+vincolo di unicità su giorno/ora).
+
+**Cosa cambia** (`modules/alternativa_irc.py`, route e template dei gruppi):
+- Pulsante "Dividi in due gruppi" (con almeno due classi): crea un nuovo
+  gruppo nello stesso giorno/ora e ci sposta circa metà degli studenti,
+  bilanciando per classi intere. Il docente già assegnato resta sul
+  gruppo originale. Si può dividere ancora una parte (nessun limite fisso).
+- Nei gruppi divisi compaiono la lettera (A, B, …), i pulsanti per
+  spostare una singola classe nell'altra parte e "Riunisci".
+- `genera_gruppi()` non disfa mai una divisione: le classi tolte spariscono
+  dalla parte in cui erano, le classi nuove dello slot vanno nella parte
+  meno numerosa (con avviso), una parte rimasta vuota e senza docente
+  viene tolta, una con docente resta segnalata come prima.
+- Il vincolo "insegna nella classe" vale solo per le classi della propria
+  parte: dividendo si allarga anche la rosa dei candidati. "Già assegnato
+  a un altro gruppo alla stessa ora" impedisce lo stesso docente su due
+  parti.
+- Supplenze: nessuna modifica necessaria, già per singolo gruppo; la
+  supplenza per l'assenza del docente di una parte elenca solo le classi
+  di quella parte. Griglia settimanale con la lettera, Excel con una
+  colonna "Gruppo" in fondo.
+
+**Verifica**: 7 nuovi test (divisione bilanciata, almeno due classi,
+rigenerazione che non disfa, parte vuota tolta, sposta/riunisci,
+candidati allargati, due docenti nello stesso slot + supplenza con le
+sole classi della parte), suite completa 618 verdi, 0 fallimenti (dopo il merge con la Sessione 70).
+End-to-end via HTTP su un database nuovo in una copia isolata del
+progetto (sessione cloud Linux, nessun `database.db` reale presente né
+toccato): genera, dividi (16 + 15), sposta, griglia, Excel, riunisci,
+`PRAGMA integrity_check` ok.
+
+## Sessione 70 — Sistemati i 4 test che fallivano da settimane
+
+Le ultime sessioni chiudevano con "stessi 4 fallimenti pre-esistenti",
+mai indagati. Eseguita la suite in sandbox Linux (cloud, senza
+`database.db`): 607 verdi, 4 rossi. Due cause, entrambe nei test, non
+nel codice dell'app:
+
+- **Test dipendenti dal `database.db` reale** (3 test):
+  `test_display_richiede_login.py::test_display_con_login_normale_e_raggiungibile`
+  cercava l'utente `ds`, e i due test di `test_docente_nuovo_render.py`
+  contavano sul bypass del login, che simula l'utente `dsga`. Senza un
+  database reale da copiare la copia è vuota: utente `None` (crash) o
+  redirect 302 a `/login`. Ora le fixture creano l'utente sulla copia
+  solo se manca (stesso schema già usato per `monitor_sala_docenti`).
+- **Date fisse superate dal calendario** (1 test):
+  `test_sostituzione_docente.py::test_termina_sostituzione_ripristina_orario_e_partecipanti`
+  usava un CdC al 16/9/2026, ma il modulo scambia i partecipanti solo
+  per eventi con data >= oggi — già notato nell'addendum 21, mai
+  corretto. Ora le date sono relative a oggi (`_lunedi_futuro()`);
+  stessa correzione per lo scrutinio fisso al 14/12/2026 di
+  `test_definitiva_iscrive_sostituto_a_eventi_futuri_della_classe`, che
+  sarebbe diventato rosso a metà dicembre.
+
+Nessun test saltato o disattivato. Suite completa: **611 verdi, 0
+fallimenti**. Aggiornato anche CLAUDE.md (diceva ancora 51 test).
+Sessione in sandbox Linux cloud, `database.db` reale mai toccato.
+
+## Sessione 69 addendum 37 — Server Windows: l'auto-aggiornamento ogni 15 minuti non partiva mai
+
+Roberto: sul PC Windows della scuola (ora il server principale) il codice
+non si aggiorna da solo ogni 15 minuti. Sessione in sandbox Linux (cloud),
+senza accesso al PC: diagnosi solo da codice, `aggiornamento.log` non
+ancora visto.
+
+**Cause trovate** in `aggiorna_e_riavvia_windows.ps1` (generato da
+`installa_server_windows.ps1`, passo 8b):
+1. **Lo script non si poteva nemmeno eseguire**: nella riga
+   `"... in $Cartella: aggiornamento SALTATO ..."` PowerShell legge
+   `$Cartella:` come variabile con prefisso di unità ed è un errore di
+   sintassi; l'intero file viene rifiutato prima di eseguire qualunque
+   cosa (verificato col parser di PowerShell 7.4). Il task girava ogni 15
+   minuti senza fare nulla e senza scrivere nel log. Corretto in `${Cartella}:`.
+2. Anche corretto quello, il controllo `git status --porcelain` vedeva
+   come "modifiche locali" i due file che l'installatore stesso crea nella
+   cartella (`avvia_server_windows.bat`, `aggiorna_e_riavvia_windows.ps1`,
+   non ignorati) e saltava l'aggiornamento per sempre. Ora
+   `--untracked-files=no` + i due file nel `.gitignore`.
+3. Riavvio: `Stop-ScheduledTask` chiude solo `powershell.exe`; il ciclo
+   cmd e `python.exe` potevano restare vivi sulla porta 5002. Ora si
+   fermano esplicitamente il ciclo cmd e il processo in ascolto sulla 5002.
+4. Minori: output di git nel log con la stessa codifica (prima UTF-16
+   mescolato), `git pull` fallito non riavvia, finestra nascosta.
+
+**Verifica**: parser PowerShell 7.4 su installatore e script generato (0
+errori, prima 1); script eseguito su repo git di prova con i comandi di
+Windows simulati: aggiorna con i file generati presenti, non fa nulla se
+già aggiornato, salta se c'è una modifica a un file tracciato. Non provato
+su Windows reale.
+
+**Passaggio manuale una tantum sul PC della scuola** (l'aggiornamento
+automatico è proprio ciò che è rotto, quindi il fix non arriva da solo):
+PowerShell come amministratore, `cd C:\CaronteApp`, `git pull`, poi
+`powershell -ExecutionPolicy Bypass -File installa_server_windows.ps1`
+(va rilanciato dopo il pull: la versione già in esecuzione rigenererebbe
+lo script vecchio).
+
 ## Sessione 69 addendum 36 — Alternativa IRC: supplenza se il docente è assente, nessun limite fisso
 
 Roberto, dopo l'addendum 35: il punto critico è che l'assenza del docente

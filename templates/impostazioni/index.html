@@ -85,6 +85,12 @@
             <span>{{ icon('arrow') }}</span>
         </a>
         {% endif %}
+        {% if puo_vedere('assegnazioni') %}
+        <a href="{{ url_for('assegnazioni.index') }}" class="imp-link">
+            {{ icon('grid-alt') }} Assegnazioni classi
+            <span>{{ icon('arrow') }}</span>
+        </a>
+        {% endif %}
         {% if puo_vedere('incarichi') %}
         <a href="{{ url_for('incarichi.index') }}" class="imp-link">
             {{ icon('star') }} Incarichi docenti
@@ -192,11 +198,12 @@
 {% endif %}
 
 {# ── ISTITUTO ────────────────────────────────────────────────────── #}
-{% if puo_vedere('contrattazione') %}
+{% if puo_vedere('contrattazione') or puo_vedere('progetti_fse') %}
 <div class="sez-card">
-    <div class="sez-title">{{ icon('coin') }} Contrattazione integrativa</div>
-    <div class="sez-desc">Economie, fondi (FIS, FMOF...), capitoli, assegnazioni ai docenti e al
-        personale ATA, lettere di incarico — solo segreteria e DSGA.</div>
+    <div class="sez-title">{{ icon('coin') }} Contabilità e progetti</div>
+    <div class="sez-desc">Contrattazione integrativa (economie, fondi FIS/FMOF, capitoli, assegnazioni
+        ai docenti e al personale ATA, lettere di incarico) e progetti FSE/FESR.</div>
+    {% if puo_vedere('contrattazione') %}
     <a href="{{ url_for('contrattazione.index') }}" class="imp-link">
         {{ icon('coin') }} Fondi e capitoli <span>{{ icon('arrow') }}</span>
     </a>
@@ -209,6 +216,12 @@
     <a href="{{ url_for('contrattazione.ata_lista') }}" class="imp-link">
         {{ icon('person') }} Personale ATA <span>{{ icon('arrow') }}</span>
     </a>
+    {% endif %}
+    {% if puo_vedere('progetti_fse') %}
+    <a href="{{ url_for('progetti_fse.index') }}" class="imp-link">
+        {{ icon('layers') }} Progetti FSE/FESR <span>{{ icon('arrow') }}</span>
+    </a>
+    {% endif %}
 </div>
 {% endif %}
 

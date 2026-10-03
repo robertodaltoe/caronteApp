@@ -288,3 +288,139 @@ def test_classi_senza_ora_di_religione_in_orario_compaiono_comunque(app, db_sess
     righe = {r['classe']: r for r in air.classi_con_adesione(ANNO)}
     assert righe['1ACAT']['n_slot'] == 1
     assert righe['2BCAT']['n_slot'] == 0
+
+
+# ── Divisione di un gruppo numeroso fra più docenti (classi intere) ──
+
+def _scenario_numeroso():
+    """Quattro classi con religione lunedì 2ª ora: 12+9+6+4 = 31 studenti."""
+    rel = crea_docente('Religione', materia='Religione')
+    for cl, n in (('1ACAT', 12), ('2ACAT', 9), ('3ACAT', 6), ('4ACAT', 4)):
+        _slot(rel, 0, 2, cl, 'RELIGIONE')
+        db.session.add(AlternativaIrcAdesione(anno_scol=ANNO, classe=cl, n_con_docente=n))
+    db.session.commit()
+    air.genera_gruppi(ANNO)
+    return AlternativaIrcGruppo.query.filter_by(anno_scol=ANNO).one()
+
+
+def _per_slot():
+    return AlternativaIrcGruppo.query.filter_by(anno_scol=ANNO, giorno=0, ora=2).order_by(
+        AlternativaIrcGruppo.id).all()
+
+
+def test_dividi_bilancia_per_classi_intere_e_tiene_il_docente(app, db_session):
+    g = _scenario_numeroso()
+    doc = crea_docente('Incaricato')
+    _slot(doc, 1, 1, '5ACAT')
+    db.session.add(AlternativaIrcDisponibilita(anno_scol=ANNO, id_docente=doc.id))
+    db.session.commit()
+    assert air.assegna(g, id_docente=doc.id)[0]
+    ok, _, nuovo = air.dividi_gruppo(g)
+    assert ok
+    a, b = _per_slot()
+    assert a.id == g.id and a.id_docente == doc.id and b.id_docente is None
+    assert sorted(a.classi_list + b.classi_list) == ['1ACAT', '2ACAT', '3ACAT', '4ACAT']
+    assert sorted([air.n_studenti_gruppo(a), air.n_studenti_gruppo(b)]) == [15, 16]
+
+
+def test_dividi_richiede_almeno_due_classi(app, db_session):
+    d = crea_docente('Religione')
+    _slot(d, 0, 2, '1ACAT', 'RELIGIONE')
+    db.session.add(AlternativaIrcAdesione(anno_scol=ANNO, classe='1ACAT', n_con_docente=25))
+    db.session.commit()
+    air.genera_gruppi(ANNO)
+    ok, _, _ = air.dividi_gruppo(AlternativaIrcGruppo.query.one())
+    assert not ok and AlternativaIrcGruppo.query.count() == 1
+
+
+def test_aggiorna_gruppi_non_disfa_la_divisione(app, db_session):
+    g = _scenario_numeroso()
+    air.dividi_gruppo(g)
+    prima = {x.id: x.classi_list for x in _per_slot()}
+    # nuova classe nello stesso slot: va nel gruppo meno numeroso
+    rel = crea_docente('Religione2')
+    _slot(rel, 0, 2, '5ACAT', 'RELIGIONE')
+    db.session.add(AlternativaIrcAdesione(anno_scol=ANNO, classe='5ACAT', n_con_docente=2))
+    db.session.commit()
+    esito = air.genera_gruppi(ANNO)
+    assert esito['classi_aggiunte_a_diviso'] == ['5ACAT']
+    dopo = {x.id: x.classi_list for x in _per_slot()}
+    assert set(dopo) == set(prima)
+    meno = min(prima, key=lambda i: sum({'1ACAT': 12, '2ACAT': 9, '3ACAT': 6, '4ACAT': 4}[c]
+                                         for c in prima[i]))
+    assert dopo[meno] == sorted(prima[meno] + ['5ACAT'])
+    # rigenerare di nuovo non cambia nulla
+    air.genera_gruppi(ANNO)
+    assert {x.id: x.classi_list for x in _per_slot()} == dopo
+
+
+def test_sottogruppo_svuotato_senza_docente_viene_tolto(app, db_session):
+    g = _scenario_numeroso()
+    _, _, nuovo = air.dividi_gruppo(g)
+    for cl in nuovo.classi_list:
+        db.session.delete(AlternativaIrcAdesione.query.filter_by(anno_scol=ANNO, classe=cl).one())
+    db.session.commit()
+    esito = air.genera_gruppi(ANNO)
+    assert esito['rimossi'] == 1 and len(_per_slot()) == 1
+
+
+def test_sposta_e_riunisci(app, db_session):
+    g = _scenario_numeroso()
+    _, _, nuovo = air.dividi_gruppo(g)
+    cl = nuovo.classi_list[0]
+    ok, _ = air.sposta_classe(nuovo, cl, g)
+    assert ok and cl in g.classi_list
+    ok, _ = air.sposta_classe(g, cl, crea_gruppo_altro_slot())
+    assert not ok
+    ok, _ = air.unisci_gruppo(nuovo)
+    assert ok
+    assert [x.classi_list for x in _per_slot()] == [['1ACAT', '2ACAT', '3ACAT', '4ACAT']]
+
+
+def crea_gruppo_altro_slot():
+    g = AlternativaIrcGruppo(anno_scol=ANNO, giorno=3, ora=4)
+    db.session.add(g)
+    db.session.commit()
+    return g
+
+
+def test_divisione_allarga_i_candidati(app, db_session):
+    """Chi insegna in una classe di una parte resta candidabile per l'altra."""
+    g = _scenario_numeroso()
+    doc = crea_docente('Prof1A')
+    _slot(doc, 2, 1, '1ACAT')
+    db.session.add(AlternativaIrcDisponibilita(anno_scol=ANNO, id_docente=doc.id))
+    db.session.commit()
+    tutti = lambda gr: _ids(air.candidati(gr), 1) + _ids(air.candidati(gr), 2)
+    assert doc.id not in tutti(g)
+    _, _, nuovo = air.dividi_gruppo(g)
+    con_1a, senza_1a = (g, nuovo) if '1ACAT' in g.classi_list else (nuovo, g)
+    assert doc.id not in tutti(con_1a)
+    assert doc.id in tutti(senza_1a)
+
+
+def test_due_docenti_stesso_slot_e_supplenza_solo_classi_del_sottogruppo(app, db_session):
+    from models.supplenza import Supplenza
+    from modules.assenze_registrazione import _genera_supplenze
+    _tabelle_supplenze(app)
+    g = _scenario_numeroso()
+    _, _, nuovo = air.dividi_gruppo(g)
+    d1, d2 = crea_docente('Uno'), crea_docente('Due')
+    for d in (d1, d2):
+        _slot(d, 1, 1, '5ACAT')
+        db.session.add(AlternativaIrcDisponibilita(anno_scol=ANNO, id_docente=d.id))
+    db.session.commit()
+    assert air.assegna(g, id_docente=d1.id)[0]
+    ok, _ = air.assegna(nuovo, id_docente=d1.id)
+    assert not ok   # stesso docente non su due gruppi alla stessa ora
+    assert air.assegna(nuovo, id_docente=d2.id)[0]
+    lunedi = date(2026, 10, 5)
+    assert air.docenti_occupati_alternativa(lunedi, 2) == {d1.id, d2.id}
+    _genera_supplenze(d2.id, lunedi, 1, 6, True, note_display='')
+    db.session.commit()
+    s = Supplenza.query.filter_by(id_assente=d2.id).one()
+    assert s.classe == air.CLASSE_SUPPLENZA and s.ora == 2
+    for cl in nuovo.classi_list:
+        assert air.label_classe(cl) in s.note
+    for cl in g.classi_list:
+        assert air.label_classe(cl) not in s.note

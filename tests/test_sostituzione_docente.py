@@ -3,7 +3,7 @@ Test per modules/sostituzione_docente.py (Sessione 69 addendum 2):
 sostituzione temporanea/definitiva di un docente titolare con un altro,
 vedi la docstring del modulo per il disegno completo.
 """
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -60,6 +60,15 @@ def _crea_cattedra(id_docente, cc, anno_scol, classi_ore):
         ))
     db.session.commit()
     return asgn
+
+
+def _lunedi_futuro():
+    """Un lunedì sicuramente nel futuro (almeno 7 giorni da oggi): il
+    modulo scambia/ripristina i partecipanti solo per eventi con
+    data >= oggi, quindi date fisse nel test smetterebbero di
+    funzionare appena superate dal calendario reale."""
+    oggi = date.today()
+    return oggi + timedelta(days=7 + (7 - oggi.weekday()) % 7)
 
 
 def _anno_scol_oggi():
@@ -144,7 +153,8 @@ def test_termina_sostituzione_ripristina_orario_e_partecipanti(app, db_session):
         _crea_cattedra(titolare.id, cc, _anno_scol_oggi(), [(5, 'A', 'RIM', 6)])
         _crea_orario(titolare.id, [(0, 1, '5ARIM')])
 
-        nella_finestra = date(2026, 9, 16)  # dentro il periodo 14-18/9 della sostituzione
+        lunedi = _lunedi_futuro()
+        nella_finestra = lunedi + timedelta(days=2)  # mercoledì, dentro la settimana della sostituzione
         ev = AttivitaIst(tipo='consiglio_classe', titolo='CdC 5A RIM',
                           data=nella_finestra, classe='5A RIM')
         db.session.add(ev)
@@ -155,7 +165,7 @@ def test_termina_sostituzione_ripristina_orario_e_partecipanti(app, db_session):
 
         risultato = avvia_sostituzione(
             id_titolare=titolare.id, id_sostituto=sostituto.id, tipo='temporanea',
-            data_inizio=date(2026, 9, 14), data_fine=date(2026, 9, 18),
+            data_inizio=lunedi, data_fine=lunedi + timedelta(days=4),
         )
         id_sost = risultato['sostituzione'].id
         assert risultato['n_eventi_ist'] == 1
@@ -306,7 +316,7 @@ def test_definitiva_iscrive_sostituto_a_eventi_futuri_della_classe(app, db_sessi
         _crea_cattedra(titolare.id, cc, anno, [(5, 'A', 'RIM', 6)])
         _crea_orario(titolare.id, [(0, 1, '5ARIM')])
 
-        futuro = date(2026, 12, 14)
+        futuro = _lunedi_futuro() + timedelta(days=7)
         ev = AttivitaIst(tipo='scrutinio', titolo='Scrutinio 5A RIM',
                           data=futuro, classe='5A RIM')
         db.session.add(ev)

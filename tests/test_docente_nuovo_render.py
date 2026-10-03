@@ -61,6 +61,20 @@ def app_reale():
         f"controllo di sicurezza fallito: {flask_app.config['SQLALCHEMY_DATABASE_URI']}"
 
     flask_app.config['TESTING'] = True
+
+    # Il bypass del login (CARONTE_SKIP_LOGIN + CARONTE_DEBUG) simula
+    # l'utente 'dsga': su un database vuoto (nessun database.db da
+    # copiare, es. CI o sandbox) non esiste e ogni GET finirebbe in
+    # redirect a /login. Lo crea sulla copia solo se manca.
+    from models import db
+    from models.utente import Utente
+    with flask_app.app_context():
+        if not Utente.query.filter_by(username='dsga', attivo=True).first():
+            u = Utente(username='dsga', nome='DSGA', ruolo='dsga')
+            u.set_pin('0000')
+            db.session.add(u)
+            db.session.commit()
+
     yield flask_app
 
     shutil.rmtree(tmp_dir, ignore_errors=True)

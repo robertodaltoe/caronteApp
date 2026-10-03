@@ -224,8 +224,12 @@ sequenza durante il collaudo reale, tutti nel devlog sotto Task 46):
   progetto — se `pip`/import falliscono in modo strano, verificare lo
   shebang di `venv/bin/pip` prima di perdere tempo altrove;
   rigenerarlo da zero è spesso più veloce che debuggarlo).
-- Test: `pytest`, suite in `tests/` — 51 test all'ultimo aggiornamento
-  del devlog, farli passare tutti prima di ogni consegna.
+- Test: `pytest`, suite in `tests/` — 611 test al 1° ottobre 2026,
+  tutti verdi: farli passare tutti prima di ogni consegna (nessun
+  fallimento "pre-esistente" tollerato). I test devono essere
+  autosufficienti: niente dipendenze da utenti/dati presenti solo nel
+  `database.db` reale (assente in CI/sandbox) né da date fisse che il
+  calendario supera (usare date relative a `date.today()`).
 - WeasyPrint richiede librerie di sistema (`brew install pango cairo
   gdk-pixbuf libffi` su macOS, vedi README.md) — già installate sul Mac
   di Roberto; assenti in sandbox Linux, dove esiste un fallback HTML
