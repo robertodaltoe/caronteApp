@@ -79,6 +79,17 @@ def _trova_riga_giorni(ws, max_scan=10):
     return None
 
 
+_RE_ORARIO_TESTO = re.compile(r'^\s*\d{1,2}[:.]\d{2}\b')
+
+
+def _e_cella_orario(v):
+    """Cella d'ora: tipo 'ora' (export storici) oppure testo tipo
+    '07:45 - 08:40' (export del 2026-10-03, settimana 4)."""
+    if isinstance(v, datetime.time):
+        return True
+    return isinstance(v, str) and bool(_RE_ORARIO_TESTO.match(v))
+
+
 def build_col_map(ws, riga_giorni=None):
     if riga_giorni is None:
         riga_giorni = _trova_riga_giorni(ws)
@@ -100,7 +111,7 @@ def build_col_map(ws, riga_giorni=None):
     ora_counter = {}
     for c in range(1, ws.max_column + 1):
         v = ws.cell(riga_orari, c).value
-        if not isinstance(v, datetime.time):
+        if not _e_cella_orario(v):
             continue
         g_num = None
         for gc in sorted(giorno_map.keys(), reverse=True):
