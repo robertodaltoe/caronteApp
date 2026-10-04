@@ -50,13 +50,28 @@ def _app_con_tutti_i_blueprint():
     from routes.impostazioni import impostazioni_bp
     from routes.cambio_anno import cambio_anno_bp
     from routes.sincronizzazione import sync_bp
+    from routes.alternativa_irc import alternativa_irc_bp
+    from routes.aule import aule_bp
+    from routes.auth import auth_bp
+    from routes.contrattazione import contrattazione_bp
+    from routes.dashboard_anno import dashboard_anno_bp
+    from routes.display import display_bp
+    from routes.formazione import formazione_bp
+    from routes.generatore_cdc import generatore_cdc_bp
+    from routes.mail_bozze import mail_bozze_bp
+    from routes.progetti_fse import progetti_fse_bp
+    from routes.ricerca import ricerca_bp
+    from routes.sostituzioni import sostituzioni_bp
 
     for bp in [agenda_bp, att_differite_bp, attivita_bp, attivita_ist_bp, cambi_bp,
                dashboard_bp, docenti_bp, esami_integrativi_bp, rientro_bp,
                assegnazioni_bp, banca_ore_bp, report_bp, recupero_bp,
                piano_personale_bp, impostazione_anno_bp, sync_conflitti_bp,
                incarichi_bp, indisp_bp, supplenze_bp, assenze_bp, impostazioni_bp,
-               cambio_anno_bp, sync_bp]:
+               cambio_anno_bp, sync_bp, alternativa_irc_bp, aule_bp, auth_bp,
+               contrattazione_bp, dashboard_anno_bp, display_bp, formazione_bp,
+               generatore_cdc_bp, mail_bozze_bp, progetti_fse_bp, ricerca_bp,
+               sostituzioni_bp]:
         app.register_blueprint(bp)
     return app
 
@@ -76,3 +91,13 @@ def test_ogni_sezione_con_endpoint_e_risolvibile():
                 falliti.append((s['slug'], s['endpoint'], str(e)))
 
     assert falliti == [], f"Endpoint non risolvibili nella Guida: {falliti}"
+
+
+def test_slug_unici_e_sezioni_nuove_presenti():
+    slugs = [s['slug'] for s in SEZIONI]
+    assert len(slugs) == len(set(slugs))
+    for atteso in ('alternativa-irc', 'navigazione', 'contrattazione', 'progetti-fse',
+                   'sostituzioni-docenti', 'formazione', 'generatore-cdc', 'display',
+                   'ricerca', 'dashboard-anno', 'utenti', 'bozze-email', 'potenziamento',
+                   'mappa-aule'):
+        assert atteso in slugs
