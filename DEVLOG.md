@@ -2,6 +2,33 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 75 — Guida aggiornata al codice attuale
+
+Roberto: controllare la sezione Guida e aggiornarla (tutte le correzioni
+e le pagine nuove proposte nel report).
+
+Solo testo in `modules/guida_content.py` (nessuna logica, nessuna
+migrazione). Corrette: Dashboard (scelta del giorno, pulsanti, tasto
+Suggerisci, "Le tue sezioni"), Cambi quadro/"Cambi turno", Indisponibilità
+(dove si apre, spunta "Genera supplenza"), Rientro/Esami integrativi/
+Recupero/Attività differite (ingresso da Attività → Attività differite),
+Piano annuale (formazione e generatore raggiungibili da Panoramica
+impostazioni o Ctrl+K), Calendario, Istituto (il backup è lo scarico di
+una copia, non uno storico cifrato), Incarichi, Docenti (Contratto Suppl.
+Breve), Orario (Alternativa IRC), Permessi, Report (altri prospetti).
+Nuove 14 pagine (da 27 a 41): Come muoversi nell'app, Ricerca,
+Potenziamento e compresenza, Sostituzione di un docente titolare,
+Alternativa IRC, Piano della formazione, Generatore del piano delle
+attività, Contrattazione integrativa, Progetti FSE/FESR, Display,
+Dashboard anno, Mappa aule, Bozze email, Utenti e PIN.
+
+`tests/test_guida_endpoint_link.py` ora registra anche i blueprint delle
+nuove pagine e controlla che gli slug siano unici. Suite completa 633
+verdi. Sandbox Linux (cloud), nessun accesso a `database.db`; non
+verificato in browser, solo rendering dei template e confronto con il
+codice. Da rileggere a occhio: il testo di Contrattazione e Progetti FSE
+descrive il flusso come risulta dal codice, non dall'uso reale.
+
 ## Sessione 74 — Progetti FSE/FESR spostato nell'area contabile
 
 Roberto: "Progetti FSE/FESR" può non stare in navbar e stare nella stessa

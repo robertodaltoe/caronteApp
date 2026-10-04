@@ -28,18 +28,28 @@ SEZIONI = [
         ),
         'passi': [
             ('Scegli il giorno',
-             'In alto trovi tre scorciatoie — Oggi, Domani, Dopodomani — oppure un calendario '
-             'per scegliere una data qualsiasi.'),
+             'In alto le frecce ‹ › portano al giorno prima o dopo, "Oggi" torna a oggi e il '
+             'calendario permette di scegliere una data qualsiasi. I tre pulsanti "Mostra nel '
+             'display" (Oggi, Domani, Dopodomani) non cambiano il giorno della pagina: aprono '
+             'il Display su quella data.'),
             ('Guarda le supplenze scoperte',
              'Le supplenze senza un sostituto assegnato sono evidenziate. Per ognuna trovi un '
              'menu a tendina con i docenti disponibili per quell\'ora: selezionane uno e conferma.'),
             ('Controlla i suggerimenti',
              'Il menu propone per primi i docenti più adatti a coprire quell\'ora (disponibili, '
-             'senza altri impegni, con ore di completamento da recuperare). Puoi comunque scegliere '
-             'chiunque altro dalla lista.'),
-            ('Registra una nuova assenza',
-             'Il pulsante "Registra assenza" in alto a destra ti porta al modulo dedicato — vedi '
-             'la guida "Assenze".'),
+             'senza altri impegni, con ore di completamento da recuperare). Accanto al menu, il '
+             'pulsante con la stella ("Suggerisci chi è libero in quest\'ora") apre l\'elenco di '
+             'chi è libero. Puoi comunque scegliere chiunque altro dalla lista.'),
+            ('Usa i pulsanti in alto per registrare qualcosa',
+             'Per il giorno selezionato trovi "+ Assenza" (vedi la guida "Assenze"), '
+             '"Indisponibilità", "+ Supplenza", "Potenziamento/compresenza" (vedi la guida '
+             '"Potenziamento e compresenza"), "Prospetto" (la stampa delle supplenze del giorno), '
+             '"Display", "Agenda" e "Cambi" (vedi la guida "Cambi quadro"). "Registra assenza" è '
+             'anche sempre nella barra di navigazione.'),
+            ('Le tue sezioni',
+             'In cima alla pagina una riga di scorciatoie cambia secondo il ruolo (DS, DSGA, '
+             'collaboratore, segreteria) e porta alle pagine che quel ruolo usa di più. Vedi la '
+             'guida "Come muoversi nell\'app".'),
         ],
         'faq': [
             ('Perché una supplenza resta "scoperta" anche dopo che ho assegnato un docente?',
@@ -171,10 +181,16 @@ SEZIONI = [
         ),
         'passi': [
             ('Apri "Nuova indisponibilità"',
-             'La trovi nel menu Attività o dalla Dashboard/Agenda del giorno interessato.'),
+             'Dal pulsante "Indisponibilità" della Dashboard del giorno interessato, dall\'Agenda '
+             'o cercandola con Ctrl+K. Non è nel menu Attività.'),
             ('Scegli il docente e il motivo',
              'Colloqui, consiglio di classe, uscita didattica, progetto, gara sportiva, formazione, '
              'riunione o "altro".'),
+            ('Decidi se generare anche la supplenza',
+             'Accanto al motivo c\'è la spunta "Genera supplenza": va attivata quando il docente '
+             'non è fisicamente in classe (es. gara, uscita, formazione — per questi motivi è '
+             'già preselezionata) e quindi serve qualcuno che copra le sue ore. Se la lasci '
+             'vuota l\'indisponibilità resta solo una nota che toglie il docente dai sostituti.'),
             ('Scegli la modalità',
              'Giorno singolo, un intervallo di più giorni, oppure ricorrente ogni settimana (utile '
              'per un impegno fisso, es. "ogni martedì mattina per un mese").'),
@@ -200,7 +216,8 @@ SEZIONI = [
         'attenzione': (
             'Non usare l\'indisponibilità al posto dell\'assenza: se il docente non è proprio a '
             'scuola, va registrata un\'assenza (che genera anche le supplenze da coprire), non solo '
-            'un\'indisponibilità.'
+            'un\'indisponibilità. L\'unica eccezione è la spunta "Genera supplenza" per un impegno '
+            'che porta il docente fuori dalla classe (gara, uscita, formazione).'
         ),
     },
     {
@@ -243,13 +260,16 @@ SEZIONI = [
         'icona': '↻',
         'riassunto': 'Scambi di ore tra docenti, ferie concordate, sorveglianze — al di fuori delle normali assenze.',
         'a_cosa_serve': (
-            'Questa pagina serve per registrare accordi che non sono una normale assenza: uno '
+            'Nei menu, nella pagina dei permessi e nella ricerca (Ctrl+K) questa funzione si '
+            'chiama "Cambi turno"; la pagina stessa si intitola "Cambi quadro orario": è la '
+            'stessa cosa. Si raggiunge dal pulsante "Cambi" della Dashboard, dalle scorciatoie '
+            'per ruolo o da Ctrl+K. Serve per registrare accordi che non sono una normale assenza: uno '
             'scambio di ore tra due docenti (uno cede un\'ora, l\'altro la copre e la restituirà più '
             'avanti), ferie o permessi concordati, sorveglianze durante le prove, simulazioni '
             'd\'esame o altre attività alternative.'
         ),
         'passi': [
-            ('Apri "Cambi quadro → Nuovo"',
+            ('Apri "Cambi turno" e premi "Nuovo"',
              'Scegli la data e il tipo di cambio (scambio ore, ferie concordate, sorveglianza, '
              'simulazione, attività alternativa, o altro).'),
             ('Indica chi cede e chi copre l\'ora',
@@ -353,7 +373,8 @@ SEZIONI = [
              'esportabile in Excel.'),
             ('Importa il Piano delle Attività',
              'Se il Piano annuale è già pronto in un file Excel, puoi importarlo da Impostazioni → '
-             'Orario invece di inserire ogni riunione a mano.'),
+             'Istituto e calendario → Importa piano delle attività, invece di inserire ogni '
+             'riunione a mano.'),
         ],
         'faq': [
             ('Lo stesso docente può essere nominato sostituto per due assenti diversi nella stessa riunione?',
@@ -382,6 +403,7 @@ SEZIONI = [
         'icona': '📅',
         'riassunto': 'Formazione obbligatoria, vista mensile, riepilogo ore, generatore Consigli di classe.',
         'a_cosa_serve': (
+            'Vedi anche le guide "Piano della formazione" e "Generatore del piano delle attività". '
             'Il "Piano Annuale delle Attività" sostituisce il foglio Excel che prima riassumeva, '
             'mese per mese, tutti gli impegni fuori dall\'orario di lezione (collegi, consigli di '
             'classe, scrutini, formazione) e le ore che ciascun docente vi dedica. In CaronteApp è '
@@ -400,13 +422,15 @@ SEZIONI = [
              'impegnate in collegio/consigli/formazione e la quota che gli spetta secondo il CCNL — '
              'un\'eventuale eccedenza è solo segnalata con un badge rosso, non blocca nulla.'),
             ('Gestisci il Piano della Formazione',
-             'Da "Impostazioni → Piano della formazione" crei i corsi dell\'anno: un corso '
+             'Dalla "Panoramica impostazioni" (o con Ctrl+K, cercando "formazione") apri "Piano '
+             'della formazione" e crei i corsi dell\'anno: un corso '
              '"obbligatorio per tutti" iscrive in automatico tutti i docenti in servizio; un corso '
              '"volontario" parte senza iscritti e ciascuno si iscrive/disiscrive dalla sua scheda. '
              'Le ore di formazione confluiscono da sole nel Riepilogo ore e nel Piano Attività '
              'Personale di ciascun docente, senza bisogno di inserirle altrove.'),
             ('Genera una bozza di Consigli di classe',
-             'Da "Impostazioni → Genera piano delle attività" scegli le classi (prese dalle '
+             'Dalla "Panoramica impostazioni" (o con Ctrl+K, cercando "generatore") apri '
+             '"Genera piano delle attività" e scegli le classi (prese dalle '
              'Assegnazioni dell\'anno, non dall\'orario — è pronto anche prima che l\'orario '
              'definitivo sia stabilizzato), il periodo, la fascia oraria giornaliera e quali classi '
              'richiedono la presenza del Dirigente. Il sistema propone una bozza che raggruppa più '
@@ -456,7 +480,10 @@ SEZIONI = [
         ),
         'passi': [
             ('Apri "Attività → Attività differite"',
-             'Trovi l\'elenco delle attività già registrate per il periodo corrente.'),
+             'È la pagina da cui si entra nelle attività estive e di recupero: tre schede, '
+             '"Recupero" (corsi di giugno e agosto), "Rientro dall\'estero" ed "Esami '
+             'integrativi" (vedi le rispettive guide). Da qui trovi anche l\'elenco delle attività '
+             'già registrate per il periodo corrente.'),
             ('Aggiungi una nuova attività differita',
              'Indica classe, docente, data e ora originaria e quella in cui viene effettivamente '
              'svolta.'),
@@ -598,9 +625,15 @@ SEZIONI = [
             ('Esporta il report globale',
              'Il pulsante "Esporta tutti" genera un unico file con i dati di tutti i docenti.'),
             ('Prepara le bozze email',
-             'Da "Report → Bozze email" puoi generare, per ogni docente, una bozza di email con il '
-             'proprio report in allegato — su Mac si apre direttamente in Mail.app, su Windows/Linux '
-             'si scarica come file .eml da aprire nel proprio programma di posta.'),
+             'Dal pulsante "Bozze email" in Report puoi generare, per ogni docente, una bozza di '
+             'email con il proprio report in allegato — vedi la guida "Bozze email banca ore".'),
+            ('Altri prospetti',
+             'Oltre al report per docente trovi "Report per il dirigente" (con un selettore per '
+             'consultare anche gli anni precedenti), "Pianifica permessi" (per ogni docente con '
+             'saldo positivo, le date future in cui potrebbe chiedere un permesso orario sfruttando '
+             'le ore libere già note; la data di fine lezioni si imposta nella pagina stessa), '
+             '"Incarichi docenti" (in sola lettura, esportabile in PDF o Excel) e il '
+             '"Prospetto supplenze" del giorno, stampabile.'),
         ],
         'faq': [],
         'attenzione': None,
@@ -621,6 +654,9 @@ SEZIONI = [
         'passi': [
             ('Apri "Orario → Orario sostegno"',
              'Seleziona il docente per vedere/modificare il suo orario settimanale.'),
+            ('Alternativa IRC',
+             'Nello stesso menu Orario c\'è anche "Alternativa IRC": la pianificazione dei gruppi '
+             'per chi non segue religione. Ha una guida a parte ("Attività alternativa all\'IRC").'),
             ('Consulta "Orario globale"',
              'Se il tuo ruolo è abilitato, mostra la griglia completa di tutti i docenti — utile '
              'come riferimento, non modificabile da questa vista.'),
@@ -641,7 +677,10 @@ SEZIONI = [
             'delle lezioni.'
         ),
         'passi': [
-            ('Apri "Recupero → Giugno" oppure "Recupero → Agosto"',
+            ('Parti da "Attività → Attività differite → Recupero"',
+             'La prima pagina elenca gli alunni con giudizio sospeso; da lì passi alla verifica '
+             'della copertura e poi ai corsi di Giugno–luglio e di Agosto.'),
+            ('Lavora su Giugno oppure su Agosto',
              'Le due sezioni funzionano allo stesso modo ma sono indipendenti — periodi ed elenchi '
              'di gruppi non si mescolano.'),
             ('Crea i gruppi',
@@ -677,8 +716,8 @@ SEZIONI = [
             'calendario dei colloqui con i docenti coinvolti.'
         ),
         'passi': [
-            ('Apri "Recupero → Rientro dall\'estero"',
-             'La trovi nel menu Attività, tra le sezioni di recupero.'),
+            ('Apri "Rientro dall\'estero"',
+             'Dal menu Attività → Attività differite, poi la scheda "Rientro dall\'estero".'),
             ('Indica le materie da verificare per classe',
              'Ogni classe può avere materie diverse da verificare, a seconda del percorso seguito '
              'all\'estero.'),
@@ -701,8 +740,8 @@ SEZIONI = [
             'relativo calendario con le commissioni coinvolte.'
         ),
         'passi': [
-            ('Apri "Recupero → Esami integrativi"',
-             'La trovi nel menu Attività, tra le sezioni di recupero.'),
+            ('Apri "Esami integrativi"',
+             'Dal menu Attività → Attività differite, poi la scheda "Esami integrativi".'),
             ('Aggiungi i candidati',
              'Indica classe di destinazione e materie d\'esame per ciascuno.'),
             ('Genera il calendario',
@@ -746,6 +785,12 @@ SEZIONI = [
              '"Ore max (override)" con l\'anno di riferimento accanto permette di far vedere il valore '
              'giusto per l\'anno passato/in corso, aggiornando comunque il contratto base per gli anni '
              'successivi.'),
+            ('Supplente temporaneo per pochi mesi',
+             'Tra i tipi di contratto c\'è "Contratto Suppl. Breve" (sigla "Suppl. br."), per chi '
+             'sostituisce un collega in malattia per 1, 2 o 3 mesi. Si imposta sia nella scheda '
+             'del docente sia nel passo "Docenti per anno". Un supplente breve non risulta in '
+             'servizio a luglio e agosto e non conta come docente a tempo indeterminato nei '
+             'riepiloghi.'),
             ('Un docente con più di un incarico nello stesso anno (es. ITP + Sostegno)',
              'Sotto ai tre ruoli principali (Titolare/ITP/Sostegno) c\'è un checkbox "Ha ANCHE un '
              'incarico di sostegno" con le relative ore, per i casi in cui un docente svolge entrambi '
@@ -850,8 +895,8 @@ SEZIONI = [
             'usati da recupero estivo, rientro dall\'estero ed esami integrativi.'
         ),
         'passi': [
-            ('Apri "Impostazioni → Calendario"',
-             'La trovi nel box "Calendario scolastico" della pagina Impostazioni.'),
+            ('Apri "Impostazioni → Istituto e calendario"',
+             'Le voci sono "Sospensioni didattiche" e "Periodi (recupero, rientro…)".'),
             ('Aggiungi una sospensione didattica',
              'Indica data (o intervallo) e descrizione — es. "Ponte 1° novembre".'),
             ('Configura i periodi',
@@ -869,8 +914,8 @@ SEZIONI = [
         'riassunto': 'Dati anagrafici dell\'istituto, parametri economici, backup del database.',
         'a_cosa_serve': (
             'I dati anagrafici dell\'istituto (nome, indirizzo — usati in intestazioni di report e '
-            'PDF), i parametri economici (es. costo orario di una supplenza) e la gestione dei '
-            'backup cifrati del database.'
+            'PDF), i parametri economici (es. costo orario di una supplenza) e lo scarico di una '
+            'copia di backup del database.'
         ),
         'passi': [
             ('Apri "Impostazioni → Istituto → Dati istituto"',
@@ -878,9 +923,11 @@ SEZIONI = [
             ('Imposta il costo ora supplenza',
              'Nella stessa pagina, sezione "Parametri economici" — usato nei report per stimare il '
              'costo delle supplenze a pagamento.'),
-            ('Gestisci i backup',
-             'Da "Backup database" puoi vedere lo storico dei backup cifrati automatici e crearne '
-             'uno manuale prima di un\'operazione delicata.'),
+            ('Scarica un backup',
+             'Da "Impostazioni → Sistema → Backup database" scarichi sul tuo computer una copia '
+             'del database (file "caronteapp_backup_<data>.db"), da fare prima di un\'operazione '
+             'delicata. Il file contiene tutti i dati personali: conservalo con la stessa cura '
+             'del database.'),
         ],
         'faq': [],
         'attenzione': None,
@@ -897,10 +944,10 @@ SEZIONI = [
             'categorie di incarico disponibili nella scuola.'
         ),
         'passi': [
-            ('Apri "Impostazioni → Docenti → Incarichi docenti"',
+            ('Apri "Impostazioni → Anno scolastico → Incarichi docenti"',
              'Assegna a un docente uno o più incarichi tra quelli disponibili.'),
             ('Gestisci i tipi di incarico',
-             'Da "Impostazioni → Istituto → Tipi di incarico assegnabili" puoi aggiungere nuovi tipi '
+             'Da "Impostazioni → Istituto e calendario → Tipi di incarico" puoi aggiungere nuovi tipi '
              'o categorie, prima di poterli assegnare ai docenti.'),
         ],
         'faq': [],
@@ -1007,8 +1054,11 @@ SEZIONI = [
             ('Apri "Impostazioni → Sistema → Permessi per ruolo"',
              'Visibile solo se il tuo ruolo è Dirigente Scolastico.'),
             ('Scegli il livello per ogni sezione e ruolo',
-             'Le righe sono raggruppate per area (Assenze e supplenze, Attività, Banca ore e '
-             'report...) per restare orientabili nonostante siano molte.'),
+             'Le sezioni sono oltre trenta, raggruppate per area (Assenze e supplenze, Attività, Banca '
+             'ore e report, Orario, Recupero, Anno scolastico e organico, Docenti e incarichi, '
+             'Istituto e calendario, Assegnazioni, Progetti FSE/FESR, Contrattazione '
+             'integrativa). Di default la Contrattazione integrativa è visibile solo a '
+             'segreteria e DSGA.'),
             ('Salva',
              'Le modifiche si applicano subito a tutti gli utenti con quel ruolo.'),
         ],
@@ -1026,6 +1076,540 @@ SEZIONI = [
             'Escludere per errore una sezione a tutti i ruoli configurabili (compreso il DS) la '
             'rende raggiungibile solo dal DSGA finché qualcuno non la riabilita da questa stessa '
             'pagina — attenzione particolare quando si escludono più sezioni insieme.'
+        ),
+    },
+    {
+        'slug': 'navigazione',
+        'endpoint': 'impostazioni.index',
+        'titolo': 'Come muoversi nell\'app',
+        'icona': '🧭',
+        'riassunto': 'Barra di navigazione, menu Impostazioni a gruppi, ricerca con Ctrl+K, percorso e scorciatoie.',
+        'a_cosa_serve': (
+            'L\'app ha molte funzioni, e non tutte stanno nella barra in alto. Questa guida spiega '
+            'dove trovarle: la barra principale per quello che si usa ogni giorno, il menu '
+            'Impostazioni a gruppi per tutto il resto, la casella Cerca (Ctrl+K) per arrivare '
+            'a qualunque pagina scrivendone il nome. Vedi ogni voce solo se il tuo ruolo può '
+            'aprirla: se una funzione non compare, di solito è per i permessi (vedi la guida '
+            '"Permessi per ruolo").'
+        ),
+        'passi': [
+            ('La barra in alto',
+             'Dashboard, "Registra assenza", i menu Attività e Orario, Banca Ore, Report, Display, '
+             'Impostazioni, Guida. La voce della sezione in cui ti trovi è evidenziata, e sopra il '
+             'titolo di ogni pagina compare il percorso (es. "Contabilità e progetti › Progetti '
+             'FSE/FESR") per capire dove sei.'),
+            ('Il menu Impostazioni a gruppi',
+             'Impostazioni si apre a tendina con i gruppi: Anno scolastico, Docenti, Contabilità e '
+             'progetti, Istituto e calendario, Sistema. Dentro ci sono per esempio Assegnazioni, '
+             'Incarichi, Anagrafica docenti, Contrattazione, Progetti FSE/FESR, Dati istituto, '
+             'Permessi per ruolo. "Panoramica impostazioni" in cima porta alla pagina di prima, '
+             'con i conteggi.'),
+            ('Cerca una funzione con Ctrl+K',
+             'Da qualunque pagina Ctrl+K (su Mac Cmd+K) porta il cursore nella casella Cerca. '
+             'Scrivi una parola — es. "ricorrenti", "formazione", "scrutini", "lettere" — e il '
+             'menu propone le pagine dell\'app che corrispondono; con le frecce e Invio ci vai. '
+             'La stessa casella cerca anche docenti e altri dati (vedi la guida "Ricerca").'),
+            ('Le scorciatoie per ruolo',
+             'In cima alla Dashboard, la riga "Le tue sezioni" mostra le pagine che il tuo ruolo '
+             'usa più spesso (per esempio il DS trova Report per il dirigente, Dashboard anno e '
+             'Piano delle attività; la segreteria Banca ore, Report, Bozze email, Lettere di '
+             'incarico).'),
+            ('Usare l\'app da tastiera',
+             'I menu a tendina si aprono anche con la tastiera (Invio o Spazio, poi le frecce) e '
+             'c\'è il link "Vai al contenuto" per saltare la barra.'),
+        ],
+        'faq': [
+            ('Non trovo una funzione nella barra: dove l\'hanno messa?',
+             'Quasi sicuramente nel menu Impostazioni (per esempio Contrattazione e Progetti '
+             'FSE/FESR sono nel gruppo "Contabilità e progetti") oppure è raggiungibile solo da '
+             'un pulsante di un\'altra pagina (per esempio "Indisponibilità" e "Cambi" dalla '
+             'Dashboard). Prova Ctrl+K e scrivi il nome.'),
+            ('Perché un collega vede voci che io non vedo?',
+             'Ogni ruolo vede solo ciò che il Dirigente ha abilitato nella pagina "Permessi per '
+             'ruolo"; alcune voci (Importa orario, Conflitti di sincronizzazione, Permessi per '
+             'ruolo) sono riservate a DS e DSGA.'),
+        ],
+        'attenzione': None,
+    },
+    {
+        'slug': 'ricerca',
+        'endpoint': 'ricerca.index',
+        'titolo': 'Ricerca',
+        'icona': '🔍',
+        'riassunto': 'La casella Cerca in alto: pagine dell\'app e dati (docenti, supplenze, assenze...).',
+        'a_cosa_serve': (
+            'La casella "Cerca… (Ctrl+K)" in alto serve a due cose insieme: proporre le pagine '
+            'dell\'app che corrispondono a quello che scrivi, e cercare nei dati — docenti, '
+            'supplenze, assenze, movimenti di banca ore e sospensioni didattiche — senza dover '
+            'sapere in quale sezione si trova un dato.'
+        ),
+        'passi': [
+            ('Scrivi nella casella',
+             'Mentre scrivi compaiono i suggerimenti: prima le funzioni ("Vai a…"), poi eventuali '
+             'dati. Scegli con le frecce e Invio, oppure con il mouse.'),
+            ('Premi Invio per tutti i risultati',
+             'La pagina dei risultati ha una sezione "Funzioni" con le pagine dell\'app e le '
+             'sezioni dei dati trovati (al massimo 25 per ciascuna).'),
+        ],
+        'faq': [
+            ('Trova anche le parole con o senza accenti?',
+             'Sì: "attività" e "attivita" si trovano a vicenda, e per le funzioni conta anche una '
+             'serie di sinonimi (es. "scrutini", "religione", "malattia").'),
+            ('Vedo nei risultati anche il motivo di un\'assenza?',
+             'Solo se il tuo ruolo può vederlo: per gli altri è mascherato, come nel resto '
+             'dell\'app.'),
+        ],
+        'attenzione': None,
+    },
+    {
+        'slug': 'potenziamento',
+        'endpoint': 'supplenze.nuovo_potenziamento',
+        'titolo': 'Potenziamento e compresenza',
+        'icona': '➕',
+        'riassunto': 'Assegnare un docente libero o di potenziamento a una classe, su più ore insieme.',
+        'a_cosa_serve': (
+            'Per assegnare un docente di potenziamento — o semplicemente un docente libero in '
+            'quell\'ora — a una classe per potenziamento o compresenza, su una o più ore dello '
+            'stesso giorno con un solo invio. Non c\'è un docente assente da sostituire: è la '
+            'differenza rispetto a una supplenza normale.'
+        ),
+        'passi': [
+            ('Apri "Potenziamento/compresenza" dalla Dashboard',
+             'Il pulsante è tra quelli in alto, e usa il giorno selezionato.'),
+            ('Scegli classe, docente e ore',
+             'Seleziona tutte le ore che servono: viene creata una voce per ciascuna.'),
+            ('Conferma',
+             'Le ore compaiono nella Dashboard del giorno come supplenze di tipo "potenziamento".'),
+        ],
+        'faq': [],
+        'attenzione': None,
+    },
+    {
+        'slug': 'sostituzioni-docenti',
+        'endpoint': 'sostituzioni.index',
+        'titolo': 'Sostituzione di un docente titolare',
+        'icona': '🔁',
+        'riassunto': 'Quando un docente esce (malattia lunga, trasferimento) e ne arriva un altro: un solo passaggio.',
+        'a_cosa_serve': (
+            'Per sostituire un docente titolare con un altro, temporaneamente (es. malattia lunga, '
+            'con rientro previsto) oppure per il resto dell\'anno (es. trasferimento, cambio '
+            'classe). In un solo passaggio vengono aggiornati orario, assenze/supplenze e cattedra. '
+            'Non va confusa con le "sostituzioni" di una riunione o di uno scrutinio descritte in '
+            'Attività istituzionali: lì si trova un sostituto per un singolo evento.'
+        ),
+        'passi': [
+            ('Apri "Impostazioni → Docenti → Sostituzioni docenti"',
+             'In cima scegli il docente titolare (chi esce) e premi "Continua"; sotto vedi le '
+             'sostituzioni attive.'),
+            ('Scegli il sostituto e il tipo',
+             'Il sostituto deve già avere un\'anagrafica (se non ce l\'ha, creala prima: un link '
+             'nella pagina la apre in una scheda nuova). "Temporanea" significa che il titolare '
+             'tornerà (serve una data di fine); "Definitiva" vale per il resto dell\'anno.'),
+            ('Cosa succede se è temporanea',
+             'L\'orario del titolare passa al sostituto solo per quel periodo, viene registrata '
+             'l\'assenza del titolare e le supplenze che ne derivano nascono già assegnate al '
+             'sostituto; le riunioni future nel periodo vengono scambiate.'),
+            ('Cosa succede se è definitiva',
+             'L\'orario e l\'intera cattedra passano al sostituto per sempre, e il sostituto si '
+             'iscrive alle riunioni future delle classi coinvolte. Non viene registrata nessuna '
+             'assenza: è un cambio di incarico, non un\'assenza.'),
+            ('Concludi una sostituzione temporanea',
+             'Dall\'elenco delle sostituzioni attive il pulsante "Termina" rimette l\'orario e le '
+             'riunioni esattamente come erano.'),
+        ],
+        'faq': [
+            ('Se avevo già registrato l\'assenza del titolare, rischio di averla doppia?',
+             'No: i giorni già coperti da un\'assenza non vengono duplicati, e le supplenze '
+             'ancora scoperte di quei giorni vengono assegnate al sostituto indicato.'),
+            ('Posso spezzare la cattedra fra titolare e sostituto?',
+             'Non con la sostituzione definitiva, che sposta sempre l\'intera cattedra: se serve, '
+             'si fa a mano dalla pagina Assegnazioni.'),
+            ('Non so ancora quando rientra il titolare: che data metto?',
+             'Una data di fine provvisoria: non esiste ancora l\'azione "estendi", quindi quando '
+             'si sa di più si conclude e si riavvia la sostituzione.'),
+        ],
+        'attenzione': (
+            'La sostituzione definitiva sposta tutta la cattedra e non si può annullare con un '
+            'pulsante: controlla titolare e sostituto prima di confermare.'
+        ),
+    },
+    {
+        'slug': 'alternativa-irc',
+        'endpoint': 'alternativa_irc.index',
+        'titolo': 'Attività alternativa all\'IRC',
+        'icona': '🎓',
+        'riassunto': 'Gruppi e docenti per gli studenti che non seguono religione, secondo la nota MIM 11814/2026.',
+        'a_cosa_serve': (
+            'Per organizzare l\'attività alternativa all\'insegnamento della religione cattolica '
+            '(nota MIM prot. 11814 del 06/05/2026, punto 3.7): le ore da coprire sono quelle di '
+            'religione già presenti nell\'orario, e il docente di ogni gruppo è lo stesso per '
+            'tutto l\'anno. La pagina iniziale riassume a che punto sei: studenti che chiedono un '
+            'docente, gruppi, gruppi con docente assegnato, gruppi ancora da assegnare.'
+        ),
+        'passi': [
+            ('1 · Adesioni per classe',
+             'Per ogni classe inserisci quanti studenti chiedono un docente per l\'attività '
+             'alternativa. Serve solo il numero: nessun nominativo.'),
+            ('2 · Disponibilità dei docenti',
+             'Registra chi ha dato la disponibilità volontaria: solo questi docenti vengono '
+             'proposti in seconda priorità.'),
+            ('3 · Gruppi e assegnazione docenti',
+             '"Aggiorna gruppi dalle adesioni" crea un gruppo per ogni slot settimanale di '
+             'religione in cui le classi hanno studenti da seguire. Per ogni gruppo scegli il '
+             'docente: i candidati sono in ordine di priorità della circolare (1. a disposizione '
+             'o a completamento d\'orario, 2. disponibilità volontaria, 3. nuovo contratto, con '
+             '"supplente da nominare"). Chi insegna in una classe del gruppo, ha un impegno in '
+             'quell\'ora, è presso un\'altra scuola o ha un\'indisponibilità fissa non compare.'),
+            ('Dividi un gruppo numeroso',
+             'Con almeno due classi, "Dividi in due gruppi" crea un secondo gruppo nello stesso '
+             'giorno e ora, bilanciando per classi intere. Ogni parte (A, B…) ha il proprio '
+             'docente; puoi spostare una classe da una parte all\'altra e "Riunisci" per tornare '
+             'a un solo gruppo. Non c\'è un limite fisso al numero di gruppi o di studenti.'),
+            ('4 · Orario settimanale',
+             'La griglia settimanale dei gruppi, esportabile in Excel.'),
+        ],
+        'faq': [
+            ('Cosa succede se il docente di un gruppo è assente?',
+             'Registrando la sua assenza, viene creata automaticamente una supplenza per il '
+             'gruppo (classe "ALT. IRC", con l\'elenco delle classi nelle note), come per qualunque '
+             'altra ora.'),
+            ('Cambiando le adesioni o l\'orario si perde il lavoro già fatto?',
+             '"Aggiorna gruppi dalle adesioni" non disfa le divisioni già fatte: le classi tolte '
+             'spariscono dalla parte in cui erano, quelle nuove vanno nella parte meno numerosa '
+             'con un avviso. Un docente non più compatibile viene segnalato, non cancellato.'),
+            ('Perché non vedo un docente tra i candidati?',
+             'È escluso se insegna in una delle classi del gruppo, se ha già un impegno in quell\'ora '
+             'o è già assegnato a un altro gruppo nello stesso slot.'),
+        ],
+        'attenzione': (
+            'Il numero indicato come "gruppo numeroso" (oltre 20 studenti) è solo un segnale per '
+            'far notare che forse conviene dividerlo, non un limite di legge.'
+        ),
+    },
+    {
+        'slug': 'formazione',
+        'endpoint': 'formazione.lista',
+        'titolo': 'Piano della formazione',
+        'icona': '🎯',
+        'riassunto': 'I corsi di formazione dell\'anno, obbligatori o volontari, con le iscrizioni dei docenti.',
+        'a_cosa_serve': (
+            'Per inserire i corsi di formazione dell\'anno scolastico e gestire chi vi partecipa. '
+            'Ogni corso crea un evento nel Piano delle attività: le ore confluiscono da sole nel '
+            'Riepilogo ore e nel Piano attività personale dei docenti, senza doverle inserire '
+            'altrove.'
+        ),
+        'passi': [
+            ('Apri "Piano della formazione"',
+             'Dalla "Panoramica impostazioni" oppure con Ctrl+K cercando "formazione". In alto '
+             'scegli l\'anno scolastico.'),
+            ('Crea un corso',
+             'Un corso "obbligatorio per tutti" iscrive in automatico tutti i docenti in servizio; '
+             'un corso "volontario" parte senza iscritti. Puoi indicare date, anche su più '
+             'giorni, e la modalità.'),
+            ('Gestisci le iscrizioni',
+             'Per i corsi volontari iscrivi o disiscrivi i docenti dalla scheda del corso.'),
+        ],
+        'faq': [
+            ('Chi non è in servizio nelle date del corso viene iscritto lo stesso?',
+             'No: vengono esclusi i docenti non in servizio a quella data (arrivati dopo, usciti '
+             'prima, in aspettativa).'),
+        ],
+        'attenzione': None,
+    },
+    {
+        'slug': 'generatore-cdc',
+        'endpoint': 'generatore_cdc.index',
+        'titolo': 'Generatore del piano delle attività',
+        'icona': '⚙️',
+        'riassunto': 'Una bozza modificabile di Consigli di classe, scrutini, GLO e riunioni di dipartimento.',
+        'a_cosa_serve': (
+            'Per non costruire da zero il calendario delle riunioni: il generatore propone una '
+            'bozza di Consigli di classe, scrutini e GLO che raggruppa più classi compatibili nello '
+            'stesso slot (nessun docente in comune, DS non doppiamente impegnato). La bozza è '
+            'sempre modificabile a mano e crea eventi veri solo quando la confermi. Le classi e i '
+            'loro docenti sono presi dalle Assegnazioni dell\'anno, non dall\'orario delle lezioni.'
+        ),
+        'passi': [
+            ('Apri "Genera piano delle attività"',
+             'Dalla "Panoramica impostazioni" oppure con Ctrl+K cercando "generatore".'),
+            ('Imposta i vincoli',
+             'Due pagine dedicate: i vincoli di orario fisso per classe (es. rientro pomeridiano '
+             'di certi indirizzi) e i vincoli manuali, cioè slot e scadenze fissati a mano prima '
+             'di generare.'),
+            ('Genera e correggi la bozza',
+             'Scegli tipo di riunione (consiglio di classe, scrutinio, GLO), classi, periodo e '
+             'fascia oraria. Le classi che non trovano slot restano "in conflitto" e vanno '
+             'piazzate a mano nella bozza.'),
+            ('Riunioni di dipartimento ed eventi unici',
+             'Le riunioni di dipartimento/materia si piazzano in data senza motore di scheduling '
+             '(dipartimenti diversi non condividono docenti). "Eventi unici" serve per le '
+             'riunioni uniche per tutti, come il Collegio docenti e l\'incontro scuola-famiglia.'),
+            ('Verifica l\'orario',
+             'La pagina "Verifica orario" segnala le riunioni che si sovrappongono a lezioni '
+             'quando l\'orario è stato caricato.'),
+        ],
+        'faq': [
+            ('Il generatore scrive subito gli eventi?',
+             'No, solo alla conferma della bozza; i partecipanti vengono precompilati dalle '
+             'Assegnazioni.'),
+        ],
+        'attenzione': (
+            'Il generatore dei Consigli di classe non guarda l\'orario delle lezioni: controlla '
+            'a mano gli slot proposti quando l\'orario è definitivo (la pagina "Verifica orario" '
+            'aiuta).'
+        ),
+    },
+    {
+        'slug': 'contrattazione',
+        'endpoint': 'contrattazione.index',
+        'titolo': 'Contrattazione integrativa',
+        'icona': '💶',
+        'riassunto': 'Fondi, capitoli di spesa, assegnazioni ai docenti, lettere di incarico, personale ATA.',
+        'a_cosa_serve': (
+            'L\'area per la segreteria e l\'ufficio contabilità: si inseriscono i fondi (FIS, FMOF, '
+            'altri), da cui si sottrae l\'eventuale quota del DSGA; l\'importo contrattabile si '
+            'divide in capitoli di spesa; dentro ogni capitolo si assegna un importo a ciascun '
+            'docente. Gli importi si inseriscono a mano, perché possono cambiare fino alla chiusura '
+            'della contrattazione. Di default la vede solo la segreteria (e il DSGA).'
+        ),
+        'passi': [
+            ('Apri "Impostazioni → Contabilità e progetti → Fondi e capitoli"',
+             'Con "Nuovo fondo" inserisci un fondo dell\'anno; poi i capitoli di spesa (es. '
+             'Valorizzazione, PCTO, Supporto organizzativo).'),
+            ('Assegna gli importi ai docenti',
+             'In ogni capitolo aggiungi le assegnazioni: ognuna passa da "Previsto" a "Comunicato '
+             '(lettera inviata)" a "Liquidato". Puoi spostare un\'assegnazione da un capitolo '
+             'all\'altro anche dopo la lettera: lo storico degli spostamenti resta sempre '
+             'visibile e i saldi restano coerenti. Con "importa incarichi" porti in un '
+             'capitolo le nomine già fatte nel Piano attività per i tipi di incarico collegati '
+             'al catalogo, invece di ridigitarle.'),
+            ('Cura il catalogo incarichi',
+             'Il "Catalogo incarichi" raccoglie, per ogni tipo di incarico, il numero di '
+             'riferimento e il testo descrittivo che finisce nelle lettere. Il testo lo compila e '
+             'aggiorna la segreteria (anche con l\'importazione di massa); non è generato '
+             'dall\'app.'),
+            ('Produci le lettere di incarico',
+             '"Lettere di incarico" mostra una riga per destinatario, con numero di incarichi, '
+             'totale, liquidati e protocollo della lettera. La lettera è una per destinatario ed '
+             'è cumulativa di tutti gli incarichi dell\'anno (tabella riassuntiva più testo '
+             'esteso dei soli incarichi assegnati), in PDF o Word. Le "Impostazioni lettera" '
+             'contengono i riferimenti che cambiano ogni anno (visti, delibere).'),
+            ('Personale ATA e retribuzione fondi MOF',
+             '"Personale ATA" è un\'anagrafica minima del personale ATA, assegnabile agli '
+             'incarichi come i docenti. Per ogni persona c\'è anche il documento "Retribuzione '
+             'fondi MOF".'),
+        ],
+        'faq': [
+            ('Se sposto un\'assegnazione tra capitoli devo rifare la lettera?',
+             'No: non serve una lettera di rettifica, ma lo spostamento resta tracciato.'),
+        ],
+        'attenzione': (
+            'Per i PDF serve WeasyPrint; dove non è disponibile l\'app lo segnala invece di '
+            'mostrare in silenzio una versione HTML.'
+        ),
+    },
+    {
+        'slug': 'progetti-fse',
+        'endpoint': 'progetti_fse.index',
+        'titolo': 'Progetti FSE/FESR',
+        'icona': '🇪🇺',
+        'riassunto': 'Progetti finanziati da fondi europei: moduli, incarichi, calendario, presenze, documenti.',
+        'a_cosa_serve': (
+            'Un\'area amministrativa separata dal Piano delle attività didattico, per i progetti '
+            'finanziati da fondi strutturali europei (FSE+/FESR, PN "Scuola e competenze" '
+            '2021-2027, per esempio il Piano Estate). Ogni progetto ha moduli, ogni modulo ha '
+            'incarichi (esperto, tutor, figura aggiuntiva, project manager), sessioni di '
+            'calendario e presenze dei partecipanti. Le sole date dei moduli compaiono in sola '
+            'lettura nell\'Agenda, per controllare che non si sovrappongano agli impegni '
+            'didattici dei docenti incaricati.'
+        ),
+        'passi': [
+            ('Apri "Impostazioni → Contabilità e progetti → Progetti FSE/FESR"',
+             'L\'elenco mostra i progetti (bozza, autorizzato, in corso, chiuso); c\'è anche un '
+             'cruscotto d\'insieme.'),
+            ('Crea progetto e moduli',
+             'Per ogni progetto indichi il tipo di costo: costi standard (UCS, con tariffa '
+             'oraria per esperto e tutor e costo di gestione per ora di presenza di ogni '
+             'partecipante) oppure costi reali. L\'app calcola i costi, non vanno ricalcolati a '
+             'mano.'),
+            ('Incarichi, calendario e presenze',
+             'In ogni modulo aggiungi gli incarichi (anche in stato "Candidato", per la raccolta '
+             'delle candidature), il calendario delle sessioni e le presenze: servono per stimare '
+             'il rimborso.'),
+            ('Segui la procedura e genera i documenti',
+             'Nella pagina Documenti del progetto trovi i passi dell\'iter in ordine: '
+             'disseminazione, decreto di assunzione al bilancio, decreto di avvio selezione e '
+             'avviso, raccolta candidature, nomina commissione, dichiarazioni dei commissari, '
+             'verbale, graduatorie provvisoria e definitiva, decreto di conferimento incarichi, '
+             'lettere di incarico o contratti. Per molti passi l\'app genera il documento.'),
+        ],
+        'faq': [
+            ('Dove la trovo ora nel menu?',
+             'Non è più nella barra: sta nel gruppo "Contabilità e progetti" del menu '
+             'Impostazioni, accanto alla Contrattazione, e si trova anche con Ctrl+K.'),
+            ('Chi la vede?',
+             'Di default DS, collaboratore e segreteria in modifica: si cambia da "Permessi per '
+             'ruolo".'),
+        ],
+        'attenzione': None,
+    },
+    {
+        'slug': 'display',
+        'endpoint': 'display.display',
+        'titolo': 'Display',
+        'icona': '🖥',
+        'riassunto': 'La pagina da mostrare su un monitor a scuola: supplenze del giorno, sempre aggiornate.',
+        'a_cosa_serve': (
+            'Il Display mostra le supplenze di un giorno in un formato adatto a un monitor in '
+            'sala docenti o all\'ingresso: classe, aula, docente che sostituisce. Si aggiorna '
+            'da solo ogni 30 secondi e, se i dati non entrano nello schermo, scorre su e giù. '
+            'Si apre in una scheda a parte.'
+        ),
+        'passi': [
+            ('Apri "Display" dalla barra',
+             'Mostra le supplenze di oggi.'),
+            ('Scegli un altro giorno dalla Dashboard',
+             'Nella Dashboard i pulsanti "Mostra nel display" (Oggi, Domani, Dopodomani) aprono '
+             'il Display su quella data; anche i pulsanti "Display" in alto fanno lo stesso per '
+             'il giorno selezionato.'),
+            ('Usa un utente "Display" per il monitor',
+             'Per un monitor fisso si crea un utente con ruolo "Display (sola lettura)": vede solo '
+             'questa pagina, qualunque indirizzo apra. Vedi la guida "Utenti e PIN".'),
+        ],
+        'faq': [
+            ('Cosa compare nelle note sul Display?',
+             'Il campo "Note display" della supplenza (vedi la guida "Supplenze"): tienile '
+             'brevi, chi le legge non ha altro contesto.'),
+            ('Mostra anche l\'aula della classe?',
+             'Sì, l\'aula assegnata alla classe (o l\'eventuale aula impostata solo per quella '
+             'supplenza).'),
+        ],
+        'attenzione': None,
+    },
+    {
+        'slug': 'dashboard-anno',
+        'endpoint': 'dashboard_anno.index',
+        'titolo': 'Dashboard anno',
+        'icona': '📈',
+        'riassunto': 'Il riepilogo di un anno scolastico: classi, docenti, organico, assegnazioni, incarichi.',
+        'a_cosa_serve': (
+            'Un riepilogo trasversale, per l\'anno scolastico scelto in alto: classi attive e '
+            'indirizzi, docenti in organico (a tempo indeterminato e determinato), movimenti '
+            '(entranti, uscenti, aspettative) e lo stato di avanzamento di organico e '
+            'assegnazioni. Utile per capire cosa manca prima di attivare l\'anno nuovo. Ogni '
+            'scheda porta alla pagina di dettaglio, e da qui si apre anche la scheda di ogni '
+            'classe.'
+        ),
+        'passi': [
+            ('Apri "Impostazioni → Anno scolastico → Dashboard anno"',
+             'Scegli l\'anno con i pulsanti in alto: puoi guardare sia l\'anno in corso sia '
+             'quello in preparazione.'),
+            ('Segui le schede',
+             'Cliccando una scheda (Classi attive, Docenti in organico…) vai alla pagina del '
+             'passo corrispondente di "Impostazione anno".'),
+            ('Apri la scheda di una classe',
+             'Dalla dashboard si arriva alla scheda di dettaglio di ogni classe.'),
+        ],
+        'faq': [],
+        'attenzione': None,
+    },
+    {
+        'slug': 'mappa-aule',
+        'endpoint': 'aule.mappa',
+        'titolo': 'Mappa aule',
+        'icona': '🗺',
+        'riassunto': 'La piantina interattiva delle aule, con le classi assegnate.',
+        'a_cosa_serve': (
+            'Una piantina interattiva, divisa in sezioni (una per piano o edificio): le zone '
+            'cliccabili mostrano le classi assegnate a ogni aula. Ha due modalità: "visualizza", '
+            'in sola lettura, e "assegna", che permette di scegliere la classe di un\'aula '
+            'direttamente dalla mappa (o liberarla).'
+        ),
+        'passi': [
+            ('Apri "Mappa aule"',
+             'Dal pulsante "Piantina interattiva" nella pagina "Aule per classe" (vedi la guida '
+             '"Assegnazioni e aule") oppure con Ctrl+K. '
+             'L\'aula di una classe vale per un anno scolastico: scegli l\'anno prima di assegnare.'),
+            ('Assegna o libera un\'aula',
+             'In modalità "assegna" clicca l\'aula, scegli la classe e conferma; per liberarla '
+             'usa il comando apposito. Le assegnazioni di altri anni non cambiano.'),
+        ],
+        'faq': [],
+        'attenzione': None,
+    },
+    {
+        'slug': 'bozze-email',
+        'endpoint': 'mail_bozze.index',
+        'titolo': 'Bozze email banca ore',
+        'icona': '✉️',
+        'riassunto': 'Preparare per ogni docente la mail con il proprio report della banca ore in allegato.',
+        'a_cosa_serve': (
+            'Per inviare a molti docenti, in un colpo solo, la comunicazione sul proprio saldo di '
+            'banca ore con il report PDF allegato. Scegli i docenti (chi non ha un indirizzo '
+            'email non è selezionabile), scrivi oggetto e testo e l\'app prepara le bozze: non invia nulla '
+            'da sola.'
+        ),
+        'passi': [
+            ('Apri "Bozze email"',
+             'Dal pulsante in Report, o con Ctrl+K cercando "mail".'),
+            ('Seleziona i docenti',
+             '"Seleziona tutti", "Deseleziona tutti" e "Solo con email" aiutano; un contatore '
+             'mostra quanti ne hai scelti.'),
+            ('Scrivi oggetto e testo',
+             'Nel testo puoi usare i segnaposto {COGNOME}, {NOME} ed {EMAIL}, sostituiti per '
+             'ogni docente. Il testo proposto è modificabile.'),
+            ('Crea le bozze',
+             'Su Mac compare "Apri bozze in Mail.app", su Windows "Script Outlook (.ps1)"; su tutti '
+             '"Scarica .eml + PDF (ZIP)" da aprire con il proprio programma di posta. Le '
+             'bozze vanno controllate e inviate da te.'),
+        ],
+        'faq': [],
+        'attenzione': (
+            'I pulsanti disponibili dipendono dal computer: l\'apertura diretta in Mail.app '
+            'funziona solo su Mac.'
+        ),
+    },
+    {
+        'slug': 'utenti',
+        'endpoint': 'auth.lista_utenti',
+        'titolo': 'Utenti e PIN',
+        'icona': '👥',
+        'riassunto': 'Chi può accedere all\'app, con quale ruolo e PIN; cronologia degli accessi.',
+        'a_cosa_serve': (
+            'Ogni persona accede con username e PIN. DS e DSGA creano gli utenti, scelgono il ruolo '
+            '(Dirigente Scolastico, DSGA, Collaboratore DS, Segreteria Personale, Display), '
+            'cambiano un PIN o disattivano un account. Ogni utente può cambiare da sé il proprio '
+            'PIN dal menu in alto a destra. La cronologia attività mostra accessi e modifiche '
+            'ai dati.'
+        ),
+        'passi': [
+            ('Apri "Impostazioni → Sistema → Gestione utenti e PIN"',
+             'Elenco degli utenti con ruolo e stato.'),
+            ('Crea o modifica un utente',
+             'Username (non modificabile dopo la creazione), cognome, nome, ruolo e PIN. Per '
+             'cambiare il PIN a qualcuno basta scriverne uno nuovo nella sua scheda; per '
+             'disattivare un account togli la spunta "attivo". Non puoi eliminare il tuo stesso '
+             'account.'),
+            ('Cambia il tuo PIN',
+             'Dal menu utente in alto a destra, "Cambia PIN": serve il PIN attuale e il nuovo '
+             'deve avere almeno 4 cifre.'),
+            ('Consulta la cronologia',
+             'Da "Log accessi": accessi e modifiche (docenti, supplenze, assenze, sospensioni, '
+             'dati istituto, utenti), filtrabili per testo, azione, utente e date; vengono '
+             'mostrati gli ultimi 300 risultati. I log più vecchi vengono cancellati '
+             'automaticamente (conservazione limitata, per la privacy).'),
+        ],
+        'faq': [
+            ('Dopo vari PIN sbagliati non riesco più ad entrare.',
+             'Dopo 5 tentativi falliti con lo stesso utente dallo stesso computer l\'accesso è '
+             'bloccato per 15 minuti.'),
+            ('Cosa può fare un utente "Display"?',
+             'Vede solo la pagina Display, sempre; non può aprire altro. È pensato per un monitor '
+             'in sala docenti.'),
+        ],
+        'attenzione': (
+            'Gli utenti si gestiscono da DS e DSGA. I PIN non vengono mostrati: se qualcuno lo '
+            'dimentica se ne imposta uno nuovo.'
         ),
     },
 ]
