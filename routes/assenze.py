@@ -236,6 +236,8 @@ def modifica(id):
         msg = "Assenza aggiornata."
         if risultato['n_sup']:
             msg += f" Rigenerate {risultato['n_sup']} variazioni supplenze."
+        if risultato['n_extra']:
+            msg += f" Registrate {risultato['n_extra']} assenze aggiuntive per i giorni successivi."
         flash(msg, "success")
         next_url = request.form.get("next") or url_for("dashboard.index", data=new_data.isoformat())
         return redirect(next_url)

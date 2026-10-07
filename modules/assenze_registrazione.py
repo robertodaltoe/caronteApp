@@ -937,7 +937,17 @@ def modifica_assenza(a, form):
     old_data       = a.data
 
     new_docente   = int(form["id_docente"])
-    new_data      = date.fromisoformat(form["data"])
+    # Il form di modifica è lo stesso della registrazione: scegliendo "Più
+    # giorni"/"Periodico" il campo 'data' viene disabilitato (e quindi non
+    # inviato) e le date arrivano in data_range_* / data_per_*. Leggere
+    # form["data"] direttamente dava BadRequestKeyError → pagina 400.
+    data_str = (form.get("data") or form.get("data_range_ini")
+                or form.get("data_per_ini") or "")
+    data_fine_str = (form.get("data_range_fin") or form.get("data_per_fin")
+                     or data_str)
+    new_data      = date.fromisoformat(data_str)
+    data_fine_ext = date.fromisoformat(data_fine_str)
+    giorni_sett   = [int(g) for g in form.getlist("giorni_sett") if str(g).isdigit()]
     ore_scelte_raw = form.getlist("ore_scelte")
     if ore_scelte_raw:
         new_ore_scelte  = sorted(int(o) for o in ore_scelte_raw if str(o).isdigit())
@@ -968,6 +978,20 @@ def modifica_assenza(a, form):
     TIPI_ASSENZA = ("permesso", "assenza", "permesso_orario", "permesso_ist", "civica",
                     "ed_civica", "malattia", "assemblea", "formazione",
                     "viaggio", "progetto", "riunione", "sciopero", "altro")
+
+    # Date aggiuntive (oltre a quella di questa riga) se la durata è stata
+    # estesa a più giorni: la riga esistente prende la prima data utile,
+    # per le altre si registrano nuove assenze come in "Nuova assenza".
+    date_extra = []
+    if data_fine_ext > new_data:
+        cur = new_data
+        while cur <= data_fine_ext:
+            if cur.weekday() < 6 and (not giorni_sett or (cur.weekday() + 1) in giorni_sett):
+                date_extra.append(cur)
+            cur += timedelta(days=1)
+        if date_extra and date_extra[0] != new_data:
+            new_data = date_extra[0]
+        date_extra = date_extra[1:]
 
     # 1. Elimina movimenti banca ore vecchi collegati
     MovimentoBancaOre.query.filter(
@@ -1043,10 +1067,32 @@ def modifica_assenza(a, form):
         _sync_presenza_ist(new_docente, [new_data], 'giustificato',
                            id_assenza=ass_id_new)
 
+    # Giorni aggiuntivi dell'intervallo: nuove assenze con gli stessi dati,
+    # saltando i giorni in cui il docente ha già un'assenza registrata.
+    n_extra = 0
+    if date_extra:
+        from werkzeug.datastructures import MultiDict
+        gia = {x.data for x in Assenza.query.filter(
+            Assenza.id_docente == new_docente,
+            Assenza.data.in_(date_extra)).all()}
+        for d_extra in date_extra:
+            if d_extra in gia:
+                continue
+            f = MultiDict(form)
+            for k in ("data", "data_range_ini", "data_range_fin", "data_per_ini",
+                      "data_per_fin", "data_fine", "giorni_sett"):
+                f.poplist(k)
+            f["data_range_ini"] = f["data_range_fin"] = d_extra.isoformat()
+            f["note"] = new_note
+            f["motivo"] = new_motivo
+            registra_assenze_form(f)
+            n_extra += 1
+
     from models.docente import Docente
     nuovo_doc = Docente.query.get(new_docente)
 
     return {
+        'n_extra': n_extra,
         'n_sup': n_sup,
         'new_motivo': new_motivo,
         'new_data': new_data,
