@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
+from models.attivita_ist import NOTA_ESONERO_PIANO
 from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,
                                   AttivitaIstPresenza, TIPI_ATTIVITA)
 from models.materia import Dipartimento, Materia, DocenteMateria
@@ -225,9 +226,6 @@ def _preset_partecipanti(attivita, con_piano=True):
     return risultato
 
 
-NOTA_ESONERO_PIANO = 'Piano attività individuale'
-
-
 def _esonerati_da_piano(evento):
     """
     Id dei docenti che il preset puro convocherebbe ma che hanno un
@@ -242,6 +240,15 @@ def _esonerati_da_piano(evento):
     return set(_preset_partecipanti(evento, con_piano=False)) - set(_preset_partecipanti(evento))
 
 
+def _partecipanti_previsti(evento):
+    """Preset + esonerati dal piano individuale: chi deve comparire
+    nell'elenco dell'evento, i secondi come assenti giustificati (vedi
+    _giustifica_esonerati_da_piano). È il confronto giusto per form e
+    risincronizzazione; _preset_partecipanti() resta l'elenco dei soli
+    convocati."""
+    return list(set(_preset_partecipanti(evento)) | _esonerati_da_piano(evento))
+
+
 def _esonerati_da_giustificare(evento):
     """
     Docenti già in elenco (preset=True) esonerati dal proprio piano la
@@ -250,20 +257,22 @@ def _esonerati_da_giustificare(evento):
     parziale o assenza collegata) — quelle restano com'erano.
     """
     esonerati = _esonerati_da_piano(evento)
-    if not esonerati:
+    if not esonerati or evento.id is None:
         return []
-    presenze = {p.id_docente: p for p in evento.presenze}
-    risultato = []
-    for part in evento.partecipanti:
+    presenze = {p.id_docente: p for p in
+                AttivitaIstPresenza.query.filter_by(id_attivita=evento.id).all()}
+    ids = []
+    for part in AttivitaIstPartecipante.query.filter_by(id_attivita=evento.id).all():
         if part.id_docente not in esonerati or not part.preset:
             continue
         pres = presenze.get(part.id_docente)
         if pres is None or (pres.stato == 'presente' and not pres.note
                             and not pres.ora_inizio_eff and not pres.ora_fine_eff
                             and not pres.id_assenza_collegata):
-            risultato.append(Docente.query.get(part.id_docente))
-    risultato.sort(key=lambda d: d.cognome)
-    return risultato
+            ids.append(part.id_docente)
+    if not ids:
+        return []
+    return Docente.query.filter(Docente.id.in_(ids)).order_by(Docente.cognome).all()
 
 
 def _diff_risincronizzazione(evento):
@@ -299,11 +308,10 @@ def _diff_risincronizzazione(evento):
     restano invece invariati: quello è un controllo di sicurezza (chi
     non è più in servizio), non un'opinione sul numero di partecipanti.
     """
-    preset_attuale = set(_preset_partecipanti(evento))
-    # Esonerati dal proprio piano personale: restano in elenco (come
-    # assenti giustificati, vedi _esonerati_da_giustificare), mai
-    # proposti in rimozione.
-    non_da_rimuovere = preset_attuale | _esonerati_da_piano(evento)
+    # Include gli esonerati dal proprio piano personale: restano in elenco
+    # come assenti giustificati (vedi _giustifica_esonerati_da_piano),
+    # mai proposti in rimozione.
+    preset_attuale = set(_partecipanti_previsti(evento))
     partecipanti = {p.id_docente: p for p in evento.partecipanti}
     presenze = {p.id_docente: p for p in evento.presenze}
 
@@ -316,7 +324,7 @@ def _diff_risincronizzazione(evento):
 
     da_rimuovibili, non_rimovibili = [], []
     for did, part in partecipanti.items():
-        if did in non_da_rimuovere or not part.preset:
+        if did in preset_attuale or not part.preset:
             continue
         pres = presenze.get(did)
         vergine = pres is None or (
@@ -1151,7 +1159,7 @@ def form(id=None):
         # perché il preset veniva sempre reinserito subito dopo
         # (segnalato da Roberto per il corso di formazione UNPLUGGED).
         if not doc_ids and 'partecipanti_form_presente' not in request.form:
-            doc_ids = _preset_partecipanti(evento)
+            doc_ids = _partecipanti_previsti(evento)
 
         # Marca l'evento come "partecipanti gestiti a mano" se la
         # checklist è stata inviata esplicitamente con una selezione
@@ -1162,12 +1170,16 @@ def form(id=None):
         # Se invece la selezione coincide col preset (l'utente non ha
         # cambiato nulla), l'evento resta sincronizzabile come prima.
         if 'partecipanti_form_presente' in request.form:
-            if set(doc_ids) != set(_preset_partecipanti(evento)):
+            if set(doc_ids) != set(_partecipanti_previsti(evento)):
                 evento.partecipanti_manuali = True
 
         for did in doc_ids:
             db.session.add(AttivitaIstPartecipante(
                 id_attivita=evento.id, id_docente=did, preset=True))
+        db.session.flush()
+        # Chi ha un piano individuale che non include l'evento resta in
+        # elenco ma come assente giustificato.
+        _giustifica_esonerati_da_piano(evento)
 
         # Ripulisce anche le presenze di chi è stato tolto dalla
         # checklist: AttivitaIstPartecipante viene già ricreata da zero
@@ -1199,7 +1211,7 @@ def form(id=None):
         return redirect(url_for('attivita_ist.lista'))
 
     # Pre-selezione docenti per preset
-    preset_ids = _preset_partecipanti(evento) if evento else []
+    preset_ids = _partecipanti_previsti(evento) if evento else []
     docenti_selezionati = {p.id_docente for p in evento.partecipanti} if evento else set()
 
     # Esclude dall'elenco selezionabile chi non è in servizio alla data
@@ -1315,7 +1327,7 @@ def preset_partecipanti_json():
         bucket_altro=request.args.get('bucket_altro') or None,
         id_dipartimento=int(id_dip) if id_dip and id_dip.isdigit() else None,
     )
-    ids = _preset_partecipanti(ev)
+    ids = _partecipanti_previsti(ev)
     seg = _segnalazioni_partecipanti(
         data_ev, request.args.get('ora_inizio') or None,
         request.args.get('ora_fine') or None,
@@ -1609,9 +1621,7 @@ def _applica_scelte_risincronizzazione(evento, da_aggiungere, da_rimuovibili,
     # quell'applicazione, non veniva mai ricordata).
     ids_prima = {p.id_docente for p in evento.partecipanti}
     finale = (ids_prima | ids_aggiunti_ora) - ids_rimossi_ora
-    # Gli esonerati dal piano personale restano in elenco come giustificati
-    # ma non fanno parte del preset: non vanno contati come scostamento.
-    if (finale - _esonerati_da_piano(evento)) != set(_preset_partecipanti(evento)):
+    if finale != set(_partecipanti_previsti(evento)):
         evento.partecipanti_manuali = True
 
     return n_agg, n_rim
@@ -1828,9 +1838,11 @@ def _import_piano_2025_26():
         db.session.flush()
 
         # Preset partecipanti
-        for did in _preset_partecipanti(obj):
+        for did in _partecipanti_previsti(obj):
             db.session.add(AttivitaIstPartecipante(
                 id_attivita=obj.id, id_docente=did, preset=True))
+        db.session.flush()
+        _giustifica_esonerati_da_piano(obj)
         count += 1
 
     db.session.commit()
@@ -1884,9 +1896,11 @@ def import_piano_xlsx():
             db.session.add(obj)
             db.session.flush()
 
-            for did in _preset_partecipanti(obj):
+            for did in _partecipanti_previsti(obj):
                 db.session.add(AttivitaIstPartecipante(
                     id_attivita=obj.id, id_docente=did, preset=True))
+            db.session.flush()
+            _giustifica_esonerati_da_piano(obj)
             n_importati += 1
 
         db.session.commit()

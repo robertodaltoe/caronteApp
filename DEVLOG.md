@@ -18,8 +18,16 @@ elenco e alla conferma la loro presenza passa a `giustificato` con nota
 la presenza è ancora vergine. Visibile in risincronizza singola e
 "tutti". Non cambia il preset per gli eventi nuovi (chi ha il piano
 continua a non essere convocato in automatico). Eseguita da sandbox
-Linux; nessun accesso a `database.db`. Test:
-`tests/test_risincronizza_esonerati_piano_individuale.py` (640 verdi).
+Linux; nessun accesso a `database.db`. Su richiesta di Roberto
+("fallo") la stessa regola vale anche per gli eventi NUOVI (form, import
+piano xlsx/2025-26): `_partecipanti_previsti()` = convocati + esonerati;
+gli esonerati entrano in elenco con presenza `giustificato` e nota
+`NOTA_ESONERO_PIANO`. I controlli di sovrapposizione/orario/FSE usano
+`AttivitaIst.partecipanti_convocati_ids` (esclude gli esonerati, non sono
+conflitti). Il contatore "partecipanti" in lista li include. Non toccati
+i generatori CdC (`generatore_cdc.py`, scrutini/GLO bucket B con
+assegnazioni proprie). Test:
+`tests/test_risincronizza_esonerati_piano_individuale.py` (642 verdi).
 
 ## Sessione 75 — Guida aggiornata al codice attuale
 

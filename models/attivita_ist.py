@@ -34,6 +34,10 @@ TIPI_ATTIVITA = {
 
 LIMITE_BUCKET = 40  # ore annue per bucket A e B
 
+# Nota delle presenze 'giustificato' generate automaticamente per i docenti
+# esonerati dal proprio Piano Attività Personale (vedi routes/attivita_ist.py).
+NOTA_ESONERO_PIANO = 'Piano attività individuale'
+
 
 def label_bucket(bucket):
     """Etichette dei tipi che appartengono a un bucket, nell'ordine di
@@ -100,6 +104,17 @@ class AttivitaIst(db.Model):
                                     back_populates='attivita',
                                     cascade='all, delete-orphan',
                                     order_by='AttivitaIstSessione.data')
+
+    @property
+    def partecipanti_convocati_ids(self):
+        """Id dei partecipanti realmente convocati: esclude chi è in elenco
+        solo come assente giustificato dal proprio piano individuale
+        (NOTA_ESONERO_PIANO) — per i controlli di sovrapposizione/orario,
+        dove non è un conflitto reale."""
+        esonerati = {p.id_docente for p in self.presenze
+                     if p.stato == 'giustificato' and p.note == NOTA_ESONERO_PIANO}
+        return {p.id_docente for p in self.partecipanti
+                if p.id_docente and p.id_docente not in esonerati}
 
     @property
     def bucket(self):

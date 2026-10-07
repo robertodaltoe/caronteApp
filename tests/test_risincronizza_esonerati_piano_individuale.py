@@ -86,3 +86,58 @@ def test_presenza_modificata_a_mano_non_viene_toccata(app, db_session):
         db.session.commit()
         from routes.attivita_ist import _esonerati_da_giustificare
         assert _esonerati_da_giustificare(ev) == []
+
+
+# ── Eventi nuovi: l'esonerato compare subito come giustificato ───────────────
+
+def _registra_blueprint(app):
+    import routes.attivita_ist as mod
+    if 'attivita_ist' not in app.blueprints:
+        app.register_blueprint(mod.attivita_ist_bp)
+
+
+def test_evento_nuovo_dal_form_include_esonerato_come_giustificato(app, db_session):
+    _setup(app)
+    _registra_blueprint(app)
+    with app.app_context():
+        d, altro, ev = _scenario()
+        from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante, AttivitaIstPresenza
+        giorno = ev.data + timedelta(days=5)
+        with app.test_client() as c:
+            r = c.post('/attivita-ist/nuova', data={
+                'tipo': 'collegio', 'titolo': 'Collegio nuovo', 'data': giorno.isoformat()})
+            assert r.status_code == 302
+        nuovo = AttivitaIst.query.filter_by(titolo='Collegio nuovo').one()
+        assert AttivitaIstPartecipante.query.filter_by(
+            id_attivita=nuovo.id, id_docente=d.id).count() == 1
+        pres = AttivitaIstPresenza.query.filter_by(
+            id_attivita=nuovo.id, id_docente=d.id).one()
+        assert pres.stato == 'giustificato'
+        assert pres.note == 'Piano attività individuale'
+        altro_pres = AttivitaIstPresenza.query.filter_by(
+            id_attivita=nuovo.id, id_docente=altro.id).first()
+        assert altro_pres is None or altro_pres.stato == 'presente'
+        # l'esonerato non è un convocato per i controlli di sovrapposizione
+        assert d.id not in nuovo.partecipanti_convocati_ids
+        assert altro.id in nuovo.partecipanti_convocati_ids
+
+
+def test_risincronizza_aggiunge_esonerato_mancante_come_giustificato(app, db_session):
+    _setup(app)
+    with app.app_context():
+        d, altro, ev = _scenario()
+        from models.attivita_ist import AttivitaIstPartecipante, AttivitaIstPresenza
+        AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id, id_docente=d.id).delete()
+        db.session.commit()
+        from routes.attivita_ist import (_diff_risincronizzazione,
+                                         _applica_scelte_risincronizzazione,
+                                         _giustifica_esonerati_da_piano)
+        da_agg, da_rim, _ = _diff_risincronizzazione(ev)
+        assert d.id in [x.id for x in da_agg]
+        _applica_scelte_risincronizzazione(ev, da_agg, da_rim)
+        db.session.flush()
+        _giustifica_esonerati_da_piano(ev)
+        db.session.commit()
+        assert AttivitaIstPresenza.query.filter_by(
+            id_attivita=ev.id, id_docente=d.id).one().stato == 'giustificato'
+        assert not ev.partecipanti_manuali

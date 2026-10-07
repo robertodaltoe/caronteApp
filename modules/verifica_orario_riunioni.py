@@ -67,7 +67,7 @@ def trova_conflitti_orario_riunioni(data_da=None, data_a=None):
     conflitti = []
 
     for ev in eventi:
-        partecipanti_ids = {p.id_docente for p in ev.partecipanti if p.id_docente}
+        partecipanti_ids = ev.partecipanti_convocati_ids
         if not partecipanti_ids:
             continue
         giorno = ev.data.weekday()
