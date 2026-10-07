@@ -52,8 +52,8 @@ def trova_sovrapposizioni_riunioni(data_da=None, data_a=None):
                 ev2 = lista[j]
                 if not (ev1.ora_inizio < ev2.ora_fine and ev1.ora_fine > ev2.ora_inizio):
                     continue
-                p1 = {p.id_docente for p in ev1.partecipanti if p.id_docente}
-                p2 = {p.id_docente for p in ev2.partecipanti if p.id_docente}
+                p1 = ev1.partecipanti_convocati_ids
+                p2 = ev2.partecipanti_convocati_ids
                 for id_doc in sorted(p1 & p2):
                     sovrapposizioni.append({
                         'evento1': ev1,

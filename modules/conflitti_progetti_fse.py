@@ -58,7 +58,7 @@ def trova_conflitti_progetti_fse(data_da=None, data_a=None):
                           AttivitaIst.ora_fine.isnot(None))
                   .all())
         for ev in eventi:
-            partecipanti_ids = {p.id_docente for p in ev.partecipanti if p.id_docente}
+            partecipanti_ids = ev.partecipanti_convocati_ids
             comuni = docenti_ids & partecipanti_ids
             if not comuni:
                 continue

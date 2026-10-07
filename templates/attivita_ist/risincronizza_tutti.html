@@ -37,6 +37,7 @@
                 <th style="padding:10px 14px; color:var(--verde);">Da aggiungere</th>
                 <th style="padding:10px 14px; color:var(--rosso);">Da rimuovere</th>
                 <th style="padding:10px 14px; color:#92400e;">Da rivedere a mano</th>
+                <th style="padding:10px 14px; color:#854d0e;">Giustificati (piano individuale)</th>
             </tr>
         </thead>
         <tbody>
@@ -61,6 +62,11 @@
                 <td style="padding:10px 14px;">
                     {% if r.non_rimovibili %}
                     <span class="badge" style="background:#fde68a; color:#92400e;">{{ r.non_rimovibili|length }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="padding:10px 14px;">
+                    {% if r.da_giustificare %}
+                    <span class="badge" style="background:var(--giallo-bg); color:var(--giallo);">{{ r.da_giustificare|length }}</span>
                     {% else %}—{% endif %}
                 </td>
             </tr>

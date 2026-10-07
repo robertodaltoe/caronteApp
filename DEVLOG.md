@@ -2,6 +2,33 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 76 — Risincronizza: esonerati dal piano individuale = giustificati
+
+Roberto: nella risincronizzazione i docenti che hanno compilato il piano
+attività individuale e non hanno scelto l'evento comparivano "da
+rimuovere"; si aspettava di vederli come assenti giustificati.
+
+Causa: `_preset_partecipanti()` (Sessione 57) toglie dal preset di un
+evento bucket A/B chi ha un piano attivo che non lo include, e
+`_diff_risincronizzazione()` trattava ogni partecipante preset fuori dal
+preset come da rimuovere. Ora (`routes/attivita_ist.py`) quei docenti
+(`_esonerati_da_piano`) non sono più proposti in rimozione: restano in
+elenco e alla conferma la loro presenza passa a `giustificato` con nota
+"Piano attività individuale" (`_giustifica_esonerati_da_piano`), solo se
+la presenza è ancora vergine. Visibile in risincronizza singola e
+"tutti". Non cambia il preset per gli eventi nuovi (chi ha il piano
+continua a non essere convocato in automatico). Eseguita da sandbox
+Linux; nessun accesso a `database.db`. Su richiesta di Roberto
+("fallo") la stessa regola vale anche per gli eventi NUOVI (form, import
+piano xlsx/2025-26): `_partecipanti_previsti()` = convocati + esonerati;
+gli esonerati entrano in elenco con presenza `giustificato` e nota
+`NOTA_ESONERO_PIANO`. I controlli di sovrapposizione/orario/FSE usano
+`AttivitaIst.partecipanti_convocati_ids` (esclude gli esonerati, non sono
+conflitti). Il contatore "partecipanti" in lista li include. Non toccati
+i generatori CdC (`generatore_cdc.py`, scrutini/GLO bucket B con
+assegnazioni proprie). Test:
+`tests/test_risincronizza_esonerati_piano_individuale.py` (642 verdi).
+
 ## Sessione 75 — Guida aggiornata al codice attuale
 
 Roberto: controllare la sezione Guida e aggiornarla (tutte le correzioni
