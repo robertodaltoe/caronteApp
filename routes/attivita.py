@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+from modules.classi import scomponi_classe
 from models import db
 from models.attivita_fuori_aula import AttivitaFuoriAula, AttivitaClasse
 from models.migrazione_slot import MigrazioneSlot
@@ -519,7 +520,8 @@ def nuova():
         if c[0] and c[0] not in('---','-x-','','POTENZIAMENTO') and c[0][0].isdigit()))
     cpind=defaultdict(list)
     for c in classi_tutte:
-        p=c.split(); cpind[p[-1] if len(p)>1 else 'ALTRO'].append(c)
+        # Raggruppa per indirizzo anche per le classi senza spazio dell'orario ("4ALSU"); il valore resta quello grezzo (serve ai lookup su OrarioDocente)
+        cpind[scomponi_classe(c)[1] or 'ALTRO'].append(c)
     attivita_esistenti = AttivitaFuoriAula.query.filter_by(stato='attiva').order_by(
         AttivitaFuoriAula.data_inizio.desc()).all()
     return render_template('attivita/form.html',docenti=docenti,oggi=oggi,tipi=TIPI,
@@ -601,7 +603,8 @@ def modifica(id):
         if c[0] and c[0] not in('---','-x-','','POTENZIAMENTO') and c[0][0].isdigit()))
     cpind=defaultdict(list)
     for c in classi_tutte:
-        p=c.split(); cpind[p[-1] if len(p)>1 else 'ALTRO'].append(c)
+        # Raggruppa per indirizzo anche per le classi senza spazio dell'orario ("4ALSU"); il valore resta quello grezzo (serve ai lookup su OrarioDocente)
+        cpind[scomponi_classe(c)[1] or 'ALTRO'].append(c)
     attivita_esistenti = AttivitaFuoriAula.query.filter(
         AttivitaFuoriAula.stato=='attiva', AttivitaFuoriAula.id!=att.id
     ).order_by(AttivitaFuoriAula.data_inizio.desc()).all()
