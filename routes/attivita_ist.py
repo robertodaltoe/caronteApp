@@ -1188,6 +1188,92 @@ def form(id=None):
     )
 
 
+def _minuti(t):
+    try:
+        h, m = map(int, t.split(':'))
+        return h * 60 + m
+    except Exception:
+        return None
+
+
+def _segnalazioni_partecipanti(data_ev, ora_inizio=None, ora_fine=None,
+                                id_escluso=None):
+    """
+    Per ogni docente con un problema noto alla data dell'evento, ritorna
+    {id_docente: [testo, ...]}: assenza registrata quel giorno,
+    indisponibilita', altra riunione istituzionale sovrapposta. Serve
+    al form dell'evento per SEGNALARE (mai togliere) chi non potra'
+    esserci: l'elenco resta quello deciso da chi lo compila.
+
+    Il motivo dell'assenza non viene esposto (alcuni motivi sono
+    riservati, vedi MOTIVI_RISERVATI in models/assenza.py): solo il
+    fatto che il docente risulta assente.
+    """
+    from models.indisponibilita import Indisponibilita
+    out = {}
+
+    def add(did, testo):
+        out.setdefault(did, []).append(testo)
+
+    for a in Assenza.query.filter_by(data=data_ev).all():
+        add(a.id_docente, 'assente (assenza registrata)')
+
+    for i in Indisponibilita.query.filter_by(data=data_ev).all():
+        add(i.id_docente, 'indisponibile' if i.ora is None
+            else f'indisponibile (ora {i.ora})')
+
+    ev_ini = _minuti(ora_inizio) if ora_inizio else None
+    ev_fin = _minuti(ora_fine) if ora_fine else None
+    q = AttivitaIst.query.filter(AttivitaIst.data == data_ev)
+    if id_escluso:
+        q = q.filter(AttivitaIst.id != id_escluso)
+    for alt in q.all():
+        alt_ini = _minuti(alt.ora_inizio) if alt.ora_inizio else None
+        alt_fin = _minuti(alt.ora_fine) if alt.ora_fine else (
+            alt_ini + 45 if alt_ini is not None else None)
+        if ev_ini is not None and alt_ini is not None:
+            fin = ev_fin if ev_fin is not None else ev_ini + 45
+            if not (alt_ini < fin and alt_fin > ev_ini):
+                continue
+        # Se manca l'orario da una delle due parti non si puo' escludere
+        # la sovrapposizione: si segnala comunque (e' solo un avviso).
+        for p in alt.partecipanti:
+            add(p.id_docente, f'già in «{alt.titolo}»'
+                + (f' ({alt.ora_inizio})' if alt.ora_inizio else ''))
+    return out
+
+
+@attivita_ist_bp.route('/attivita-ist/preset-partecipanti')
+def preset_partecipanti_json():
+    """
+    Partecipanti previsti per un evento NON ancora salvato, dai campi
+    correnti del form (tipo/classe/data/dipartimento), piu' le
+    segnalazioni sui docenti che quel giorno non ci sono. Prima la
+    checklist di un evento nuovo partiva sempre vuota (preset_ids vale
+    [] senza evento) e cambiare tipo/classe non la ricalcolava: un CdC
+    creato scegliendo solo la classe finiva con zero partecipanti.
+    """
+    try:
+        data_ev = date.fromisoformat(request.args.get('data', ''))
+    except ValueError:
+        return {'ids': [], 'segnalazioni': {}}
+    id_dip = request.args.get('id_dipartimento') or None
+    ev = AttivitaIst(
+        tipo=request.args.get('tipo', ''), titolo='',
+        data=data_ev,
+        classe=request.args.get('classe', '').strip() or None,
+        bucket_altro=request.args.get('bucket_altro') or None,
+        id_dipartimento=int(id_dip) if id_dip and id_dip.isdigit() else None,
+    )
+    ids = _preset_partecipanti(ev)
+    seg = _segnalazioni_partecipanti(
+        data_ev, request.args.get('ora_inizio') or None,
+        request.args.get('ora_fine') or None,
+        id_escluso=request.args.get('id', type=int))
+    return {'ids': ids,
+            'segnalazioni': {str(k): v for k, v in seg.items()}}
+
+
 # ── ELIMINA ──────────────────────────────────────────────────────────────────
 
 def _elimina_evento_core(e):

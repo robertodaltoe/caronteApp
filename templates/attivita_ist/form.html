@@ -109,7 +109,10 @@
 <div class="card" style="flex:1; min-width:300px; padding:20px;">
     <h3 style="font-size:.95rem; color:var(--blu); margin-bottom:8px;">{{ icon('person') }} Partecipanti</h3>
     <p style="font-size:.78rem; color:var(--grigio); margin-bottom:12px;">
-        Il preset è calcolato automaticamente dal tipo evento. Puoi modificarlo.
+        Il preset è calcolato automaticamente dal tipo evento (e dalla classe
+        o dal dipartimento scelti). Puoi modificarlo. I docenti assenti,
+        indisponibili o già impegnati in quel giorno restano nell'elenco ma
+        sono segnalati.
     </p>
     <!-- Sentinella: distingue "checklist presente ma nessuno selezionato"
          (l'utente ha cliccato "Nessuno" e vuole zero partecipanti) da
@@ -146,6 +149,8 @@
                          (not evento and d.id in preset_ids) %}checked{% endif %}>
             {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
             {% if d.materia_effettiva %}<span style="font-size:.72rem; color:var(--grigio); margin-left:4px;">{{ d.materia_effettiva }}</span>{% endif %}
+            <span class="doc-warn" data-did="{{ d.id }}"
+                  style="display:none; font-size:.72rem; color:#b45309; background:#fef3c7; border-radius:4px; padding:1px 6px; margin-left:auto;"></span>
         </label>
         {% endfor %}
     </div>
@@ -211,8 +216,49 @@ function aggiornaTipo() {
     box.style.background  = c[0]; box.style.color = c[1]; box.style.borderColor = c[2];
     box.textContent = info.txt || '';
 }
-function selTutti()  { document.querySelectorAll('.doc-check').forEach(c => c.checked = true); }
-function deselTutti(){ document.querySelectorAll('.doc-check').forEach(c => c.checked = false); }
+// Dopo un intervento manuale sulla checklist il preset non la
+// sovrascrive più (solo le segnalazioni continuano ad aggiornarsi).
+let checklistToccata = false;
+function selTutti()  { checklistToccata = true; document.querySelectorAll('.doc-check').forEach(c => c.checked = true); }
+function deselTutti(){ checklistToccata = true; document.querySelectorAll('.doc-check').forEach(c => c.checked = false); }
+
+// Evento nuovo: la checklist parte vuota dal server (nessun evento da
+// cui calcolare il preset) — Roberto: scegliendo solo la classe di un
+// CdC si aspettava tutti i docenti di quella classe come partecipanti.
+// Qui il preset viene chiesto al server a ogni cambio di tipo/classe/
+// dipartimento/data/orario e applicato finché non si tocca la
+// checklist a mano. Le segnalazioni (assenti, indisponibili, già
+// impegnati) valgono anche in modifica, senza togliere nessuno.
+const EVENTO_ID = {{ evento.id if evento else 'null' }};
+let presetTimer = null;
+function aggiornaPreset() {
+    clearTimeout(presetTimer);
+    presetTimer = setTimeout(async () => {
+        const f = document.getElementById('form-ist');
+        const q = new URLSearchParams();
+        ['tipo','classe','id_dipartimento','data','ora_inizio','ora_fine','bucket_altro'].forEach(n => {
+            const el = f.elements[n];
+            if (el && el.value) q.set(n, el.value);
+        });
+        if (EVENTO_ID) q.set('id', EVENTO_ID);
+        if (!q.get('data')) return;
+        let r;
+        try {
+            const resp = await fetch('{{ url_for("attivita_ist.preset_partecipanti_json") }}?' + q);
+            if (!resp.ok) return;
+            r = await resp.json();
+        } catch (e) { return; }
+        if (!EVENTO_ID && !checklistToccata) {
+            const ids = new Set(r.ids.map(String));
+            document.querySelectorAll('.doc-check').forEach(c => c.checked = ids.has(c.value));
+        }
+        document.querySelectorAll('.doc-warn').forEach(w => {
+            const m = r.segnalazioni[w.dataset.did];
+            w.textContent = m ? m.join(' · ') : '';
+            w.style.display = m ? 'inline-block' : 'none';
+        });
+    }, 150);
+}
 
 // Aggiunge (senza deselezionare gli altri) tutti i docenti che hanno
 // l'incarico scelto -- referenti di dipartimento, coordinatori,
@@ -221,6 +267,7 @@ function deselTutti(){ document.querySelectorAll('.doc-check').forEach(c => c.ch
 function aggiungiPerIncarico() {
     const sel = document.getElementById('sel-incarico');
     if (!sel || !sel.value) return;
+    checklistToccata = true;
     sel.value.split(',').forEach(id => {
         const chk = document.querySelector('.doc-check[value="' + id + '"]');
         if (chk) chk.checked = true;
@@ -252,6 +299,16 @@ aggiungiGiornata('{{ s.data.isoformat() }}', '{{ s.ora_inizio or "" }}', '{{ s.o
 {% endfor %}
 {% endif %}
 
-document.addEventListener('DOMContentLoaded', aggiornaTipo);
+document.addEventListener('DOMContentLoaded', () => {
+    aggiornaTipo();
+    const f = document.getElementById('form-ist');
+    ['tipo','classe','id_dipartimento','data','ora_inizio','ora_fine','bucket_altro'].forEach(n => {
+        const el = f.elements[n];
+        if (el) el.addEventListener('change', aggiornaPreset);
+    });
+    document.querySelectorAll('.doc-check').forEach(c =>
+        c.addEventListener('click', () => { checklistToccata = true; }));
+    aggiornaPreset();
+});
 </script>
 {% endblock %}
