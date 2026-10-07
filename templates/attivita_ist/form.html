@@ -125,6 +125,9 @@
     <div style="margin-bottom:8px;">
         <button type="button" onclick="selTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Tutti</button>
         <button type="button" onclick="deselTutti()" class="btn btn-sm" style="background:#e5eaf0;color:var(--blu);">Nessuno</button>
+        <button type="button" onclick="caricaPreset()" class="btn btn-sm btn-success"
+                title="Aggiunge alla selezione i docenti previsti per il tipo e la classe/dipartimento scelti">{{ icon('plus') }} Carica docenti previsti</button>
+        <div id="preset-esito" style="font-size:.76rem; color:var(--grigio); margin-top:6px;"></div>
     </div>
     {% if selettori_incarico %}
     <div style="display:flex; gap:6px; margin-bottom:12px;">
@@ -229,6 +232,38 @@ function deselTutti(){ checklistToccata = true; document.querySelectorAll('.doc-
 // dipartimento/data/orario e applicato finché non si tocca la
 // checklist a mano. Le segnalazioni (assenti, indisponibili, già
 // impegnati) valgono anche in modifica, senza togliere nessuno.
+// Aggiunge (senza togliere nessuno) i docenti previsti per tipo+classe/
+// dipartimento correnti: serve anche in modifica, su un evento già
+// salvato con l'elenco vuoto. Spiega a parole se non c'è nulla da caricare.
+async function caricaPreset() {
+    const f = document.getElementById('form-ist');
+    const esito = document.getElementById('preset-esito');
+    const q = new URLSearchParams();
+    ['tipo','classe','id_dipartimento','data','bucket_altro'].forEach(n => {
+        const el = f.elements[n]; if (el && el.value) q.set(n, el.value);
+    });
+    if (!q.get('data')) { esito.textContent = 'Imposta prima la data.'; return; }
+    let r;
+    try {
+        const resp = await fetch('{{ url_for("attivita_ist.preset_partecipanti_json") }}?' + q);
+        r = await resp.json();
+    } catch (e) { esito.textContent = 'Impossibile calcolare i docenti previsti.'; return; }
+    checklistToccata = true;
+    let n = 0;
+    const ids = new Set(r.ids.map(String));
+    document.querySelectorAll('.doc-check').forEach(c => {
+        if (ids.has(c.value) && !c.checked) { c.checked = true; n++; }
+    });
+    if (!r.ids.length) {
+        const tipo = f.elements['tipo'].value;
+        esito.textContent = (tipo === 'riunione_extra' || tipo === 'altro')
+            ? 'Per questo tipo di evento non esiste un elenco automatico: usa "aggiungi per incarico" o spunta i nomi.'
+            : 'Nessun docente previsto: controlla di aver scelto la classe (o il dipartimento) giusta.';
+    } else {
+        esito.textContent = n + ' docenti aggiunti alla selezione (' + r.ids.length + ' previsti). Ricorda di salvare.';
+    }
+    aggiornaPreset();
+}
 const EVENTO_ID = {{ evento.id if evento else 'null' }};
 let presetTimer = null;
 function aggiornaPreset() {
