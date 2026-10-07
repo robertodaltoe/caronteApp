@@ -275,7 +275,7 @@ def _esonerati_da_giustificare(evento):
     return Docente.query.filter(Docente.id.in_(ids)).order_by(Docente.cognome).all()
 
 
-def _diff_risincronizzazione(evento):
+def _diff_risincronizzazione(evento, ignora_manuali=False):
     """
     Confronta l'elenco partecipanti congelato alla creazione dell'evento
     con quello che _preset_partecipanti() calcolerebbe ORA, con i dati
@@ -307,6 +307,13 @@ def _diff_risincronizzazione(evento):
     routes/attivita_ist.py::form(). "da rimuovibili"/"non_rimovibili"
     restano invece invariati: quello è un controllo di sicurezza (chi
     non è più in servizio), non un'opinione sul numero di partecipanti.
+
+    ignora_manuali=True (pulsante "Proponi comunque i docenti mancanti"
+    della pagina) propone i mancanti anche per un evento "manuale" — solo
+    su richiesta esplicita: un elenco vuoto può essere una scelta
+    deliberata ("Nessuno"), non va ripopolato di nascosto. Caso d'uso:
+    CdC straordinario creato scegliendo solo la classe, salvato con zero
+    partecipanti e quindi marcato manuale.
     """
     # Include gli esonerati dal proprio piano personale: restano in elenco
     # come assenti giustificati (vedi _giustifica_esonerati_da_piano),
@@ -315,7 +322,7 @@ def _diff_risincronizzazione(evento):
     partecipanti = {p.id_docente: p for p in evento.partecipanti}
     presenze = {p.id_docente: p for p in evento.presenze}
 
-    if evento.partecipanti_manuali:
+    if evento.partecipanti_manuali and not ignora_manuali:
         da_aggiungere = []
     else:
         da_aggiungere_ids = preset_attuale - set(partecipanti.keys())
@@ -1667,7 +1674,8 @@ def risincronizza_partecipanti(id):
                         if 'aggiungi_selezione_presente' in request.form else None)
         rimuovi_ids = ({int(v) for v in request.form.getlist('rimuovi_ids')}
                        if 'rimuovi_selezione_presente' in request.form else None)
-        da_aggiungere, da_rimuovibili, _ = _diff_risincronizzazione(evento)
+        da_aggiungere, da_rimuovibili, _ = _diff_risincronizzazione(
+            evento, ignora_manuali=bool(request.form.get('proponi_mancanti')))
         n_agg, n_rim = _applica_scelte_risincronizzazione(
             evento, da_aggiungere, da_rimuovibili, aggiungi_ids, rimuovi_ids)
         n_giu = _giustifica_esonerati_da_piano(evento)
@@ -1685,9 +1693,16 @@ def risincronizza_partecipanti(id):
             return redirect(next_url)
         return redirect(url_for('attivita_ist.risincronizza_partecipanti', id=id))
 
-    da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(evento)
+    proponi_mancanti = bool(request.args.get('proponi_mancanti'))
+    da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(
+        evento, ignora_manuali=proponi_mancanti)
+    # Assenti/indisponibili/già impegnati quel giorno tra i da aggiungere:
+    # solo segnalati accanto al nome, restano selezionabili.
+    segnalazioni = _segnalazioni_partecipanti(
+        evento.data, evento.ora_inizio, evento.ora_fine, id_escluso=evento.id)
     return render_template('attivita_ist/risincronizza.html',
         evento=evento, da_aggiungere=da_aggiungere,
+        proponi_mancanti=proponi_mancanti, segnalazioni=segnalazioni,
         da_giustificare=_esonerati_da_giustificare(evento),
         da_rimuovibili=da_rimuovibili, non_rimovibili=non_rimovibili,
         next_url=request.args.get('next', '').strip())
