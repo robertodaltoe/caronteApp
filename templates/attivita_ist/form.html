@@ -76,7 +76,7 @@
         <select name="classe">
             <option value="">— nessuna —</option>
             {% for c in classi %}
-            <option value="{{ c }}" {% if evento and evento.classe == c %}selected{% endif %}>{{ c }}</option>
+            <option value="{{ c }}" {% if classe_sel == c %}selected{% endif %}>{{ c }}</option>
             {% endfor %}
         </select>
     </div>

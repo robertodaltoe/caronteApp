@@ -47,6 +47,12 @@
                     <a href="{{ url_for('attivita_ist.risincronizza_partecipanti', id=r.evento.id, next=url_for('attivita_ist.risincronizza_tutti')) }}">
                         {{ r.evento.tipo_emoji }} {{ r.evento.titolo }}
                     </a>
+                    {% if r.vuoto_manuale %}
+                    <label style="display:block; font-size:.74rem; color:#3730a3; margin-top:2px; cursor:pointer;">
+                        <input type="checkbox" name="includi_vuoti" value="{{ r.evento.id }}" checked>
+                        elenco vuoto: carica i docenti previsti
+                    </label>
+                    {% endif %}
                 </td>
                 <td style="padding:10px 14px; white-space:nowrap;">{{ r.evento.data.strftime('%d/%m/%Y') }}</td>
                 <td style="padding:10px 14px;">

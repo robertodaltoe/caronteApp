@@ -274,13 +274,15 @@ def _scambia_partecipanti_eventi(sost, classi_coinvolte, data_da, data_a):
     oggi = _date.today()
     q = AttivitaIst.query.filter(
         AttivitaIst.data >= max(data_da, oggi),
-        AttivitaIst.classe.in_(classi_coinvolte),
+        AttivitaIst.classe.isnot(None),
     )
     if data_a:
         q = q.filter(AttivitaIst.data <= data_a)
 
+    from modules.classi import stessa_classe
     n = 0
-    for ev in q.all():
+    for ev in [e for e in q.all()
+               if any(stessa_classe(e.classe, c) for c in classi_coinvolte)]:
         aveva_titolare = AttivitaIstPartecipante.query.filter_by(
             id_attivita=ev.id, id_docente=sost.id_titolare).first()
         if aveva_titolare:

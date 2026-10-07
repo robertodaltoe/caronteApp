@@ -127,3 +127,23 @@ def test_risincronizza_post_proponi_mancanti_aggiunge_e_segnala(app, db_session)
         assert r.status_code == 302
     ids = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id)}
     assert ids == {rossi.id, bianchi.id, verdi.id}
+
+
+def test_preset_classe_senza_spazio_come_da_orario(app, db_session):
+    rossi, bianchi, verdi, neri = _setup(app)
+    with app.test_client() as c:
+        j = c.get('/attivita-ist/preset-partecipanti', query_string={
+            'tipo': 'consiglio_classe', 'classe': '3ALSC',
+            'data': FUTURO.isoformat()}).get_json()
+    assert set(j['ids']) == {rossi.id, bianchi.id, verdi.id}
+
+
+def test_risincronizza_tutti_carica_evento_vuoto_solo_se_spuntato(app, db_session):
+    rossi, bianchi, verdi, neri = _setup(app)
+    ev = _evento_manuale()
+    with app.test_client() as c:
+        c.post('/attivita-ist/risincronizza-tutti', data={})  # spunta tolta
+        assert AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id).count() == 0
+        c.post('/attivita-ist/risincronizza-tutti', data={'includi_vuoti': [str(ev.id)]})
+    ids = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id)}
+    assert ids == {rossi.id, bianchi.id, verdi.id}

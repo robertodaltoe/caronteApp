@@ -9,6 +9,7 @@ from models.assenza import Assenza
 from datetime import date, datetime, timedelta
 import json
 import re
+from modules.classi import etichetta_classe, stessa_classe, scomponi_classe
 
 attivita_ist_bp = Blueprint('attivita_ist', __name__)
 
@@ -102,19 +103,18 @@ def _docenti_da_assegnazioni_per_classe(anno_scol, classe_label):
     perché le Assegnazioni coprono già tutte le classi di concorso,
     sostegno compreso).
     """
-    m = re.match(r'(\d+)([AB]?)\s+(.+)', classe_label or '')
-    if not m:
-        return set()
     from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
-    righe = (AssegnazioneClasse.query
-             .join(AssegnazioneDocente,
-                   AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
-             .filter(AssegnazioneDocente.anno_scol == anno_scol,
-                     AssegnazioneDocente.id_docente.isnot(None),
-                     AssegnazioneClasse.anno_corso == int(m.group(1)),
-                     AssegnazioneClasse.sezione == (m.group(2) or 'A'),
-                     AssegnazioneClasse.indirizzo == m.group(3).strip())
-             .all())
+    base = (AssegnazioneClasse.query
+            .join(AssegnazioneDocente,
+                  AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
+            .filter(AssegnazioneDocente.anno_scol == anno_scol,
+                    AssegnazioneDocente.id_docente.isnot(None)))
+    from modules.classi import stessa_classe
+    # Forma "4ALSU" (dall'orario) o "4A LSU": si confronta senza spazi
+    # sulle classi realmente assegnate nell'anno, senza indovinare dove
+    # finisce la sezione e comincia l'indirizzo (segnalato da Roberto:
+    # CdC straordinario su "4ALSU" senza docenti caricati).
+    righe = [r for r in base.all() if stessa_classe(r.label_classe, classe_label)]
     return {r.assegnazione.id_docente for r in righe}
 
 
@@ -408,11 +408,12 @@ def iscrivi_docente_a_eventi_classe(id_docente, classi_label, anno_scol=None):
     from models.attivita_ist import AttivitaIst
 
     oggi = date.today()
-    eventi = AttivitaIst.query.filter(
+    from modules.classi import stessa_classe
+    eventi = [ev for ev in AttivitaIst.query.filter(
         AttivitaIst.data >= oggi,
         AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio', 'glo')),
-        AttivitaIst.classe.in_(list(classi_label)),
-    ).all()
+        AttivitaIst.classe.isnot(None),
+    ).all() if any(stessa_classe(ev.classe, c) for c in classi_label)]
     if anno_scol:
         eventi = [ev for ev in eventi if _anno_scolastico(ev.data) == anno_scol]
     return _iscrivi_docente_a_eventi(id_docente, eventi)
@@ -740,9 +741,9 @@ def _righe_piano_annuale(anno, tipo_f='', mese_f=''):
     # e Classe separati (il modello li tiene insieme in un'unica label
     # "3A LLI"), Categoria = etichetta del tipo.
     for ev in eventi:
-        m = re.match(r'(\d+[AB]?)\s+(.+)', ev.classe) if ev.classe else None
-        ev.col_classe = m.group(1) if m else ''
-        ev.col_indirizzo = m.group(2) if m else ''
+        ev.col_classe, ev.col_indirizzo = scomponi_classe(ev.classe)
+        ev.col_classe = ev.col_classe or ''
+        ev.col_indirizzo = ev.col_indirizzo or ''
         ev.col_categoria = ev.tipo_label
 
     n_eventi = len(eventi)
@@ -890,10 +891,9 @@ def piano_annuale_xlsx():
         AttivitaIst.tipo.in_(('consiglio_classe', 'scrutinio')),
         AttivitaIst.classe.isnot(None)).all()
     for ev in eventi_classe:
-        m = re.match(r'(\d+[AB]?)\s+(.+)', ev.classe)
-        if not m:
+        classe, indirizzo = scomponi_classe(ev.classe)
+        if not classe:
             continue
-        classe, indirizzo = m.group(1), m.group(2)
         acc = classi_ore.setdefault((indirizzo, classe), {'cdc': 0.0, 'scrutinio': 0.0})
         chiave = 'cdc' if ev.tipo == 'consiglio_classe' else 'scrutinio'
         acc[chiave] += ev.durata_ore
@@ -1107,7 +1107,7 @@ def form(id=None):
     # veniva inviata vuota) — segnalato da Roberto.
     from models.assegnazione import AssegnazioneClasse
     classi_db = sorted(
-        {s.classe for s in
+        {etichetta_classe(s.classe) for s in
          __import__('models.orario_docente', fromlist=['OrarioDocente'])
          .OrarioDocente.query.all()
          if s.classe and s.classe not in ('POTENZIAMENTO','---','-x-','')}
@@ -1120,7 +1120,7 @@ def form(id=None):
         ora_ini     = request.form.get('ora_inizio', '').strip() or None
         ora_fin     = request.form.get('ora_fine', '').strip() or None
         note        = request.form.get('note', '').strip() or None
-        classe      = request.form.get('classe', '').strip() or None
+        classe      = etichetta_classe(request.form.get('classe', '').strip()) or None
         id_dip      = request.form.get('id_dipartimento') or None
         bucket_altro = request.form.get('bucket_altro') if tipo == 'altro' else None
         if bucket_altro not in ('A', 'B', 'N'):
@@ -1247,6 +1247,7 @@ def form(id=None):
 
     return render_template('attivita_ist/form.html',
         evento=evento, docenti=docenti, dipartimenti=dipartimenti,
+        classe_sel=etichetta_classe(evento.classe) if evento else None,
         selettori_incarico=selettori_incarico,
         classi=classi_db, tipi=TIPI_ATTIVITA,
         preset_ids=preset_ids,
@@ -1330,7 +1331,7 @@ def preset_partecipanti_json():
     ev = AttivitaIst(
         tipo=request.args.get('tipo', ''), titolo='',
         data=data_ev,
-        classe=request.args.get('classe', '').strip() or None,
+        classe=etichetta_classe(request.args.get('classe', '').strip()) or None,
         bucket_altro=request.args.get('bucket_altro') or None,
         id_dipartimento=int(id_dip) if id_dip and id_dip.isdigit() else None,
     )
@@ -1728,17 +1729,29 @@ def risincronizza_tutti():
 
     righe = []
     for ev in eventi:
-        da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(ev)
+        # Evento "gestito a mano" ma con elenco VUOTO (es. CdC
+        # straordinario salvato scegliendo solo la classe): la lista
+        # vuota può essere voluta ("Nessuno"), quindi qui si propongono
+        # i docenti previsti ma con una spunta per riga che l'utente può
+        # togliere prima di confermare (Roberto: dev'essere gestibile
+        # anche da "Risincronizza tutti").
+        vuoto_manuale = bool(ev.partecipanti_manuali and not ev.partecipanti)
+        da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(
+            ev, ignora_manuali=vuoto_manuale)
         da_giustificare = _esonerati_da_giustificare(ev)
         if da_aggiungere or da_rimuovibili or non_rimovibili or da_giustificare:
-            righe.append({'evento': ev, 'da_aggiungere': da_aggiungere,
+            righe.append({'evento': ev, 'vuoto_manuale': vuoto_manuale,
+                           'da_aggiungere': da_aggiungere,
                            'da_giustificare': da_giustificare,
                            'da_rimuovibili': da_rimuovibili,
                            'non_rimovibili': non_rimovibili})
 
     if request.method == 'POST':
         n_eventi = tot_agg = tot_rim = tot_giu = 0
+        includi_vuoti = {int(v) for v in request.form.getlist('includi_vuoti') if v.isdigit()}
         for r in righe:
+            if r['vuoto_manuale'] and r['evento'].id not in includi_vuoti:
+                continue
             n_agg, n_rim = _applica_scelte_risincronizzazione(
                 r['evento'], r['da_aggiungere'], r['da_rimuovibili'])
             n_giu = _giustifica_esonerati_da_piano(r['evento'])
@@ -2209,8 +2222,8 @@ def sostituzione_scrutinio(id):
     docenti_classe_ids = set()
     if classe_scrutinio:
         docenti_classe_ids = {
-            s.id_docente for s in OrarioDocente.query.filter_by(
-                classe=classe_scrutinio).all()
+            s.id_docente for s in OrarioDocente.query.all()
+            if stessa_classe(s.classe, classe_scrutinio)
         }
 
     # Tutti i docenti attivi NON della classe, esclusi quelli non in

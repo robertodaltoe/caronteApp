@@ -67,7 +67,8 @@ def _parse_classe(label):
     """'3A LLI' -> (3, 'LLI'). None se il formato non è riconosciuto
     (es. potenziamento, classi speciali) — quella classe non ha vincoli
     orario applicabili, solo il controllo sui docenti condivisi."""
-    m = _RE_CLASSE.match(label or '')
+    from modules.classi import etichetta_classe
+    m = _RE_CLASSE.match(etichetta_classe(label) or '')
     if not m:
         return None, None
     return int(m.group(1)), m.group(3).strip()
