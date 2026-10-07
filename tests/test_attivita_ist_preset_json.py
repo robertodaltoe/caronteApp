@@ -85,3 +85,45 @@ def test_preset_data_non_valida_risposta_vuota(app, db_session):
         j = c.get('/attivita-ist/preset-partecipanti',
                   query_string={'tipo': 'consiglio_classe', 'data': ''}).get_json()
     assert j == {'ids': [], 'segnalazioni': {}}
+
+
+def _evento_manuale(docenti_in_elenco=()):
+    ev = AttivitaIst(tipo='consiglio_classe', titolo='CdC straordinario 3A LSC',
+                      classe='3A LSC', data=FUTURO, origine='manuale',
+                      partecipanti_manuali=True)
+    db.session.add(ev)
+    db.session.flush()
+    for d in docenti_in_elenco:
+        db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id, preset=False))
+    db.session.commit()
+    return ev
+
+
+def test_risincronizza_evento_manuale_vuoto_propone_docenti_classe_solo_su_richiesta(app, db_session):
+    from routes.attivita_ist import _diff_risincronizzazione
+    rossi, bianchi, verdi, neri = _setup(app)
+    ev = _evento_manuale()
+    assert _diff_risincronizzazione(ev)[0] == []  # "Nessuno" resta una scelta valida
+    da_agg, _, _ = _diff_risincronizzazione(ev, ignora_manuali=True)
+    assert {d.id for d in da_agg} == {rossi.id, bianchi.id, verdi.id}
+
+
+def test_risincronizza_evento_manuale_con_elenco_non_propone_salvo_richiesta(app, db_session):
+    from routes.attivita_ist import _diff_risincronizzazione
+    rossi, bianchi, verdi, neri = _setup(app)
+    ev = _evento_manuale([rossi])
+    assert _diff_risincronizzazione(ev)[0] == []
+    da_agg, _, _ = _diff_risincronizzazione(ev, ignora_manuali=True)
+    assert {d.id for d in da_agg} == {bianchi.id, verdi.id}
+
+
+def test_risincronizza_post_proponi_mancanti_aggiunge_e_segnala(app, db_session):
+    rossi, bianchi, verdi, neri = _setup(app)
+    db.session.add(Assenza(id_docente=bianchi.id, data=FUTURO))
+    db.session.commit()
+    ev = _evento_manuale([rossi])
+    with app.test_client() as c:
+        r = c.post(f'/attivita-ist/{ev.id}/risincronizza', data={'proponi_mancanti': '1'})
+        assert r.status_code == 302
+    ids = {p.id_docente for p in AttivitaIstPartecipante.query.filter_by(id_attivita=ev.id)}
+    assert ids == {rossi.id, bianchi.id, verdi.id}

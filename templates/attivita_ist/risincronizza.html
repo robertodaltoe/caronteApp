@@ -26,6 +26,12 @@
     (una selezione diversa dal preset automatico) — la risincronizzazione non propone
     più "da aggiungere" per non ripristinare un elenco che hai già personalizzato.
     Continua però a segnalare chi non è più in servizio.
+    {% if not proponi_mancanti %}
+    <div style="margin-top:8px;">
+        <a href="{{ url_for('attivita_ist.risincronizza_partecipanti', id=evento.id, proponi_mancanti=1, next=next_url) }}"
+           class="btn btn-sm btn-success">{{ icon('plus') }} Proponi comunque i docenti mancanti</a>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -40,6 +46,7 @@
 
 <form method="post" id="form-risync">
 <input type="hidden" name="next" value="{{ next_url }}">
+{% if proponi_mancanti %}<input type="hidden" name="proponi_mancanti" value="1">{% endif %}
 {% if da_aggiungere %}
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
     <h3 style="font-size:.9rem; color:var(--verde); margin-bottom:10px;">
@@ -60,6 +67,7 @@
                       background:var(--verde-bg); color:var(--verde); border:1px solid transparent;">
             <input type="checkbox" name="aggiungi_ids" value="{{ d.id }}" checked style="display:none;">
             {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+            {% if segnalazioni.get(d.id) %}<span style="font-size:.7rem; color:#b45309;">⚠ {{ segnalazioni[d.id]|join(' · ') }}</span>{% endif %}
         </label>
         {% endfor %}
     </div>
