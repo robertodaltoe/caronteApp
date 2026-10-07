@@ -102,19 +102,28 @@ def _docenti_da_assegnazioni_per_classe(anno_scol, classe_label):
     perché le Assegnazioni coprono già tutte le classi di concorso,
     sostegno compreso).
     """
-    m = re.match(r'(\d+)([AB]?)\s+(.+)', classe_label or '')
-    if not m:
-        return set()
     from models.assegnazione import AssegnazioneDocente, AssegnazioneClasse
-    righe = (AssegnazioneClasse.query
-             .join(AssegnazioneDocente,
-                   AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
-             .filter(AssegnazioneDocente.anno_scol == anno_scol,
-                     AssegnazioneDocente.id_docente.isnot(None),
-                     AssegnazioneClasse.anno_corso == int(m.group(1)),
-                     AssegnazioneClasse.sezione == (m.group(2) or 'A'),
-                     AssegnazioneClasse.indirizzo == m.group(3).strip())
-             .all())
+    base = (AssegnazioneClasse.query
+            .join(AssegnazioneDocente,
+                  AssegnazioneDocente.id == AssegnazioneClasse.id_assegnazione)
+            .filter(AssegnazioneDocente.anno_scol == anno_scol,
+                    AssegnazioneDocente.id_docente.isnot(None)))
+    m = re.match(r'(\d+)([AB]?)\s+(.+)', classe_label or '')
+    righe = []
+    if m:
+        righe = base.filter(AssegnazioneClasse.anno_corso == int(m.group(1)),
+                            AssegnazioneClasse.sezione == (m.group(2) or 'A'),
+                            AssegnazioneClasse.indirizzo == m.group(3).strip()).all()
+    if not righe and classe_label:
+        # Etichetta senza spazio ("4ALSU", come può arrivare dall'orario
+        # importato) o con spaziatura diversa da label_classe ("4A LSU"):
+        # confronto senza spazi e maiuscole sulle classi realmente
+        # assegnate nell'anno, che evita di indovinare dove finisce la
+        # sezione e comincia l'indirizzo (segnalato da Roberto: CdC
+        # straordinario su "4ALSU" senza docenti caricati).
+        chiave = re.sub(r'\s+', '', classe_label).upper()
+        righe = [r for r in base.all()
+                 if re.sub(r'\s+', '', r.label_classe).upper() == chiave]
     return {r.assegnazione.id_docente for r in righe}
 
 
@@ -1728,17 +1737,29 @@ def risincronizza_tutti():
 
     righe = []
     for ev in eventi:
-        da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(ev)
+        # Evento "gestito a mano" ma con elenco VUOTO (es. CdC
+        # straordinario salvato scegliendo solo la classe): la lista
+        # vuota può essere voluta ("Nessuno"), quindi qui si propongono
+        # i docenti previsti ma con una spunta per riga che l'utente può
+        # togliere prima di confermare (Roberto: dev'essere gestibile
+        # anche da "Risincronizza tutti").
+        vuoto_manuale = bool(ev.partecipanti_manuali and not ev.partecipanti)
+        da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(
+            ev, ignora_manuali=vuoto_manuale)
         da_giustificare = _esonerati_da_giustificare(ev)
         if da_aggiungere or da_rimuovibili or non_rimovibili or da_giustificare:
-            righe.append({'evento': ev, 'da_aggiungere': da_aggiungere,
+            righe.append({'evento': ev, 'vuoto_manuale': vuoto_manuale,
+                           'da_aggiungere': da_aggiungere,
                            'da_giustificare': da_giustificare,
                            'da_rimuovibili': da_rimuovibili,
                            'non_rimovibili': non_rimovibili})
 
     if request.method == 'POST':
         n_eventi = tot_agg = tot_rim = tot_giu = 0
+        includi_vuoti = {int(v) for v in request.form.getlist('includi_vuoti') if v.isdigit()}
         for r in righe:
+            if r['vuoto_manuale'] and r['evento'].id not in includi_vuoti:
+                continue
             n_agg, n_rim = _applica_scelte_risincronizzazione(
                 r['evento'], r['da_aggiungere'], r['da_rimuovibili'])
             n_giu = _giustifica_esonerati_da_piano(r['evento'])
