@@ -117,7 +117,7 @@ def _docenti_da_assegnazioni_per_classe(anno_scol, classe_label):
     return {r.assegnazione.id_docente for r in righe}
 
 
-def _preset_partecipanti(attivita):
+def _preset_partecipanti(attivita, con_piano=True):
     """
     Genera lista docenti previsti per l'evento in base al tipo, escludendo
     chi non è in servizio alla data dell'evento — vedi
@@ -137,6 +137,11 @@ def _preset_partecipanti(attivita):
     eventi, in proporzione alle sue ore di contratto. Gli scrutini
     (bucket None) restano invece sempre calcolati come per chiunque
     altro, fuori da questo meccanismo.
+
+    con_piano=False restituisce il preset "puro", senza l'effetto del
+    Piano Personale: serve a _esonerati_da_piano() per distinguere chi è
+    fuori dall'evento per scelta del proprio piano da chi è fuori per
+    altri motivi (uscita, contratto scaduto...).
     """
     esclusi_ids = _non_in_servizio_per_data(attivita.data)
 
@@ -198,7 +203,7 @@ def _preset_partecipanti(attivita):
     else:
         risultato = [d.id for d in docenti_attivi]
 
-    if attivita.bucket is not None:
+    if con_piano and attivita.bucket is not None:
         from models.piano_attivita_personale import PianoAttivitaPersonale
         anno_ev = _anno_scolastico(attivita.data)
         # Un piano con link_disabilitato non deve più sostituire il
@@ -217,6 +222,47 @@ def _preset_partecipanti(attivita):
                            if attivita.id in p.ids_attivita_scelte and did not in esclusi_ids}
             risultato = [i for i in risultato if i not in piani] + list(selezionati)
 
+    return risultato
+
+
+NOTA_ESONERO_PIANO = 'Piano attività individuale'
+
+
+def _esonerati_da_piano(evento):
+    """
+    Id dei docenti che il preset puro convocherebbe ma che hanno un
+    Piano Attività Personale attivo che NON include questo evento (vedi
+    _preset_partecipanti): non sono "da rimuovere" dall'evento, sono
+    assenti giustificati — stessa logica dello scrutinio, dove chi non
+    c'è va segnalato, non fatto sparire (Roberto: "dovrei vedere il
+    docente automaticamente segnato come assente giustificato").
+    """
+    if evento.bucket is None:
+        return set()
+    return set(_preset_partecipanti(evento, con_piano=False)) - set(_preset_partecipanti(evento))
+
+
+def _esonerati_da_giustificare(evento):
+    """
+    Docenti già in elenco (preset=True) esonerati dal proprio piano la
+    cui presenza non è ancora 'giustificato': mai presenza già
+    modificata a mano (stato diverso da 'presente', nota, orario
+    parziale o assenza collegata) — quelle restano com'erano.
+    """
+    esonerati = _esonerati_da_piano(evento)
+    if not esonerati:
+        return []
+    presenze = {p.id_docente: p for p in evento.presenze}
+    risultato = []
+    for part in evento.partecipanti:
+        if part.id_docente not in esonerati or not part.preset:
+            continue
+        pres = presenze.get(part.id_docente)
+        if pres is None or (pres.stato == 'presente' and not pres.note
+                            and not pres.ora_inizio_eff and not pres.ora_fine_eff
+                            and not pres.id_assenza_collegata):
+            risultato.append(Docente.query.get(part.id_docente))
+    risultato.sort(key=lambda d: d.cognome)
     return risultato
 
 
@@ -254,6 +300,10 @@ def _diff_risincronizzazione(evento):
     non è più in servizio), non un'opinione sul numero di partecipanti.
     """
     preset_attuale = set(_preset_partecipanti(evento))
+    # Esonerati dal proprio piano personale: restano in elenco (come
+    # assenti giustificati, vedi _esonerati_da_giustificare), mai
+    # proposti in rimozione.
+    non_da_rimuovere = preset_attuale | _esonerati_da_piano(evento)
     partecipanti = {p.id_docente: p for p in evento.partecipanti}
     presenze = {p.id_docente: p for p in evento.presenze}
 
@@ -266,7 +316,7 @@ def _diff_risincronizzazione(evento):
 
     da_rimuovibili, non_rimovibili = [], []
     for did, part in partecipanti.items():
-        if did in preset_attuale or not part.preset:
+        if did in non_da_rimuovere or not part.preset:
             continue
         pres = presenze.get(did)
         vergine = pres is None or (
@@ -1559,10 +1609,29 @@ def _applica_scelte_risincronizzazione(evento, da_aggiungere, da_rimuovibili,
     # quell'applicazione, non veniva mai ricordata).
     ids_prima = {p.id_docente for p in evento.partecipanti}
     finale = (ids_prima | ids_aggiunti_ora) - ids_rimossi_ora
-    if finale != set(_preset_partecipanti(evento)):
+    # Gli esonerati dal piano personale restano in elenco come giustificati
+    # ma non fanno parte del preset: non vanno contati come scostamento.
+    if (finale - _esonerati_da_piano(evento)) != set(_preset_partecipanti(evento)):
         evento.partecipanti_manuali = True
 
     return n_agg, n_rim
+
+
+def _giustifica_esonerati_da_piano(evento):
+    """Segna 'giustificato' (nota: piano individuale) la presenza dei
+    docenti esonerati dal proprio piano — vedi _esonerati_da_giustificare.
+    Ritorna il numero di presenze aggiornate/create (senza commit)."""
+    n = 0
+    for d in _esonerati_da_giustificare(evento):
+        pres = AttivitaIstPresenza.query.filter_by(
+            id_attivita=evento.id, id_docente=d.id).first()
+        if pres is None:
+            pres = AttivitaIstPresenza(id_attivita=evento.id, id_docente=d.id)
+            db.session.add(pres)
+        pres.stato = 'giustificato'
+        pres.note = NOTA_ESONERO_PIANO
+        n += 1
+    return n
 
 
 @attivita_ist_bp.route('/attivita-ist/<int:id>/risincronizza', methods=['GET', 'POST'])
@@ -1591,8 +1660,11 @@ def risincronizza_partecipanti(id):
         da_aggiungere, da_rimuovibili, _ = _diff_risincronizzazione(evento)
         n_agg, n_rim = _applica_scelte_risincronizzazione(
             evento, da_aggiungere, da_rimuovibili, aggiungi_ids, rimuovi_ids)
+        n_giu = _giustifica_esonerati_da_piano(evento)
         db.session.commit()
-        flash(f'Risincronizzato: {n_agg} aggiunti, {n_rim} rimossi.', 'success')
+        flash(f'Risincronizzato: {n_agg} aggiunti, {n_rim} rimossi'
+              + (f', {n_giu} segnati assenti giustificati (piano individuale)' if n_giu else '')
+              + '.', 'success')
         # Torna alla pagina da cui si è arrivati (es. "Risincronizza
         # tutti"), se indicata — altrimenti resta sulla pagina di
         # risincronizzazione stessa (mostrerà "Elenco già allineato" se
@@ -1606,6 +1678,7 @@ def risincronizza_partecipanti(id):
     da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(evento)
     return render_template('attivita_ist/risincronizza.html',
         evento=evento, da_aggiungere=da_aggiungere,
+        da_giustificare=_esonerati_da_giustificare(evento),
         da_rimuovibili=da_rimuovibili, non_rimovibili=non_rimovibili,
         next_url=request.args.get('next', '').strip())
 
@@ -1631,23 +1704,28 @@ def risincronizza_tutti():
     righe = []
     for ev in eventi:
         da_aggiungere, da_rimuovibili, non_rimovibili = _diff_risincronizzazione(ev)
-        if da_aggiungere or da_rimuovibili or non_rimovibili:
+        da_giustificare = _esonerati_da_giustificare(ev)
+        if da_aggiungere or da_rimuovibili or non_rimovibili or da_giustificare:
             righe.append({'evento': ev, 'da_aggiungere': da_aggiungere,
+                           'da_giustificare': da_giustificare,
                            'da_rimuovibili': da_rimuovibili,
                            'non_rimovibili': non_rimovibili})
 
     if request.method == 'POST':
-        n_eventi = tot_agg = tot_rim = 0
+        n_eventi = tot_agg = tot_rim = tot_giu = 0
         for r in righe:
             n_agg, n_rim = _applica_scelte_risincronizzazione(
                 r['evento'], r['da_aggiungere'], r['da_rimuovibili'])
-            if n_agg or n_rim:
+            n_giu = _giustifica_esonerati_da_piano(r['evento'])
+            if n_agg or n_rim or n_giu:
                 n_eventi += 1
             tot_agg += n_agg
             tot_rim += n_rim
+            tot_giu += n_giu
         db.session.commit()
         flash(f'Risincronizzati {n_eventi} eventi: {tot_agg} aggiunti in totale, '
-              f'{tot_rim} rimossi in totale.', 'success')
+              f'{tot_rim} rimossi in totale, {tot_giu} segnati assenti giustificati '
+              f'(piano individuale).', 'success')
         return redirect(url_for('attivita_ist.lista'))
 
     return render_template('attivita_ist/risincronizza_tutti.html', righe=righe)

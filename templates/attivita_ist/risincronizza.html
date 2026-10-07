@@ -29,7 +29,7 @@
 </div>
 {% endif %}
 
-{% if not da_aggiungere and not da_rimuovibili and not non_rimovibili %}
+{% if not da_aggiungere and not da_rimuovibili and not non_rimovibili and not da_giustificare %}
 <div class="card" style="padding:24px; text-align:center; color:var(--grigio);">
     {{ icon('check') }} Elenco già allineato: nessuna differenza trovata.
 </div>
@@ -92,6 +92,25 @@
 </div>
 {% endif %}
 
+{% if da_giustificare %}
+<div class="card" style="padding:16px 20px; margin-bottom:16px; background:var(--giallo-bg);">
+    <h3 style="font-size:.9rem; color:var(--giallo); margin-bottom:10px;">
+        {{ icon('check') }} Assenti giustificati dal piano individuale ({{ da_giustificare|length }})
+    </h3>
+    <p style="font-size:.78rem; color:var(--giallo); margin-bottom:10px;">
+        Hanno compilato il piano attività individuale senza scegliere questo evento: restano in elenco e
+        alla conferma vengono segnati automaticamente come assenti giustificati (non vengono rimossi).
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        {% for d in da_giustificare %}
+        <span class="badge" style="background:#fde68a; color:#854d0e; font-size:.8rem; padding:3px 10px;">
+            {{ d.cognome }}{% if d.nome %} {{ d.nome[0] }}.{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 {% if non_rimovibili %}
 <div class="card" style="padding:16px 20px; margin-bottom:16px; background:#fef3c7;">
     <h3 style="font-size:.9rem; color:#92400e; margin-bottom:10px;">
@@ -112,7 +131,7 @@
 {% endif %}
 
 <div style="display:flex; gap:10px;">
-    {% if da_aggiungere or da_rimuovibili %}
+    {% if da_aggiungere or da_rimuovibili or da_giustificare %}
     <button type="submit" class="btn btn-success" id="btn-conferma">
         {{ icon('check') }} Conferma (<span id="tot-agg">{{ da_aggiungere|length }}</span> aggiunti, <span id="tot-rim">{{ da_rimuovibili|length }}</span> rimossi)
     </button>
