@@ -31,16 +31,18 @@ def get_ore_ist_docente(id_docente, anno=None):
                     .join(AttivitaIst,
                           AttivitaIst.id == AttivitaIstPresenza.id_attivita)
                     .filter(AttivitaIstPresenza.id_docente == id_docente,
-                            AttivitaIstPresenza.stato == 'presente',
                             AttivitaIst.data >= anno_ini,
                             AttivitaIst.data <= anno_fin)
                     .all())
+        # Eventi multi-data: conta anche chi era presente solo in alcune
+        # giornate (stato della prima giornata non basta).
+        presenze = [p for p in presenze if p.presente_in_qualche_giornata]
     except Exception:
         return {'A': 0.0, 'B': 0.0, 'limite': limite}
 
-    ore_a = round(sum(p.ore_effettive for p in presenze
+    ore_a = round(sum(p.ore_conteggiate for p in presenze
                       if p.attivita.bucket == 'A'), 1)
-    ore_b = round(sum(p.ore_effettive for p in presenze
+    ore_b = round(sum(p.ore_conteggiate for p in presenze
                       if p.attivita.bucket == 'B'), 1)
 
     # Dettaglio per il prospetto: lista presenze ordinate per data
