@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db
 from models.attivita_ist import NOTA_ESONERO_PIANO
 from models.attivita_ist import (AttivitaIst, AttivitaIstPartecipante,
-                                  AttivitaIstPresenza, TIPI_ATTIVITA)
+                                  AttivitaIstPresenza, AttivitaIstPresenzaGiornata,
+                                  TIPI_ATTIVITA)
 from models.materia import Dipartimento, Materia, DocenteMateria
 from models.docente import Docente
 from models.assenza import Assenza
@@ -1441,6 +1442,9 @@ def sposta_blocco():
             e.data = e.data + delta
             for s in e.sessioni:
                 s.data = s.data + delta
+            for p in e.presenze:
+                for g in p.per_data:
+                    g.data = g.data + delta
         db.session.commit()
         verso = 'avanti' if giorni > 0 else 'indietro'
         flash(f'{len(eventi)} eventi spostati {verso} di {abs(giorni)} giorni.', 'success')
@@ -1469,23 +1473,66 @@ def presenze(id):
             ))
         db.session.commit()
 
+    # Evento su più date (AttivitaIst.sessioni): le presenze si
+    # registrano giornata per giornata. La prima usa la riga
+    # AttivitaIstPresenza, le successive AttivitaIstPresenzaGiornata.
+    sessioni = list(evento.sessioni) if len(evento.sessioni) > 1 else []
+    date_giornate = [s.data for s in sessioni]
+    try:
+        data_sel = date.fromisoformat(request.values.get('data', ''))
+    except ValueError:
+        data_sel = None
+    if data_sel not in date_giornate:
+        data_sel = evento.data
+    sessione_sel = next((s for s in sessioni if s.data == data_sel), None)
+    prima_giornata = data_sel == evento.data
+    ora_ini_sel = sessione_sel.ora_inizio if sessione_sel else evento.ora_inizio
+    ora_fin_sel = sessione_sel.ora_fine if sessione_sel else evento.ora_fine
+
     if request.method == 'POST':
         for p in evento.presenze:
             stato    = request.form.get(f'stato_{p.id_docente}', 'presente')
             nota     = request.form.get(f'nota_{p.id_docente}', '').strip() or None
             ora_ini  = request.form.get(f'ora_ini_{p.id_docente}', '').strip() or None
             ora_fin  = request.form.get(f'ora_fin_{p.id_docente}', '').strip() or None
-            p.stato          = stato
-            p.note           = nota
-            # Ore parziali: salva solo se diverse dall'intero evento
-            p.ora_inizio_eff = ora_ini if (ora_ini and ora_ini != evento.ora_inizio) else None
-            p.ora_fine_eff   = ora_fin if (ora_fin and ora_fin != evento.ora_fine)   else None
+            # Ore parziali: salva solo se diverse dall'intera giornata
+            ini_eff = ora_ini if (ora_ini and ora_ini != ora_ini_sel) else None
+            fin_eff = ora_fin if (ora_fin and ora_fin != ora_fin_sel) else None
+            if prima_giornata:
+                p.stato = stato
+                p.note = nota
+                p.ora_inizio_eff = ini_eff
+                p.ora_fine_eff = fin_eff
+            else:
+                g = p._giornata(data_sel)
+                if g is None:
+                    g = AttivitaIstPresenzaGiornata(presenza=p, data=data_sel)
+                    db.session.add(g)
+                g.stato, g.note = stato, nota
+                g.ora_inizio_eff, g.ora_fine_eff = ini_eff, fin_eff
         db.session.commit()
         flash('Presenze salvate.', 'success')
-        return redirect(url_for('attivita_ist.presenze', id=id))
+        return redirect(url_for('attivita_ist.presenze', id=id,
+                                data=data_sel.isoformat() if sessioni else None))
+
+    # Vista della giornata selezionata: oggetti con gli stessi attributi
+    # di AttivitaIstPresenza, così il template resta lo stesso.
+    if prima_giornata:
+        righe = list(evento.presenze)
+    else:
+        from types import SimpleNamespace
+        righe = []
+        for p in evento.presenze:
+            g = p._giornata(data_sel)
+            righe.append(SimpleNamespace(
+                id_docente=p.id_docente, docente=p.docente,
+                stato=g.stato if g else 'presente',
+                note=g.note if g else None,
+                ora_inizio_eff=g.ora_inizio_eff if g else None,
+                ora_fine_eff=g.ora_fine_eff if g else None))
 
     assenze_giorno = {a.id_docente: a for a in
-                      Assenza.query.filter_by(data=evento.data).all()}
+                      Assenza.query.filter_by(data=data_sel).all()}
 
     # Indisponibilità dichiarate per la stessa data (impegni già noti:
     # colloqui, uscite, gare, formazione, ecc.) — non escludono di per sé
@@ -1493,7 +1540,7 @@ def presenze(id):
     # perché indicano un possibile conflitto da verificare.
     from models.indisponibilita import Indisponibilita
     indisponibilita_giorno = {}
-    for i in Indisponibilita.query.filter_by(data=evento.data).all():
+    for i in Indisponibilita.query.filter_by(data=data_sel).all():
         indisponibilita_giorno.setdefault(i.id_docente, []).append(i)
 
     presenze_map  = {p.id_docente: p for p in evento.presenze}
@@ -1546,6 +1593,8 @@ def presenze(id):
 
     return render_template('attivita_ist/presenze.html',
         evento=evento, presenze_map=presenze_map,
+        righe=righe, sessioni=sessioni, data_sel=data_sel,
+        ora_ini_sel=ora_ini_sel, ora_fin_sel=ora_fin_sel,
         assenze_giorno=assenze_giorno,
         indisponibilita_giorno=indisponibilita_giorno,
         docenti_extra=docenti_extra,
