@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Importa schede piano personale{% endblock %}
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('download') }} Importa schede Excel — Piano attività personale</h1>
+<p style="font-size:.78rem; margin-bottom:14px;"><a href="{{ url_for('piano_personale.lista') }}">← Torna al piano personale</a></p>
+
+<form method="post" enctype="multipart/form-data" class="card" style="padding:16px; max-width:640px; margin-bottom:16px;">
+    <p style="font-size:.82rem; color:var(--grigio); margin-bottom:10px;">
+        Carica una o più schede compilate dai docenti (.xlsx). Vedrai un'anteprima prima di salvare.
+    </p>
+    <input type="file" name="file" accept=".xlsx" multiple required>
+    <button type="submit" class="btn btn-primary btn-sm">{{ icon('check') }} Leggi schede</button>
+</form>
+
+{% if errori %}
+<div class="card" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid var(--rosso);">
+    {% for e in errori %}<div style="font-size:.82rem;">{{ icon('warning') }} <b>{{ e.file or '' }}</b>: {{ e.errore }}</div>{% endfor %}
+</div>
+{% endif %}
+
+{% if anteprima %}
+<form method="post" action="{{ url_for('piano_personale.importa_conferma') }}">
+<div class="card" style="padding:0; overflow:hidden;">
+<table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+    <thead><tr style="background:#f8fafc; text-align:left;">
+        <th style="padding:8px;"></th><th style="padding:8px;">Docente</th><th style="padding:8px;">File</th>
+        <th style="padding:8px; text-align:right;">Impegni</th>
+        <th style="padding:8px; text-align:right;">Ore A / quota</th>
+        <th style="padding:8px; text-align:right;">Ore B / quota</th>
+        <th style="padding:8px;">Cambia</th><th style="padding:8px;">Avvisi</th>
+    </tr></thead>
+    <tbody>
+    {% for a in anteprima %}
+    <tr style="border-top:1px solid #f1f3f5; vertical-align:top;">
+        <td style="padding:8px;">
+            <input type="checkbox" name="scheda" checked
+                   value="{{ a.docente.id }}|{{ a.anno }}|{{ a.scelti | join(',') }}">
+        </td>
+        <td style="padding:8px; font-weight:600;">{{ a.docente.cognome }} {{ a.docente.nome }}</td>
+        <td style="padding:8px; color:var(--grigio); font-size:.76rem;">{{ a.file }}</td>
+        <td style="padding:8px; text-align:right;">{{ a.n_scelti }}</td>
+        <td style="padding:8px; text-align:right;">{{ a.ore_a }} / {{ a.quota_a }}</td>
+        <td style="padding:8px; text-align:right;">{{ a.ore_b }} / {{ a.quota_b }}</td>
+        <td style="padding:8px; font-size:.78rem;">
+            {% if a.ha_scelte_attuali %}+{{ a.aggiunti }} / −{{ a.tolti }}{% else %}nuovo piano{% endif %}
+        </td>
+        <td style="padding:8px; font-size:.78rem; color:var(--giallo);">
+            {% for v in a.avvisi %}<div>{{ v }}</div>{% endfor %}
+            {% if a.bloccato %}
+            <label><input type="checkbox" name="forza_{{ a.docente.id }}" value="1"> aggiorna comunque</label>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<button type="submit" class="btn btn-success" style="margin-top:12px;">{{ icon('check') }} Applica le schede selezionate</button>
+</form>
+{% endif %}
+{% endblock %}

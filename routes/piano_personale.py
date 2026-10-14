@@ -250,3 +250,145 @@ def invia(token):
     db.session.commit()
     flash('Piano inviato alla segreteria. Resta modificabile finché non viene confermato.', 'success')
     return redirect(url_for('piano_personale.pubblico', token=token))
+
+
+# ── SCHEDE EXCEL (per chi non può usare il link da fuori scuola) ────────────
+
+def _scheda_docente(d, anno):
+    p = PianoAttivitaPersonale.query.filter_by(id_docente=d.id, anno_scol=anno).first()
+    sel = p.ids_attivita_scelte if p else set()
+    qa, qb = quota_ore_bucket(d, anno)
+    return (d, _eventi_selezionabili(anno), sel, qa, qb)
+
+
+@piano_personale_bp.route('/attivita-ist/piano-personale/<int:id_docente>/scheda.xlsx')
+def scheda_xlsx(id_docente):
+    import io
+    from flask import send_file
+    from config_anno import get_anno_corrente
+    from modules.piano_personale_xlsx import genera_xlsx, nome_file_scheda
+    anno = request.args.get('anno') or get_anno_corrente()
+    d = Docente.query.get_or_404(id_docente)
+    buf = io.BytesIO()
+    genera_xlsx([_scheda_docente(d, anno)], anno).save(buf)
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name=nome_file_scheda(d, anno),
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@piano_personale_bp.route('/attivita-ist/piano-personale/schede.zip')
+def schede_zip():
+    """Una scheda per ogni docente elencato in lista() per l'anno."""
+    import io, zipfile
+    from flask import send_file
+    from config_anno import get_anno_corrente, intervallo_anno_scolastico
+    from routes.attivita_ist import _non_in_servizio_per_data
+    from modules.piano_personale_xlsx import genera_xlsx, nome_file_scheda
+    anno = request.args.get('anno') or get_anno_corrente()
+    esclusi = _non_in_servizio_per_data(intervallo_anno_scolastico(anno)[0])
+    docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
+               if d.id not in esclusi and deve_compilare_piano(d, anno)]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        for d in docenti:
+            f = io.BytesIO()
+            genera_xlsx([_scheda_docente(d, anno)], anno).save(f)
+            z.writestr(nome_file_scheda(d, anno), f.getvalue())
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name=f'schede_piano_attivita_{anno}.zip',
+                     mimetype='application/zip')
+
+
+def _analizza_scheda(s):
+    """Confronta una scheda letta dal file con lo stato attuale in Caronte.
+    Ritorna dict per l'anteprima (anche con 'errore')."""
+    d = db.session.get(Docente, s['id_docente'])
+    if not d:
+        return {'errore': f'Docente id {s["id_docente"]} non trovato', 'id_docente': s['id_docente']}
+    anno = s['anno_scol']
+    validi = {e.id: e for e in _eventi_selezionabili(anno)}
+    scelti = s['scelti'] & set(validi)
+    sconosciuti = len(s['scelti'] - set(validi))
+    nuovi_eventi = len(set(validi) - s['id_presenti'])
+    p = PianoAttivitaPersonale.query.filter_by(id_docente=d.id, anno_scol=anno).first()
+    attuali = p.ids_attivita_scelte if p else set()
+    ore_a = sum(validi[i].durata_ore for i in scelti if validi[i].bucket == BUCKET_A)
+    ore_b = sum(validi[i].durata_ore for i in scelti if validi[i].bucket == BUCKET_B)
+    qa, qb = quota_ore_bucket(d, anno)
+    avvisi = []
+    if p and (p.stato == 'bloccato'):
+        avvisi.append('Piano BLOCCATO: verrà aggiornato solo se spunti la conferma')
+    if p and p.link_disabilitato:
+        avvisi.append('Il link del docente è disabilitato (le scelte si salvano comunque)')
+    if sconosciuti:
+        avvisi.append(f'{sconosciuti} impegni scelti non esistono più nel piano e vengono ignorati')
+    if nuovi_eventi:
+        avvisi.append(f'{nuovi_eventi} eventi creati dopo l\'esportazione non erano nella scheda')
+    if ore_a > qa + 0.01 or ore_b > qb + 0.01:
+        avvisi.append('Ore scelte oltre la quota')
+    elif ore_a < qa - 0.01 or ore_b < qb - 0.01:
+        avvisi.append('Ore scelte sotto la quota')
+    return {'docente': d, 'anno': anno, 'scelti': sorted(scelti), 'n_scelti': len(scelti),
+            'ore_a': round(ore_a, 2), 'ore_b': round(ore_b, 2), 'quota_a': qa, 'quota_b': qb,
+            'aggiunti': len(scelti - attuali), 'tolti': len(attuali - scelti),
+            'ha_scelte_attuali': bool(attuali), 'bloccato': bool(p and p.stato == 'bloccato'),
+            'avvisi': avvisi, 'errore': None}
+
+
+@piano_personale_bp.route('/attivita-ist/piano-personale/importa', methods=['GET', 'POST'])
+def importa_schede():
+    from modules.piano_personale_xlsx import leggi_xlsx
+    if request.method == 'GET':
+        return render_template('attivita_ist/piano_personale_importa.html', anteprima=None)
+
+    anteprima, errori = [], []
+    for f in request.files.getlist('file'):
+        if not f or not f.filename:
+            continue
+        try:
+            for s in leggi_xlsx(f):
+                a = _analizza_scheda(s)
+                a['file'] = f.filename
+                (errori if a['errore'] else anteprima).append(a)
+        except ValueError as e:
+            errori.append({'file': f.filename, 'errore': str(e)})
+    return render_template('attivita_ist/piano_personale_importa.html',
+                           anteprima=anteprima, errori=errori)
+
+
+@piano_personale_bp.route('/attivita-ist/piano-personale/importa/conferma', methods=['POST'])
+def importa_conferma():
+    """Applica le schede mostrate in anteprima. Ogni scheda arriva come
+    campo 'scheda' = 'id_docente|anno|id1,id2,...'; si rivalidano gli id
+    sugli eventi attuali."""
+    applicate = saltate = 0
+    for raw in request.form.getlist('scheda'):
+        try:
+            id_doc_s, anno, ids_s = raw.split('|', 2)
+            d = db.session.get(Docente, int(id_doc_s))
+            ids = {int(x) for x in ids_s.split(',') if x}
+        except (ValueError, TypeError):
+            continue
+        if not d:
+            continue
+        p = PianoAttivitaPersonale.query.filter_by(id_docente=d.id, anno_scol=anno).first()
+        if p and p.stato == 'bloccato' and request.form.get(f'forza_{d.id}') != '1':
+            saltate += 1
+            continue
+        if not p:
+            p = PianoAttivitaPersonale(id_docente=d.id, anno_scol=anno, token=genera_token())
+            db.session.add(p)
+            db.session.flush()
+        validi = {e.id for e in _eventi_selezionabili(anno)}
+        PianoAttivitaPersonaleVoce.query.filter_by(id_piano=p.id).delete()
+        for eid in ids & validi:
+            db.session.add(PianoAttivitaPersonaleVoce(id_piano=p.id, id_attivita=eid))
+        if p.stato == 'bozza':
+            p.stato = 'inviato'
+        p.inviato_il = datetime.utcnow()
+        applicate += 1
+    db.session.commit()
+    flash(f'{applicate} piani aggiornati dalle schede Excel.'
+          + (f' {saltate} piani bloccati lasciati invariati.' if saltate else ''),
+          'success' if applicate else 'warning')
+    return redirect(url_for('piano_personale.lista'))

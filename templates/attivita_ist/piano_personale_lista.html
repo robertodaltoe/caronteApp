@@ -46,6 +46,9 @@
             {% endfor %}
         </div>
         {% endif %}
+        <a href="{{ url_for('piano_personale.schede_zip', anno=anno) }}" class="btn btn-sm" style="background:#e5eaf0;"
+           title="Una scheda Excel per ogni docente, da inviare a chi non può usare il link">{{ icon('download') }} Schede Excel (zip)</a>
+        <a href="{{ url_for('piano_personale.importa_schede') }}" class="btn btn-sm" style="background:#e5eaf0;">{{ icon('plus') }} Importa schede</a>
         <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Attività istituzionali</a>
     </div>
 </div>
@@ -61,7 +64,8 @@
      border-radius:6px; padding:8px 12px; margin-bottom:14px;">
     {{ icon('warning') }} Il link personale funziona solo da un dispositivo collegato alla rete
     dell'istituto — <strong>il docente deve compilarlo da scuola</strong>, non funziona da casa
-    o da una rete diversa. Avvisalo quando gli invii il link.
+    o da una rete diversa. Avvisalo quando gli invii il link. Da casa: invia la <strong>scheda Excel</strong>
+    (pulsante per riga o zip completo) e poi caricala con <strong>Importa schede</strong>.
 </div>
 
 {% if not righe %}
@@ -112,6 +116,8 @@
                 {% endif %}
             </td>
             <td style="text-align:center;">
+                <a href="{{ url_for('piano_personale.scheda_xlsx', id_docente=r.docente.id, anno=anno) }}"
+                   class="btn btn-sm" style="background:#e5eaf0;" title="Scheda Excel da compilare offline">{{ icon('download') }}</a>
                 {% if not r.piano %}
                 <form method="post" action="{{ url_for('piano_personale.genera', id_docente=r.docente.id) }}" style="display:inline;">
                     <input type="hidden" name="anno" value="{{ anno }}">
