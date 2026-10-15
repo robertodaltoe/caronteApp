@@ -104,7 +104,13 @@ def _docenti_per_anno(anno_scol):
 
     anno_corrente = get_anno_corrente()  # fonte di verità: DB
 
-    base = Docente.query.filter_by(attivo=True).filter(
+    # attivo=False con anno_scol_uscita valorizzato = uscito (disattivato
+    # automaticamente al cambio anno): resta visibile negli anni PRECEDENTI
+    # all'uscita (filtro sotto). attivo=False senza data = eliminato.
+    base = Docente.query.filter(or_(
+        Docente.attivo == True,
+        Docente.anno_scol_uscita != None,
+    )).filter(
         # Non ancora arrivato (TI storico senza data = sempre incluso)
         or_(
             Docente.anno_scol_inizio == None,

@@ -2,6 +2,23 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 77 — Docenti usciti: disattivazione automatica al cambio anno
+
+Roberto: scorrendo la scheda docente con Prec./Succ. comparivano i docenti
+non più in servizio, con "attivo" spuntato. Causa: l'uscita è solo una data
+(`anno_scol_uscita`), `attivo` restava True; l'elenco li filtrava, la
+navigazione no (fix 1: navigazione sullo stesso elenco).
+
+Fix 2 (su richiesta): `app.py::_migra_disattiva_docenti_usciti()` all'avvio
+mette `attivo=False` a chi ha `anno_scol_uscita <= anno corrente`
+(backup cifrato `_pre_disattiva_docenti_usciti` prima, idempotente).
+`_docenti_per_anno()` ora include anche attivo=False con anno_scol_uscita
+valorizzato per gli anni PRECEDENTI all'uscita, così lo storico non sparisce.
+Gli altri punti che filtrano `attivo=True` per anni passati (es.
+assegnazioni, recupero_costanti) non mostrano più gli usciti: da verificare.
+"Elimina" (attivo=False senza data) resta nascosto ovunque.
+Sessione in sandbox Linux; test su DB in-memory/copia, mai database.db reale.
+
 ## Sessione 76 — Risincronizza: esonerati dal piano individuale = giustificati
 
 Roberto: nella risincronizzazione i docenti che hanno compilato il piano

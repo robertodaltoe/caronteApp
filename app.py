@@ -422,6 +422,7 @@ def create_app(avvio_con_reloader=True):
         _migra_contrattazione_protocollo_ata()
         _backfill_anno_scol_banca_ore()
         _migra_indici_fk_calde()
+        _migra_disattiva_docenti_usciti(base_dir)
         _seed_dipartimenti_materie()
         _seed_sospensioni()
         from models.permesso_ruolo import (_seed_permessi_ruolo, _migra_split_sezioni_permessi,
@@ -1063,6 +1064,40 @@ def _migra_indici_fk_calde():
             conn.execute(text(
                 f"CREATE INDEX IF NOT EXISTS {nome_indice} ON {tabella} ({colonna})"))
         conn.commit()
+
+
+def _migra_disattiva_docenti_usciti(base_dir):
+    """Mette attivo=False ai docenti non più in servizio nell'anno
+    corrente: anno_scol_uscita valorizzato e <= anno corrente (l'uscita
+    vale "da" quell'anno, vedi routes/impostazione_anno.py::
+    _docenti_per_anno). Gli anni precedenti all'uscita continuano a
+    mostrarli (quella funzione include attivo=False + anno_scol_uscita).
+    Idempotente; backup cifrato solo se c'è davvero qualcosa da fare."""
+    from config_anno import get_anno_corrente
+    from models.docente import Docente
+
+    anno = get_anno_corrente()
+    da_disattivare = Docente.query.filter(
+        Docente.attivo == True,
+        Docente.anno_scol_uscita != None,
+        Docente.anno_scol_uscita <= anno,
+    ).all()
+    if not da_disattivare:
+        return
+    db_path = os.path.join(base_dir, 'database.db')
+    if os.path.exists(db_path):
+        from modules.backup_cifrato import crea_backup_cifrato
+        try:
+            crea_backup_cifrato(db_path, os.path.join(base_dir, 'data', 'backup'),
+                                suffisso='_pre_disattiva_docenti_usciti')
+        except Exception as e:
+            # Senza backup non si modifica il database.
+            print(f'Disattivazione docenti usciti saltata (backup fallito): {e}')
+            return
+    for d in da_disattivare:
+        d.attivo = False
+    db.session.commit()
+    print(f'Disattivati {len(da_disattivare)} docenti usciti (anno {anno}).')
 
 
 def _pulizia_log(base_dir):
