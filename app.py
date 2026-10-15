@@ -11,6 +11,22 @@ if _sys.platform == 'darwin':
         '/opt/homebrew/lib:' + os.environ.get('DYLD_LIBRARY_PATH', ''))
 from datetime import datetime, timedelta
 
+# Console Windows su code page legacy (cp850/cp1252) mentre Python scrive
+# UTF-8: "Lunedì" compariva come "LunedÃ¬". Si porta la console a UTF-8 e si
+# rende stdout/stderr tolleranti, cosi' vale anche con avvii senza i .bat.
+if _sys.platform == 'win32':
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+        ctypes.windll.kernel32.SetConsoleCP(65001)
+    except Exception:
+        pass
+    for _flusso in (_sys.stdout, _sys.stderr):
+        try:
+            _flusso.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
 def _ottieni_secret_key(base_dir):
     """
     Ordine di preferenza:

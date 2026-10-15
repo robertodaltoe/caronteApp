@@ -170,6 +170,9 @@ $avviaServerPath = Join-Path $Cartella "avvia_server_windows.bat"
 REM Avvia CaronteApp come server permanente (accesso diretto via LAN,
 REM nessun sync su Google Drive: questo PC e' l'unica fonte dati).
 cd /d "%~dp0"
+chcp 65001 >nul
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
 call venv\Scripts\activate.bat
 :loop
 python app.py

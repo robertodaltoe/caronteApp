@@ -1,6 +1,9 @@
 @echo off
 REM Avvia CaronteApp su porta 5002 - Windows
 cd /d "%~dp0"
+chcp 65001 >nul
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
 
 if exist "venv\Scripts\activate.bat" (
     call venv\Scripts\activate.bat
