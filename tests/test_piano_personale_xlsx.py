@@ -34,3 +34,12 @@ def test_file_non_di_caronte_rifiutato():
     buf = io.BytesIO(); Workbook().save(buf); buf.seek(0)
     with pytest.raises(ValueError):
         leggi_xlsx(buf)
+
+
+def test_csv_condivisione_e_script():
+    from modules.piano_personale_xlsx import csv_condivisione, SCRIPT_CONDIVISIONE
+    out = csv_condivisione([('ROSSI', 'Anna', 'a.rossi@x.it', 'f.xlsx'), ('BIANCHI', '', '', 'g.xlsx')])
+    righe = out.strip().splitlines()
+    assert righe[0] == 'cognome,nome,email,file'
+    assert righe[1] == 'ROSSI,Anna,a.rossi@x.it,f.xlsx'
+    assert 'addEditor' in SCRIPT_CONDIVISIONE and 'setShareableByEditors(false)' in SCRIPT_CONDIVISIONE

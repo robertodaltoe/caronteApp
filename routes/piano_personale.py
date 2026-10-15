@@ -283,17 +283,23 @@ def schede_zip():
     from flask import send_file
     from config_anno import get_anno_corrente, intervallo_anno_scolastico
     from routes.attivita_ist import _non_in_servizio_per_data
-    from modules.piano_personale_xlsx import genera_xlsx, nome_file_scheda
+    from modules.piano_personale_xlsx import (genera_xlsx, nome_file_scheda, csv_condivisione,
+                                              NOME_CSV_CONDIVISIONE, SCRIPT_CONDIVISIONE)
     anno = request.args.get('anno') or get_anno_corrente()
     esclusi = _non_in_servizio_per_data(intervallo_anno_scolastico(anno)[0])
     docenti = [d for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
                if d.id not in esclusi and deve_compilare_piano(d, anno)]
     buf = io.BytesIO()
+    righe_csv = []
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
         for d in docenti:
             f = io.BytesIO()
             genera_xlsx([_scheda_docente(d, anno)], anno).save(f)
-            z.writestr(nome_file_scheda(d, anno), f.getvalue())
+            nome = nome_file_scheda(d, anno)
+            z.writestr(nome, f.getvalue())
+            righe_csv.append((d.cognome, d.nome or '', (d.email or '').strip(), nome))
+        z.writestr(NOME_CSV_CONDIVISIONE, csv_condivisione(righe_csv))
+        z.writestr('condividi_schede.gs', SCRIPT_CONDIVISIONE)
     buf.seek(0)
     return send_file(buf, as_attachment=True, download_name=f'schede_piano_attivita_{anno}.zip',
                      mimetype='application/zip')

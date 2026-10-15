@@ -129,3 +129,50 @@ def leggi_xlsx(file_obj):
     if not out:
         raise ValueError('nessuna scheda docente trovata nel file')
     return out
+
+
+NOME_CSV_CONDIVISIONE = 'elenco_condivisione.csv'
+
+SCRIPT_CONDIVISIONE = """/**
+ * Condivide ogni scheda Excel SOLO con il suo docente.
+ * 1. Carica in una cartella Drive tutte le schede .xlsx e il file
+ *    elenco_condivisione.csv (stessa cartella).
+ * 2. Apri script.google.com con l'account della scuola, crea un progetto,
+ *    incolla questo codice e sostituisci ID_CARTELLA (la parte finale
+ *    dell'URL della cartella).
+ * 3. Esegui condividiSchede() e autorizza. Il log mostra l'esito per riga.
+ */
+const ID_CARTELLA = 'ID_CARTELLA';
+
+function condividiSchede() {
+  const cartella = DriveApp.getFolderById(ID_CARTELLA);
+  const csv = cartella.getFilesByName('elenco_condivisione.csv');
+  if (!csv.hasNext()) throw new Error('elenco_condivisione.csv non trovato nella cartella');
+  const righe = Utilities.parseCsv(csv.next().getBlob().getDataAsString());
+  let ok = 0, saltate = 0;
+  righe.slice(1).forEach(function (r) {
+    const cognome = r[0], email = (r[2] || '').trim(), nomeFile = r[3];
+    if (!email) { Logger.log('SALTATO (nessuna email): ' + cognome); saltate++; return; }
+    const it = cartella.getFilesByName(nomeFile);
+    if (!it.hasNext()) { Logger.log('SALTATO (file non trovato): ' + nomeFile); saltate++; return; }
+    const f = it.next();
+    f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+    f.setShareableByEditors(false);
+    f.addEditor(email);
+    Logger.log('OK ' + cognome + ' -> ' + email);
+    ok++;
+  });
+  Logger.log('Condivise: ' + ok + ' - Saltate: ' + saltate);
+}
+"""
+
+
+def csv_condivisione(righe):
+    """righe: lista di (cognome, nome, email, nome_file)."""
+    import csv, io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['cognome', 'nome', 'email', 'file'])
+    for r in righe:
+        w.writerow(r)
+    return buf.getvalue()
