@@ -381,8 +381,13 @@ def modifica(id):
                          ColloquiEccezione.data >= _ecc_ini,
                          ColloquiEccezione.data <= _ecc_fine)
                  .order_by(ColloquiEccezione.data).all())
-    # Navigazione prev/next tra docenti attivi (ordine alfabetico)
-    tutti = [doc.id for doc in Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()]
+    # Navigazione prev/next sullo STESSO elenco mostrato da /docenti per
+    # l'anno corrente (in servizio, ordine alfabetico): filtrare solo per
+    # attivo=True includeva anche chi ha anno_scol_uscita passato, che
+    # l'elenco nasconde ma che resta attivo=True.
+    from routes.impostazione_anno import _docenti_per_anno
+    tutti = [doc.id for doc in sorted(_docenti_per_anno(get_anno_corrente()),
+                                      key=lambda x: x.cognome)]
     idx   = tutti.index(id) if id in tutti else -1
     id_prev = tutti[idx - 1] if idx > 0            else None
     id_next = tutti[idx + 1] if idx < len(tutti)-1 else None
