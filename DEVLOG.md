@@ -2,6 +2,58 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 78 — Orario xlsx con ore in testo, schede Excel del piano personale, condivisione Drive, console Windows UTF-8
+
+Sessione sul Mac diretto (worktree), verifiche su copie del database
+(mai scritture sul `database.db` reale, integrity_check ok).
+
+**1. Contrattazione: tipi incarico collegati al catalogo.**
+`TipoIncarico.id_tipo_incarico_contrattazione` (opzionale, caso per caso,
+migrazione additiva) + pulsante "Importa" per capitolo
+(`contrattazione.capitolo_importa_incarichi`) che porta in assegnazione le
+nomine di Piano Attività gia' fatte (es. Coordinatore di classe) senza
+ridigitarle; anti-duplicato su docente + voce di catalogo nel fondo.
+Provato su copia del DB reale (38 nomine "Coordinatore di classe").
+
+**2. Import orario: celle d'ora scritte come testo.** L'export della
+settimana 4 ("07:45 - 08:40") non aveva celle di tipo ora, quindi
+`build_col_map()` non riconosceva il foglio. `_e_cella_orario()` in
+`modules/parser_orario.py` accetta ora entrambe le forme. File reale:
+1341 slot, 73 docenti. Test `tests/test_parser_orario_ore_testo.py`.
+Sul server l'errore persisteva finche' non girava il codice nuovo
+(auto-aggiornamento ogni 15 min + riavvio).
+
+**3. Piano attività personale per chi non raggiunge il link da casa.**
+Il link e' valido solo in LAN. Aggiunte: scheda Excel per docente / zip
+(`piano_personale.scheda_xlsx`, `schede_zip`, `modules/piano_personale_xlsx.py`;
+compilabile solo la colonna "Partecipo", id e metadati nascosti) e
+"Importa schede" con anteprima e conferma (`importa_schede`,
+`importa_conferma`): quota ore, differenze, avvisi; i piani bloccati non
+si toccano senza spunta. Lo zip contiene anche `elenco_condivisione.csv`
+(cognome, nome, email, file) e `condividi_schede.gs`.
+
+**4. Condivisione su Drive.** Cartella "Piano attività personale
+2026-2027" in Il mio Drive (29 schede, file scritti nella cartella Drive
+Desktop). Il connettore Drive di Claude legge/crea ma NON condivide
+("The caller does not have permission"): la condivisione e' stata fatta
+da un progetto Apps Script creato e lanciato dal Chrome di Roberto
+(autorizzazione data da lui), editor senza ri-condivisione, notifica
+automatica di Google. Log: "Condivise: 29". Nota: GHEZZI Angelo ha email
+`andrea.ghezzi@` (doppio nome, confermato da Roberto, non un errore).
+Controllate le email prima dell'invio (ALOISIO corretta in anagrafica).
+Promemoria aggiunto nello Scadenzario del Registro convocazioni per
+l'invio insieme alla circolare 55.
+
+**5. Console Windows: "Lunedì" mostrato come "LunedÃ¬".** Code page
+legacy contro output UTF-8. `app.py` all'avvio su win32 chiama
+`SetConsoleOutputCP(65001)` e riconfigura stdout/stderr UTF-8; `chcp 65001`
++ `PYTHONUTF8=1` in `avvia_caronte.bat` e nel `.bat` generato
+dall'installer. Non verificabile da Mac: da controllare sul PC server
+dopo l'aggiornamento (il `.bat` gia' installato non viene rigenerato, ma
+la correzione in `app.py` basta).
+
+Suite: 659 test verdi.
+
 ## Sessione 77 — Docenti usciti: disattivazione automatica al cambio anno
 
 Roberto: scorrendo la scheda docente con Prec./Succ. comparivano i docenti
