@@ -878,8 +878,17 @@ def elimina(asgn_id):
     anno = asgn.anno_scol
     nome = asgn.display_name
     id_doc = asgn.id_docente
+    # Nomi dell'orario collegati a questo placeholder: restano come posto
+    # "nuovo" identificato dal solo nome nel file (non si perdono le ore).
+    from models.posto_vacante import AliasPostoVacante
+    collegati = AliasPostoVacante.query.filter_by(id_assegnazione=asgn.id).all()
+    for a in collegati:
+        a.id_assegnazione = None
     db.session.delete(asgn)
     db.session.commit()
+    if collegati:
+        from modules.posti_vacanti import ricalcola_supplenze_posti
+        ricalcola_supplenze_posti()
     if id_doc:
         _pulisci_docente_materie_orfane(id_doc, anno)
     flash(f'Assegnazione {nome} eliminata.', 'warning')
@@ -924,6 +933,12 @@ def nomina(asgn_id):
         flash(f'{doc.cognome} {doc.nome}: ore eccessive '
               f'({ore_gia + tot}h > {max_ore_anno}h).', 'danger')
     else:
+        # Se il placeholder e' collegato a righe dell'orario importato
+        # (posto vacante), le ore passano al docente e le supplenze future
+        # del posto si cancellano: e' in servizio. Prima di perdere il
+        # collegamento (nome_placeholder = None).
+        from modules.posti_vacanti import nomina_posto
+        esito_posto = nomina_posto(f'A{asgn.id}', id_doc)
         asgn.id_docente = id_doc
         asgn.nome_placeholder = None
         db.session.commit()
@@ -935,7 +950,11 @@ def nomina(asgn_id):
         from routes.attivita_ist import iscrivi_docente_a_eventi_classe
         iscrivi_docente_a_eventi_classe(
             id_doc, [ac.label_classe for ac in asgn.classi], anno_scol=asgn.anno_scol)
-        flash(f'Nominato: {doc.cognome} {doc.nome} — materie sincronizzate.', 'success')
+        flash(f'Nominato: {doc.cognome} {doc.nome} — materie sincronizzate.'
+              + (f' {esito_posto["ore"]} ore dell\'orario assegnate, '
+                 f'{esito_posto["supplenze_cancellate"]} supplenze del posto vacante cancellate.'
+                 if esito_posto['ore'] or esito_posto['supplenze_cancellate'] else ''),
+              'success')
     return redirect(url_for('assegnazioni.index', anno=asgn.anno_scol))
 
 

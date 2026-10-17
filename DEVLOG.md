@@ -2,6 +2,47 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 79 — Posti vacanti nell'orario (docenti non ancora nominati)
+
+Roberto: l'orario importato contiene righe di docenti non ancora nominati
+(salvati come placeholder in Assegnazioni): venivano scartate come "non
+riconosciute" e l'orario globale risultava bucato; voleva vederle in orario
+e come supplenze da assegnare. Scelte confermate: le supplenze dei posti
+si generano **solo da oggi in poi**; i posti vacanti non contano in
+statistiche/banca ore finche' non c'e' un sostituto; alla **nomina** le
+supplenze future del posto si **cancellano** (il docente e' in servizio,
+anche se gia' assegnate); i nomi del file non coincidono con quelli dei
+placeholder, quindi collegamento manuale ricordato.
+
+Perche' una tabella a parte: `OrarioDocente.id_docente` e' NOT NULL e letto
+da 20+ moduli. Nuovi: `models/posto_vacante.py` (`OrarioPlaceholder`,
+ricreata a ogni import; `AliasPostoVacante`: nome nel file -> placeholder
+di Assegnazioni (per id riga, non per nome: "Supplente" compare due volte),
+oppure posto "nuovo" identificato dal nome, oppure ignora) e
+`modules/posti_vacanti.py`. Import: i nomi senza docente salvano le ore in
+`orario_placeholder`; restano "non riconosciuti" solo i nomi mai collegati.
+Sincronizzazione: sezione "Posti vacanti" (collega / crea nuovo / ignora,
+scollega, nomina). Orario globale: i posti collegati compaiono con
+"docente virtuale" (id negativo, prefisso ◌). Supplenze: `id_assente`
+NULL, `note='POSTO_VACANTE|<chiave>|materia'` (marcatore in `note`, non in
+una colonna nuova, perche' `note` e' gia' sincronizzata da auto_sync),
+`note_display='Posto vacante: X'`; orizzonte = fine validita' dell'orario
+o 28 giorni. `assegnazioni.nomina` porta le ore del posto collegato al
+docente; `assegnazioni.elimina` trasforma i collegamenti in posti "nuovi".
+Verificato su copia del DB reale con il file QUINTA SETTIMANA rinominato su
+tre righe (34 supplenze da oggi, reimport idempotente, nomina: 14 ore al
+docente e 0 supplenze residue); 4 test in `tests/test_posti_vacanti.py`.
+
+Limiti noti: nessun ricalcolo automatico giornaliero senza reimport (se
+l'orario non ha data finale, l'orizzonte di 28 giorni si rinnova solo a
+ogni import/collegamento); le cancellazioni di supplenze dei posti scrivono
+lapidi (chiave data+ora+classe+NULL): se una stessa chiave si rigenerasse
+dopo una cancellazione, il merge tra postazioni potrebbe cancellarla di
+nuovo. Per i docenti veri non riconosciuti (refusi) restano gli alias.
+
+Fix a margine: `tests/test_iscrizione_eventi_classe_anno.py` usava una data
+fissa (15/10/2026) ormai passata: ora relativa a oggi. Suite: tutta verde.
+
 ## Sessione 78 — Orario xlsx con ore in testo, schede Excel del piano personale, condivisione Drive, console Windows UTF-8
 
 Sessione sul Mac diretto (worktree), verifiche su copie del database

@@ -415,12 +415,21 @@ def applica_importazione(excel_path, db_session,
     OrarioDocente.query.delete()
     db_session.flush()
 
+    from models.posto_vacante import AliasPostoVacante
+    alias_posti = {a.nome_file.upper() for a in AliasPostoVacante.query.all()}
+    non_risolti = []
+
     seen = set()
     creati = []
     for slot in parsed['slots']:
         doc = risolvi(slot['cognome_file'])
         if doc is None:
-            stats['non_riconosciuti'].add(slot['cognome_file'])
+            # Non e' un docente: potrebbe essere un posto vacante (docente
+            # non ancora nominato). Le sue ore si conservano a parte; solo
+            # i nomi mai collegati restano "non riconosciuti".
+            non_risolti.append(slot)
+            if slot['cognome_file'].upper().strip() not in alias_posti:
+                stats['non_riconosciuti'].add(slot['cognome_file'])
             continue
         key = (doc.id, slot['giorno'], slot['ora'],
                'comp' if slot['tipo_ora'] == 'compresenza' else 'norm')
@@ -439,6 +448,10 @@ def applica_importazione(excel_path, db_session,
         stats['slot_totali'] += 1
 
     _marca_compresenze_itp(creati)
+
+    from modules.posti_vacanti import salva_slot_posti
+    stats['slot_posti'] = salva_slot_posti(
+        non_risolti, data_inizio_validita, data_fine_validita)
 
     # Salva log
     nr_list = list(stats['non_riconosciuti'])

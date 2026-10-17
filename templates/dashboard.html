@@ -216,7 +216,7 @@
             <td><strong>{{ s.ora }}ª</strong></td>
             <td><strong>{{ s.classe }}</strong></td>
             <td style="color:var(--grigio); font-size:.88rem;">
-                {% if s.assente %}{{ s.assente.cognome }}{% if s.assente.nome %} {{ s.assente.nome[0] }}.{% endif %}{% else %}—{% endif %}
+                {% if s.assente %}{{ s.assente.cognome }}{% if s.assente.nome %} {{ s.assente.nome[0] }}.{% endif %}{% else %}{{ s.note_display or '—' }}{% endif %}
             </td>
             <td>
                 {% if s.stato == 'scoperta' %}

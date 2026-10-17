@@ -48,13 +48,17 @@ def test_iscrive_a_evento_dello_stesso_anno_scolastico(app, db_session):
     d = crea_docente('Zampetti')
     db.session.commit()
 
-    # Consiglio di classe di ottobre 2026 -> anno scolastico 2026-2027.
+    # Evento futuro (relativo a oggi: una data fissa, superata dal
+    # calendario, faceva fallire il test) nell'anno scolastico di quella data.
+    quando = date.today() + timedelta(days=3)
+    anno = (f'{quando.year}-{quando.year + 1}' if quando.month >= 9
+            else f'{quando.year - 1}-{quando.year}')
     ev_stesso_anno = AttivitaIst(tipo='consiglio_classe', titolo='CdC', classe='4A RIM',
-                                  data=date(2026, 10, 15), origine='manuale')
+                                  data=quando, origine='manuale')
     db.session.add(ev_stesso_anno)
     db.session.commit()
 
-    n = mod.iscrivi_docente_a_eventi_classe(d.id, ['4A RIM'], anno_scol='2026-2027')
+    n = mod.iscrivi_docente_a_eventi_classe(d.id, ['4A RIM'], anno_scol=anno)
 
     assert n == 1
     assert AttivitaIstPartecipante.query.filter_by(

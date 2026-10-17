@@ -78,6 +78,78 @@
     </form>
 </div>
 
+<!-- POSTI VACANTI -->
+<div class="card" style="margin-bottom:20px;">
+    <h2>{{ icon('person') }} Posti vacanti (docenti non ancora nominati)</h2>
+    <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px; max-width:75ch;">
+        Le righe del file orario che non corrispondono a nessun docente. Collegandole a un posto
+        vacante compaiono nell'orario globale e generano da oggi le supplenze da assegnare.
+        Il collegamento resta salvato per i prossimi import. Per un docente vero usa invece gli alias qui sotto.
+    </p>
+
+    {% if in_attesa %}
+    <h3 style="font-size:.9rem; margin:0 0 8px;">Da collegare</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:18px; font-size:.85rem;">
+        {% for nome, n_slot, classi in in_attesa %}
+        <tr style="border-top:1px solid #f1f3f5;">
+            <td style="padding:6px; font-weight:700;">{{ nome }}</td>
+            <td style="padding:6px; color:var(--grigio);">{{ n_slot }} ore{% if classi %} · {{ classi | join(', ') }}{% endif %}</td>
+            <td style="padding:6px;">
+                <form method="post" action="{{ url_for('sync.posto_collega') }}" style="display:flex; gap:6px; align-items:center;">
+                    <input type="hidden" name="nome_file" value="{{ nome }}">
+                    <select name="scelta" required style="padding:4px;">
+                        <option value="">— scegli —</option>
+                        {% for p in placeholder_disponibili %}
+                        <option value="asg:{{ p.id }}">Collega a: {{ p.nome_placeholder }}{% if p.classe_concorso %} ({{ p.classe_concorso.codice }}){% endif %}</option>
+                        {% endfor %}
+                        <option value="nuovo">Crea nuovo posto vacante "{{ nome }}"</option>
+                        <option value="ignora">Ignora</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" type="submit">Applica</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if posti %}
+    <h3 style="font-size:.9rem; margin:0 0 8px;">Posti collegati</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+        {% for p in posti %}
+        <tr style="border-top:1px solid #f1f3f5; vertical-align:top;">
+            <td style="padding:6px; font-weight:700;">{{ p.nome }}</td>
+            <td style="padding:6px; color:var(--grigio);">
+                {% for a in p.alias %}
+                <span style="display:inline-block; margin-right:8px;">{{ a.nome_file }}
+                    <form method="post" action="{{ url_for('sync.posto_scollega', id=a.id) }}" style="display:inline;"
+                          onsubmit="return confirm('Scollegare {{ a.nome_file }}? Le sue supplenze da assegnare verranno rimosse.')">
+                        <button type="submit" style="background:none;border:none;color:var(--rosso);cursor:pointer;" title="Scollega">&times;</button>
+                    </form></span>
+                {% endfor %}
+                · {{ p.slots | length }} ore
+            </td>
+            <td style="padding:6px;">
+                <form method="post" action="{{ url_for('sync.posto_nomina') }}" style="display:flex; gap:6px;"
+                      onsubmit="return confirm('Nominare il docente su questo posto? Le ore passano al suo orario e le supplenze future del posto vengono cancellate.')">
+                    <input type="hidden" name="chiave" value="{{ p.chiave }}">
+                    <select name="id_docente" required style="padding:4px;">
+                        <option value="">— nomina docente —</option>
+                        {% for d in docenti %}<option value="{{ d.id }}">{{ d.cognome }} {{ d.nome or '' }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-sm" type="submit" style="background:#e5eaf0;">Nomina</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if not in_attesa and not posti %}
+    <p style="color:var(--grigio); font-size:.85rem;">Nessun nome da collegare nell'ultimo orario importato.</p>
+    {% endif %}
+</div>
+
 <!-- ALIAS DOCENTI -->
 <div class="card" style="margin-bottom:20px;">
     <h2>{{ icon('grid-alt') }} Alias docenti</h2>

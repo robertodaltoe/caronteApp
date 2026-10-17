@@ -34,6 +34,7 @@ def app():
         from models.orario_docente import OrarioDocente  # noqa
         from models.orario_sostegno import OrarioSostegno  # noqa
         from models.supplenza import Supplenza  # noqa
+        from models.posto_vacante import AliasPostoVacante, OrarioPlaceholder  # noqa
         from models.movimento_banca_ore import MovimentoBancaOre  # noqa
         from models.indisponibilita import Indisponibilita  # noqa
         from models.materia import Dipartimento, Materia, DocenteMateria  # noqa
