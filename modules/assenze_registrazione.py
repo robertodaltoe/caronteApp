@@ -321,6 +321,12 @@ def _genera_supplenze(id_docente, data, ora_inizio, ora_fine,
         ).first():
             continue
 
+        # Posto vacante (ITP non ancora nominato) sulla stessa classe/ora:
+        # la supplenza del titolare assente copre gia' la classe, quella
+        # del posto -- se ancora da assegnare -- sarebbe un doppione.
+        from modules.posti_vacanti import elimina_supplenze_posto_scoperte
+        elimina_supplenze_posto_scoperte(data, slot.ora, slot.classe)
+
         from flask import g as _g
         _utente = _g.utente.username if getattr(_g, 'utente', None) else None
         preassegnata = bool(id_sostituto_preset) and assegnabile

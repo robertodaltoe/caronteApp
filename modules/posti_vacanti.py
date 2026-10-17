@@ -117,6 +117,16 @@ def _elimina_supplenza(s):
     db.session.delete(s)
 
 
+def elimina_supplenze_posto_scoperte(data, ora, classe):
+    """Toglie la supplenza di un posto vacante su (data, ora, classe) se e'
+    ancora scoperta; una gia' assegnata a un sostituto non si tocca."""
+    for s in Supplenza.query.filter(
+            Supplenza.data == data, Supplenza.ora == ora, Supplenza.classe == classe,
+            Supplenza.id_assente.is_(None), Supplenza.stato == 'scoperta',
+            Supplenza.note.like(PREFISSO_NOTE_SUPPLENZA + '%')).all():
+        _elimina_supplenza(s)
+
+
 def _supplenze_posti(da):
     return [s for s in Supplenza.query.filter(
         Supplenza.id_assente.is_(None), Supplenza.data >= da,
@@ -126,6 +136,8 @@ def _supplenze_posti(da):
 def ricalcola_supplenze_posti(oggi=None):
     """Allinea le supplenze dei posti vacanti all'orario. Ritorna
     {'create': n, 'cancellate': n}. Commit incluso."""
+    from modules.compresenze import ha_compagno_presente, invalida_cache
+    invalida_cache()
     oggi = oggi or date.today()
     posti = posti_collegati()
 
@@ -138,8 +150,12 @@ def ricalcola_supplenze_posti(oggi=None):
             fine = r.data_fine_validita or (oggi + timedelta(days=ORIZZONTE_GIORNI))
             d = ini
             while d <= fine:
+                # Compagno presente nella stessa classe/ora (titolare, ITP o
+                # sostegno): la classe e' gia' coperta, niente supplenza.
+                # Id 0 = "nessun docente" (non e' mai un docente reale).
                 if d.weekday() == r.giorno and not _festivo_o_sospeso(d) \
-                        and not _classe_fuori_aula(d, r.classe, r.ora):
+                        and not _classe_fuori_aula(d, r.classe, r.ora) \
+                        and not ha_compagno_presente(0, r.giorno, r.ora, r.classe, d):
                     attese.setdefault((d, r.ora, r.classe),
                                       (p['chiave'], p['nome'], r.materia))
                 d += timedelta(days=1)
@@ -160,7 +176,7 @@ def ricalcola_supplenze_posti(oggi=None):
             continue
         if Supplenza.query.filter_by(data=d, ora=ora, classe=classe).filter(
                 Supplenza.stato != 'annullata').first():
-            continue
+            continue  # classe gia' con una supplenza (es. titolare assente)
         db.session.add(Supplenza(
             data=d, ora=ora, classe=classe, id_assente=None, id_sostituto=None,
             tipo='recupero', stato='scoperta', origine='automatica',

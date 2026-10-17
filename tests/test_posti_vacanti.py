@@ -79,3 +79,43 @@ def test_nomina_porta_le_ore_e_cancella_le_supplenze_anche_assegnate(app, db_ses
     assert AliasPostoVacante.query.count() == 0
     ore = OrarioDocente.query.filter_by(id_docente=doc.id).all()
     assert {(r.giorno, r.ora) for r in ore} >= {(d.weekday(), 2)}
+
+
+def test_itp_in_compresenza_con_titolare_presente_non_genera_supplenza(app, db_session):
+    d = _giorno_feriale_futuro()
+    tit = crea_docente('Titolare')
+    db.session.commit()
+    db.session.add(OrarioDocente(id_docente=tit.id, giorno=d.weekday(), ora=2,
+                                 classe='1ACAT', materia='FISICA', tipo_ora='lezione'))
+    salva_slot_posti([_slot('ITP FISICA', d.weekday(), 2, '1ACAT'),
+                      _slot('ITP FISICA', d.weekday(), 3, '1ACAT')],
+                     date.today(), date.today() + timedelta(days=14))
+    db.session.commit()
+    collega_nome('ITP FISICA', 'nuovo')
+
+    ricalcola_supplenze_posti()
+
+    sup = Supplenza.query.all()
+    assert sup, 'la 3a ora, senza titolare, deve restare scoperta'
+    assert {s.ora for s in sup} == {3}
+
+
+def test_titolare_assente_la_classe_resta_da_coprire_una_volta_sola(app, db_session):
+    from models.assenza import Assenza
+    d = _giorno_feriale_futuro()
+    tit = crea_docente('Titolare')
+    db.session.commit()
+    db.session.add(OrarioDocente(id_docente=tit.id, giorno=d.weekday(), ora=2,
+                                 classe='1ACAT', materia='FISICA', tipo_ora='lezione'))
+    db.session.add(Assenza(id_docente=tit.id, data=d, ora_inizio=1, ora_fine=8,
+                           motivo='malattia'))
+    salva_slot_posti([_slot('ITP FISICA', d.weekday(), 2, '1ACAT')],
+                     date.today(), date.today() + timedelta(days=14))
+    db.session.commit()
+    collega_nome('ITP FISICA', 'nuovo')
+
+    ricalcola_supplenze_posti()
+
+    # titolare assente: nessun compagno presente -> la supplenza esiste, una sola
+    righe = Supplenza.query.filter_by(data=d, ora=2, classe='1ACAT').all()
+    assert len(righe) == 1

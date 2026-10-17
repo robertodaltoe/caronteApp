@@ -40,6 +40,16 @@ lapidi (chiave data+ora+classe+NULL): se una stessa chiave si rigenerasse
 dopo una cancellazione, il merge tra postazioni potrebbe cancellarla di
 nuovo. Per i docenti veri non riconosciuti (refusi) restano gli alias.
 
+**Compresenza ITP (richiesta successiva):** se nella stessa classe/ora c'e'
+un compagno presente (titolare, ITP o sostegno, via
+`modules.compresenze.ha_compagno_presente`) il posto vacante NON genera
+supplenza: la classe e' gia' coperta. Se il titolare e' assente la classe
+va coperta una volta sola: `_genera_supplenze` toglie la supplenza ancora
+scoperta del posto sulla stessa classe/ora
+(`elimina_supplenze_posto_scoperte`), una gia' assegnata non si tocca.
+Coperto da 2 test aggiuntivi; la prova sul DB reale non lo esercita
+(le righe rinominate nel file di prova non erano ITP in compresenza).
+
 Fix a margine: `tests/test_iscrizione_eventi_classe_anno.py` usava una data
 fissa (15/10/2026) ormai passata: ora relativa a oggi. Suite: tutta verde.
 
