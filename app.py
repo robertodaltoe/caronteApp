@@ -188,6 +188,7 @@ def create_app(avvio_con_reloader=True):
     from routes.indisponibilita import indisp_bp
     from routes.attivita import attivita_bp
     from routes.agenda import agenda_bp
+    from routes.calendario import calendario_bp
     from routes.aule import aule_bp
 
     app.register_blueprint(dashboard_bp)
@@ -204,6 +205,7 @@ def create_app(avvio_con_reloader=True):
     app.register_blueprint(indisp_bp)
     app.register_blueprint(attivita_bp)
     app.register_blueprint(agenda_bp)
+    app.register_blueprint(calendario_bp)
     app.register_blueprint(aule_bp)
     from routes.attivita_ist import attivita_ist_bp
     app.register_blueprint(attivita_ist_bp)

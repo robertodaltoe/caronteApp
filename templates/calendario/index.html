@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Calendario impegni{% endblock %}
+
+{% block extra_style %}
+<style>
+.cal-wrap { --c-piano:#2f6fbf; --c-piano-bg:#e3edfa; --c-formazione:#0f8a8a; --c-formazione-bg:#d9f1f1;
+    --c-progetti:#1d8a6c; --c-progetti-bg:#dcf2ea; --c-assenza:#b7791f; --c-assenza-bg:#fbefd5;
+    --c-lezione:#6b7686; --c-lezione-bg:#e9ecf1; --c-conf:#d33a2c; --c-conf-bg:#fde7e4; --H:46px; }
+.cal-bar { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cal-range { color:var(--grigio); font-size:.88rem; font-variant-numeric:tabular-nums; }
+.cal-ctrl { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.cal-wrap button, .cal-wrap select { font:inherit; background:#fff; border:1px solid #d1d5db; border-radius:6px; padding:6px 10px; cursor:pointer; }
+.cal-seg { display:inline-flex; }
+.cal-seg button { border-radius:0; margin-left:-1px; }
+.cal-seg button:first-child { border-radius:6px 0 0 6px; margin-left:0; }
+.cal-seg button:last-child { border-radius:0 6px 6px 0; }
+.cal-seg button[aria-pressed="true"] { background:var(--blu); color:#fff; border-color:var(--blu); }
+.cal-filters { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; background:#fff; border:1px solid #e5eaf0; border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+.cal-filters label { font-size:.82rem; display:flex; gap:6px; align-items:center; }
+.cal-legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-left:auto; }
+.cal-sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
+.cal-sum { font-size:.85rem; margin-bottom:8px; }
+.cal-sum .bad { color:var(--c-conf); font-weight:700; }
+.cal-box { background:#fff; border:1px solid #e5eaf0; border-radius:8px; overflow-x:auto; }
+.cal-inner { min-width:640px; }
+.cal-head, .cal-allday, .cal-body { display:grid; }
+.cal-head > div { padding:8px 6px; text-align:center; font-size:.78rem; color:var(--grigio); border-left:1px solid #eef1f5; }
+.cal-head > div b { display:block; font-size:1rem; color:#1b2230; font-weight:600; }
+.cal-head > div.oggi b { background:var(--blu); color:#fff; width:28px; height:28px; line-height:28px; border-radius:50%; margin:0 auto; }
+.cal-allday > div { border-left:1px solid #eef1f5; border-top:1px solid #eef1f5; padding:3px; display:flex; flex-direction:column; gap:2px; min-height:4px; }
+.cal-hours div { height:var(--H); font:.68rem ui-monospace,monospace; color:var(--grigio); text-align:right; padding:0 6px; transform:translateY(-7px); }
+.cal-col { position:relative; border-left:1px solid #eef1f5; height:calc(var(--H) * 11);
+    background-image:linear-gradient(#eef1f5 1px, transparent 1px); background-size:100% var(--H); }
+.cal-wrap .cal-ev { position:absolute; border-radius:5px; padding:3px 5px; font-size:.72rem; line-height:1.25; font-family:inherit; overflow:hidden; text-align:left;
+    background:var(--bg); border:1px solid var(--c); border-left-width:3px; color:#1b2230; }
+.cal-ev b { display:block; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-ev span { font:.66rem ui-monospace,monospace; color:#667085; }
+.cal-ev.lez { opacity:.85; }
+.cal-ev.conf, .cal-chip.conf { border:2px solid var(--c-conf); background:var(--c-conf-bg); }
+.cal-ev.conf b::before, .cal-chip.conf::before { content:"! "; color:var(--c-conf); font-weight:800; }
+.cal-ev.sel, .cal-chip.sel { box-shadow:0 0 0 2px var(--blu); }
+.cal-wrap .cal-chip { font-size:.72rem; border:0; border-left:3px solid var(--c); background:var(--bg); padding:1px 4px; border-radius:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left; width:100%; cursor:pointer; }
+.cal-mese { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); min-width:640px; }
+.cal-mese .dh { padding:6px; font-size:.78rem; color:var(--grigio); text-align:center; border-bottom:1px solid #e5eaf0; }
+.cal-cell { min-height:92px; border-left:1px solid #eef1f5; border-bottom:1px solid #eef1f5; padding:4px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.cal-cell .n { font-size:.78rem; color:var(--grigio); }
+.cal-cell.fuori .n { opacity:.4; }
+.cal-more { font-size:.72rem; color:var(--grigio); }
+.cal-detail { background:#fff; border:1px solid #e5eaf0; border-radius:8px; padding:12px 14px; margin-top:10px; display:flex; flex-direction:column; gap:5px; font-size:.88rem; }
+.cal-detail h2 { margin:0; font-size:1rem; }
+.cal-detail .m { color:var(--grigio); }
+.cal-detail .warn { color:var(--c-conf); font-weight:600; }
+.cal-ical { margin-top:14px; font-size:.85rem; }
+.cal-ical a { display:inline-block; margin-right:12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cal-wrap">
+  <div class="cal-bar">
+    <div>
+      <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('calendar') }} Calendario impegni</h1>
+      <div class="cal-range" id="range"></div>
+    </div>
+    <div class="cal-ctrl">
+      <button id="prev" aria-label="Periodo precedente">‹</button>
+      <button id="oggi">Oggi</button>
+      <button id="next" aria-label="Periodo successivo">›</button>
+      <div class="cal-seg" role="group" aria-label="Vista">
+        <button data-v="giorno" aria-pressed="false">Giorno</button>
+        <button data-v="settimana" aria-pressed="true">Settimana</button>
+        <button data-v="mese" aria-pressed="false">Mese</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-filters">
+    <label for="docente">Mostra
+      <select id="docente">
+        <option value="">Tutto l'istituto</option>
+        {% for d in docenti %}<option value="{{ d.id }}" {% if d.id == id_docente %}selected{% endif %}>{{ d.cognome }} {{ d.nome }}</option>{% endfor %}
+      </select>
+    </label>
+    <div class="cal-legend" id="legend">
+      {% for k, nome in fonti.items() %}
+      <label><input type="checkbox" data-k="{{ k }}" checked> <span class="cal-sw" style="background:var(--c-{{ k }})"></span> {{ nome }}</label>
+      {% endfor %}
+      <label><span class="cal-sw" style="border:2px solid var(--c-conf); background:var(--c-conf-bg)"></span> Sovrapposizione</label>
+    </div>
+  </div>
+  <p style="font-size:.78rem; color:var(--grigio); margin:0 0 8px;" id="nota-lezioni">Le lezioni compaiono solo scegliendo un docente.</p>
+
+  <div class="cal-sum" id="sum"></div>
+  <div class="cal-box"><div class="cal-inner" id="cal"></div></div>
+  <div class="cal-detail" id="detail"></div>
+
+  <div class="cal-ical">
+    <strong>Esporta in iCal</strong> (file da importare in Google Calendar, senza lezioni né assenze{% if id_docente %}; solo del docente scelto{% endif %}):
+    <span id="ical-links">
+      {% for k, nome in calendari_ical.items() %}<a href="{{ url_for('calendario.ical', cal=k) }}" data-cal="{{ k }}">{{ nome.replace('Caronte – ', '') }}</a>{% endfor %}
+    </span>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+(function(){
+const FONTI = {{ fonti|tojson }};
+const GIORNI = ['Lun','Mar','Mer','Gio','Ven','Sab'];
+const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const H = 46, ORA0 = 7;
+const $ = s => document.querySelector(s);
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const addD = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const mm = t => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lunedi = d => addD(d, -((d.getDay()+6)%7));
+
+const p = new URLSearchParams(location.search);
+const S = { v: ['giorno','settimana','mese'].includes(p.get('v')) ? p.get('v') : 'settimana',
+            anchor: /^\d{4}-\d\d-\d\d$/.test(p.get('d')||'') ? new Date(p.get('d')+'T12:00:00') : new Date(),
+            doc: $('#docente').value, off: new Set(), sel: null, eventi: [], req: 0 };
+S.anchor.setHours(12,0,0,0);
+
+function intervallo() {
+  if (S.v === 'giorno') return [S.anchor, S.anchor];
+  if (S.v === 'settimana') { const l = lunedi(S.anchor); return [l, addD(l,5)]; }
+  const primo = new Date(S.anchor.getFullYear(), S.anchor.getMonth(), 1, 12);
+  const start = lunedi(primo);
+  return [start, addD(start,41)];
+}
+
+function carica() {
+  const [da, a] = intervallo(), n = ++S.req;
+  const q = new URLSearchParams({da: iso(da), a: iso(a), fonti: Object.keys(FONTI).filter(k => !S.off.has(k)).join(',')});
+  if (S.doc) q.set('docente', S.doc);
+  const u = new URLSearchParams({v: S.v, d: iso(S.anchor)}); if (S.doc) u.set('docente', S.doc);
+  history.replaceState(null, '', '?' + u);
+  document.querySelectorAll('#ical-links a').forEach(l => {
+    const base = l.href.split('?')[0]; l.href = base + (S.doc ? '?docente=' + S.doc : '');
+  });
+  $('#nota-lezioni').hidden = !!S.doc;
+  fetch('{{ url_for("calendario.dati") }}?' + q).then(r => r.json()).then(j => {
+    if (n !== S.req) return;
+    S.eventi = j.impegni; render();
+  });
+}
+
+function lanes(list) {
+  list = list.slice().sort((x,y) => mm(x.ora_inizio)-mm(y.ora_inizio) || mm(y.ora_fine)-mm(x.ora_fine));
+  const res = []; let grp = [], end = 0;
+  const flush = () => { const ls = []; grp.forEach(e => { let k = 0; while (ls[k] && ls[k] > mm(e.ora_inizio)) k++; ls[k] = mm(e.ora_fine); e.lane = k; });
+    grp.forEach(e => { e.n = ls.length; res.push(e); }); grp = []; };
+  list.forEach(e => { if (grp.length && mm(e.ora_inizio) >= end) flush(); grp.push(e); end = Math.max(end, mm(e.ora_fine)); });
+  flush(); return res;
+}
+
+const stile = e => 'style="--c:var(--c-'+e.fonte+');--bg:var(--c-'+e.fonte+'-bg)"';
+
+function griglia(giorni) {
+  const gt = '46px repeat('+giorni.length+',minmax(0,1fr))', oggi = iso(new Date());
+  let h = '<div class="cal-head" style="grid-template-columns:'+gt+'"><div></div>';
+  giorni.forEach(d => h += '<div class="'+(iso(d)===oggi?'oggi':'')+'">'+GIORNI[(d.getDay()+6)%7]+'<b>'+d.getDate()+'</b></div>');
+  h += '</div>';
+  const senza = S.eventi.filter(e => !e.ora_inizio);
+  if (senza.length) {
+    h += '<div class="cal-allday" style="grid-template-columns:'+gt+'"><div></div>';
+    giorni.forEach(d => { h += '<div>'; senza.filter(e => e.data === iso(d)).forEach(e =>
+      h += '<button class="cal-chip '+(e.conflitti.length?'conf ':'')+(S.sel===e.id?'sel':'')+'" data-id="'+esc(e.id)+'" '+stile(e)+'>'+esc(e.titolo)+'</button>'); h += '</div>'; });
+    h += '</div>';
+  }
+  h += '<div class="cal-body" style="grid-template-columns:'+gt+'"><div class="cal-hours">';
+  for (let o = ORA0; o < ORA0+11; o++) h += '<div>'+String(o).padStart(2,'0')+':00</div>';
+  h += '</div>';
+  giorni.forEach(d => {
+    h += '<div class="cal-col">';
+    lanes(S.eventi.filter(e => e.ora_inizio && e.data === iso(d)).map(e => Object.assign({}, e))).forEach(e => {
+      const top = Math.max((mm(e.ora_inizio)-ORA0*60)/60*H, 0), ht = Math.max((mm(e.ora_fine)-mm(e.ora_inizio))/60*H-2, 18), w = 100/e.n;
+      h += '<button class="cal-ev '+(e.fonte==='lezione'?'lez ':'')+(e.conflitti.length?'conf ':'')+(S.sel===e.id?'sel':'')+'" data-id="'+esc(e.id)+'" style="top:'+top+'px;height:'+ht+'px;left:calc('+e.lane*w+'% + 1px);width:calc('+w+'% - 3px);--c:var(--c-'+e.fonte+');--bg:var(--c-'+e.fonte+'-bg)"><b>'+esc(e.titolo)+'</b><span>'+e.ora_inizio+'–'+e.ora_fine+'</span></button>';
+    });
+    h += '</div>';
+  });
+  return h + '</div>';
+}
+
+function mese() {
+  const a = S.anchor, [start] = intervallo();
+  let h = '<div class="cal-mese">' + GIORNI.concat(['Dom']).map(g => '<div class="dh">'+g+'</div>').join('');
+  for (let i = 0; i < 42; i++) {
+    const d = addD(start,i); if (i >= 35 && d.getMonth() !== a.getMonth()) break;
+    const del = S.eventi.filter(e => e.data === iso(d));
+    h += '<div class="cal-cell '+(d.getMonth()!==a.getMonth()?'fuori':'')+'"><div class="n">'+d.getDate()+'</div>';
+    del.slice(0,3).forEach(e => h += '<button class="cal-chip '+(e.conflitti.length?'conf ':'')+(S.sel===e.id?'sel':'')+'" data-id="'+esc(e.id)+'" '+stile(e)+'>'+(e.ora_inizio||'')+' '+esc(e.titolo)+'</button>');
+    if (del.length > 3) h += '<div class="cal-more">+'+(del.length-3)+' altri</div>';
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+function render() {
+  const [da, a] = intervallo(); let giorni = [];
+  if (S.v === 'giorno') { giorni = [S.anchor]; $('#range').textContent = GIORNI[(S.anchor.getDay()+6)%7]+' '+S.anchor.getDate()+' '+MESI[S.anchor.getMonth()]+' '+S.anchor.getFullYear(); }
+  else if (S.v === 'settimana') { for (let i = 0; i < 6; i++) giorni.push(addD(da,i)); $('#range').textContent = 'Settimana dal '+da.getDate()+' '+MESI[da.getMonth()]+' al '+a.getDate()+' '+MESI[a.getMonth()]+' '+a.getFullYear(); }
+  else $('#range').textContent = MESI[S.anchor.getMonth()]+' '+S.anchor.getFullYear();
+  $('#cal').innerHTML = S.v === 'mese' ? mese() : griglia(giorni);
+  const nc = S.eventi.filter(e => e.conflitti.length).length;
+  $('#sum').innerHTML = S.eventi.length+' impegni'+(nc ? ' · <span class="bad">'+nc+' in sovrapposizione</span>' : ' · nessuna sovrapposizione');
+  dettaglio();
+}
+
+function dettaglio() {
+  const e = S.eventi.find(x => x.id === S.sel), box = $('#detail');
+  if (!e) { box.innerHTML = '<span class="m">Seleziona un impegno per vedere il dettaglio e aprire la pagina di origine.</span>'; return; }
+  box.innerHTML = '<h2>'+esc(e.titolo)+'</h2><div class="m"><span class="cal-sw" style="background:var(--c-'+e.fonte+')"></span> '+esc(FONTI[e.fonte])+' · '+e.data.split('-').reverse().join('/')+' · '+(e.ora_inizio ? e.ora_inizio+'–'+e.ora_fine : 'senza orario')+(e.classe ? ' · classe '+esc(e.classe) : '')+'</div>'
+    + (e.docenti.length ? '<div class="m">Docenti: '+e.docenti.map(esc).join(', ')+(e.ds ? ' · richiede il DS' : '')+'</div>' : '')
+    + e.conflitti.map(w => '<div class="warn">Attenzione: '+esc(w)+'</div>').join('')
+    + '<div><a href="'+esc(e.url)+'">Apri la pagina di origine →</a></div>';
+}
+
+document.addEventListener('click', ev => { const b = ev.target.closest('[data-id]'); if (b && $('#cal').contains(b)) { S.sel = b.dataset.id; render(); } });
+document.querySelectorAll('.cal-seg button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.v === S.v);
+  b.onclick = () => { S.v = b.dataset.v; document.querySelectorAll('.cal-seg button').forEach(x => x.setAttribute('aria-pressed', x === b)); carica(); }; });
+const passo = n => { const a = new Date(S.anchor);
+  if (S.v === 'giorno') a.setDate(a.getDate()+n); else if (S.v === 'settimana') a.setDate(a.getDate()+7*n); else a.setMonth(a.getMonth()+n, 1);
+  S.anchor = a; carica(); };
+$('#prev').onclick = () => passo(-1); $('#next').onclick = () => passo(1);
+$('#oggi').onclick = () => { S.anchor = new Date(); S.anchor.setHours(12,0,0,0); carica(); };
+$('#docente').onchange = e => { S.doc = e.target.value; S.sel = null; carica(); };
+$('#legend').addEventListener('change', e => { const k = e.target.dataset.k; if (!k) return; e.target.checked ? S.off.delete(k) : S.off.add(k); carica(); });
+carica();
+})();
+</script>
+{% endblock %}

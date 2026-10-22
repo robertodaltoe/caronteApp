@@ -65,6 +65,8 @@ FUNZIONI = [
          sezione='supplenze', icona='school', parole='potenziamento compresenza', azione=True),
     dict(label='Agenda supplenze e indisponibilità', endpoint='agenda.index', gruppo='giornata',
          sezione='agenda', icona='calendar', parole='agenda calendario settimana', blueprint=True),
+    dict(label='Calendario impegni', endpoint='calendario.index', gruppo='giornata',
+         sezione='agenda', icona='calendar', parole='calendario impegni settimana mese giorno ical riunioni', blueprint=True),
     dict(label='Cambi turno', endpoint='cambi.lista', gruppo='giornata',
          sezione='cambi', icona='swap', parole='cambio quadro scambio ore restituzione', blueprint=True),
     dict(label='Display', endpoint='display.display', gruppo='giornata',
