@@ -580,7 +580,7 @@ main.container:focus { outline: none; }
         {% endif %}
     {% endif %}
 
-    {% if puo_vedere('attivita') or puo_vedere('attivita_istituzionali') or puo_vedere('attivita_differite') or puo_vedere('piano_personale') %}
+    {% if puo_vedere('attivita') or puo_vedere('attivita_istituzionali') or puo_vedere('attivita_differite') or puo_vedere('piano_personale') or puo_vedere('agenda') %}
     <div class="nav-dropdown">
         <a href="#" role="button" aria-haspopup="true" aria-expanded="false"{% if nav_area == 'attivita' %} class="active"{% endif %}><span class="nav-ic">{{ icon('list') }}</span> Attività</a>
         <div class="nav-drop-menu">
@@ -590,6 +590,9 @@ main.container:focus { outline: none; }
             {% if puo_vedere('attivita_istituzionali') %}
             <a href="{{ url_for('attivita_ist.lista') }}"><span class="nav-ic">{{ icon('building') }}</span> Attività istituzionali</a>
             <a href="{{ url_for('attivita_ist.piano_annuale') }}"><span class="nav-ic">{{ icon('list') }}</span> Piano delle attività</a>
+            {% endif %}
+            {% if puo_vedere('agenda') %}
+            <a href="{{ url_for('calendario.index') }}" title="Vista giorno/settimana/mese di riunioni, progetti, assenze e lezioni"><span class="nav-ic">{{ icon('calendar') }}</span> Calendario impegni</a>
             {% endif %}
             {% if puo_vedere('attivita_differite') %}
             <a href="{{ url_for('att_differite.index') }}" title="Recuperi di giugno/agosto, rientro dall'estero, esami integrativi"><span class="nav-ic">{{ icon('clock') }}</span> Attività differite</a>
