@@ -1042,46 +1042,55 @@ def riepilogo_ore():
 
 # ── VERIFICA SOVRAPPOSIZIONI ─────────────────────────────────────────────────
 # Richiesta esplicita di Roberto dopo aver spostato le date di alcune
-# attività: controllare se un docente si ritrova su due impegni che si
-# accavallano. Due fonti, combinate nella stessa pagina:
-# 1. riunione vs riunione (modules/verifica_sovrapposizioni_riunioni.py,
-#    nuovo);
-# 2. riunione vs sessione di un modulo Progetti FSE/FESR — dove finiscono
-#    i docenti tutor/esperti — già coperto da
-#    modules/conflitti_progetti_fse.py::trova_conflitti_progetti_fse()
-#    (nato per l'Agenda/calendario modulo, qui solo riusato).
+# attività: controllare ogni possibile accavallamento. Cinque fonti,
+# combinate nella stessa pagina (tutte considerano anche le giornate
+# delle attività multi-giorno, tranne la 2):
+# 1. riunione vs riunione, stesso docente
+#    (modules/verifica_sovrapposizioni_riunioni.py);
+# 2. riunione vs sessione di un modulo Progetti FSE/FESR — già coperto da
+#    modules/conflitti_progetti_fse.py::trova_conflitti_progetti_fse();
+# 3. riunione vs lezione pomeridiana dell'orario reale del docente
+#    (modules/verifica_orario_riunioni.py, solo ore pomeridiane);
+# 4. due eventi sulla stessa classe, anche senza docenti in comune;
+# 5. due eventi che richiedono entrambi il DS.
+def _raccogli_sovrapposizioni(data_da):
+    from modules.verifica_sovrapposizioni_riunioni import (
+        trova_sovrapposizioni_riunioni, trova_sovrapposizioni_classe,
+        trova_sovrapposizioni_ds)
+    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+    from modules.verifica_orario_riunioni import trova_conflitti_orario_riunioni
+    return dict(
+        sovrapposizioni=trova_sovrapposizioni_riunioni(data_da=data_da),
+        conflitti_fse=trova_conflitti_progetti_fse(data_da=data_da),
+        conflitti_lezioni=trova_conflitti_orario_riunioni(data_da=data_da),
+        sovrapposizioni_classe=trova_sovrapposizioni_classe(data_da=data_da),
+        sovrapposizioni_ds=trova_sovrapposizioni_ds(data_da=data_da),
+    )
+
+
 @attivita_ist_bp.route('/attivita-ist/verifica-sovrapposizioni')
 def verifica_sovrapposizioni():
     solo_future = request.args.get('solo_future', '1') == '1'
     data_da = date.today() if solo_future else None
-
-    from modules.verifica_sovrapposizioni_riunioni import trova_sovrapposizioni_riunioni
-    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
-
-    sovrapposizioni = trova_sovrapposizioni_riunioni(data_da=data_da)
-    conflitti_fse = trova_conflitti_progetti_fse(data_da=data_da)
-
     return render_template('attivita_ist/verifica_sovrapposizioni.html',
-        solo_future=solo_future,
-        sovrapposizioni=sovrapposizioni,
-        conflitti_fse=conflitti_fse)
+        solo_future=solo_future, **_raccogli_sovrapposizioni(data_da))
 
 
 @attivita_ist_bp.route('/attivita-ist/verifica-sovrapposizioni/xlsx')
 def verifica_sovrapposizioni_xlsx():
     import io
     from flask import send_file
-    from modules.verifica_sovrapposizioni_riunioni import (
-        trova_sovrapposizioni_riunioni, genera_xlsx_sovrapposizioni)
-    from modules.conflitti_progetti_fse import trova_conflitti_progetti_fse
+    from modules.verifica_sovrapposizioni_riunioni import genera_xlsx_sovrapposizioni
 
     solo_future = request.args.get('solo_future', '1') == '1'
     data_da = date.today() if solo_future else None
 
-    sovrapposizioni = trova_sovrapposizioni_riunioni(data_da=data_da)
-    conflitti_fse = trova_conflitti_progetti_fse(data_da=data_da)
-
-    wb = genera_xlsx_sovrapposizioni(sovrapposizioni, conflitti_fse)
+    r = _raccogli_sovrapposizioni(data_da)
+    wb = genera_xlsx_sovrapposizioni(
+        r['sovrapposizioni'], r['conflitti_fse'],
+        conflitti_lezioni=r['conflitti_lezioni'],
+        sovrapposizioni_classe=r['sovrapposizioni_classe'],
+        sovrapposizioni_ds=r['sovrapposizioni_ds'])
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)

@@ -55,8 +55,9 @@ def trova_conflitti_orario_riunioni(data_da=None, data_a=None):
     from models.orario_docente import OrarioDocente
     from models.docente import Docente
 
-    q = AttivitaIst.query.filter(
-        AttivitaIst.ora_inizio.isnot(None), AttivitaIst.ora_fine.isnot(None))
+    from modules.verifica_sovrapposizioni_riunioni import fasce_evento
+
+    q = AttivitaIst.query
     if data_da:
         q = q.filter(AttivitaIst.data >= data_da)
     if data_a:
@@ -70,24 +71,30 @@ def trova_conflitti_orario_riunioni(data_da=None, data_a=None):
         partecipanti_ids = ev.partecipanti_convocati_ids
         if not partecipanti_ids:
             continue
-        giorno = ev.data.weekday()
-        slots = OrarioDocente.query.filter(
-            OrarioDocente.giorno == giorno,
-            OrarioDocente.id_docente.in_(partecipanti_ids),
-            OrarioDocente.ora.in_(MAPPA_ORE_POMERIDIANE.keys()),
-        ).all()
-        for s in slots:
-            if s.classe in _CLASSI_NON_REALI or s.tipo_ora not in _TIPI_ORA_REALI:
+        # Attivita' multi-giorno: ogni giornata (sessione) ha il suo
+        # giorno della settimana e il suo orario.
+        for data_f, f_ini, f_fine in fasce_evento(ev):
+            if (data_da and data_f < data_da) or (data_a and data_f > data_a):
                 continue
-            ora_ini, ora_fin = MAPPA_ORE_POMERIDIANE[s.ora]
-            if ev.ora_inizio < ora_fin and ev.ora_fine > ora_ini:
-                conflitti.append({
-                    'evento': ev,
-                    'docente': docenti_map.get(s.id_docente),
-                    'ora_lezione': s.ora,
-                    'ora_lezione_clock': f'{ora_ini}–{ora_fin}',
-                    'classe_lezione': s.classe,
-                    'materia_lezione': s.materia,
-                })
+            slots = OrarioDocente.query.filter(
+                OrarioDocente.giorno == data_f.weekday(),
+                OrarioDocente.id_docente.in_(partecipanti_ids),
+                OrarioDocente.ora.in_(MAPPA_ORE_POMERIDIANE.keys()),
+            ).all()
+            for s in slots:
+                if s.classe in _CLASSI_NON_REALI or s.tipo_ora not in _TIPI_ORA_REALI:
+                    continue
+                ora_ini, ora_fin = MAPPA_ORE_POMERIDIANE[s.ora]
+                if f_ini < ora_fin and f_fine > ora_ini:
+                    conflitti.append({
+                        'evento': ev,
+                        'data': data_f,
+                        'fascia': (f_ini, f_fine),
+                        'docente': docenti_map.get(s.id_docente),
+                        'ora_lezione': s.ora,
+                        'ora_lezione_clock': f'{ora_ini}–{ora_fin}',
+                        'classe_lezione': s.classe,
+                        'materia_lezione': s.materia,
+                    })
 
     return conflitti
