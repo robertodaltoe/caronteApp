@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 {% from '_icons.html' import icon %}
-{% block title %}Verifica sovrapposizioni tra riunioni{% endblock %}
+{% block title %}Verifica sovrapposizioni{% endblock %}
 
 {% block content %}
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
     <a href="{{ url_for('attivita_ist.lista') }}" class="btn btn-primary btn-sm">{{ icon('arrow-left') }} Attività Istituzionali</a>
-    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('warning') }} Verifica sovrapposizioni tra riunioni</h1>
+    <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('warning') }} Verifica sovrapposizioni</h1>
 </div>
 <p style="color:var(--grigio); font-size:.85rem; margin-bottom:16px; max-width:760px;">
-    Controlla se un docente si ritrova su due impegni nello stesso giorno con orari che si
-    accavallano: sia fra due riunioni istituzionali (Consigli di classe, scrutini, collegi...),
-    sia fra una riunione e una sessione di un modulo Progetti FSE/FESR (dove il docente compare
-    come tutor o esperto).
+    Controlla ogni possibile accavallamento tra le attività istituzionali: stesso docente su due
+    riunioni, riunione e sessione di un modulo Progetti FSE/FESR, riunione e lezione del
+    pomeriggio (6ª–8ª ora) dell'orario reale, due eventi sulla stessa classe, due eventi che
+    richiedono entrambi il Dirigente. Le attività su più giorni sono controllate giornata per
+    giornata (tranne il confronto con i Progetti FSE/FESR, che usa solo la prima giornata).
+    Le lezioni del mattino non sono controllate.
 </p>
 
+{% set totale = sovrapposizioni|length + conflitti_fse|length + conflitti_lezioni|length + sovrapposizioni_classe|length + sovrapposizioni_ds|length %}
 <div style="margin-bottom:16px; display:flex; gap:8px;">
     <a href="{{ url_for('attivita_ist.verifica_sovrapposizioni', solo_future=1) }}" class="btn btn-sm"
        style="{% if solo_future %}background:var(--blu);color:white;{% else %}background:#eef1f5;color:#374151;{% endif %}">
@@ -23,7 +26,7 @@
        style="{% if not solo_future %}background:var(--blu);color:white;{% else %}background:#eef1f5;color:#374151;{% endif %}">
         Tutto l'anno
     </a>
-    {% if sovrapposizioni or conflitti_fse %}
+    {% if totale %}
     <a href="{{ url_for('attivita_ist.verifica_sovrapposizioni_xlsx', solo_future=1 if solo_future else 0) }}"
        class="btn btn-sm" style="background:var(--verde);color:white; margin-left:auto;">
         {{ icon('download') }} Esporta Excel
@@ -31,7 +34,6 @@
     {% endif %}
 </div>
 
-{% set totale = sovrapposizioni|length + conflitti_fse|length %}
 {% if not totale %}
 <div class="card" style="text-align:center; padding:32px; color:var(--grigio);">
     {{ icon('check') }} Nessuna sovrapposizione trovata{{ ' da oggi in poi' if solo_future else '' }}.
@@ -59,18 +61,18 @@
         <tbody>
             {% for s in sovrapposizioni %}
             <tr>
-                <td>{{ s.evento1.data.strftime('%d/%m/%Y') }}</td>
+                <td>{{ (s.data or s.evento1.data).strftime('%d/%m/%Y') }}</td>
                 <td>
                     {{ s.evento1.titolo }}
                     {%- if s.evento1.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ s.evento1.classe }}</span>{% endif %}
                     <br>
-                    <span style="font-size:.78rem; color:var(--grigio);">{{ s.evento1.ora_inizio }}–{{ s.evento1.ora_fine }}</span>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ s.ora1[0] }}–{{ s.ora1[1] }}</span>
                 </td>
                 <td>
                     {{ s.evento2.titolo }}
                     {%- if s.evento2.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ s.evento2.classe }}</span>{% endif %}
                     <br>
-                    <span style="font-size:.78rem; color:var(--grigio);">{{ s.evento2.ora_inizio }}–{{ s.evento2.ora_fine }}</span>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ s.ora2[0] }}–{{ s.ora2[1] }}</span>
                 </td>
                 <td>{{ s.docente.cognome if s.docente else '?' }} {{ s.docente.nome if s.docente else '' }}</td>
             </tr>
@@ -83,7 +85,7 @@
 
 {% if conflitti_fse %}
 <h2 style="font-size:1.05rem; color:var(--blu); margin-bottom:8px;">Riunione — sessione Progetti FSE/FESR</h2>
-<div class="card" style="padding:0; overflow:hidden;">
+<div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
     <div style="overflow-x:auto;">
     <table style="table-layout:fixed; min-width:800px; width:100%;">
         <thead>
@@ -111,6 +113,97 @@
                     <span style="font-size:.78rem; color:var(--grigio);">{{ c.sessione.ora_inizio }}–{{ c.sessione.ora_fine }}</span>
                 </td>
                 <td>{{ c.docente.cognome if c.docente else '?' }} {{ c.docente.nome if c.docente else '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+{% macro cella_evento(ev, ora) %}
+    {{ ev.titolo }}
+    {%- if ev.classe %} <span class="badge badge-blu" style="font-size:.72rem;">{{ ev.classe }}</span>{% endif %}
+    <br>
+    <span style="font-size:.78rem; color:var(--grigio);">{{ ora[0] }}–{{ ora[1] }}</span>
+    · <a href="{{ url_for('attivita_ist.presenze', id=ev.id) }}" style="font-size:.78rem;">Apri →</a>
+{% endmacro %}
+
+{% if conflitti_lezioni %}
+<h2 style="font-size:1.05rem; color:var(--blu); margin-bottom:8px;">Riunione — lezione dell'orario (pomeriggio)</h2>
+<div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:800px; width:100%;">
+        <thead>
+            <tr>
+                <th style="width:130px;">Data</th>
+                <th>Riunione</th>
+                <th style="width:150px;">Docente</th>
+                <th style="width:190px;">Lezione reale</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in conflitti_lezioni %}
+            <tr>
+                <td>{{ c.data.strftime('%d/%m/%Y') }}</td>
+                <td>{{ cella_evento(c.evento, c.fascia) }}</td>
+                <td>{{ c.docente.cognome if c.docente else '?' }} {{ c.docente.nome if c.docente else '' }}</td>
+                <td>{{ c.ora_lezione }}ª ora ({{ c.ora_lezione_clock }})<br>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ c.classe_lezione }}{% if c.materia_lezione %} — {{ c.materia_lezione }}{% endif %}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+{% if sovrapposizioni_classe %}
+<h2 style="font-size:1.05rem; color:var(--blu); margin-bottom:8px;">Stessa classe nello stesso momento</h2>
+<div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:800px; width:100%;">
+        <thead>
+            <tr>
+                <th style="width:130px;">Data</th>
+                <th style="width:110px;">Classe</th>
+                <th>1ª riunione</th>
+                <th>2ª riunione</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sovrapposizioni_classe %}
+            <tr>
+                <td>{{ s.data.strftime('%d/%m/%Y') }}</td>
+                <td>{{ s.classe }}</td>
+                <td>{{ cella_evento(s.evento1, s.ora1) }}</td>
+                <td>{{ cella_evento(s.evento2, s.ora2) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+{% if sovrapposizioni_ds %}
+<h2 style="font-size:1.05rem; color:var(--blu); margin-bottom:8px;">Presenza del Dirigente richiesta in due eventi</h2>
+<div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+    <div style="overflow-x:auto;">
+    <table style="table-layout:fixed; min-width:800px; width:100%;">
+        <thead>
+            <tr>
+                <th style="width:130px;">Data</th>
+                <th>1ª riunione</th>
+                <th>2ª riunione</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sovrapposizioni_ds %}
+            <tr>
+                <td>{{ s.data.strftime('%d/%m/%Y') }}</td>
+                <td>{{ cella_evento(s.evento1, s.ora1) }}</td>
+                <td>{{ cella_evento(s.evento2, s.ora2) }}</td>
             </tr>
             {% endfor %}
         </tbody>

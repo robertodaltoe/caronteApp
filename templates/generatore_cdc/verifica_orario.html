@@ -50,8 +50,8 @@
         <tbody>
             {% for c in conflitti %}
             <tr>
-                <td>{{ c.evento.data.strftime('%d/%m/%Y') }}<br>
-                    <span style="font-size:.78rem; color:var(--grigio);">{{ c.evento.ora_inizio }}–{{ c.evento.ora_fine }}</span>
+                <td>{{ (c.data or c.evento.data).strftime('%d/%m/%Y') }}<br>
+                    <span style="font-size:.78rem; color:var(--grigio);">{{ c.fascia[0] if c.fascia else c.evento.ora_inizio }}–{{ c.fascia[1] if c.fascia else c.evento.ora_fine }}</span>
                 </td>
                 <td>
                     {{ c.evento.titolo }}

@@ -2,6 +2,26 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 80 — Verifica sovrapposizioni completa (lezioni, classe, DS, multi-giorno)
+
+Roberto: la pagina "Verifica sovrapposizioni" di Attivita' Istituzionali
+controllava solo riunione-riunione (stesso docente) e riunione-sessione
+FSE/FESR, NON le lezioni dell'orario (quel controllo esisteva solo in
+Genera piano attivita' -> Verifica conflitti orario). Chiesto: una
+verifica per ogni sovrapposizione possibile, **senza ore del mattino**.
+
+Ora la pagina (e l'export Excel, un foglio per fonte) copre: riunione-
+riunione per docente; riunione-sessione FSE/FESR (invariata, usa solo la
+prima giornata di un'attivita' multi-giorno); riunione-lezione
+pomeridiana (6a-8a ora, `verifica_orario_riunioni`, riusata); due eventi
+sulla stessa classe anche senza docenti in comune; due eventi con
+`richiede_ds` insieme. Le attivita' multi-giorno (`AttivitaIstSessione`)
+sono ora confrontate giornata per giornata (prima solo data/ora
+principali): `fasce_evento()` in `verifica_sovrapposizioni_riunioni.py`.
+Non esiste un campo aula su AttivitaIst, quindi nessun controllo aule.
+Sandbox Linux; verifica pagina e xlsx su copia in /tmp (DB nuovo), mai
+sul database.db reale. 670 test verdi.
+
 ## Sessione 79 — Posti vacanti nell'orario (docenti non ancora nominati)
 
 Roberto: l'orario importato contiene righe di docenti non ancora nominati

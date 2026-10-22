@@ -185,7 +185,7 @@ def test_route_verifica_sovrapposizioni_reachable_senza_dati(app, db_session, mo
 
 # ── export Excel ─────────────────────────────────────────────────────
 
-def test_genera_xlsx_sovrapposizioni_contiene_entrambi_i_fogli(app, db_session):
+def test_genera_xlsx_sovrapposizioni_contiene_tutti_i_fogli(app, db_session):
     """genera_xlsx_sovrapposizioni() non passa da render_template (nessun
     problema di template_folder/base.html) -- verificabile direttamente."""
     from modules.verifica_sovrapposizioni_riunioni import genera_xlsx_sovrapposizioni
@@ -201,7 +201,8 @@ def test_genera_xlsx_sovrapposizioni_contiene_entrambi_i_fogli(app, db_session):
     sovrapposizioni = trova_sovrapposizioni_riunioni()
     wb = genera_xlsx_sovrapposizioni(sovrapposizioni, [])
 
-    assert wb.sheetnames == ['Riunione - riunione', 'Riunione - sessione FSE-FESR']
+    assert wb.sheetnames == ['Riunione - riunione', 'Riunione - sessione FSE-FESR',
+                              'Riunione - lezione', 'Stessa classe', 'Presenza DS']
     ws1 = wb['Riunione - riunione']
     assert ws1['A1'].value == 'Data'
     assert ws1.cell(row=2, column=1).value == '10/05/2027'
@@ -224,3 +225,84 @@ def test_route_verifica_sovrapposizioni_xlsx_scarica_un_file_valido(app, db_sess
         assert r.status_code == 200
         assert r.mimetype == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         assert r.data[:2] == b'PK'  # xlsx è uno zip
+
+
+# ── nuove verifiche: classe, DS, lezioni, multi-giorno ───────────────
+
+def test_sovrapposizione_stessa_classe_senza_docenti_in_comune(app, db_session):
+    from modules.verifica_sovrapposizioni_riunioni import trova_sovrapposizioni_classe
+    _crea_tabelle(app)
+    _evento('consiglio_classe', 'CdC', date(2027, 5, 10), '14:00', '16:00', '3A LSU')
+    _evento('scrutinio', 'Scrutinio', date(2027, 5, 10), '15:00', '17:00', '3ALSU')
+    _evento('scrutinio', 'Altra classe', date(2027, 5, 10), '15:00', '17:00', '2B CAT')
+    db.session.commit()
+    ris = trova_sovrapposizioni_classe()
+    assert len(ris) == 1
+    assert ris[0]['classe'] == '3A LSU'
+    assert trova_sovrapposizioni_riunioni() == []
+
+
+def test_sovrapposizione_ds_solo_se_entrambi_lo_richiedono(app, db_session):
+    from modules.verifica_sovrapposizioni_riunioni import trova_sovrapposizioni_ds
+    _crea_tabelle(app)
+    a = _evento('consiglio_classe', 'A', date(2027, 5, 10), '14:00', '16:00', '3A LSU')
+    b = _evento('consiglio_classe', 'B', date(2027, 5, 10), '15:00', '17:00', '2B CAT')
+    c = _evento('collegio', 'C', date(2027, 5, 10), '15:00', '17:00')
+    a.richiede_ds = b.richiede_ds = True
+    db.session.commit()
+    ris = trova_sovrapposizioni_ds()
+    assert len(ris) == 1
+    assert {ris[0]['evento1'].id, ris[0]['evento2'].id} == {a.id, b.id}
+
+
+def test_sovrapposizione_considera_le_giornate_di_attivita_multigiorno(app, db_session):
+    from models.attivita_ist import AttivitaIstSessione
+    _crea_tabelle(app)
+    d = crea_docente('Multi')
+    corso = _evento('formazione', 'Corso', date(2027, 5, 10), '09:00', '10:00')
+    db.session.add_all([
+        AttivitaIstSessione(id_attivita=corso.id, data=date(2027, 5, 10), ora_inizio='09:00', ora_fine='10:00'),
+        AttivitaIstSessione(id_attivita=corso.id, data=date(2027, 5, 12), ora_inizio='14:00', ora_fine='16:00'),
+    ])
+    cdc = _evento('consiglio_classe', 'CdC', date(2027, 5, 12), '15:00', '17:00', '3A LSU')
+    for ev in (corso, cdc):
+        db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id))
+    db.session.commit()
+    ris = trova_sovrapposizioni_riunioni()
+    assert len(ris) == 1
+    assert ris[0]['data'] == date(2027, 5, 12)
+    assert ris[0]['ora1'] == ('14:00', '16:00')
+
+
+def test_riunione_vs_lezione_pomeridiana_anche_in_giornata_di_sessione(app, db_session):
+    from models.attivita_ist import AttivitaIstSessione
+    from models.orario_docente import OrarioDocente
+    from modules.verifica_orario_riunioni import trova_conflitti_orario_riunioni
+    _crea_tabelle(app)
+    d = crea_docente('Lezione')
+    ev = _evento('formazione', 'Corso', date(2027, 5, 10), '09:00', '10:00')
+    db.session.add_all([
+        AttivitaIstSessione(id_attivita=ev.id, data=date(2027, 5, 10), ora_inizio='09:00', ora_fine='10:00'),
+        # mercoledi' 12/05/2027 = giorno 2, 7ª ora 13:25-14:25
+        AttivitaIstSessione(id_attivita=ev.id, data=date(2027, 5, 12), ora_inizio='14:00', ora_fine='16:00'),
+        AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id),
+        OrarioDocente(id_docente=d.id, giorno=2, ora=7, classe='3A LSU', materia='Storia', tipo_ora='lezione'),
+        # lunedi' mattina: non controllato
+        OrarioDocente(id_docente=d.id, giorno=0, ora=2, classe='3A LSU', materia='Storia', tipo_ora='lezione'),
+    ])
+    db.session.commit()
+    ris = trova_conflitti_orario_riunioni()
+    assert len(ris) == 1
+    assert ris[0]['data'] == date(2027, 5, 12)
+    assert ris[0]['ora_lezione'] == 7
+
+
+def test_route_passa_alla_pagina_tutte_le_verifiche(app, db_session, monkeypatch):
+    with app.app_context():
+        db.create_all()
+    catturato = _registra_blueprint(app, monkeypatch)
+    with app.test_client() as c:
+        assert c.get('/attivita-ist/verifica-sovrapposizioni?solo_future=0').status_code == 200
+    k = catturato['kwargs']
+    for chiave in ('conflitti_lezioni', 'sovrapposizioni_classe', 'sovrapposizioni_ds'):
+        assert k[chiave] == []
