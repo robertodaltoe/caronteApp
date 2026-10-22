@@ -31,7 +31,7 @@
     <div>
         <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('check') }} Presenze — {{ evento.tipo_emoji }} {{ evento.titolo }}</h1>
         <p style="font-size:.84rem; color:var(--grigio);">
-            {{ data_sel.strftime('%A %d/%m/%Y') | capitalize }}
+            {{ data_sel|strftime_it('%A %d/%m/%Y') | capitalize }}
             {% if ora_ini_sel %} · {{ ora_ini_sel }}{% if ora_fin_sel %}–{{ ora_fin_sel }}{% endif %}{% endif %}
             {% if not sessioni and evento.durata_ore > 0 %} · <strong>{{ '%.1f'|format(evento.durata_ore) }}h</strong>{% endif %}
         </p>

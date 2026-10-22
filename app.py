@@ -264,6 +264,18 @@ def create_app(avvio_con_reloader=True):
     app.jinja_env.filters['from_json'] = lambda s: json.loads(s) if s else []
     app.jinja_env.filters['enumerate'] = enumerate
 
+    # Date in italiano indipendenti dal locale di sistema: strftime('%A')
+    # dipende da it_IT e, con una codifica locale diversa da UTF-8,
+    # "Giovedì" diventava "GiovedÃ¬" (e dopo capitalize() "Giovedã¬").
+    from modules.prospetto_supplenze import GIORNI_IT, MESI_IT
+    def _strftime_it(d, fmt):
+        fmt = (fmt.replace('%A', GIORNI_IT[d.weekday()])
+                  .replace('%a', GIORNI_IT[d.weekday()][:3])
+                  .replace('%B', MESI_IT[d.month])
+                  .replace('%b', MESI_IT[d.month][:3]))
+        return d.strftime(fmt)
+    app.jinja_env.filters['strftime_it'] = _strftime_it
+
     # Protezione accesso — tutte le route tranne login/PIN e i link personali.
     #
     # 'display.display' NON è più qui (Sessione 69 addendum 6): mostra

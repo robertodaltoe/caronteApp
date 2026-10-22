@@ -55,7 +55,7 @@
 {% for data_sim, dati in prospetto.items() %}
 <div class="giorno-section">
     <div class="giorno-header">
-        <span>{{ icon('grid') }} {{ data_sim.strftime('%A %d %B %Y') }}</span>
+        <span>{{ icon('grid') }} {{ data_sim|strftime_it('%A %d %B %Y') }}</span>
         <span style="font-size:.85rem; font-weight:400;">
             {{ dati.righe|length }} supplenze da coprire
         </span>

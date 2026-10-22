@@ -165,7 +165,7 @@ details.mese-blocco:first-of-type .mese-header { margin-top: 0; }
                     <tr style="cursor:pointer; background:#fafbfc;" onclick="toggleGruppo('{{ grp_id }}')">
                         <td onclick="event.stopPropagation()"></td>
                         <td style="font-weight:700; vertical-align:top; text-transform:capitalize;">
-                            {% if loop.first %}{{ data_r.strftime('%A %d/%m') }}{% endif %}
+                            {% if loop.first %}{{ data_r|strftime_it('%A %d/%m') }}{% endif %}
                         </td>
                         <td>
                             {{ icon('chevron-down') }}
@@ -213,7 +213,7 @@ details.mese-blocco:first-of-type .mese-header { margin-top: 0; }
                     <tr>
                         <td><input type="checkbox" name="ids" value="{{ e.id }}" class="chk-blocco-piano" onchange="aggiornaBarraBlocco('piano')"></td>
                         <td style="font-weight:700; vertical-align:top; text-transform:capitalize;">
-                            {% if loop.first %}{{ data_r.strftime('%A %d/%m') }}{% endif %}
+                            {% if loop.first %}{{ data_r|strftime_it('%A %d/%m') }}{% endif %}
                         </td>
                         <td>
                             <span class="tipo-dot dot-{{ e.tipo }}"></span>{{ e.titolo }}

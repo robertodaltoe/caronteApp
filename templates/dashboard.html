@@ -112,7 +112,7 @@
             margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <div>
         <h1 style="font-size:1.5rem; color:var(--blu); font-weight:800;">
-            Supplenze del {{ data_sel.strftime('%A %d %B %Y').capitalize() }}
+            Supplenze del {{ (data_sel|strftime_it('%A %d %B %Y')).capitalize() }}
         </h1>
         <p style="color:var(--grigio); font-size:.88rem; margin-top:3px;">
             {% if data_sel == oggi %}Oggi{% else %}Data selezionata{% endif %}

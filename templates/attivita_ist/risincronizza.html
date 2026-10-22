@@ -6,7 +6,7 @@
 <div style="margin-bottom:16px;">
     <h1 style="font-size:1.3rem; color:var(--blu);">{{ icon('refresh') }} Risincronizza partecipanti</h1>
     <p style="font-size:.84rem; color:var(--grigio);">
-        {{ evento.tipo_emoji }} {{ evento.titolo }} — {{ evento.data.strftime('%A %d/%m/%Y') | capitalize }}
+        {{ evento.tipo_emoji }} {{ evento.titolo }} — {{ evento.data|strftime_it('%A %d/%m/%Y') | capitalize }}
     </p>
 </div>
 

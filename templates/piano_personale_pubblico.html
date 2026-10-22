@@ -129,7 +129,7 @@
                 {% set giorno = e.data.strftime('%d/%m/%Y') %}
                 {% if giorno != ns.giorno_corrente %}
                     {% set ns.giorno_corrente = giorno %}
-                    <div class="giorno-header">{{ e.data.strftime('%A %d %B %Y') | capitalize }}</div>
+                    <div class="giorno-header">{{ e.data|strftime_it('%A %d %B %Y') | capitalize }}</div>
                 {% endif %}
                 <div class="ev-row">
                     <label>
