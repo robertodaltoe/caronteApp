@@ -428,6 +428,7 @@ def create_app(avvio_con_reloader=True):
         from models.recupero import RecuperoDocente, RecuperoGruppo, RecuperoLezione, RecuperoAlunno, RecuperoVincolo, RecuperoImport, RecuperoPeriodo  # noqa
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
+        from models.email_uscita import EmailUscita  # noqa
         from models.permesso_ruolo import PermessoRuolo  # noqa
         from models.docente import DocenteContrattoAnno, DocenteColloquiAnno  # noqa
         from models.piano_attivita_personale import PianoAttivitaPersonale, PianoAttivitaPersonaleVoce  # noqa
