@@ -2,6 +2,42 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 81 — Calendario degli impegni (giorno/settimana/mese) + iCal
+
+Roberto: voleva una vista stile Google Calendar per avere subito sotto
+gli occhi gli impegni; confermato di partire da docente + istituto, con
+griglia fatta a mano (niente FullCalendar), accesso dalla scheda del
+singolo docente (Banca ore > docente, dove c'e' anche "Stampa orario")
+e dal menu azioni del tab Docenti del Report, ed export iCal.
+
+Nuova pagina `/calendario` (sola lettura): viste giorno/settimana/mese,
+filtro "Tutto l'istituto" o singolo docente, legenda con fonti
+attivabili. Fonti: Piano delle attivita' e Formazione (AttivitaIst,
+multi-giorno per sessione), Progetti FSE/FESR (SessioneFSE), Assenze
+(solo "Assenza <cognome>": il motivo non esce mai), Lezioni (solo con un
+docente scelto; saltano le sospensioni didattiche; l'orario con periodo
+di validita' prevale su quello "sempre valido"). Le sovrapposizioni NON
+hanno logica propria: `_conflitti()` riusa i controlli di Verifica
+sovrapposizioni (riunioni, classe, DS, FSE, lezioni pomeridiane) e marca
+gli impegni coinvolti in rosso. Logica in
+`modules/calendario_impegni.py`, route in `routes/calendario.py`
+(`/calendario/dati` JSON, max 62 giorni). Permessi: blueprint mappato
+sulla sezione `agenda` (nessuna nuova sezione/migrazione).
+
+iCal: `/calendario/ical/<piano|formazione|progetti>.ics[?docente=id]`,
+anno scolastico corrente, niente lezioni ne' assenze, orari "floating".
+Sono file da importare in Google Calendar, NON feed in abbonamento:
+l'app e' dietro login sul server scuola, Google non puo' raggiungerla.
+Un abbonamento richiederebbe URL con token segreto: non fatto, da
+decidere con Roberto.
+
+Limiti noti: il calendario per classe non c'e' ancora; Progetti istituto
+da agganciare quando esisteranno; i link di origine delle assenze e
+delle lezioni puntano a modifica assenza / orario globale.
+`tests/conftest.py` ora importa anche i modelli FSE (tabelle mancanti
+nel DB di test). Sandbox Linux; pagina verificata su copia in /tmp (DB
+nuovo) con browser headless, mai sul database.db reale. 676 test verdi.
+
 ## Sessione 80 — Verifica sovrapposizioni completa (lezioni, classe, DS, multi-giorno)
 
 Roberto: la pagina "Verifica sovrapposizioni" di Attivita' Istituzionali

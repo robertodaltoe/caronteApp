@@ -75,6 +75,11 @@
            title="Solo la griglia oraria settimanale, senza banca ore — anche vuota se l'orario non è ancora stato importato per questo docente">
             {{ icon('grid') }} Stampa orario
         </a>
+        <a href="{{ url_for('calendario.index', docente=docente.id) }}"
+           class="btn btn-sm" style="background:#6b7280;color:white;"
+           title="Calendario degli impegni di questo docente: riunioni, progetti, assenze e lezioni">
+            {{ icon('calendar') }} Calendario impegni
+        </a>
         <a href="{{ url_for('report.singolo_xlsx', id=docente.id, anno=anno) }}"
            class="btn btn-sm btn-success">
             {{ icon('chart') }} XLSX

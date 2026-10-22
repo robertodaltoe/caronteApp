@@ -191,6 +191,7 @@ BLUEPRINT_SEZIONE = {
     'supplenze':          'supplenze',
     'cambi':              'cambi',
     'agenda':             'agenda',
+    'calendario':         'agenda',
     'attivita':           'attivita',
     'attivita_ist':       'attivita_istituzionali',
     'formazione':         'attivita_istituzionali',

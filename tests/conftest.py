@@ -71,6 +71,7 @@ def app():
             TipoIncaricoContrattazione, ImpostazioniLetteraContrattazione,
             LetteraIncaricoProtocollo, PersonaleAta)
         from models.indisponibilita_ricorrente import IndisponibilitaRicorrente  # noqa
+        from models.progetto_fse import ProgettoFSE, ModuloFSE, IncaricoFSE, SessioneFSE  # noqa
         db.create_all()
         yield app
         db.session.remove()
