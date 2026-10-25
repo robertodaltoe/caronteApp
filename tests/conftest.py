@@ -64,6 +64,7 @@ def app():
         from models.colloqui_eccezione import ColloquiEccezione  # noqa
         from models.sync_conflitto import SyncConflitto  # noqa
         from models.sync_tombstone import SyncTombstone  # noqa
+        from models.email_uscita import EmailUscita  # noqa
         from models.alternativa_irc import (AlternativaIrcAdesione,  # noqa
             AlternativaIrcDisponibilita, AlternativaIrcGruppo, AlternativaIrcGruppoClasse)
         from models.contrattazione import (FondoContrattazione, CapitoloContrattazione,  # noqa
