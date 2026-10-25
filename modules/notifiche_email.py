@@ -48,9 +48,9 @@ def _solo_a():
 
 
 def giorno_default(oggi=None):
-    """Prossimo giorno feriale (lun-ven) dopo oggi."""
+    """Prossimo giorno di lezione (lun-sab) dopo oggi: il sabato notifica per lunedi'."""
     g = (oggi or date.today()) + timedelta(days=1)
-    while g.weekday() >= 5:
+    while g.weekday() == 6:
         g += timedelta(days=1)
     return g
 

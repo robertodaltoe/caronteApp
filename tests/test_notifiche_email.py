@@ -34,8 +34,9 @@ def _setup(giorni=3):
     return g, sost, ass
 
 
-def test_giorno_default_salta_weekend():
-    assert ne.giorno_default(date(2026, 10, 23)) == date(2026, 10, 26)  # ven -> lun
+def test_giorno_default_si_lavora_il_sabato():
+    assert ne.giorno_default(date(2026, 10, 23)) == date(2026, 10, 24)  # ven -> sab
+    assert ne.giorno_default(date(2026, 10, 24)) == date(2026, 10, 26)  # sab -> lun
     assert ne.giorno_default(date(2026, 10, 25)) == date(2026, 10, 26)  # dom -> lun
     assert ne.giorno_default(date(2026, 10, 26)) == date(2026, 10, 27)
 
