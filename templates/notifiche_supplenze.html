@@ -44,6 +44,25 @@
     </p>
 </div>
 
+<details class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <summary style="cursor:pointer; font-weight:700; font-size:.88rem;">Modello del messaggio</summary>
+    <form method="post" action="{{ url_for('mail_bozze.notifiche_supplenze_modello') }}" style="margin-top:10px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="data" value="{{ giorno.isoformat() }}">
+        <label style="font-size:.82rem; font-weight:700;">Saluto</label>
+        <input type="text" name="saluto" value="{{ modello.saluto }}" style="width:100%; margin-bottom:8px;">
+        <label style="font-size:.82rem; font-weight:700;">Frase prima dell'elenco</label>
+        <input type="text" name="apertura" value="{{ modello.apertura }}" style="width:100%; margin-bottom:8px;">
+        <label style="font-size:.82rem; font-weight:700;">Chiusura</label>
+        <textarea name="chiusura" rows="2" style="width:100%;">{{ modello.chiusura }}</textarea>
+        <p style="font-size:.75rem; color:var(--grigio); margin:6px 0;">
+            Segnaposto: <code>{{ segnaposto }}</code>. L'elenco (ora, classe, materia, tipo di ora) è automatico
+            e non contiene mai il nome del docente assente. Svuota un campo per ripristinare il testo predefinito.
+        </p>
+        <button class="btn btn-sm btn-primary" type="submit">Salva modello</button>
+    </form>
+</details>
+
 {% if risultati %}
 <div class="card" style="padding:12px 16px; margin-bottom:12px;">
     <h2 style="margin-bottom:8px;">Esito</h2>

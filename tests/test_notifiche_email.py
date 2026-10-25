@@ -46,7 +46,10 @@ def test_un_messaggio_per_docente_con_tutte_le_supplenze(app):
         g, sost, _ = _setup()
         p = ne.proposte_supplenze(g)
         assert len(p) == 1 and p[0]['variante'] == 'nuova'
-        assert '3A' in p[0]['corpo'] and '4B' in p[0]['corpo'] and 'Bianchi' in p[0]['corpo']
+        c = p[0]['corpo']
+        assert '3A' in c and '4B' in c
+        assert 'Bianchi' not in c  # dato potenzialmente sensibile
+        assert c.startswith('Gentile collega,')
 
 
 def test_off_non_registra(app, monkeypatch):
@@ -174,3 +177,26 @@ def test_banca_ore_reale_senza_pdf_invia_comunque_il_testo(app, monkeypatch):
         r = ne.invia_banca_ore(ne.primo_del_mese(), [a.id])
         assert r == [('Rossi', 'inviata', 'inviato senza PDF')]
         assert inviati and inviati[0][3] == []
+
+
+def test_riga_con_materia_e_tipo_ora(app):
+    from models.orario_docente import OrarioDocente
+    with app.test_request_context():
+        g, sost, ass = _setup()
+        db.session.add(OrarioDocente(id_docente=ass.id, giorno=g.weekday(), ora=3,
+                                     classe='3A', materia='Italiano'))
+        for s in Supplenza.query.filter_by(ora=3):
+            s.tipo = 'recupero'
+        db.session.commit()
+        c = ne.proposte_supplenze(g)[0]['corpo']
+        assert 'classe 3A, Italiano (recupero)' in c
+
+
+def test_modello_personalizzabile_con_default(app):
+    with app.test_request_context():
+        g, sost, _ = _setup()
+        ne.imposta_modello('Ciao {NOME}!', 'Per {GIORNO}:', 'Fine.')
+        c = ne.proposte_supplenze(g)[0]['corpo']
+        assert c.startswith('Ciao Mario!') and 'Per ' in c and c.rstrip().endswith('Fine.')
+        ne.imposta_modello('', '', '')
+        assert ne.proposte_supplenze(g)[0]['corpo'].startswith('Gentile collega,')

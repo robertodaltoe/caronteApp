@@ -79,3 +79,20 @@ def test_pagina_report_banca_ore_e_invio_simulato(app_reale, monkeypatch):
         EmailUscita.query.filter_by(id_docente=id_d).delete()
         Docente.query.filter_by(id=id_d).delete()
         db.session.commit()
+
+
+def test_salvataggio_modello_dalla_pagina(app_reale):
+    import re
+    from models import db
+    from models.config_app import ConfigApp
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        assert 'Modello del messaggio' in corpo and 'Gentile collega,' in corpo
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/notifiche-supplenze/modello',
+                   data={'csrf_token': tok, 'saluto': 'Buongiorno,', 'apertura': '', 'chiusura': ''})
+        assert r.status_code == 302
+        assert 'Buongiorno,' in c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+    with app_reale.app_context():
+        ConfigApp.query.filter(ConfigApp.chiave.like('email_modello_%')).delete(synchronize_session=False)
+        db.session.commit()

@@ -232,7 +232,8 @@ def notifiche_supplenze():
         giorno = ne.giorno_default()
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
-        solo_a=sorted(ne._solo_a()), risultati=None)
+        solo_a=sorted(ne._solo_a()), risultati=None, modello=ne.modello(),
+        segnaposto=ne.SEGNAPOSTO)
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/invia', methods=['POST'])
@@ -248,7 +249,8 @@ def notifiche_supplenze_invia():
              f'{giorno.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
-        solo_a=sorted(ne._solo_a()), risultati=risultati)
+        solo_a=sorted(ne._solo_a()), risultati=risultati, modello=ne.modello(),
+        segnaposto=ne.SEGNAPOSTO)
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/impostazioni', methods=['POST'])
@@ -293,3 +295,13 @@ def report_banca_ore_invia():
     auth_log('report_banca_ore_email',
              f'{mese.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return _render_banca_ore(mese, risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/modello', methods=['POST'])
+def notifiche_supplenze_modello():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    ne.imposta_modello(request.form.get('saluto'), request.form.get('apertura'),
+                       request.form.get('chiusura'))
+    auth_log('modello_notifiche_supplenze', 'testi aggiornati')
+    return redirect(url_for('mail_bozze.notifiche_supplenze', data=request.form.get('data', '')))

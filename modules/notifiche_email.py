@@ -14,10 +14,11 @@ variabile d'ambiente CARONTE_EMAIL_MODE):
             (CARONTE_EMAIL_SOLO_A o impostazione) e' compilata (indirizzi separati da virgola) si invia solo a
             quegli indirizzi: gli altri risultano 'saltata'.
 
+Il nome del docente assente non compare mai (dato potenzialmente sensibile).
 Variazioni: se per (docente, giorno) e' gia' stato inviato un messaggio
 e l'elenco poi cambia, la proposta diventa "variazione"; se l'elenco
-si svuota, "annullamento". Nel testo: data, ora, classe, assente; mai
-nomi di alunni.
+si svuota, "annullamento". Nel testo: data, ora, classe, materia, tipo di ora; mai
+nomi di alunni ne' del docente assente. Il testo e' personalizzabile (modello()).
 """
 import hashlib
 import os
@@ -81,21 +82,84 @@ def giorno_default(oggi=None):
     return g
 
 
+MODELLO_DEFAULT = {
+    'saluto': 'Gentile collega,',
+    'apertura': 'ti sono state assegnate le seguenti supplenze per {GIORNO}:',
+    'chiusura': ('Messaggio automatico del gestionale supplenze: '
+                 'in caso di dubbi contatta la vicepresidenza.'),
+}
+_CHIAVI_MODELLO = {k: f'email_modello_{k}' for k in MODELLO_DEFAULT}
+SEGNAPOSTO = '{GIORNO} {NOME} {COGNOME}'
+
+
+def modello():
+    """Testi del messaggio supplenze: impostazione salvata, altrimenti default."""
+    out = {}
+    for k, d in MODELLO_DEFAULT.items():
+        v = _config(_CHIAVI_MODELLO[k])
+        out[k] = v if v and v.strip() else d
+    return out
+
+
+def imposta_modello(saluto, apertura, chiusura):
+    """Salva i testi; un campo vuoto ripristina il default."""
+    from models.config_app import ConfigApp
+    for k, v in (('saluto', saluto), ('apertura', apertura), ('chiusura', chiusura)):
+        v = (v or '').strip()[:1000]
+        r = ConfigApp.query.filter_by(chiave=_CHIAVI_MODELLO[k]).first()
+        if r is None:
+            db.session.add(ConfigApp(chiave=_CHIAVI_MODELLO[k], valore=v))
+        else:
+            r.valore = v
+    db.session.commit()
+
+
+def _sostituisci(testo, docente, giorno):
+    return (testo.replace('{GIORNO}', _quando(giorno))
+                 .replace('{NOME}', docente.nome or '')
+                 .replace('{COGNOME}', docente.cognome or ''))
+
+
 def _etichetta_ora(ora):
     from routes.supplenze import ORA_LABEL
     return ORA_LABEL.get(ora, f'{ora}ª').replace('  ', ' ')
 
 
-def _riga(s, assenti):
+_TIPO_ORA = {'recupero': 'recupero', 'pagamento': 'pagamento',
+             'completamento': 'completamento', 'potenziamento': 'potenziamento',
+             'disposizione': 'a disposizione'}
+
+
+def _materia(s):
+    """Materia della lezione scoperta, dall'orario del docente assente."""
+    if not s.id_assente:
+        return None
+    from models.orario_docente import OrarioDocente
+    q = (OrarioDocente.query
+         .filter_by(id_docente=s.id_assente, giorno=s.data.weekday(), ora=s.ora)
+         .filter(db.or_(OrarioDocente.data_inizio_validita.is_(None),
+                        OrarioDocente.data_inizio_validita <= s.data))
+         .filter(db.or_(OrarioDocente.data_fine_validita.is_(None),
+                        OrarioDocente.data_fine_validita >= s.data)))
+    righe = q.all()
+    for r in righe:
+        if r.classe == s.classe and r.materia:
+            return r.materia
+    return next((r.materia for r in righe if r.materia), None)
+
+
+def _riga(s):
+    """Solo dati non sensibili: ora, classe, materia, tipo di ora.
+    Il nome del docente assente non compare mai."""
     testo = f'- {_etichetta_ora(s.ora)}'
     if s.classe:
         testo += f', classe {s.classe}'
-    ass = assenti.get(s.id_assente)
-    if ass is not None:
-        testo += f' (in sostituzione di {ass.cognome})'
-    extra = _TIPI_DA_MOSTRARE.get(s.tipo)
-    if extra:
-        testo += f' [{extra}]'
+    materia = _materia(s)
+    if materia:
+        testo += f', {materia}'
+    tipo = _TIPO_ORA.get(s.tipo)
+    if tipo:
+        testo += f' ({tipo})'
     return testo
 
 
@@ -113,11 +177,13 @@ def _saluto(d):
 
 def componi(docente, giorno, righe, variante):
     """Ritorna (oggetto, corpo). variante: nuova | variazione | annullamento."""
+    m = modello()
     quando = _quando(giorno)
-    firma = ['', 'Messaggio automatico di Caronte: in caso di dubbi contatta la vicepresidenza.']
+    saluto = _sostituisci(m['saluto'], docente, giorno)
+    firma = ['', _sostituisci(m['chiusura'], docente, giorno)]
     if variante == 'annullamento':
         oggetto = f'ANNULLAMENTO supplenze di {quando}'
-        corpo = [_saluto(docente), '',
+        corpo = [saluto, '',
                  f'le supplenze che ti erano state comunicate per {quando} sono state annullate.']
     else:
         prefisso = 'VARIAZIONE supplenze' if variante == 'variazione' else 'Supplenze'
@@ -125,8 +191,8 @@ def componi(docente, giorno, righe, variante):
         intro = (f'l\'elenco delle tue supplenze per {quando} è stato aggiornato; '
                  f'questo sostituisce il messaggio precedente:'
                  if variante == 'variazione'
-                 else f'ti sono state assegnate le seguenti supplenze per {quando}:')
-        corpo = [_saluto(docente), '', intro, ''] + righe
+                 else _sostituisci(m['apertura'], docente, giorno))
+        corpo = [saluto, '', intro, ''] + righe
     return oggetto, '\n'.join(corpo + firma)
 
 
@@ -155,15 +221,13 @@ def proposte_supplenze(giorno):
     if not ids:
         return []
     docenti = {d.id: d for d in Docente.query.filter(Docente.id.in_(ids)).all()}
-    assenti = {d.id: d for d in Docente.query.filter(
-        Docente.id.in_({s.id_assente for s in supp if s.id_assente})).all()} if supp else {}
 
     out = []
     for id_doc in ids:
         d = docenti.get(id_doc)
         if d is None:
             continue
-        righe = [_riga(s, assenti) for s in per_doc.get(id_doc, [])]
+        righe = [_riga(s) for s in per_doc.get(id_doc, [])]
         h = _hash(righe)
         prec = _ultimo_inviato(id_doc, giorno)
         if prec is None:
