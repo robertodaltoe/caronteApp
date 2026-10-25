@@ -19,15 +19,49 @@
         <label for="data" style="font-weight:700; font-size:.88rem;">Giorno</label>
         <input type="date" id="data" name="data" value="{{ giorno.isoformat() }}">
         <button class="btn btn-sm btn-primary" type="submit">Mostra</button>
-        <span style="font-size:.82rem;">
-            Modalità invio:
-            {% if modalita == 'off' %}<strong style="color:#b91c1c;">disattivato</strong> (solo anteprima)
-            {% elif modalita == 'simulato' %}<strong style="color:#b45309;">simulato</strong> (registra, non spedisce)
-            {% else %}<strong style="color:#166534;">reale</strong>{% if solo_a %} — solo a: {{ solo_a|join(', ') }}{% endif %}
-            {% endif %}
-        </span>
     </form>
 </div>
+
+<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <form method="post" action="{{ url_for('mail_bozze.notifiche_supplenze_impostazioni') }}"
+          style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:.85rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="data" value="{{ giorno.isoformat() }}">
+        <strong>Modalità invio</strong>
+        <select name="modalita">
+            <option value="off" {{ 'selected' if modalita == 'off' }}>Spento (solo anteprima)</option>
+            <option value="simulato" {{ 'selected' if modalita == 'simulato' }}>Simulato (registra, non spedisce)</option>
+            <option value="reale" {{ 'selected' if modalita == 'reale' }}>Reale (spedisce)</option>
+        </select>
+        <label>Solo a (prova, separati da virgola; vuoto = tutti)
+            <input type="text" name="solo_a" value="{{ solo_a|join(', ') }}" size="40">
+        </label>
+        <button class="btn btn-sm btn-primary" type="submit">Salva</button>
+    </form>
+    <p style="font-size:.75rem; color:var(--grigio); margin:6px 0 0;">
+        Con «Reale» l'invio parte dal tuo account Google solo dopo l'autorizzazione (vedi guida);
+        finché non è configurata ogni invio risulta «errore» e si può ripetere.
+    </p>
+</div>
+
+<details class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <summary style="cursor:pointer; font-weight:700; font-size:.88rem;">Modello del messaggio</summary>
+    <form method="post" action="{{ url_for('mail_bozze.notifiche_supplenze_modello') }}" style="margin-top:10px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="data" value="{{ giorno.isoformat() }}">
+        <label style="font-size:.82rem; font-weight:700;">Saluto</label>
+        <input type="text" name="saluto" value="{{ modello.saluto }}" style="width:100%; margin-bottom:8px;">
+        <label style="font-size:.82rem; font-weight:700;">Frase prima dell'elenco</label>
+        <input type="text" name="apertura" value="{{ modello.apertura }}" style="width:100%; margin-bottom:8px;">
+        <label style="font-size:.82rem; font-weight:700;">Chiusura</label>
+        <textarea name="chiusura" rows="2" style="width:100%;">{{ modello.chiusura }}</textarea>
+        <p style="font-size:.75rem; color:var(--grigio); margin:6px 0;">
+            Segnaposto: <code>{{ segnaposto }}</code>. L'elenco (ora, classe, materia, tipo di ora) è automatico
+            e non contiene mai il nome del docente assente. Svuota un campo per ripristinare il testo predefinito.
+        </p>
+        <button class="btn btn-sm btn-primary" type="submit">Salva modello</button>
+    </form>
+</details>
 
 {% if risultati %}
 <div class="card" style="padding:12px 16px; margin-bottom:12px;">

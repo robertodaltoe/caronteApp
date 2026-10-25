@@ -37,3 +37,62 @@ def test_pagina_e_invio_simulato(app_reale, monkeypatch):
         e = EmailUscita.query.filter_by(id_docente=id_s).one()
         assert e.stato == 'simulata'
         db.session.delete(e); db.session.commit()
+
+
+def test_selettore_modalita_salva_e_si_vede(app_reale):
+    from models import db
+    from models.config_app import ConfigApp
+    import re
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/notifiche-supplenze/impostazioni',
+                   data={'csrf_token': tok, 'modalita': 'simulato', 'solo_a': ''})
+        assert r.status_code == 302
+        assert '<option value="simulato" selected' in c.get(
+            '/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+    with app_reale.app_context():
+        for k in ('email_modalita', 'email_solo_a'):
+            ConfigApp.query.filter_by(chiave=k).delete()
+        db.session.commit()
+
+
+def test_pagina_report_banca_ore_e_invio_simulato(app_reale, monkeypatch):
+    import re
+    from models import db
+    from models.docente import Docente
+    from models.email_uscita import EmailUscita
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'simulato')
+    with app_reale.app_context():
+        d = Docente(cognome='ProvaBanca', nome='T', email='prova.banca@davincichiavenna.edu.it', attivo=True)
+        db.session.add(d); db.session.commit()
+        id_d = d.id
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
+        assert 'ProvaBanca' in corpo and 'Saldo netto' in corpo
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        mese = re.search(r'name="mese" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/report-banca-ore/invia',
+                   data={'csrf_token': tok, 'mese': mese, 'docenti': [id_d]})
+        assert r.status_code == 200 and 'simulata' in r.get_data(as_text=True)
+    with app_reale.app_context():
+        EmailUscita.query.filter_by(id_docente=id_d).delete()
+        Docente.query.filter_by(id=id_d).delete()
+        db.session.commit()
+
+
+def test_salvataggio_modello_dalla_pagina(app_reale):
+    import re
+    from models import db
+    from models.config_app import ConfigApp
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        assert 'Modello del messaggio' in corpo and 'Gentile collega,' in corpo
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/notifiche-supplenze/modello',
+                   data={'csrf_token': tok, 'saluto': 'Buongiorno,', 'apertura': '', 'chiusura': ''})
+        assert r.status_code == 302
+        assert 'Buongiorno,' in c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+    with app_reale.app_context():
+        ConfigApp.query.filter(ConfigApp.chiave.like('email_modello_%')).delete(synchronize_session=False)
+        db.session.commit()

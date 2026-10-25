@@ -232,7 +232,8 @@ def notifiche_supplenze():
         giorno = ne.giorno_default()
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
-        solo_a=sorted(ne._solo_a()), risultati=None)
+        solo_a=sorted(ne._solo_a()), risultati=None, modello=ne.modello(),
+        segnaposto=ne.SEGNAPOSTO)
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/invia', methods=['POST'])
@@ -248,4 +249,59 @@ def notifiche_supplenze_invia():
              f'{giorno.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
+        solo_a=sorted(ne._solo_a()), risultati=risultati, modello=ne.modello(),
+        segnaposto=ne.SEGNAPOSTO)
+
+
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/impostazioni', methods=['POST'])
+def notifiche_supplenze_impostazioni():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    nuova = request.form.get('modalita', '')
+    if nuova in ne.MODALITA_VALIDE:
+        ne.imposta(nuova, request.form.get('solo_a', ''))
+        auth_log('impostazioni_notifiche_email', f'modalita={nuova}')
+    return redirect(url_for('mail_bozze.notifiche_supplenze',
+                            data=request.form.get('data', '')))
+
+
+# ── REPORT BANCA ORE via email (mensile, tutti i docenti) ─────
+def _mese_da_richiesta(valore):
+    from modules import notifiche_email as ne
+    try:
+        return date.fromisoformat((valore or '') + '-01').replace(day=1)
+    except ValueError:
+        return ne.primo_del_mese()
+
+
+def _render_banca_ore(mese, risultati=None):
+    from modules import notifiche_email as ne
+    return render_template('notifiche_banca_ore.html', mese=mese,
+        proposte=ne.proposte_banca_ore(mese), modalita=ne.modalita(),
         solo_a=sorted(ne._solo_a()), risultati=risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/report-banca-ore')
+def report_banca_ore():
+    return _render_banca_ore(_mese_da_richiesta(request.args.get('mese')))
+
+
+@mail_bozze_bp.route('/mail-bozze/report-banca-ore/invia', methods=['POST'])
+def report_banca_ore_invia():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    mese = _mese_da_richiesta(request.form.get('mese'))
+    risultati = ne.invia_banca_ore(mese, request.form.getlist('docenti'))
+    auth_log('report_banca_ore_email',
+             f'{mese.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
+    return _render_banca_ore(mese, risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/modello', methods=['POST'])
+def notifiche_supplenze_modello():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    ne.imposta_modello(request.form.get('saluto'), request.form.get('apertura'),
+                       request.form.get('chiusura'))
+    auth_log('modello_notifiche_supplenze', 'testi aggiornati')
+    return redirect(url_for('mail_bozze.notifiche_supplenze', data=request.form.get('data', '')))

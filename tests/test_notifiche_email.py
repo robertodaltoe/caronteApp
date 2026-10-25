@@ -46,7 +46,10 @@ def test_un_messaggio_per_docente_con_tutte_le_supplenze(app):
         g, sost, _ = _setup()
         p = ne.proposte_supplenze(g)
         assert len(p) == 1 and p[0]['variante'] == 'nuova'
-        assert '3A' in p[0]['corpo'] and '4B' in p[0]['corpo'] and 'Bianchi' in p[0]['corpo']
+        c = p[0]['corpo']
+        assert '3A' in c and '4B' in c
+        assert 'Bianchi' not in c  # dato potenzialmente sensibile
+        assert c.startswith('Gentile collega,')
 
 
 def test_off_non_registra(app, monkeypatch):
@@ -125,3 +128,75 @@ def test_messaggio_gmail_senza_from_e_con_destinatario():
     from modules.gmail_invio import costruisci
     m = costruisci(MAIL, 'Oggetto', 'Corpo')
     assert m['To'] == MAIL and m['From'] is None
+
+
+def test_impostazione_salvata_vince_sulla_variabile(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    with app.test_request_context():
+        assert ne.modalita() == 'reale'
+        ne.imposta('simulato', 'a@davincichiavenna.edu.it; b@davincichiavenna.edu.it')
+        assert ne.modalita() == 'simulato'
+        assert ne._solo_a() == {'a@davincichiavenna.edu.it', 'b@davincichiavenna.edu.it'}
+        with pytest.raises(ValueError):
+            ne.imposta('boh')
+
+
+def test_banca_ore_tutti_i_docenti_un_invio_al_mese(app, monkeypatch):
+    from models.movimento_banca_ore import MovimentoBancaOre
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'simulato')
+    monkeypatch.setattr('routes.report.get_saldi_docente',
+                        lambda i, anno_scol=None: dict(supplenze=5, permessi=1, civica=0, pagamento=1))
+    monkeypatch.setattr('config_anno.get_anno_corrente', lambda: '2026-2027')
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', None)
+        db.session.commit()
+        mese = ne.primo_del_mese()
+        p = ne.proposte_banca_ore(mese)
+        assert len(p) == 2 and 'Saldo netto: 3 h' in p[1]['corpo'] + p[0]['corpo']
+        r = dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [a.id, b.id]))
+        assert r == {'Rossi': 'simulata', 'Verdi': 'saltata'}
+        assert ne.proposte_banca_ore(mese)[0]['variante'] == 'gia_inviata'
+        # saldi cambiati -> aggiornamento
+        monkeypatch.setattr('routes.report.get_saldi_docente',
+                            lambda i, anno_scol=None: dict(supplenze=9, permessi=1, civica=0, pagamento=1))
+        p = ne.proposte_banca_ore(mese)
+        assert p[0]['variante'] == 'aggiornamento' and p[0]['oggetto'].startswith('AGGIORNAMENTO')
+
+
+def test_banca_ore_reale_senza_pdf_invia_comunque_il_testo(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    monkeypatch.setattr('routes.report.get_saldi_docente',
+                        lambda i, anno_scol=None: dict(supplenze=2, permessi=0, civica=0, pagamento=0))
+    monkeypatch.setattr('config_anno.get_anno_corrente', lambda: '2026-2027')
+    monkeypatch.setattr(ne, '_pdf_banca_ore', lambda d: (_ for _ in ()).throw(RuntimeError('no weasyprint')))
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    with app.test_request_context():
+        a = _doc()
+        db.session.commit()
+        r = ne.invia_banca_ore(ne.primo_del_mese(), [a.id])
+        assert r == [('Rossi', 'inviata', 'inviato senza PDF')]
+        assert inviati and inviati[0][3] == []
+
+
+def test_riga_con_materia_e_tipo_ora(app):
+    from models.orario_docente import OrarioDocente
+    with app.test_request_context():
+        g, sost, ass = _setup()
+        db.session.add(OrarioDocente(id_docente=ass.id, giorno=g.weekday(), ora=3,
+                                     classe='3A', materia='Italiano'))
+        for s in Supplenza.query.filter_by(ora=3):
+            s.tipo = 'recupero'
+        db.session.commit()
+        c = ne.proposte_supplenze(g)[0]['corpo']
+        assert 'classe 3A, Italiano (recupero)' in c
+
+
+def test_modello_personalizzabile_con_default(app):
+    with app.test_request_context():
+        g, sost, _ = _setup()
+        ne.imposta_modello('Ciao {NOME}!', 'Per {GIORNO}:', 'Fine.')
+        c = ne.proposte_supplenze(g)[0]['corpo']
+        assert c.startswith('Ciao Mario!') and 'Per ' in c and c.rstrip().endswith('Fine.')
+        ne.imposta_modello('', '', '')
+        assert ne.proposte_supplenze(g)[0]['corpo'].startswith('Gentile collega,')
