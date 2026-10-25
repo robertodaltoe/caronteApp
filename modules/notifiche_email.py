@@ -6,11 +6,12 @@ calcola per ogni docente il messaggio con TUTTE le sue supplenze assegnate
 per il giorno scelto; Roberto vede l'anteprima e preme Invia. Lo stesso
 calcolo potra' essere lanciato da un job pianificato (invio automatico).
 
-Modalita', da variabile d'ambiente CARONTE_EMAIL_MODE:
+Modalita' (impostabile dalla pagina Notifiche supplenze; in mancanza vale la
+variabile d'ambiente CARONTE_EMAIL_MODE):
   off       (default) l'anteprima si vede ma non si invia/registra nulla;
   simulato  registra in email_uscita senza inviare;
-  reale     invia con modules/gmail_invio.py. Se CARONTE_EMAIL_SOLO_A e'
-            impostata (indirizzi separati da virgola) si invia solo a
+  reale     invia con modules/gmail_invio.py. Se la lista di prova
+            (CARONTE_EMAIL_SOLO_A o impostazione) e' compilata (indirizzi separati da virgola) si invia solo a
             quegli indirizzi: gli altri risultano 'saltata'.
 
 Variazioni: se per (docente, giorno) e' gia' stato inviato un messaggio
@@ -37,14 +38,39 @@ _GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'
 _TIPI_DA_MOSTRARE = {'disposizione': 'a disposizione', 'potenziamento': 'potenziamento'}
 
 
+def _config(chiave):
+    from models.config_app import ConfigApp
+    r = ConfigApp.query.filter_by(chiave=chiave).first()
+    return r.valore if r and r.valore is not None else None
+
+
+def imposta(modalita_nuova, solo_a=''):
+    """Salva modalita' e lista di prova nelle impostazioni dell'app."""
+    from models.config_app import ConfigApp
+    if modalita_nuova not in MODALITA_VALIDE:
+        raise ValueError('modalita non valida')
+    for chiave, valore in (('email_modalita', modalita_nuova),
+                           ('email_solo_a', (solo_a or '').strip())):
+        r = ConfigApp.query.filter_by(chiave=chiave).first()
+        if r is None:
+            db.session.add(ConfigApp(chiave=chiave, valore=valore))
+        else:
+            r.valore = valore
+    db.session.commit()
+
+
 def modalita():
-    m = (os.environ.get('CARONTE_EMAIL_MODE') or 'off').strip().lower()
+    """Impostazione salvata in Caronte; in mancanza, CARONTE_EMAIL_MODE; poi 'off'."""
+    m = (_config('email_modalita') or os.environ.get('CARONTE_EMAIL_MODE') or 'off')
+    m = m.strip().lower()
     return m if m in MODALITA_VALIDE else 'off'
 
 
 def _solo_a():
-    raw = os.environ.get('CARONTE_EMAIL_SOLO_A') or ''
-    return {x.strip().lower() for x in raw.split(',') if x.strip()}
+    raw = _config('email_solo_a')
+    if raw is None:
+        raw = os.environ.get('CARONTE_EMAIL_SOLO_A') or ''
+    return {x.strip().lower() for x in raw.replace(';', ',').split(',') if x.strip()}
 
 
 def giorno_default(oggi=None):

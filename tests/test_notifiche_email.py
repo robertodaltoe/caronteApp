@@ -125,3 +125,14 @@ def test_messaggio_gmail_senza_from_e_con_destinatario():
     from modules.gmail_invio import costruisci
     m = costruisci(MAIL, 'Oggetto', 'Corpo')
     assert m['To'] == MAIL and m['From'] is None
+
+
+def test_impostazione_salvata_vince_sulla_variabile(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    with app.test_request_context():
+        assert ne.modalita() == 'reale'
+        ne.imposta('simulato', 'a@davincichiavenna.edu.it; b@davincichiavenna.edu.it')
+        assert ne.modalita() == 'simulato'
+        assert ne._solo_a() == {'a@davincichiavenna.edu.it', 'b@davincichiavenna.edu.it'}
+        with pytest.raises(ValueError):
+            ne.imposta('boh')

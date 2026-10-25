@@ -249,3 +249,15 @@ def notifiche_supplenze_invia():
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
         solo_a=sorted(ne._solo_a()), risultati=risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/impostazioni', methods=['POST'])
+def notifiche_supplenze_impostazioni():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    nuova = request.form.get('modalita', '')
+    if nuova in ne.MODALITA_VALIDE:
+        ne.imposta(nuova, request.form.get('solo_a', ''))
+        auth_log('impostazioni_notifiche_email', f'modalita={nuova}')
+    return redirect(url_for('mail_bozze.notifiche_supplenze',
+                            data=request.form.get('data', '')))

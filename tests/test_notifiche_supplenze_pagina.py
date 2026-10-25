@@ -37,3 +37,21 @@ def test_pagina_e_invio_simulato(app_reale, monkeypatch):
         e = EmailUscita.query.filter_by(id_docente=id_s).one()
         assert e.stato == 'simulata'
         db.session.delete(e); db.session.commit()
+
+
+def test_selettore_modalita_salva_e_si_vede(app_reale):
+    from models import db
+    from models.config_app import ConfigApp
+    import re
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/notifiche-supplenze/impostazioni',
+                   data={'csrf_token': tok, 'modalita': 'simulato', 'solo_a': ''})
+        assert r.status_code == 302
+        assert '<option value="simulato" selected' in c.get(
+            '/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+    with app_reale.app_context():
+        for k in ('email_modalita', 'email_solo_a'):
+            ConfigApp.query.filter_by(chiave=k).delete()
+        db.session.commit()
