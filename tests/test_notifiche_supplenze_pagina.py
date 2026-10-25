@@ -55,3 +55,27 @@ def test_selettore_modalita_salva_e_si_vede(app_reale):
         for k in ('email_modalita', 'email_solo_a'):
             ConfigApp.query.filter_by(chiave=k).delete()
         db.session.commit()
+
+
+def test_pagina_report_banca_ore_e_invio_simulato(app_reale, monkeypatch):
+    import re
+    from models import db
+    from models.docente import Docente
+    from models.email_uscita import EmailUscita
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'simulato')
+    with app_reale.app_context():
+        d = Docente(cognome='ProvaBanca', nome='T', email='prova.banca@davincichiavenna.edu.it', attivo=True)
+        db.session.add(d); db.session.commit()
+        id_d = d.id
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
+        assert 'ProvaBanca' in corpo and 'Saldo netto' in corpo
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        mese = re.search(r'name="mese" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/report-banca-ore/invia',
+                   data={'csrf_token': tok, 'mese': mese, 'docenti': [id_d]})
+        assert r.status_code == 200 and 'simulata' in r.get_data(as_text=True)
+    with app_reale.app_context():
+        EmailUscita.query.filter_by(id_docente=id_d).delete()
+        Docente.query.filter_by(id=id_d).delete()
+        db.session.commit()

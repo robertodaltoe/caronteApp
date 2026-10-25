@@ -130,9 +130,9 @@ def componi(docente, giorno, righe, variante):
     return oggetto, '\n'.join(corpo + firma)
 
 
-def _ultimo_inviato(id_docente, giorno):
+def _ultimo_inviato(id_docente, giorno, tipo='supplenze'):
     return (EmailUscita.query
-            .filter_by(tipo='supplenze', id_docente=id_docente, giorno=giorno)
+            .filter_by(tipo=tipo, id_docente=id_docente, giorno=giorno)
             .filter(EmailUscita.stato.in_(STATI_INVIATI))
             .order_by(EmailUscita.id.desc()).first())
 
@@ -187,10 +187,10 @@ def proposte_supplenze(giorno):
     return out
 
 
-def _registra(p, giorno, stato, dettaglio=None):
+def _registra(p, giorno, stato, dettaglio=None, tipo='supplenze'):
     db.session.add(EmailUscita(
-        tipo='supplenze', giorno=giorno, hash_contenuto=p['hash'],
-        chiave=f'supplenze:{p["docente"].id}:{giorno.isoformat()}:{p["hash"]}:{time.time_ns()}',
+        tipo=tipo, giorno=giorno, hash_contenuto=p['hash'],
+        chiave=f'{tipo}:{p["docente"].id}:{giorno.isoformat()}:{p["hash"]}:{time.time_ns()}',
         id_docente=p['docente'].id, destinatario=p['email'],
         oggetto=p['oggetto'], corpo=p['corpo'], stato=stato, dettaglio=dettaglio))
     db.session.commit()
@@ -239,4 +239,111 @@ def invia_supplenze(giorno, ids_docenti, mittente=None):
             continue
         _registra(p, giorno, 'inviata')
         risultati.append((nome, 'inviata', None))
+    return risultati
+
+
+# ── Report banca ore (mensile, tutti i docenti) ───────────────
+def primo_del_mese(oggi=None):
+    o = oggi or date.today()
+    return o.replace(day=1)
+
+
+def _saldi_testo(saldi):
+    lordo = saldi['supplenze'] - saldi['permessi'] - saldi['civica']
+    netto = lordo - saldi['pagamento']
+    righe = [
+        f'- Supplenze svolte: {saldi["supplenze"]} h',
+        f'- Permessi orari: -{saldi["permessi"]} h',
+        f'- Ed. Civica: -{saldi["civica"]} h',
+        f'- Ore a pagamento: -{saldi["pagamento"]} h',
+        f'- Saldo lordo: {lordo} h',
+        f'- Saldo netto: {netto} h',
+    ]
+    return righe
+
+
+def proposte_banca_ore(mese):
+    """Una proposta per ogni docente attivo, mese = primo giorno del mese.
+    Un solo invio per mese; se i saldi cambiano si propone un aggiornamento."""
+    from config_anno import get_anno_corrente
+    from routes.report import get_saldi_docente
+    anno = get_anno_corrente()
+    out = []
+    for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome, Docente.nome).all():
+        saldi = get_saldi_docente(d.id)
+        righe = _saldi_testo(saldi)
+        h = _hash(righe)
+        prec = _ultimo_inviato(d.id, mese, 'banca_ore')
+        variante = 'nuova' if prec is None else ('gia_inviata' if prec.hash_contenuto == h else 'aggiornamento')
+        mese_txt = f'{mese.month:02d}/{mese.year}'
+        agg = 'AGGIORNAMENTO ' if variante == 'aggiornamento' else ''
+        oggetto = f'{agg}Report banca ore - {mese_txt}'
+        corpo = '\n'.join([
+            _saluto(d), '',
+            f'questo è il tuo report della banca ore per l\'a.s. {anno}, aggiornato a {date.today().strftime("%d/%m/%Y")}'
+            + (' (sostituisce il precedente)' if variante == 'aggiornamento' else '') + ':',
+            ''] + righe + [
+            '', 'In allegato il dettaglio in PDF. Se noti discrepanze, scrivi alla vicepresidenza.',
+            '', 'Messaggio automatico di Caronte.'])
+        email = (d.email or '').strip().lower()
+        blocco = None
+        if not email:
+            blocco = 'email mancante'
+        elif not email.endswith(DOMINIO_AMMESSO):
+            blocco = 'indirizzo fuori dominio'
+        out.append(dict(docente=d, email=email, righe=righe, variante=variante,
+                        oggetto=oggetto, corpo=corpo, hash=h, blocco=blocco))
+    return out
+
+
+def _pdf_banca_ore(docente):
+    from routes.mail_bozze import _genera_pdf_bytes
+    return _genera_pdf_bytes(docente)
+
+
+def invia_banca_ore(mese, ids_docenti):
+    mod = modalita()
+    if mod == 'off':
+        return [('—', 'errore', 'invio disattivato')]
+    scelti = {int(i) for i in ids_docenti}
+    solo_a = _solo_a()
+    risultati = []
+    for p in proposte_banca_ore(mese):
+        if p['docente'].id not in scelti:
+            continue
+        if len(risultati) >= MAX_PER_INVIO:
+            risultati.append(('—', 'errore', f'tetto di {MAX_PER_INVIO} messaggi per invio'))
+            break
+        nome = p['docente'].cognome
+        if p['variante'] == 'gia_inviata':
+            risultati.append((nome, 'saltata', 'già inviato questo mese'))
+            continue
+        if p['blocco']:
+            _registra(p, mese, 'saltata', p['blocco'], 'banca_ore')
+            risultati.append((nome, 'saltata', p['blocco']))
+            continue
+        if mod == 'simulato':
+            _registra(p, mese, 'simulata', None, 'banca_ore')
+            risultati.append((nome, 'simulata', None))
+            continue
+        if solo_a and p['email'] not in solo_a:
+            _registra(p, mese, 'saltata', 'fuori lista di prova', 'banca_ore')
+            risultati.append((nome, 'saltata', 'fuori lista di prova'))
+            continue
+        note = None
+        try:
+            allegati = []
+            try:
+                allegati = [(f'Banca_ore_{nome}.pdf', _pdf_banca_ore(p['docente']))]
+            except Exception:
+                note = 'inviato senza PDF'   # i valori sono comunque nel testo
+            from modules.gmail_invio import invia
+            invia(p['email'], p['oggetto'], p['corpo'], allegati)
+        except Exception as e:
+            db.session.rollback()
+            _registra(p, mese, 'errore', str(e)[:240], 'banca_ore')
+            risultati.append((nome, 'errore', str(e)[:120]))
+            continue
+        _registra(p, mese, 'inviata', note, 'banca_ore')
+        risultati.append((nome, 'inviata', note))
     return risultati

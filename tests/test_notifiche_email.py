@@ -136,3 +136,41 @@ def test_impostazione_salvata_vince_sulla_variabile(app, monkeypatch):
         assert ne._solo_a() == {'a@davincichiavenna.edu.it', 'b@davincichiavenna.edu.it'}
         with pytest.raises(ValueError):
             ne.imposta('boh')
+
+
+def test_banca_ore_tutti_i_docenti_un_invio_al_mese(app, monkeypatch):
+    from models.movimento_banca_ore import MovimentoBancaOre
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'simulato')
+    monkeypatch.setattr('routes.report.get_saldi_docente',
+                        lambda i, anno_scol=None: dict(supplenze=5, permessi=1, civica=0, pagamento=1))
+    monkeypatch.setattr('config_anno.get_anno_corrente', lambda: '2026-2027')
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', None)
+        db.session.commit()
+        mese = ne.primo_del_mese()
+        p = ne.proposte_banca_ore(mese)
+        assert len(p) == 2 and 'Saldo netto: 3 h' in p[1]['corpo'] + p[0]['corpo']
+        r = dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [a.id, b.id]))
+        assert r == {'Rossi': 'simulata', 'Verdi': 'saltata'}
+        assert ne.proposte_banca_ore(mese)[0]['variante'] == 'gia_inviata'
+        # saldi cambiati -> aggiornamento
+        monkeypatch.setattr('routes.report.get_saldi_docente',
+                            lambda i, anno_scol=None: dict(supplenze=9, permessi=1, civica=0, pagamento=1))
+        p = ne.proposte_banca_ore(mese)
+        assert p[0]['variante'] == 'aggiornamento' and p[0]['oggetto'].startswith('AGGIORNAMENTO')
+
+
+def test_banca_ore_reale_senza_pdf_invia_comunque_il_testo(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    monkeypatch.setattr('routes.report.get_saldi_docente',
+                        lambda i, anno_scol=None: dict(supplenze=2, permessi=0, civica=0, pagamento=0))
+    monkeypatch.setattr('config_anno.get_anno_corrente', lambda: '2026-2027')
+    monkeypatch.setattr(ne, '_pdf_banca_ore', lambda d: (_ for _ in ()).throw(RuntimeError('no weasyprint')))
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    with app.test_request_context():
+        a = _doc()
+        db.session.commit()
+        r = ne.invia_banca_ore(ne.primo_del_mese(), [a.id])
+        assert r == [('Rossi', 'inviata', 'inviato senza PDF')]
+        assert inviati and inviati[0][3] == []

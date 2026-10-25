@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Report banca ore via email{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('mail') }} Report banca ore via email</h1>
+        <p style="font-size:.83rem; color:var(--grigio); margin-top:3px;">
+            Un messaggio per ogni docente con i saldi e il PDF del report. Un invio al mese; se i saldi cambiano si propone un aggiornamento.
+        </p>
+    </div>
+    <a href="{{ url_for('mail_bozze.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Bozze email</a>
+</div>
+
+<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label for="mese" style="font-weight:700; font-size:.88rem;">Mese</label>
+        <input type="month" id="mese" name="mese" value="{{ mese.strftime('%Y-%m') }}">
+        <button class="btn btn-sm btn-primary" type="submit">Mostra</button>
+    </form>
+</div>
+
+<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <form method="post" action="{{ url_for('mail_bozze.notifiche_supplenze_impostazioni') }}"
+          style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:.85rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="mese" value="{{ mese.strftime('%Y-%m') }}">
+        <strong>Modalità invio</strong>
+        <select name="modalita">
+            <option value="off" {{ 'selected' if modalita == 'off' }}>Spento (solo anteprima)</option>
+            <option value="simulato" {{ 'selected' if modalita == 'simulato' }}>Simulato (registra, non spedisce)</option>
+            <option value="reale" {{ 'selected' if modalita == 'reale' }}>Reale (spedisce)</option>
+        </select>
+        <label>Solo a (prova, separati da virgola; vuoto = tutti)
+            <input type="text" name="solo_a" value="{{ solo_a|join(', ') }}" size="40">
+        </label>
+        <button class="btn btn-sm btn-primary" type="submit">Salva</button>
+    </form>
+    <p style="font-size:.75rem; color:var(--grigio); margin:6px 0 0;">
+        Con «Reale» l'invio parte dal tuo account Google solo dopo l'autorizzazione (vedi guida);
+        finché non è configurata ogni invio risulta «errore» e si può ripetere.
+    </p>
+</div>
+
+{% if risultati %}
+<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <h2 style="margin-bottom:8px;">Esito</h2>
+    <ul style="margin:0; padding-left:18px; font-size:.86rem;">
+        {% for nome, stato, det in risultati %}
+        <li>{{ nome }}: <strong>{{ stato }}</strong>{% if det %} — {{ det }}{% endif %}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('mail_bozze.report_banca_ore_invia') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="mese" value="{{ mese.strftime('%Y-%m') }}">
+    {% if not proposte %}
+    <div class="card" style="padding:16px;">Nessun docente attivo.</div>
+    {% endif %}
+    {% for p in proposte %}
+    <div class="card" style="padding:12px 16px; margin-bottom:10px;">
+        <label style="display:flex; gap:10px; align-items:center; font-weight:700; color:var(--blu);">
+            <input type="checkbox" name="docenti" value="{{ p.docente.id }}"
+                   {% if p.variante != 'gia_inviata' and not p.blocco %}checked{% endif %}
+                   {% if p.variante == 'gia_inviata' or p.blocco %}disabled{% endif %}>
+            {{ p.docente.cognome }} {{ p.docente.nome or '' }}
+            <span style="font-weight:400; font-size:.8rem; color:var(--grigio);">{{ p.email or 'senza email' }}</span>
+            <span style="font-size:.75rem; padding:2px 8px; border-radius:10px; background:#eef2f7;">
+                {% if p.blocco %}non inviabile: {{ p.blocco }}
+                {% elif p.variante == 'gia_inviata' %}già inviato questo mese
+                {% elif p.variante == 'nuova' %}nuova
+                {% elif p.variante == 'aggiornamento' %}aggiornamento
+                {% else %}aggiornamento{% endif %}
+            </span>
+        </label>
+        <details style="margin-top:6px;">
+            <summary style="cursor:pointer; font-size:.82rem;">Anteprima</summary>
+            <p style="font-size:.82rem; margin:6px 0 2px;"><strong>Oggetto:</strong> {{ p.oggetto }}</p>
+            <pre style="white-space:pre-wrap; font-family:var(--font); font-size:.82rem; background:#f8fafc; padding:8px 10px; border-radius:6px;">{{ p.corpo }}</pre>
+        </details>
+    </div>
+    {% endfor %}
+    {% if proposte %}
+    <button class="btn btn-success" type="submit" {% if modalita == 'off' %}disabled{% endif %}>
+        {{ icon('mail') }} {{ 'Registra (simulato)' if modalita == 'simulato' else 'Invia ai selezionati' }}
+    </button>
+    {% endif %}
+</form>
+{% endblock %}
