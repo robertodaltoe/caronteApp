@@ -203,8 +203,6 @@ def assegna(id):
 
     db.session.commit()
     pubblica_su_drive_se_possibile()
-    from modules.notifiche_email import notifica_supplenza_assegnata
-    notifica_supplenza_assegnata(s)
     docente = Docente.query.get(int(id_sost))
     from routes.auth import log as auth_log
     auth_log('assegna_supplenza',

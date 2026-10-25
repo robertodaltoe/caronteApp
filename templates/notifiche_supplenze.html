@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Notifiche supplenze{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div>
+        <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('mail') }} Notifiche supplenze</h1>
+        <p style="font-size:.83rem; color:var(--grigio); margin-top:3px;">
+            Un messaggio per docente con tutte le supplenze assegnate per il giorno scelto.
+            Controlla l'anteprima e invia.
+        </p>
+    </div>
+    <a href="{{ url_for('mail_bozze.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Bozze email</a>
+</div>
+
+<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label for="data" style="font-weight:700; font-size:.88rem;">Giorno</label>
+        <input type="date" id="data" name="data" value="{{ giorno.isoformat() }}">
+        <button class="btn btn-sm btn-primary" type="submit">Mostra</button>
+        <span style="font-size:.82rem;">
+            Modalità invio:
+            {% if modalita == 'off' %}<strong style="color:#b91c1c;">disattivato</strong> (solo anteprima)
+            {% elif modalita == 'simulato' %}<strong style="color:#b45309;">simulato</strong> (registra, non spedisce)
+            {% else %}<strong style="color:#166534;">reale</strong>{% if solo_a %} — solo a: {{ solo_a|join(', ') }}{% endif %}
+            {% endif %}
+        </span>
+    </form>
+</div>
+
+{% if risultati %}
+<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+    <h2 style="margin-bottom:8px;">Esito</h2>
+    <ul style="margin:0; padding-left:18px; font-size:.86rem;">
+        {% for nome, stato, det in risultati %}
+        <li>{{ nome }}: <strong>{{ stato }}</strong>{% if det %} — {{ det }}{% endif %}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('mail_bozze.notifiche_supplenze_invia') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="data" value="{{ giorno.isoformat() }}">
+    {% if not proposte %}
+    <div class="card" style="padding:16px;">Nessuna supplenza assegnata per questo giorno.</div>
+    {% endif %}
+    {% for p in proposte %}
+    <div class="card" style="padding:12px 16px; margin-bottom:10px;">
+        <label style="display:flex; gap:10px; align-items:center; font-weight:700; color:var(--blu);">
+            <input type="checkbox" name="docenti" value="{{ p.docente.id }}"
+                   {% if p.variante != 'gia_inviata' and not p.blocco %}checked{% endif %}
+                   {% if p.variante == 'gia_inviata' or p.blocco %}disabled{% endif %}>
+            {{ p.docente.cognome }} {{ p.docente.nome or '' }}
+            <span style="font-weight:400; font-size:.8rem; color:var(--grigio);">{{ p.email or 'senza email' }}</span>
+            <span style="font-size:.75rem; padding:2px 8px; border-radius:10px; background:#eef2f7;">
+                {% if p.blocco %}non inviabile: {{ p.blocco }}
+                {% elif p.variante == 'gia_inviata' %}già inviata
+                {% elif p.variante == 'nuova' %}nuova
+                {% elif p.variante == 'variazione' %}variazione
+                {% else %}annullamento{% endif %}
+            </span>
+        </label>
+        <details style="margin-top:6px;">
+            <summary style="cursor:pointer; font-size:.82rem;">Anteprima</summary>
+            <p style="font-size:.82rem; margin:6px 0 2px;"><strong>Oggetto:</strong> {{ p.oggetto }}</p>
+            <pre style="white-space:pre-wrap; font-family:var(--font); font-size:.82rem; background:#f8fafc; padding:8px 10px; border-radius:6px;">{{ p.corpo }}</pre>
+        </details>
+    </div>
+    {% endfor %}
+    {% if proposte %}
+    <button class="btn btn-success" type="submit" {% if modalita == 'off' %}disabled{% endif %}>
+        {{ icon('mail') }} {{ 'Registra (simulato)' if modalita == 'simulato' else 'Invia ai selezionati' }}
+    </button>
+    {% endif %}
+</form>
+{% endblock %}

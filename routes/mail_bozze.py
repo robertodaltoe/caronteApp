@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file
+from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for
 from models import db
 from models.docente import Docente
 from models.supplenza import Supplenza
@@ -220,3 +220,32 @@ def scarica_ps1():
     return send_file(buf, mimetype='text/plain',
                      as_attachment=True,
                      download_name=f'BozzeEmail_{date.today().isoformat()}.ps1')
+
+
+# ── NOTIFICHE SUPPLENZE (email ai docenti il giorno prima) ────
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze')
+def notifiche_supplenze():
+    from modules import notifiche_email as ne
+    try:
+        giorno = date.fromisoformat(request.args.get('data', ''))
+    except ValueError:
+        giorno = ne.giorno_default()
+    return render_template('notifiche_supplenze.html', giorno=giorno,
+        proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
+        solo_a=sorted(ne._solo_a()), risultati=None)
+
+
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/invia', methods=['POST'])
+def notifiche_supplenze_invia():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    try:
+        giorno = date.fromisoformat(request.form.get('data', ''))
+    except ValueError:
+        return redirect(url_for('mail_bozze.notifiche_supplenze'))
+    risultati = ne.invia_supplenze(giorno, request.form.getlist('docenti'))
+    auth_log('notifiche_supplenze',
+             f'{giorno.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
+    return render_template('notifiche_supplenze.html', giorno=giorno,
+        proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
+        solo_a=sorted(ne._solo_a()), risultati=risultati)

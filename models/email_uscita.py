@@ -15,7 +15,9 @@ class EmailUscita(db.Model):
 
     id           = db.Column(db.Integer, primary_key=True)
     creato_il    = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    tipo         = db.Column(db.String(30), nullable=False)    # es. supplenza
+    tipo         = db.Column(db.String(30), nullable=False)    # es. supplenze
+    giorno       = db.Column(db.Date, index=True)               # giorno a cui si riferisce
+    hash_contenuto = db.Column(db.String(16))                   # per riconoscere variazioni
     chiave       = db.Column(db.String(120), nullable=False, unique=True)
     id_docente   = db.Column(db.Integer, db.ForeignKey('docenti.id'), nullable=True)
     destinatario = db.Column(db.String(200))
