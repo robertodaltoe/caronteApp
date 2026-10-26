@@ -345,13 +345,10 @@ def motivo_non_disponibile(ctx, id_docente, giorno, ora, classi, escludi_gruppo=
     comuni = set(classi) & ctx.classi[id_docente]
     if comuni:
         return 'insegna nella classe ' + ', '.join(label_classe(c) for c in sorted(comuni))
-    if doc.multi_sede:
-        giorni = doc.giorni_presenza_list
-        if giorni and giorno not in giorni:
-            return f'{GIORNI[giorno]} è in servizio presso un\'altra scuola'
-        uscita = doc.ora_uscita_map.get(giorno)
-        if uscita is not None and ora > uscita:
-            return 'in quell\'ora è già presso l\'altra sede'
+    from modules.suggerimenti_supplenza import motivo_non_in_sede
+    motivo_sede = motivo_non_in_sede(doc, giorno, ora)
+    if motivo_sede:
+        return motivo_sede
     for g, o in ctx.indisp[id_docente]:
         if g == giorno and (o is None or o == ora):
             return 'indisponibilità ricorrente fissa'

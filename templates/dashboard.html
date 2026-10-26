@@ -593,9 +593,12 @@
 {% block extra_script %}
 <script>
 let _supplenzaId = null, _selectedDocId = null, _selectedTipo = 'recupero';
+let _sugArgs = null, _mostraComunque = false;
 
-function apriSuggerimenti(supplenzaId, ora, idAssente, data, classe) {
+function apriSuggerimenti(supplenzaId, ora, idAssente, data, classe, mostraComunque) {
+    _mostraComunque = !!mostraComunque;
     _supplenzaId = supplenzaId; _selectedDocId = null;
+    _sugArgs = [supplenzaId, ora, idAssente, data, classe];
     document.getElementById('btn-conferma').disabled = true;
     document.getElementById('pann-content').innerHTML = '';
     document.getElementById('pann-info').textContent = '';
@@ -605,6 +608,7 @@ function apriSuggerimenti(supplenzaId, ora, idAssente, data, classe) {
     const params = new URLSearchParams({data, ora});
     if (idAssente) params.append('id_assente', idAssente);
     if (classe) params.append('classe', classe);
+    if (_mostraComunque) params.append('mostra_comunque', '1');
     fetch('/api/suggerimenti?' + params)
         .then(r => r.json()).then(renderSuggerimenti)
         .catch(() => {
@@ -618,6 +622,16 @@ function renderSuggerimenti(data) {
     document.getElementById('pann-loading').style.display = 'none';
     const content = document.getElementById('pann-content');
     content.innerHTML = '';
+    if (data.n_non_in_sede_nascosti) {
+        const nota = document.createElement('div');
+        nota.style.cssText = 'font-size:.75rem; padding:6px 10px; margin-bottom:6px; background:var(--giallo-bg); color:var(--giallo); border-radius:6px;';
+        nota.innerHTML = `${data.n_non_in_sede_nascosti} docente/i nascosti perché in servizio in un\'altra scuola. `
+            + '<a href="#" style="font-weight:700;">Mostra comunque</a>';
+        nota.querySelector('a').addEventListener('click', e => {
+            e.preventDefault(); apriSuggerimenti(..._sugArgs, true);
+        });
+        content.appendChild(nota);
+    }
     if (!data.gruppi || !data.gruppi.length) {
         document.getElementById('pann-empty').style.display = 'block'; return;
     }
@@ -663,7 +677,7 @@ function renderSuggerimenti(data) {
             const avvisoSede = doc.fuori_sede
                 ? `<div style="font-size:.68rem; color:var(--giallo); background:var(--giallo-bg);
                     border-radius:3px; padding:1px 6px; margin-top:2px;">
-                    {{ icon('warning') }} oggi non in sede (${doc.altra_scuola})</div>`
+                    {{ icon('warning') }} ${doc.motivo_fuori_sede || 'oggi non in sede'} (${doc.altra_scuola})</div>`
                 : '';
             row.dataset.partnerIds = (doc.partner_ids || []).join(',');
             row.innerHTML = `<div style="flex:1;"><div class="cand-nome">${doc.cognome}${doc.nome ? ' '+doc.nome[0]+'.' : ''}${badgeClasse}${badgeCompresenza}${badgeITP}${badgePT}</div>${avvisoSede}<div class="cand-dettaglio">${doc.dettaglio}${doc.materia ? ' · '+doc.materia : ''}</div></div><span class="cand-saldo ${sc}">${doc.saldo_label}</span>`;

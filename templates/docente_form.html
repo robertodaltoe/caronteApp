@@ -252,8 +252,35 @@
                     {% endfor %}
                 </div>
             </div>
+            <div id="avviso-multi-sede" style="display:none; margin-top:8px; padding:6px 9px;
+                 border-radius:6px; background:var(--giallo-bg); color:var(--giallo);
+                 font-size:.78rem;"></div>
         </div>
     </div>
+    <script>
+    (function () {
+        const box = document.getElementById('avviso-multi-sede');
+        const nomi = ['Lun','Mar','Mer','Gio','Ven','Sab'];
+        function aggiorna() {
+            const sez = document.getElementById('sez-multi');
+            if (!box || !sez || sez.style.display === 'none') { if (box) box.style.display = 'none'; return; }
+            const pres = [...document.querySelectorAll('input[name="giorni_presenza"]:checked')]
+                .map(c => parseInt(c.value));
+            const msg = [];
+            if (!pres.length) msg.push('Nessun giorno di presenza spuntato: il docente non verrà mai escluso per i giorni in un\'altra scuola.');
+            else for (let g = 0; g < 6; g++) {
+                const sel = document.querySelector(`select[name="ora_uscita_${g}"]`);
+                if (sel && sel.value && !pres.includes(g))
+                    msg.push(`Ora di uscita su ${nomi[g]}, ma ${nomi[g]} non è tra i giorni di presenza: non ha effetto.`);
+            }
+            box.textContent = msg.join(' ');
+            box.style.display = msg.length ? 'block' : 'none';
+        }
+        document.addEventListener('change', aggiorna);
+        document.addEventListener('DOMContentLoaded', aggiorna);
+        aggiorna();
+    })();
+    </script>
 
     {# ── 3. Ruolo didattico ───────────────────────────────────────── #}
     <div class="card" style="padding:16px 18px;">

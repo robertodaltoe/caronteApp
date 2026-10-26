@@ -1,0 +1,95 @@
+"""
+Docenti "Più scuole" (giorni di presenza + orario spezzato): funzione
+unica docente_in_sede/motivo_non_in_sede, esclusione dai suggerimenti
+supplenza (con "mostra comunque") e avvisi di incoerenza nella scheda.
+"""
+from datetime import date
+
+from models import db
+from models.orario_docente import OrarioDocente
+from modules.suggerimenti_supplenza import (avvisi_multi_sede, docente_in_sede,
+                                            motivo_non_in_sede)
+from tests.conftest import crea_docente
+
+LUNEDI = date(2026, 9, 21)
+MARTEDI = date(2026, 9, 22)
+
+
+def _multi(cognome, giorni='0', uscita=None):
+    d = crea_docente(cognome)
+    d.altra_scuola = 'IIS Altrove'
+    d.giorni_presenza = giorni
+    d.ora_uscita_json = uscita
+    db.session.commit()
+    return d
+
+
+def test_funzione_giorni_e_orario_spezzato(app, db_session):
+    d = _multi('Multi', giorni='0,2', uscita='{"0": 3}')
+    assert docente_in_sede(d, 0, 3)
+    assert not docente_in_sede(d, 0, 4)          # dopo l'ora di uscita
+    assert not docente_in_sede(d, 1, 2)          # martedì non presente
+    assert not docente_in_sede(d, 1)             # anche senza ora
+
+
+def test_docente_normale_sempre_in_sede(app, db_session):
+    d = crea_docente('Normale')
+    assert docente_in_sede(d, 3, 7)
+
+
+def test_multi_sede_senza_giorni_non_filtra(app, db_session):
+    d = _multi('SenzaGiorni', giorni=None)
+    assert motivo_non_in_sede(d, 4, 1) is None
+
+
+def test_avvisi_scheda(app, db_session):
+    senza = _multi('Senza', giorni=None)
+    assert any('Nessun giorno' in a for a in avvisi_multi_sede(senza))
+    incoerente = _multi('Incoerente', giorni='0', uscita='{"2": 3}')
+    assert any('Mercoledì' in a for a in avvisi_multi_sede(incoerente))
+    ok = _multi('Ok', giorni='0', uscita='{"0": 3}')
+    assert avvisi_multi_sede(ok) == []
+    assert avvisi_multi_sede(crea_docente('Normale')) == []
+
+
+def _prepara(app):
+    from routes.supplenze import supplenze_bp
+    from models.indisponibilita_ricorrente import IndisponibilitaRicorrente  # noqa
+    from models.attivita_fuori_aula import AttivitaFuoriAula, AttivitaClasse  # noqa
+    db.create_all()
+    if 'supplenze' not in app.blueprints:
+        app.register_blueprint(supplenze_bp)
+
+
+def _slot(d, giorno, ora):
+    db.session.add(OrarioDocente(id_docente=d.id, giorno=giorno, ora=ora,
+                                 classe='1A TEST', materia='T', tipo_ora='lezione'))
+
+
+def _ids(payload):
+    return {d['id'] for g in payload['gruppi'] for d in g['docenti']}
+
+
+def test_suggerimenti_escludono_fuori_sede_e_mostra_comunque(app, db_session):
+    _prepara(app)
+    uscita = _multi('Spezzato', giorni='0,1', uscita='{"0": 3}')
+    altro_giorno = _multi('Altrove', giorni='1')       # lunedì altrove
+    normale = crea_docente('Normale')
+    for d in (uscita, altro_giorno, normale):
+        _slot(d, 0, 8)                                   # ha ore il lunedì
+    db.session.commit()
+
+    with app.test_client() as c:
+        p = c.get(f'/api/suggerimenti?data={LUNEDI.isoformat()}&ora=5').get_json()
+        assert _ids(p) == {normale.id}
+        assert p['n_non_in_sede_nascosti'] == 2
+
+        p = c.get(f'/api/suggerimenti?data={LUNEDI.isoformat()}&ora=5&mostra_comunque=1').get_json()
+        assert _ids(p) == {normale.id, uscita.id, altro_giorno.id}
+        g = next(g for g in p['gruppi'] if g['key'] == 'non_in_sede')
+        assert {d['id'] for d in g['docenti']} == {uscita.id, altro_giorno.id}
+        assert p['n_non_in_sede_nascosti'] == 0
+
+        # ora 3 (entro l'uscita): "Spezzato" è in sede, "Altrove" no
+        p = c.get(f'/api/suggerimenti?data={LUNEDI.isoformat()}&ora=3').get_json()
+        assert _ids(p) == {normale.id, uscita.id}

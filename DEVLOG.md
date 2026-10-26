@@ -2,6 +2,27 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 82 — Docenti "Più scuole" esclusi dai suggerimenti supplenza
+
+Roberto: "giorni di presenza qui" e "orario spezzato" dovevano togliere
+il docente dalle sostituzioni possibili, ma nei candidati era solo un
+avviso giallo (e l'orario spezzato non era considerato affatto).
+Sessione in sandbox Linux (Cowork/cloud), test su DB in-memory.
+
+- `modules/suggerimenti_supplenza.py`: funzione unica
+  `motivo_non_in_sede` / `docente_in_sede(docente, giorno, ora)` (giorni
+  di presenza + ora di uscita), ora usata anche da
+  `alternativa_irc.motivo_non_disponibile` (stessi messaggi di prima).
+- `/api/suggerimenti`: i docenti non in sede sono esclusi di default;
+  `mostra_comunque=1` li mette nel gruppo "Non in sede (altra scuola)".
+  La risposta include `n_non_in_sede_nascosti`; dashboard: nota con
+  link "Mostra comunque".
+- Scheda docente: avvisi (live in pagina e dopo il salvataggio) se
+  nessun giorno di presenza o ora di uscita su giorno non di presenza.
+- Non fatto (da decidere con Roberto): riunioni/attivita'/recupero
+  agosto (i dati descrivono solo la mattina: al piu' avviso) e
+  rimodulazione orario 4^/5^ (periodo con date, da progettare).
+
 ## Sessione 81 — Calendario degli impegni (giorno/settimana/mese) + iCal
 
 Roberto: voleva una vista stile Google Calendar per avere subito sotto
