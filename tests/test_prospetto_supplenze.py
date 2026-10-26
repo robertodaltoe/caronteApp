@@ -257,3 +257,9 @@ def test_genera_prospetto_avvisa_se_usa_foglio_di_un_altro_anno(app, db_session,
 
     assert avviso_foglio is not None
     assert 'MATRICE 26_27' in avviso_foglio
+
+
+def test_matrice_non_ha_piu_la_nona_ora():
+    """Roberto (26/10/2026): la 9ª ora non serve più nella matrice."""
+    assert 9 not in ORA_COLS
+    assert sorted(ORA_COLS) == list(range(1, 9))

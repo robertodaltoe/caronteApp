@@ -20,8 +20,10 @@ from openpyxl.styles import PatternFill, Font
 ORA_COLS = {
     1: (4,  6),   2: (8,  10),  3: (12, 14),
     4: (16, 18),  5: (20, 22),  6: (24, 26),
-    7: (28, 30),  8: (32, 34),  9: (36, 38),
+    7: (28, 30),  8: (32, 34),
 }
+# La 9ª ora non è più nella matrice (Roberto, 26/10/2026): le supplenze
+# alla 9ª ora non compaiono nella griglia, solo nelle liste/tabella web.
 
 # Firme: (col_docente, col_euro, col_c, col_r, col_p) — colonne verificate
 # identiche nei due fogli del template reale, solo le righe (FIRME_START/
@@ -30,7 +32,9 @@ ORA_COLS = {
 FIRME_COLS = [
     (2,  10, 11, 12, 13),   # col1: docente=B(2), €=J(10), C=K(11), R=L(12), P=M(13)
     (14, 22, 23, 24, 25),   # col2: docente=N(14), €=V(22), C=W(23), R=X(24), P=Y(25)
-    (26, 34, 35, 36, 37),   # col3: docente=Z(26), €=AH(34), C=AI(35), R=AJ(36), P=AK(37)
+    (26, 32, 33, 34, 35),   # col3: docente=Z(26), €=AF(32), C=AG(33), R=AH(34), P=AI(35)
+                            # (senza 9ª ora la matrice finisce in AI: il 3° blocco
+                            # perde le due colonne AJ:AK e restringe il nome)
 ]
 
 FILL_TIPO = {
@@ -197,7 +201,7 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
 
     # ── 3. Svuota celle dati ──────────────────────────────────
     for riga in righe_classi.values():
-        for ora in range(1, 10):
+        for ora in ORA_COLS:
             ca, cs = ORA_COLS[ora]
             try:
                 ws.cell(riga, ca).value = None
