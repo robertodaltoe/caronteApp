@@ -51,9 +51,9 @@ def test_post_modifica_con_next_torna_alla_pagina_di_provenienza(app, db_session
         assert r.headers['Location'] == '/assegnazioni?anno=2026-2027'
 
 
-def test_post_modifica_senza_next_torna_allelenco_come_prima(app, db_session):
-    """Comportamento invariato quando non si arriva da un altro contesto
-    (es. dall'elenco Docenti stesso, che non passa 'next')."""
+def test_post_modifica_senza_next_resta_nella_scheda(app, db_session):
+    """Senza 'next' (es. dall'elenco Docenti) si resta nella scheda del
+    docente appena salvato, non si torna all'elenco (richiesta di Roberto)."""
     _registra_blueprint(app)
     from concorrenza import versione_str
     d = crea_docente('Verdi')
@@ -66,4 +66,4 @@ def test_post_modifica_senza_next_torna_allelenco_come_prima(app, db_session):
             'versione': versione_str(d.modificato_il),
         })
         assert r.status_code == 302
-        assert r.headers['Location'] == '/docenti'
+        assert r.headers['Location'].startswith(f'/docenti/{d.id}/modifica')
