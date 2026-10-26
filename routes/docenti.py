@@ -366,8 +366,14 @@ def modifica(id):
         from modules.suggerimenti_supplenza import avvisi_multi_sede
         for avviso in avvisi_multi_sede(d):
             flash(avviso, 'warning')
-        next_url = request.form.get('next') or url_for('docenti.lista')
-        return redirect(next_url)
+        # Con 'next' (aperta da Ricerca/Assegnazioni) si torna lì, come
+        # prima; altrimenti si resta nella scheda del docente appena
+        # salvato (richiesta di Roberto), sullo stesso anno colloqui.
+        next_url = request.form.get('next')
+        if next_url:
+            return redirect(next_url)
+        return redirect(url_for('docenti.modifica', id=d.id,
+                                anno_colloqui=anno_colloqui))
 
     # Colloqui per-anno: stesso pattern del selettore "Materie insegnate"
     # — di default l'anno corrente, valorizzabile da querystring così i
