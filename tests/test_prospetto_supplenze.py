@@ -197,9 +197,9 @@ def test_genera_prospetto_compila_la_griglia_per_classe_con_e_senza_spazio(app, 
     riga_1bcat = _righe_classi(ws)['1B CAT']
     ca3, cs3 = ORA_COLS[3]
     ca4, cs4 = ORA_COLS[4]
-    assert ws.cell(riga_1bcat, ca3).value == 'Rossi'
+    assert ws.cell(riga_1bcat, ca3).value == '***'
     assert ws.cell(riga_1bcat, cs3).value == 'Verdi (R)'
-    assert ws.cell(riga_1bcat, ca4).value == 'Bianchi'
+    assert ws.cell(riga_1bcat, ca4).value == '***'
     assert ws.cell(riga_1bcat, cs4).value == 'Neri (€)'
 
 
@@ -263,3 +263,23 @@ def test_matrice_non_ha_piu_la_nona_ora():
     """Roberto (26/10/2026): la 9ª ora non serve più nella matrice."""
     assert 9 not in ORA_COLS
     assert sorted(ORA_COLS) == list(range(1, 9))
+
+
+def test_genera_prospetto_censura_i_docenti_assenti(app, db_session, monkeypatch, tmp_path):
+    """Roberto (26/10/2026): il nome del docente assente nel prospetto
+    va sostituito da ***, il sostituto resta in chiaro."""
+    import config_anno, io
+    from openpyxl import load_workbook
+    monkeypatch.setattr(config_anno, 'get_anno_corrente', lambda app=None: '2026-2027')
+    template_path = _salva_template(tmp_path, _template_con_due_anni())
+    supplenze = [_supplenza('1B CAT', 3, assente='Rossi', sostituto='Verdi', tipo='recupero')]
+
+    xlsx_bytes, _, _ = genera_prospetto(date(2026, 9, 15), supplenze, template_path)
+
+    ws = load_workbook(io.BytesIO(xlsx_bytes)).worksheets[0]
+    riga = _righe_classi(ws)['1B CAT']
+    ca, cs = ORA_COLS[3]
+    assert ws.cell(riga, ca).value == '***'
+    assert ws.cell(riga, cs).value == 'Verdi (R)'
+    assert ws.cell(5, 2).value == '***'
+    assert 'Rossi' not in {c.value for row in ws.iter_rows() for c in row}
