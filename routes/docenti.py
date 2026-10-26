@@ -356,6 +356,9 @@ def modifica(id):
         from routes.auth import log as auth_log
         auth_log('modifica_docente', f'{d.nome_completo}')
         flash(f"Docente {d.nome_completo} aggiornato.", 'success')
+        from modules.suggerimenti_supplenza import avvisi_multi_sede
+        for avviso in avvisi_multi_sede(d):
+            flash(avviso, 'warning')
         next_url = request.form.get('next') or url_for('docenti.lista')
         return redirect(next_url)
 

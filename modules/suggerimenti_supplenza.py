@@ -82,6 +82,53 @@ def calcola_saldi_docenti(anno_scol, oggi=None):
     return saldi_eff, saldi_prev, saldi_totale
 
 
+GIORNI_SETTIMANA = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
+
+
+def motivo_non_in_sede(docente, giorno, ora=None):
+    """PURA — nessuna query. None se il docente è in sede (giorno/ora di
+    lezione al mattino), altrimenti il motivo: giorno non incluso nei
+    "giorni di presenza qui", oppure ora successiva all'ora di uscita
+    dell'orario spezzato. Vale solo per i docenti "Più scuole"; senza
+    giorni di presenza indicati il giorno non viene filtrato."""
+    if not docente.multi_sede:
+        return None
+    giorni = docente.giorni_presenza_list
+    if giorni and giorno not in giorni:
+        return f'{GIORNI_SETTIMANA[giorno]} è in servizio presso un\'altra scuola'
+    if ora is not None:
+        uscita = docente.ora_uscita_map.get(giorno)
+        if uscita is not None and ora > uscita:
+            return 'in quell\'ora è già presso l\'altra sede'
+    return None
+
+
+def docente_in_sede(docente, giorno, ora=None):
+    """PURA. True se il docente non è impegnato presso un'altra scuola."""
+    return motivo_non_in_sede(docente, giorno, ora) is None
+
+
+def avvisi_multi_sede(docente):
+    """PURA. Incoerenze nella scheda di un docente "Più scuole" che
+    renderebbero inefficace il filtro in sede: nessun giorno di presenza
+    (il filtro per giorno non scatta mai) oppure ora di uscita indicata
+    su un giorno in cui il docente non è presente comunque."""
+    if not docente.multi_sede:
+        return []
+    avvisi = []
+    giorni = docente.giorni_presenza_list
+    if not giorni:
+        avvisi.append('Nessun giorno di presenza indicato: il docente non verrà '
+                      'mai escluso dai suggerimenti per i giorni passati in un\'altra scuola.')
+    else:
+        for g in sorted(docente.ora_uscita_map):
+            if g not in giorni and 0 <= g < len(GIORNI_SETTIMANA):
+                avvisi.append(f'Ora di uscita indicata per {GIORNI_SETTIMANA[g]}, '
+                              f'ma {GIORNI_SETTIMANA[g]} non è tra i giorni di presenza: '
+                              f'l\'ora di uscita non ha effetto.')
+    return avvisi
+
+
 def docenti_esclusi(data_sel, ora, giorno):
     """
     Determina quali docenti NON sono candidabili come sostituti in una

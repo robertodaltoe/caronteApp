@@ -262,7 +262,9 @@ def api_suggerimenti():
     from modules.suggerimenti_supplenza import (
         docenti_esclusi, docenti_occupati_stessa_ora, ha_ora_adiacente,
         calcola_saldi_docenti, formatta_saldo_label_proiettato,
+        motivo_non_in_sede,
     )
+    mostra_comunque = request.args.get('mostra_comunque') == '1'
 
     # 1. Assenti (tutto il giorno o solo quell'ora) e indisponibili puntuali
     assenti_tutto_giorno_ids, assenti_ora_ids, indisp_ids = \
@@ -347,6 +349,17 @@ def api_suggerimenti():
         if d.id not in esclusi
     }
 
+    # Docenti "Più scuole" impegnati altrove in questo giorno/ora (giorni di
+    # presenza + orario spezzato): esclusi di default, rimessi in un gruppo
+    # a parte con "mostra comunque".
+    non_in_sede = {}
+    for _id, _d in tutti.items():
+        _m = motivo_non_in_sede(_d, giorno, ora)
+        if _m:
+            non_in_sede[_id] = _m
+    if not mostra_comunque:
+        tutti = {i: d for i, d in tutti.items() if i not in non_in_sede}
+
     # ── Slot orario di tutti i docenti in quel giorno ────────
     # Include anche l'orario di sostegno (tabella separata, vedi
     # models/orario_sostegno.py): un docente di sostegno impegnato in
@@ -366,6 +379,7 @@ def api_suggerimenti():
     gruppo_comp   = []  # Compresenza nell'ora
     gruppo_adj    = []  # Liberi nell'ora con ora adiacente
     gruppo_liberi = []  # Liberi nell'ora senza adiacenza
+    gruppo_non_in_sede = []  # Impegnati in un'altra scuola (solo con mostra_comunque)
     gruppo_pot_occupato = []  # Già assegnati a potenziamento/compresenza in quest'ora (dirottabili)
 
     for doc_id, doc in tutti.items():
@@ -440,7 +454,7 @@ def api_suggerimenti():
         # Multi-sede: verifica se la supplenza è in un giorno fuori presenza
         giorni_pres = getattr(doc, 'giorni_presenza_list', [])
         multi_sede  = getattr(doc, 'multi_sede', False)
-        fuori_sede  = multi_sede and bool(giorni_pres) and (giorno not in giorni_pres)
+        fuori_sede  = doc_id in non_in_sede
         entry = {
             'id':      doc_id,
             'cognome': doc.cognome,
@@ -457,6 +471,7 @@ def api_suggerimenti():
             'multi_sede': multi_sede,
             'altra_scuola': getattr(doc, 'altra_scuola', None) or '',
             'fuori_sede': fuori_sede,
+            'motivo_fuori_sede': non_in_sede.get(doc_id, ''),
         }
 
         # Già assegnato a potenziamento/compresenza in quest'ora (comando
@@ -471,6 +486,13 @@ def api_suggerimenti():
         # docenti sia con slot_ora vuoto (erano liberi, sarebbero finiti
         # nei gruppi "liberi") sia con slot_ora di tipo potenziamento
         # strutturale (sarebbero finiti in gruppo_pot).
+        if fuori_sede:
+            # Senza ore quel giorno non sarebbe comunque un candidato.
+            if slots:
+                entry['dettaglio'] = non_in_sede[doc_id]
+                gruppo_non_in_sede.append(entry)
+            continue
+
         if doc_id in occupati_pot_ids:
             entry['dettaglio'] = 'Già assegnato a potenziamento/compresenza'
             gruppo_pot_occupato.append(entry)
@@ -521,7 +543,7 @@ def api_suggerimenti():
             # Se non ha nessuna ora nel giorno →︎ non è in servizio →︎ escluso
 
     # Ordina ogni gruppo per saldo crescente (più debito = priorità)
-    for g in [gruppo_pot, gruppo_comp, gruppo_adj, gruppo_liberi, gruppo_pot_occupato]:
+    for g in [gruppo_pot, gruppo_comp, gruppo_adj, gruppo_liberi, gruppo_pot_occupato, gruppo_non_in_sede]:
         g.sort(key=lambda x: x['saldo_min'])
 
     # ── Mappa orario completo (tutti i giorni) per il badge "sua classe" ──
@@ -532,7 +554,7 @@ def api_suggerimenti():
 
     # Aggiorna docente_della_classe nei gruppi già costruiti usando l'orario completo
     if classe_sup:
-        for gruppo in [gruppo_adj, gruppo_liberi, gruppo_pot, gruppo_comp, gruppo_pot_occupato]:
+        for gruppo in [gruppo_adj, gruppo_liberi, gruppo_pot, gruppo_comp, gruppo_pot_occupato, gruppo_non_in_sede]:
             for entry in gruppo:
                 entry['docente_classe'] = any(
                     s.classe == classe_sup
@@ -588,6 +610,7 @@ def api_suggerimenti():
         tutti_incluso_assenti = {
             d.id: d for d in Docente.query.filter_by(attivo=True).all()
             if d.id not in esclusi_fuori and d.id != id_assente
+            and (mostra_comunque or d.id not in non_in_sede)
         }
         for doc_id, doc in tutti_incluso_assenti.items():
             slots = slots_per_doc.get(doc_id, [])
@@ -640,8 +663,19 @@ def api_suggerimenti():
                                'verifica prima di confermare.',
                        'docenti': gruppo_pot_occupato})
 
+    if gruppo_non_in_sede:
+        gruppi.append({'label': '⚠ Non in sede (altra scuola)', 'key': 'non_in_sede',
+                       'note': 'Impegnati presso un\'altra scuola in questo giorno/ora: '
+                               'assegnare solo se sai che sono comunque disponibili.',
+                       'docenti': gruppo_non_in_sede})
+
+    # Quanti ne ha nascosti il filtro (solo chi avrebbe ore in quel giorno)
+    n_nascosti = 0 if mostra_comunque else sum(
+        1 for i in non_in_sede if slots_per_doc.get(i))
+
     return jsonify({
         'gruppi': gruppi,
+        'n_non_in_sede_nascosti': n_nascosti,
         'ora': ora,
         'data': data_str,
         'totale_candidati': sum(len(g['docenti']) for g in gruppi)
