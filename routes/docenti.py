@@ -311,10 +311,17 @@ def modifica(id):
             db.session.add(riga_coll)
         cg = request.form.get('colloqui_giorno', '').strip()
         riga_coll.giorno     = int(cg) if cg != '' else None
-        ci = request.form.get('colloqui_ora_inizio', '').strip()
-        riga_coll.ora_inizio = int(ci) if ci else None
-        cf = request.form.get('colloqui_ora_fine', '').strip()
-        riga_coll.ora_fine   = int(cf) if cf else None
+        if 'colloqui_ora' in request.form:
+            # Form attuale: un'unica ora (il colloquio dura un modulo
+            # orario), salvata come inizio = fine.
+            co = request.form.get('colloqui_ora', '').strip()
+            riga_coll.ora_inizio = int(co) if co else None
+            riga_coll.ora_fine   = riga_coll.ora_inizio
+        else:
+            ci = request.form.get('colloqui_ora_inizio', '').strip()
+            riga_coll.ora_inizio = int(ci) if ci else None
+            cf = request.form.get('colloqui_ora_fine', '').strip()
+            riga_coll.ora_fine   = int(cf) if cf else None
         d.attivo         = 'attivo' in request.form
         d.nome_display   = f"{d.cognome} {d.nome[0]}." if d.nome else d.cognome
 
@@ -672,6 +679,15 @@ def esporta_dati(id):
         return html_content
 
 
+def _docenti_con_colloqui(anno_scol):
+    """Docenti attivi con un giorno di colloqui valido per l'anno dato
+    (tabella per-anno con fallback sui valori ereditati, non il solo
+    campo base Docente.colloqui_giorno)."""
+    attivi = Docente.query.filter(Docente.attivo == True).order_by(Docente.cognome).all()
+    return [d for d in attivi
+            if d.colloqui_effettivi_per_anno(anno_scol)['giorno'] is not None]
+
+
 @docenti_bp.route('/docenti/eccezioni-istituto', methods=['GET', 'POST'])
 def eccezioni_istituto():
     if request.method == 'POST':
@@ -692,13 +708,19 @@ def eccezioni_istituto():
                     periodi.append((di, df, ne))
                 except ValueError:
                     continue
-            docenti_con_colloqui = Docente.query.filter(
-                Docente.attivo == True,
-                Docente.colloqui_giorno != None
-            ).all()
+            from config_anno import intervallo_anno_scolastico
+            anno = get_anno_corrente()
+            _ini, _fine = intervallo_anno_scolastico(anno)
+            docenti_con_colloqui = _docenti_con_colloqui(anno)
             n = 0
             for doc in docenti_con_colloqui:
-                ColloquiEccezione.query.filter_by(id_docente=doc.id).delete()
+                # Solo le eccezioni dell'anno in corso: quelle degli altri
+                # anni non sono mostrate in questa pagina e non vanno perse.
+                ColloquiEccezione.query.filter(
+                    ColloquiEccezione.id_docente == doc.id,
+                    ColloquiEccezione.data >= _ini,
+                    ColloquiEccezione.data <= _fine,
+                ).delete()
                 for di, df, ne in periodi:
                     db.session.add(ColloquiEccezione(
                         id_docente=doc.id, data=di, data_fine=df, note=ne))
@@ -708,14 +730,16 @@ def eccezioni_istituto():
             return redirect(url_for('docenti.eccezioni_istituto'))
 
     # GET — prendi le eccezioni del primo docente come riferimento
-    docenti_con_colloqui = Docente.query.filter(
-        Docente.attivo == True,
-        Docente.colloqui_giorno != None
-    ).order_by(Docente.cognome).all()
+    from config_anno import intervallo_anno_scolastico
+    anno = get_anno_corrente()
+    _ini, _fine = intervallo_anno_scolastico(anno)
+    docenti_con_colloqui = _docenti_con_colloqui(anno)
     eccezioni_ref = []
     if docenti_con_colloqui:
-        eccezioni_ref = ColloquiEccezione.query.filter_by(
-            id_docente=docenti_con_colloqui[0].id
-        ).order_by(ColloquiEccezione.data).all()
+        eccezioni_ref = (ColloquiEccezione.query
+                         .filter(ColloquiEccezione.id_docente == docenti_con_colloqui[0].id,
+                                 ColloquiEccezione.data >= _ini,
+                                 ColloquiEccezione.data <= _fine)
+                         .order_by(ColloquiEccezione.data).all())
     return render_template('eccezioni_istituto.html',
         docenti=docenti_con_colloqui, eccezioni=eccezioni_ref)
