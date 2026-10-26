@@ -268,3 +268,10 @@ def test_eccezioni_istituto_include_docenti_con_colloqui_per_anno_e_rispetta_alt
     note = {e.note for e in ColloquiEccezione.query.filter_by(id_docente=solo_anno.id)}
     assert note == {'altro anno', 'online'}
     assert ColloquiEccezione.query.filter_by(id_docente=senza.id).count() == 0
+
+
+def test_label_colloqui_una_sola_ora_non_mostra_intervallo():
+    from models.docente import _colloqui_label
+    assert _colloqui_label(3, 2, 2, breve=True) == 'Gio 2ª'
+    assert _colloqui_label(3, 2, 2) == 'Giovedì 2ª ora'
+    assert _colloqui_label(3, 2, 3, breve=True) == 'Gio 2ª–3ª'

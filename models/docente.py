@@ -10,7 +10,7 @@ def _colloqui_label(giorno, ora_inizio, ora_fine, breve=False):
         return None
     g = (_GIORNI_COLLOQUI_BREVI if breve else _GIORNI_COLLOQUI)[giorno]
     suffisso = 'ª' if breve else 'ª ora'
-    if ora_inizio and ora_fine:
+    if ora_inizio and ora_fine and ora_fine != ora_inizio:
         return f"{g} {ora_inizio}ª–{ora_fine}{suffisso}"
     elif ora_inizio:
         return f"{g} {ora_inizio}{suffisso}"
