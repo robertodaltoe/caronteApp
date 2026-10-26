@@ -192,3 +192,10 @@ def ha_ora_adiacente(ore_occupate, ora):
     'ora' è tra queste (utile per proporre chi ha già un buco vicino,
     invece di far venire a scuola qualcuno solo per quell'ora)."""
     return (ora - 1) in ore_occupate or (ora + 1) in ore_occupate
+
+
+def adiacenza_prec_succ(ore_occupate, ora):
+    """PURA — nessuna query. Come ha_ora_adiacente ma distingue i due
+    lati: ritorna (ha_precedente, ha_successiva), per mostrare nei
+    suggerimenti se il docente ha già impegno nell'ora prima e/o dopo."""
+    return (ora - 1) in ore_occupate, (ora + 1) in ore_occupate
