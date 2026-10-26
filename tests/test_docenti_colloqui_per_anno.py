@@ -226,3 +226,45 @@ def test_eccezione_con_periodo_copre_tutti_i_giorni_non_solo_il_primo(app, db_se
         r = c.get('/api/suggerimenti?data=2025-10-13&ora=1')
         assert r.status_code == 200
     assert d.id in _ids_nei_gruppi(r)
+
+
+def test_colloqui_campo_singolo_ora_salva_inizio_uguale_fine(app, db_session):
+    import routes.docenti as mod
+    if 'docenti' not in app.blueprints:
+        app.register_blueprint(mod.docenti_bp)
+    d = crea_docente('ColloquiOra')
+    db.session.commit()
+    with app.test_client() as c:
+        r = _post_modifica(c, d, '2026-2027', colloqui_giorno=2,
+                           extra={'colloqui_ora': '1'})
+        assert r.status_code == 302
+    db.session.refresh(d)
+    eff = d.colloqui_effettivi_per_anno('2026-2027')
+    assert (eff['giorno'], eff['ora_inizio'], eff['ora_fine']) == (2, 1, 1)
+
+
+def test_eccezioni_istituto_include_docenti_con_colloqui_per_anno_e_rispetta_altri_anni(app, db_session):
+    import routes.docenti as mod
+    from config_anno import get_anno_corrente, intervallo_anno_scolastico
+    from models.docente import DocenteColloquiAnno
+    if 'docenti' not in app.blueprints:
+        app.register_blueprint(mod.docenti_bp)
+    anno = get_anno_corrente()
+    ini, fine = intervallo_anno_scolastico(anno)
+    solo_anno = crea_docente('SoloPerAnno')
+    senza = crea_docente('SenzaColloqui')
+    db.session.commit()
+    db.session.add(DocenteColloquiAnno(id_docente=solo_anno.id, anno_scol=anno,
+                                       giorno=1, ora_inizio=1, ora_fine=1))
+    fuori = ColloquiEccezione(id_docente=solo_anno.id, data=date(ini.year - 3, 1, 10), note='altro anno')
+    db.session.add(fuori)
+    db.session.commit()
+    with app.test_client() as c:
+        r = c.post('/docenti/eccezioni-istituto', data={
+            'azione': 'salva_istituto',
+            'eccezione_data[]': [ini.isoformat()], 'eccezione_data_fine[]': [''],
+            'eccezione_note[]': ['online']})
+        assert r.status_code == 302
+    note = {e.note for e in ColloquiEccezione.query.filter_by(id_docente=solo_anno.id)}
+    assert note == {'altro anno', 'online'}
+    assert ColloquiEccezione.query.filter_by(id_docente=senza.id).count() == 0

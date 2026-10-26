@@ -598,11 +598,17 @@
             {% endif %}
         </div>
         <div style="font-size:.72rem; font-weight:400; color:var(--grigio); margin-bottom:12px;">
-            — esclusi dai suggerimenti supplenze
+            — un'ora a settimana, esclusa dai suggerimenti supplenze
             {% if docente and not colloqui_eff.esplicito %}
             <span style="color:#9ca3af;">· valore ereditato, non impostato apposta per il {{ anno_sel_colloqui }}</span>
             {% endif %}
         </div>
+        {% if docente and colloqui_eff.ora_inizio and colloqui_eff.ora_fine and colloqui_eff.ora_fine != colloqui_eff.ora_inizio %}
+        <div style="font-size:.74rem; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 10px; margin-bottom:10px;">
+            Questo colloquio era impostato su più ore ({{ colloqui_eff.ora_inizio }}ª–{{ colloqui_eff.ora_fine }}ª).
+            Il form gestisce una sola ora: salvando resterà solo la {{ colloqui_eff.ora_inizio }}ª.
+        </div>
+        {% endif %}
         {% if docente %}<input type="hidden" name="anno_colloqui" value="{{ anno_sel_colloqui }}">{% endif %}
         <div style="display:flex; gap:10px; align-items:flex-end;{% if docente and not colloqui_eff.esplicito %} opacity:.6;{% endif %}">
             <div class="form-group" style="flex:3; margin-bottom:0;">
@@ -616,20 +622,11 @@
                 </select>
             </div>
             <div class="form-group" style="flex:1; margin-bottom:0;">
-                <label>Dalle</label>
-                <select name="colloqui_ora_inizio">
+                <label>Ora</label>
+                <select name="colloqui_ora">
                     <option value="">—</option>
                     {% for o in range(1,10) %}
                     <option value="{{ o }}" {% if docente and colloqui_eff.ora_inizio==o %}selected{% endif %}>{{ o }}ª</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group" style="flex:1; margin-bottom:0;">
-                <label>Alle</label>
-                <select name="colloqui_ora_fine">
-                    <option value="">—</option>
-                    {% for o in range(1,10) %}
-                    <option value="{{ o }}" {% if docente and colloqui_eff.ora_fine==o %}selected{% endif %}>{{ o }}ª</option>
                     {% endfor %}
                 </select>
             </div>
