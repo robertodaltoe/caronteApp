@@ -50,6 +50,10 @@ TIPO_SIGLA = {
     'completamento': 'C', 'potenziamento': 'P', 'disposizione': 'D',
 }
 
+# Il prospetto è affisso: i nomi dei docenti assenti vengono oscurati
+# (Roberto, 26/10/2026). I sostituti restano in chiaro.
+CENSURA = '***'
+
 GIORNI_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica']
 MESI_IT   = ['','gennaio','febbraio','marzo','aprile','maggio','giugno',
              'luglio','agosto','settembre','ottobre','novembre','dicembre']
@@ -189,7 +193,7 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
         if i.docente:
             assenti_set.add(i.docente.cognome)
 
-    assenti_str = ', '.join(sorted(assenti_set))
+    assenti_str = ', '.join(CENSURA for _ in assenti_set)
 
     # Riga 4: M4 (col 13) — spazio tra H4:L4 e il resto
     ws.cell(4, 13).value = assenti_str
@@ -231,7 +235,7 @@ def genera_prospetto(data_sel, supplenze, template_path, save_dir=None, attivita
 
         ca, cs = ORA_COLS[s.ora]
 
-        nome_ass  = s.assente.cognome if s.assente else ''
+        nome_ass  = CENSURA if s.assente else ''
         nome_sost = ''
 
         if s.sostituto:
