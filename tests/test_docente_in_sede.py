@@ -93,3 +93,35 @@ def test_suggerimenti_escludono_fuori_sede_e_mostra_comunque(app, db_session):
         # ora 3 (entro l'uscita): "Spezzato" è in sede, "Altrove" no
         p = c.get(f'/api/suggerimenti?data={LUNEDI.isoformat()}&ora=3').get_json()
         assert _ids(p) == {normale.id, uscita.id}
+
+
+def test_adiacenza_prec_succ_pura():
+    from modules.suggerimenti_supplenza import adiacenza_prec_succ
+    assert adiacenza_prec_succ({2, 3}, 4) == (True, False)
+    assert adiacenza_prec_succ({5}, 4) == (False, True)
+    assert adiacenza_prec_succ({3, 5}, 4) == (True, True)
+    assert adiacenza_prec_succ({1, 7}, 4) == (False, False)
+
+
+def test_suggerimenti_indicano_prec_succ_e_codice_cc(app, db_session):
+    _prepara(app)
+    from models.classe_concorso import ClasseConcorso
+    cc = ClasseConcorso(codice='A012', nome='Discipline letterarie')
+    db.session.add(cc)
+    db.session.flush()
+    solo_prec = crea_docente('SoloPrec')
+    solo_prec.id_classe_concorso = cc.id
+    entrambe = crea_docente('Entrambe')
+    lontano = crea_docente('Lontano')
+    for d, ore in ((solo_prec, (4,)), (entrambe, (4, 6)), (lontano, (1,))):
+        for o in ore:
+            _slot(d, 0, o)
+    db.session.commit()
+
+    with app.test_client() as c:
+        p = c.get(f'/api/suggerimenti?data={LUNEDI.isoformat()}&ora=5').get_json()
+    per_id = {d['id']: d for g in p['gruppi'] for d in g['docenti']}
+    assert (per_id[solo_prec.id]['ora_prec'], per_id[solo_prec.id]['ora_succ']) == (True, False)
+    assert (per_id[entrambe.id]['ora_prec'], per_id[entrambe.id]['ora_succ']) == (True, True)
+    assert (per_id[lontano.id]['ora_prec'], per_id[lontano.id]['ora_succ']) == (False, False)
+    assert per_id[solo_prec.id]['materia'] == 'A012'

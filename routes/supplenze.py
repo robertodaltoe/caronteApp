@@ -261,6 +261,7 @@ def api_suggerimenti():
     from models.indisponibilita_ricorrente import IndisponibilitaRicorrente
     from modules.suggerimenti_supplenza import (
         docenti_esclusi, docenti_occupati_stessa_ora, ha_ora_adiacente,
+        adiacenza_prec_succ,
         calcola_saldi_docenti, formatta_saldo_label_proiettato,
         motivo_non_in_sede,
     )
@@ -459,7 +460,10 @@ def api_suggerimenti():
             'id':      doc_id,
             'cognome': doc.cognome,
             'nome':    doc.nome or '',
-            'materia': doc.materia_effettiva or '',
+            # Solo il codice della classe di concorso (la descrizione
+            # testuale occupava troppo spazio nella riga del candidato)
+            'materia': (doc.classe_concorso.codice if doc.classe_concorso
+                        else doc.materia) or '',
             'saldo_min':      saldo_eff,
             'saldo_prev_min': saldo_prev,
             'saldo_label':    saldo_label,
@@ -517,6 +521,7 @@ def api_suggerimenti():
                     # →︎ trattalo come libero con ora adiacente
                     ore_occupate = {s.ora for s in slots}
                     ha_adiacente = ha_ora_adiacente(ore_occupate, ora)
+                    entry['ora_prec'], entry['ora_succ'] = adiacenza_prec_succ(ore_occupate, ora)
                     if ha_adiacente:
                         entry['dettaglio'] = f'Libero — compresenza inattiva ({slot_ora.classe})'
                         gruppo_adj.append(entry)
@@ -533,6 +538,7 @@ def api_suggerimenti():
             ore_occupate = {s.ora for s in slots}
             ha_adiacente = ha_ora_adiacente(ore_occupate, ora)
             ha_giorno    = len(ore_occupate) > 0
+            entry['ora_prec'], entry['ora_succ'] = adiacenza_prec_succ(ore_occupate, ora)
 
             if ha_giorno and ha_adiacente:
                 entry['dettaglio'] = 'Libero (ora adiacente)'
