@@ -261,7 +261,7 @@ def api_suggerimenti():
     from models.indisponibilita_ricorrente import IndisponibilitaRicorrente
     from modules.suggerimenti_supplenza import (
         docenti_esclusi, docenti_occupati_stessa_ora, ha_ora_adiacente,
-        adiacenza_prec_succ,
+        adiacenza_prec_succ, ore_in_servizio,
         calcola_saldi_docenti, formatta_saldo_label_proiettato,
         motivo_non_in_sede,
     )
@@ -369,6 +369,15 @@ def api_suggerimenti():
     from models.orario_sostegno import slots_come_orario_docente
     slots_giorno = list(OrarioDocente.query.filter_by(giorno=giorno).all()) \
         + slots_come_orario_docente(giorno)
+
+    # Ore in cui ogni docente è assente quel giorno (permesso breve o
+    # assenza oraria): non contano come "ora precedente/successiva"
+    # in servizio, il docente a scuola in quell'ora non c'è.
+    ore_assenza = {}
+    for a in Assenza.query.filter_by(data=data_sel).all():
+        i = 1 if a.ora_inizio is None else a.ora_inizio
+        f = 9 if a.ora_fine is None else a.ora_fine
+        ore_assenza.setdefault(a.id_docente, set()).update(range(i, f + 1))
 
     # Mappa id_docente -> lista slot del giorno
     slots_per_doc = {}
@@ -519,7 +528,7 @@ def api_suggerimenti():
                     # Compagno assente/indisponibile (BIM, FSL…) →︎ il docente è
                     # effettivamente LIBERO in quell'ora (la compresenza non è attiva)
                     # →︎ trattalo come libero con ora adiacente
-                    ore_occupate = {s.ora for s in slots}
+                    ore_occupate = ore_in_servizio(slots, data_sel, ore_assenza.get(doc_id, ()))
                     ha_adiacente = ha_ora_adiacente(ore_occupate, ora)
                     entry['ora_prec'], entry['ora_succ'] = adiacenza_prec_succ(ore_occupate, ora)
                     if ha_adiacente:
@@ -535,7 +544,7 @@ def api_suggerimenti():
             # Se ha lezione propria →︎ non disponibile (già in classe)
         else:
             # Libero in quell'ora — controlla adiacenza
-            ore_occupate = {s.ora for s in slots}
+            ore_occupate = ore_in_servizio(slots, data_sel, ore_assenza.get(doc_id, ()))
             ha_adiacente = ha_ora_adiacente(ore_occupate, ora)
             ha_giorno    = len(ore_occupate) > 0
             entry['ora_prec'], entry['ora_succ'] = adiacenza_prec_succ(ore_occupate, ora)

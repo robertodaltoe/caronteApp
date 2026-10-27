@@ -125,3 +125,28 @@ def test_suggerimenti_indicano_prec_succ_e_codice_cc(app, db_session):
     assert (per_id[entrambe.id]['ora_prec'], per_id[entrambe.id]['ora_succ']) == (True, True)
     assert (per_id[lontano.id]['ora_prec'], per_id[lontano.id]['ora_succ']) == (False, False)
     assert per_id[solo_prec.id]['materia'] == 'A012'
+
+
+def test_prec_succ_ignora_ore_non_in_servizio(app, db_session):
+    """Regressione (Tramontana): un'ora di orario in cui il docente è
+    assente o con validità scaduta non deve dare il badge 'prec.' né
+    far considerare il docente 'in servizio' quel giorno."""
+    from models.assenza import Assenza
+    _prepara(app)
+    assente_ora1 = crea_docente('AssenteOra1')
+    _slot(assente_ora1, 0, 1)
+    _slot(assente_ora1, 0, 4)                 # unica ora davvero in servizio
+    scaduto = crea_docente('Scaduto')
+    _slot(scaduto, 0, 1)
+    db.session.flush()
+    OrarioDocente.query.filter_by(id_docente=scaduto.id).update(
+        {'data_fine_validita': date(2026, 9, 1)})
+    db.session.add(Assenza(id_docente=assente_ora1.id, data=LUNEDI,
+                           ora_inizio=1, ora_fine=1, motivo='permesso_orario'))
+    db.session.commit()
+
+    with app.test_client() as c:
+        p = c.get(f'/api/suggerimenti?data={LUNEDI.isoformat()}&ora=2').get_json()
+    per_id = {d['id']: d for g in p['gruppi'] for d in g['docenti']}
+    assert per_id[assente_ora1.id]['ora_prec'] is False
+    assert scaduto.id not in per_id           # nessuna ora valida: non in servizio
