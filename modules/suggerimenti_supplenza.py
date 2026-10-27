@@ -186,6 +186,31 @@ def docenti_occupati_stessa_ora(data_sel, ora):
     return occupati_ids, occupati_pot_ids
 
 
+_CLASSI_NON_REALI = (None, '', '---', '-x-')
+
+
+def ore_in_servizio(slots, data_sel, ore_assente=()):
+    """PURA — nessuna query. Ore del giorno in cui il docente è
+    effettivamente in servizio a scuola, a partire dai suoi slot di
+    orario: scarta le righe senza classe reale ('---', '-x-'), quelle
+    con un periodo di validità che non copre data_sel (orario
+    provvisorio scaduto/non ancora valido) e le ore in cui risulta
+    assente (permesso breve, assenza oraria). Serve a ha_giorno/
+    ora_prec/ora_succ: prima bastava che esistesse una riga di orario."""
+    ore = set()
+    for s in slots:
+        if getattr(s, 'classe', None) in _CLASSI_NON_REALI:
+            continue
+        ini = getattr(s, 'data_inizio_validita', None)
+        fine = getattr(s, 'data_fine_validita', None)
+        if (ini and data_sel < ini) or (fine and data_sel > fine):
+            continue
+        if s.ora in ore_assente:
+            continue
+        ore.add(s.ora)
+    return ore
+
+
 def ha_ora_adiacente(ore_occupate, ora):
     """PURA — nessuna query. Dato l'insieme di ore in cui il docente ha
     già un impegno nel giorno, dice se l'ora immediatamente prima o dopo
