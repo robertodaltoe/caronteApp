@@ -200,3 +200,14 @@ def test_modello_personalizzabile_con_default(app):
         assert c.startswith('Ciao Mario!') and 'Per ' in c and c.rstrip().endswith('Fine.')
         ne.imposta_modello('', '', '')
         assert ne.proposte_supplenze(g)[0]['corpo'].startswith('Gentile collega,')
+
+
+def test_mittente_atteso_configurabile(monkeypatch):
+    import importlib
+    from modules import gmail_invio
+    monkeypatch.setenv('CARONTE_EMAIL_MITTENTE', 'Vicepresidenza@davincichiavenna.edu.it')
+    importlib.reload(gmail_invio)
+    assert gmail_invio.MITTENTE_ATTESO == 'vicepresidenza@davincichiavenna.edu.it'
+    monkeypatch.delenv('CARONTE_EMAIL_MITTENTE')
+    importlib.reload(gmail_invio)
+    assert gmail_invio.MITTENTE_ATTESO == 'roberto.daltoe@davincichiavenna.edu.it'

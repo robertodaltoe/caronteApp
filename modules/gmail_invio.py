@@ -23,7 +23,10 @@ DATA = os.path.join(BASE, 'data')
 FILE_CLIENT = os.path.join(DATA, 'gmail_client.json')
 FILE_TOKEN = os.path.join(DATA, 'gmail_token.json')
 SCOPE = 'https://www.googleapis.com/auth/gmail.send'
-MITTENTE_ATTESO = 'roberto.daltoe@davincichiavenna.edu.it'
+# account che deve aver autorizzato l'invio; per usarne un altro (es. una casella
+# della vicepresidenza) basta impostare CARONTE_EMAIL_MITTENTE e rifare l'autorizzazione
+MITTENTE_ATTESO = (os.environ.get('CARONTE_EMAIL_MITTENTE')
+                   or 'roberto.daltoe@davincichiavenna.edu.it').strip().lower()
 URL_TOKEN = 'https://oauth2.googleapis.com/token'
 URL_SEND = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send'
 
