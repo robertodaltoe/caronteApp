@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Orario {{ docente.cognome }} — {{ oggi.strftime('%d/%m/%Y') }}</title>
 <style>
+@page { size: A4 landscape; margin: 10mm; }
 * { box-sizing:border-box; margin:0; padding:0; }
 @font-face {
     font-family: 'Open Sans'; font-weight: 400; font-style: normal;
@@ -18,21 +19,23 @@
     src: url(data:font/woff2;base64,{{ FONT_OS_700 }}) format('woff2');
 }
 body { font-family: 'Open Sans', Arial, sans-serif; font-size:10pt;
-       color:#1e2939; padding:14px 18px; }
+       color:#1e2939; padding:0; }
 h1 { font-size:15pt; color:#7a1c17; margin-bottom:2px; }
 .sub { font-size:9pt; color:#6b7280; margin-bottom:16px; }
 
 table { width:100%; border-collapse:collapse; table-layout:fixed; }
 th { background:#7a1c17; color:white; padding:7px 4px; text-align:center;
      font-weight:600; font-size:8.5pt; }
-th.col-ora { width:70px; }
+th.col-ora { width:62px; }
 td.col-ora { background:#f3e5e2; font-weight:700; font-size:8pt;
              text-align:center; vertical-align:middle; color:#7a1c17; }
-td { border:1px solid #d9dfe6; padding:4px; height:44px;
+td { border:1px solid #d9dfe6; padding:4px 5px; height:42px;
      vertical-align:middle; text-align:center; font-size:8.5pt; }
 td.vuota { background:#fafafa; }
 .classe { font-weight:700; font-size:9.5pt; }
-.materia { color:#6b7280; font-size:7.5pt; margin-top:2px; }
+.materia { color:#6b7280; font-size:7.5pt; margin-top:2px; line-height:1.25;
+           overflow-wrap:anywhere; word-break:break-word; }
+tr { page-break-inside:avoid; }
 
 .piede { margin-top:14px; font-size:7.5pt; color:#9ca3af; }
 </style>
