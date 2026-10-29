@@ -11,8 +11,10 @@
             Controlla l'anteprima e invia.
         </p>
     </div>
-    <a href="{{ url_for('mail_bozze.calendario_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Calendario impegni</a>
-    <a href="{{ url_for('mail_bozze.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Bozze email</a>
+    <div style="display:flex; gap:8px; flex-shrink:0; white-space:nowrap;">
+        <a href="{{ url_for('mail_bozze.calendario_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Calendario impegni</a>
+        <a href="{{ url_for('mail_bozze.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Bozze email</a>
+    </div>
 </div>
 
 <div class="card" style="padding:12px 16px; margin-bottom:12px;">

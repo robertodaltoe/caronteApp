@@ -116,12 +116,18 @@ def _giorni(data_da, data_a):
         d += timedelta(days=1)
 
 
-def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None):
+def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None, con_conflitti=True,
+                    con_facoltativi=False):
     """
     Impegni nell'intervallo [data_da, data_a] (date incluse).
     id_docente: se indicato, solo gli impegni di quel docente e, in piu',
     le sue lezioni; altrimenti la vista d'istituto (senza lezioni).
     fonti: sottoinsieme di FONTI da includere (None = tutte).
+    con_conflitti: False salta il calcolo delle sovrapposizioni (costoso,
+    non serve a chi non le mostra, es. l'agenda mensile per docente).
+    con_facoltativi: include anche gli eventi a cui il docente NON e'
+    convocato (esonerato dal proprio piano individuale), marcati
+    'facoltativo': True e con i loro id in 'id_facoltativi'.
     """
     from models.attivita_ist import AttivitaIst, TIPI_ATTIVITA
     from models.assenza import Assenza
@@ -130,15 +136,16 @@ def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None):
     from models.sospensione import SospensioneDidattica
 
     fonti = set(fonti) if fonti is not None else set(FONTI)
-    conf = _conflitti(data_da, data_a)
+    conf = _conflitti(data_da, data_a) if con_conflitti else {}
     impegni = []
 
-    def aggiungi(chiave, sid, fonte, titolo, d, a, b, docenti, classe, url, ds=False):
+    def aggiungi(chiave, sid, fonte, titolo, d, a, b, docenti, classe, url, ds=False, ids=(), facoltativi=()):
         impegni.append({
             'id': sid, 'fonte': fonte, 'titolo': titolo, 'data': d.isoformat(),
             'ora_inizio': a, 'ora_fine': b, 'docenti': sorted(docenti),
             'classe': classe, 'url': url, 'ds': bool(ds),
-            'conflitti': conf.get(chiave, []),
+            'conflitti': conf.get(chiave, []), 'id_docenti': sorted(ids),
+            'id_facoltativi': sorted(facoltativi),
         })
 
     # ── Piano delle attivita' + Formazione ────────────────────────────
@@ -147,12 +154,23 @@ def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None):
             fonte = 'formazione' if ev.tipo == 'formazione' else 'piano'
             if fonte not in fonti:
                 continue
-            if id_docente is not None and id_docente not in ev.partecipanti_convocati_ids:
+            convocati = ev.partecipanti_convocati_ids
+            facoltativi = set()
+            if con_facoltativi and any(
+                    data_da <= d <= data_a for d in
+                    ([x.data for x in ev.sessioni] if ev.sessioni else [ev.data])):
+                # Esonerati dal proprio piano individuale (anche se non
+                # ancora registrati sull'evento) + gia' giustificati.
+                from routes.attivita_ist import _esonerati_da_piano
+                facoltativi = ({p.id_docente for p in ev.partecipanti if p.id_docente}
+                               - convocati) | (_esonerati_da_piano(ev) - convocati)
+            if id_docente is not None and id_docente not in convocati \
+                    and id_docente not in facoltativi:
                 continue
             fasce = ([(s.data, s.ora_inizio, s.ora_fine) for s in ev.sessioni]
                      if ev.sessioni else [(ev.data, ev.ora_inizio, ev.ora_fine)])
             nomi = [p.docente.cognome for p in ev.partecipanti
-                    if p.docente and p.id_docente in ev.partecipanti_convocati_ids]
+                    if p.docente and p.id_docente in convocati]
             tipo = TIPI_ATTIVITA.get(ev.tipo, {}).get('label', ev.tipo)
             for d, a, b in fasce:
                 if d < data_da or d > data_a:
@@ -161,8 +179,9 @@ def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None):
                     a = b = None
                 aggiungi(('ist', ev.id, d), f'ist-{ev.id}-{d.isoformat()}', fonte,
                          ev.titolo, d, a, b, nomi, ev.classe,
-                         f'/attivita-ist/{ev.id}/modifica', ds=ev.richiede_ds)
+                         f'/attivita-ist/{ev.id}/modifica', ds=ev.richiede_ds, ids=convocati, facoltativi=facoltativi)
                 impegni[-1]['tipo'] = tipo
+                impegni[-1]['facoltativo'] = id_docente is not None and id_docente in facoltativi
 
     # ── Progetti FSE/FESR ─────────────────────────────────────────────
     if 'progetti' in fonti:
@@ -179,7 +198,7 @@ def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None):
             a, b = (s.ora_inizio, s.ora_fine) if s.ora_inizio and s.ora_fine else (None, None)
             titolo = f'{mod.progetto.titolo} · {mod.titolo}' if mod.progetto else mod.titolo
             aggiungi(('fse', s.id), f'fse-{s.id}', 'progetti', titolo, s.data, a, b,
-                     nomi, None, f'/progetti-fse/moduli/{mod.id}/calendario')
+                     nomi, None, f'/progetti-fse/moduli/{mod.id}/calendario', ids=ids)
 
     # ── Assenze ───────────────────────────────────────────────────────
     if 'assenza' in fonti:

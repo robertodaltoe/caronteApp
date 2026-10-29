@@ -43,7 +43,7 @@
             e il <strong>proprio PDF riepilogativo</strong> (con date e tipologia delle supplenze) dal tuo account.
         </p>
     </div>
-    <div style="display:flex; gap:8px;">
+    <div style="display:flex; gap:8px; flex-shrink:0; white-space:nowrap;">
         <a href="{{ url_for('mail_bozze.notifiche_supplenze') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Notifiche supplenze</a>
         <a href="{{ url_for('mail_bozze.orari_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Orari dei docenti</a>
         <a href="{{ url_for('mail_bozze.calendario_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Calendario impegni</a>

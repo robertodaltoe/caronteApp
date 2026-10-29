@@ -325,3 +325,44 @@ def test_calendario_mese_default():
     assert ne.mese_calendario_default(date(2026, 10, 14)) == date(2026, 10, 1)
     assert ne.mese_calendario_default(date(2026, 10, 15)) == date(2026, 11, 1)
     assert ne.mese_calendario_default(date(2026, 12, 20)) == date(2027, 1, 1)
+
+
+def test_calendario_raccolta_unica_uguale_a_quella_per_docente(app):
+    from modules.calendario_agenda import impegni_mese, impegni_mese_tutti
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', 'v@davincichiavenna.edu.it')
+        _impegno('Collegio docenti', date(2031, 3, 10), a)
+        _impegno('Consiglio di classe', date(2031, 3, 12), b)
+        _impegno('Dipartimento', date(2031, 3, 12), a)
+        tutti = impegni_mese_tutti(mese)
+        for d in (a, b):
+            assert [e['id'] for e in tutti.get(d.id, [])] == [e['id'] for e in impegni_mese(d, mese)]
+
+
+def test_calendario_esonerato_dal_piano_vede_l_impegno_come_facoltativo(app, monkeypatch):
+    from models.attivita_ist import AttivitaIst, NOTA_ESONERO_PIANO
+    from models.attivita_ist import AttivitaIstPartecipante, AttivitaIstPresenza
+    from modules.calendario_agenda import impegni_mese, impegni_mese_tutti, ics_mese
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a, b, c = _doc(), _doc('Verdi', 'v@davincichiavenna.edu.it'), _doc('Neri', 'n@davincichiavenna.edu.it')
+        ev = AttivitaIst(tipo='altro', titolo='Collegio', data=date(2031, 3, 10), ora_inizio='15:00',
+                         ora_fine='17:00', origine='manuale')
+        db.session.add(ev); db.session.flush()
+        for d in (a, b):
+            db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id))
+        # Verdi: esonero gia' registrato sull'evento
+        db.session.add(AttivitaIstPresenza(id_attivita=ev.id, id_docente=b.id, stato='giustificato',
+                                           note=NOTA_ESONERO_PIANO))
+        db.session.commit()
+        # Neri: esonero dal piano non ancora registrato (non e' nemmeno in elenco)
+        monkeypatch.setattr('routes.attivita_ist._esonerati_da_piano', lambda e: {c.id})
+        tutti = impegni_mese_tutti(mese)
+        assert [e['facoltativo'] for e in tutti[a.id]] == [False]
+        assert [e['facoltativo'] for e in tutti[b.id]] == [True]
+        assert [e['facoltativo'] for e in tutti[c.id]] == [True]
+        assert [e['facoltativo'] for e in impegni_mese(c, mese)] == [True]
+        assert b'facoltativa' in ics_mese(b, mese)
+        p = {x['docente'].cognome: x for x in ne.proposte_calendario(mese)}
+        assert p['Verdi']['n_impegni'] == 1 and p['Neri']['n_impegni'] == 1
