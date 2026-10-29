@@ -70,6 +70,7 @@ def test_pagina_report_banca_ore_e_invio_simulato(app_reale, monkeypatch):
     with app_reale.test_client() as c:
         corpo = c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
         assert 'ProvaBanca' in corpo and 'Saldo netto' in corpo
+        assert 'Seleziona tutti' in corpo and 'Deseleziona tutti' in corpo
         tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
         mese = re.search(r'name="mese" value="([^"]+)"', corpo).group(1)
         r = c.post('/mail-bozze/report-banca-ore/invia',
