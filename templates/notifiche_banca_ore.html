@@ -60,6 +60,12 @@
     {% if not proposte %}
     <div class="card" style="padding:16px;">Nessun docente attivo.</div>
     {% endif %}
+    {% if proposte %}
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="selezionaDocenti(true)">Seleziona tutti</button>
+        <button type="button" class="btn btn-sm" onclick="selezionaDocenti(false)">Deseleziona tutti</button>
+    </div>
+    {% endif %}
     {% for p in proposte %}
     <div class="card" style="padding:12px 16px; margin-bottom:10px;">
         <label style="display:flex; gap:10px; align-items:center; font-weight:700; color:var(--blu);">
@@ -89,4 +95,9 @@
     </button>
     {% endif %}
 </form>
+<script>
+function selezionaDocenti(stato) {
+    document.querySelectorAll('input[name="docenti"]:not(:disabled)').forEach(function (c) { c.checked = stato; });
+}
+</script>
 {% endblock %}
