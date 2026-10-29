@@ -43,7 +43,7 @@
             <strong>proprio orario settimanale in PDF</strong>, con la data di validità scritta, dal tuo account.
         </p>
     </div>
-    <div style="display:flex; gap:8px;">
+    <div style="display:flex; gap:8px; flex-shrink:0; white-space:nowrap;">
         <a href="{{ url_for('mail_bozze.report_banca_ore') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Report banca ore</a>
         <a href="{{ url_for('mail_bozze.notifiche_supplenze') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Notifiche supplenze</a>
         <a href="{{ url_for('mail_bozze.calendario_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Calendario impegni</a>
