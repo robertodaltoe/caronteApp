@@ -1,17 +1,6 @@
 {% extends "base.html" %}
 {% from '_icons.html' import icon %}
-{% block title %}Attività fuori aula{# ── ANNULLATE ─────────────────────────────────────────────── #}
-{% if annullate %}
-<h2 style="font-size:1rem; font-weight:700; color:var(--grigio); margin-bottom:8px;">
-    Annullate
-    <span style="font-size:.8rem; font-weight:400; margin-left:6px;">{{ annullate|length }}</span>
-</h2>
-<div style="opacity:.6;">
-{{ tabella_attivita(annullate, true) }}
-</div>
-{% endif %}
-
-{% endblock %}
+{% block title %}Attività fuori aula{% endblock %}
 {% block content %}
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -139,6 +128,17 @@
 </h2>
 <div style="opacity:.6;">
 {{ tabella_attivita(passate, true) }}
+</div>
+{% endif %}
+
+{# ── ANNULLATE ─────────────────────────────────────────────── #}
+{% if annullate %}
+<h2 style="font-size:1rem; font-weight:700; color:var(--grigio); margin-bottom:8px;">
+    Annullate
+    <span style="font-size:.8rem; font-weight:400; margin-left:6px;">{{ annullate|length }}</span>
+</h2>
+<div style="opacity:.6;">
+{{ tabella_attivita(annullate, true) }}
 </div>
 {% endif %}
 
