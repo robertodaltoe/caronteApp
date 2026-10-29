@@ -194,3 +194,10 @@ def test_pagina_calendario_docenti_e_invio_simulato(app_reale, monkeypatch):
         AttivitaIst.query.filter_by(id=id_e).delete()
         Docente.query.filter_by(id=id_d).delete()
         db.session.commit()
+
+
+def test_intestazione_notifiche_supplenze_ha_i_pulsanti_delle_altre_pagine(app_reale):
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        for url in ('/mail-bozze/report-banca-ore', '/mail-bozze/orari-docenti', '/mail-bozze/calendario-docenti'):
+            assert f'href="{url}"' in corpo
