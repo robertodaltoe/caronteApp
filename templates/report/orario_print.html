@@ -26,8 +26,8 @@ h1 { font-size:15pt; color:#7a1c17; margin-bottom:2px; }
 table { width:100%; border-collapse:collapse; table-layout:fixed; }
 th { background:#7a1c17; color:white; padding:7px 4px; text-align:center;
      font-weight:600; font-size:8.5pt; }
-th.col-ora { width:62px; }
-td.col-ora { background:#f3e5e2; font-weight:700; font-size:8pt;
+th.col-ora { width:92px; }
+td.col-ora { white-space:nowrap; background:#f3e5e2; font-weight:700; font-size:8pt;
              text-align:center; vertical-align:middle; color:#7a1c17; }
 td { border:1px solid #d9dfe6; padding:4px 5px; height:42px;
      vertical-align:middle; text-align:center; font-size:8.5pt; }
@@ -69,7 +69,7 @@ tr { page-break-inside:avoid; }
             <td class="{{ '' if slot else 'vuota' }}">
                 {% if slot %}
                 <div class="classe">{{ slot.classe }}</div>
-                {% if slot.materia %}<div class="materia">{{ slot.materia }}</div>{% endif %}
+                {% if slot.materia %}<div class="materia">{{ slot.materia | replace('POTENZIAMENTO','POT') | replace('Potenziamento','POT') | replace('potenziamento','POT') }}</div>{% endif %}
                 {% endif %}
             </td>
             {% endfor %}
