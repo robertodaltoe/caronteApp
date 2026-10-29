@@ -152,7 +152,8 @@ def test_banca_ore_tutti_i_docenti_un_invio_al_mese(app, monkeypatch):
         db.session.commit()
         mese = ne.primo_del_mese()
         p = ne.proposte_banca_ore(mese)
-        assert len(p) == 2 and 'Saldo netto: 3 h' in p[1]['corpo'] + p[0]['corpo']
+        assert len(p) == 2 and 'Gentile prof. Rossi' in p[0]['corpo'] + p[1]['corpo']
+        assert 'Saldo netto' not in p[0]['corpo']   # i dettagli stanno nel PDF
         r = dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [a.id, b.id]))
         assert r == {'Rossi': 'simulata', 'Verdi': 'saltata'}
         assert ne.proposte_banca_ore(mese)[0]['variante'] == 'gia_inviata'
@@ -161,6 +162,27 @@ def test_banca_ore_tutti_i_docenti_un_invio_al_mese(app, monkeypatch):
                             lambda i, anno_scol=None: dict(supplenze=9, permessi=1, civica=0, pagamento=1))
         p = ne.proposte_banca_ore(mese)
         assert p[0]['variante'] == 'aggiornamento' and p[0]['oggetto'].startswith('AGGIORNAMENTO')
+
+
+def test_banca_ore_testo_modificabile_salvato_e_pdf_allegato(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    monkeypatch.setattr('routes.report.get_saldi_docente',
+                        lambda i, anno_scol=None: dict(supplenze=2, permessi=0, civica=0, pagamento=0))
+    monkeypatch.setattr(ne, '_pdf_banca_ore', lambda d: b'%PDF-prova')
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    with app.test_request_context():
+        a = _doc()
+        db.session.commit()
+        mese = ne.primo_del_mese()
+        r = ne.invia_banca_ore(mese, [a.id], 'Banca ore {MESE}', 'Ciao {NOME} {COGNOME}, ecco il file.')
+        assert r == [('Rossi', 'inviata', '')] or r[0][1] == 'inviata'
+        dest, ogg, corpo, allegati = inviati[0]
+        assert ogg == f'Banca ore {mese.month:02d}/{mese.year}' and corpo.startswith('Ciao ')
+        assert allegati == [('Banca_ore_Rossi.pdf', b'%PDF-prova')]
+        assert ne.modello_banca_ore()['corpo'] == 'Ciao {NOME} {COGNOME}, ecco il file.'   # salvato
+        ne.imposta_modello_banca_ore('', '')   # vuoto = default
+        assert ne.modello_banca_ore() == ne.BANCA_ORE_DEFAULT
 
 
 def test_banca_ore_reale_senza_pdf_invia_comunque_il_testo(app, monkeypatch):
