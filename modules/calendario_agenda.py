@@ -26,7 +26,18 @@ def nome_mese(mese):
 def impegni_mese(docente, mese):
     """Impegni personali del mese (mese = primo giorno)."""
     ultimo = date(mese.year, mese.month, calendar.monthrange(mese.year, mese.month)[1])
-    return raccogli_impegni(mese, ultimo, id_docente=docente.id, fonti=FONTI_PERSONALI)
+    return raccogli_impegni(mese, ultimo, id_docente=docente.id, fonti=FONTI_PERSONALI, con_conflitti=False)
+
+
+def impegni_mese_tutti(mese):
+    """{id_docente: [impegni]} per tutto il mese con una sola raccolta
+    (la pagina d'invio la usa per tutti i docenti insieme)."""
+    ultimo = date(mese.year, mese.month, calendar.monthrange(mese.year, mese.month)[1])
+    out = {}
+    for e in raccogli_impegni(mese, ultimo, fonti=FONTI_PERSONALI, con_conflitti=False):
+        for i in e['id_docenti']:
+            out.setdefault(i, []).append(e)
+    return out
 
 
 def ics_mese(docente, mese, impegni=None):

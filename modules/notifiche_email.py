@@ -616,11 +616,12 @@ def _sostituisci_calendario(testo, docente, mese):
 def proposte_calendario(mese):
     """Una proposta per ogni docente attivo con almeno un impegno nel mese.
     Un invio per mese; se gli impegni cambiano dopo l'invio, AGGIORNAMENTO."""
-    from modules.calendario_agenda import impegni_mese
+    from modules.calendario_agenda import impegni_mese_tutti
     mod = modello_calendario()
+    tutti = impegni_mese_tutti(mese)
     out = []
     for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome, Docente.nome).all():
-        imp = impegni_mese(d, mese)
+        imp = tutti.get(d.id, [])
         righe = [f"{e['data']}|{e['ora_inizio']}|{e['ora_fine']}|{e['titolo']}|{e['classe']}" for e in imp]
         h = _hash(righe)
         prec = _ultimo_inviato(d.id, mese, 'calendario')

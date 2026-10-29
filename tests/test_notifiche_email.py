@@ -325,3 +325,16 @@ def test_calendario_mese_default():
     assert ne.mese_calendario_default(date(2026, 10, 14)) == date(2026, 10, 1)
     assert ne.mese_calendario_default(date(2026, 10, 15)) == date(2026, 11, 1)
     assert ne.mese_calendario_default(date(2026, 12, 20)) == date(2027, 1, 1)
+
+
+def test_calendario_raccolta_unica_uguale_a_quella_per_docente(app):
+    from modules.calendario_agenda import impegni_mese, impegni_mese_tutti
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', 'v@davincichiavenna.edu.it')
+        _impegno('Collegio docenti', date(2031, 3, 10), a)
+        _impegno('Consiglio di classe', date(2031, 3, 12), b)
+        _impegno('Dipartimento', date(2031, 3, 12), a)
+        tutti = impegni_mese_tutti(mese)
+        for d in (a, b):
+            assert [e['id'] for e in tutti.get(d.id, [])] == [e['id'] for e in impegni_mese(d, mese)]
