@@ -40,7 +40,7 @@ td.vuota { background:#fafafa; }
 <body>
 
 <h1>Orario settimanale — {{ docente.cognome }} {{ docente.nome }}</h1>
-<div class="sub">Stampato il {{ oggi.strftime('%d/%m/%Y') }}</div>
+<div class="sub">{% if valido_dal %}Orario valido dal {{ valido_dal.strftime('%d/%m/%Y') }} — {% endif %}Stampato il {{ oggi.strftime('%d/%m/%Y') }}</div>
 
 {% if not orario %}
 <div class="sub" style="color:#b91c1c; font-weight:700;">

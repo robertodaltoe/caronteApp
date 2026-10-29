@@ -124,3 +124,34 @@ def test_impostazioni_dalla_pagina_banca_ore_tornano_alla_pagina_banca_ore(app_r
     with app_reale.app_context():
         ConfigApp.query.filter(ConfigApp.chiave.in_(['email_modalita', 'email_solo_a'])).delete(synchronize_session=False)
         db.session.commit()
+
+
+def test_pagina_orari_docenti_e_invio_simulato(app_reale, monkeypatch):
+    import re
+    from models import db
+    from models.docente import Docente
+    from models.orario_docente import OrarioDocente
+    from models.email_uscita import EmailUscita
+    from models.config_app import ConfigApp
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'simulato')
+    with app_reale.app_context():
+        d = Docente(cognome='ProvaOrario', nome='T', email='prova.orario@davincichiavenna.edu.it', attivo=True)
+        db.session.add(d); db.session.flush()
+        db.session.add(OrarioDocente(id_docente=d.id, giorno=0, ora=1, classe='1Z', materia='Prova'))
+        db.session.commit()
+        id_d = d.id
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/orari-docenti?valido_dal=2026-11-03').get_data(as_text=True)
+        assert 'ProvaOrario' in corpo and 'Seleziona tutti' in corpo and 'valido dal' in corpo.lower()
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/orari-docenti/invia',
+                   data={'csrf_token': tok, 'valido_dal': '2026-11-03', 'docenti': [id_d],
+                         'oggetto': 'Orario {DATA}', 'corpo': 'Ecco {COGNOME}'})
+        assert r.status_code == 200 and 'simulata' in r.get_data(as_text=True)
+        assert c.get(f'/mail-bozze/orari-docenti/pdf/{id_d}?valido_dal=2026-11-03').status_code in (200, 503)
+    with app_reale.app_context():
+        ConfigApp.query.filter(ConfigApp.chiave.in_(['email_orario_oggetto', 'email_orario_corpo'])).delete(synchronize_session=False)
+        EmailUscita.query.filter_by(id_docente=id_d).delete()
+        OrarioDocente.query.filter_by(id_docente=id_d).delete()
+        Docente.query.filter_by(id=id_d).delete()
+        db.session.commit()

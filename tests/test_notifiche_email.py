@@ -233,3 +233,40 @@ def test_mittente_atteso_configurabile(monkeypatch):
     monkeypatch.delenv('CARONTE_EMAIL_MITTENTE')
     importlib.reload(gmail_invio)
     assert gmail_invio.MITTENTE_ATTESO == 'roberto.daltoe@davincichiavenna.edu.it'
+
+
+def test_orario_un_invio_per_versione_con_pdf_e_data(app, monkeypatch):
+    from datetime import date
+    from models.orario_docente import OrarioDocente
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    pdf_chiamati = []
+    monkeypatch.setattr('routes.report.orario_pdf_bytes',
+                        lambda d, valido_dal=None: pdf_chiamati.append(valido_dal) or b'%PDF-orario')
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', None)    # Verdi senza email
+        db.session.add(OrarioDocente(id_docente=a.id, giorno=1, ora=2, classe='3A', materia='Italiano'))
+        db.session.add(OrarioDocente(id_docente=b.id, giorno=1, ora=2, classe='4B', materia='Storia'))
+        db.session.commit()
+        v = date(2026, 11, 3)
+        p = {x['docente'].cognome: x for x in ne.proposte_orario(v)}
+        assert p['Rossi']['oggetto'] == 'Il tuo orario delle lezioni — valido dal 03/11/2026'
+        assert p['Verdi']['blocco'] == 'email mancante'
+        r = dict((n, s) for n, s, _ in ne.invia_orario(v, [a.id, b.id]))
+        assert r == {'Rossi': 'inviata', 'Verdi': 'saltata'}
+        assert pdf_chiamati == [v] and inviati[0][3] == [('Orario_Rossi.pdf', b'%PDF-orario')]
+        assert {x['docente'].cognome: x['variante'] for x in ne.proposte_orario(v)}['Rossi'] == 'gia_inviata'
+        # orario cambiato, stessa data -> aggiornamento; altra data -> nuova versione
+        db.session.add(OrarioDocente(id_docente=a.id, giorno=2, ora=3, classe='3A', materia='Storia'))
+        db.session.commit()
+        assert {x['docente'].cognome: x for x in ne.proposte_orario(v)}['Rossi']['variante'] == 'aggiornamento'
+        assert {x['docente'].cognome: x for x in ne.proposte_orario(date(2026, 12, 1))}['Rossi']['variante'] == 'nuova'
+
+
+def test_orario_senza_righe_non_inviabile(app):
+    from datetime import date
+    with app.test_request_context():
+        _doc()
+        db.session.commit()
+        assert ne.proposte_orario(date(2026, 11, 3))[0]['blocco'] == 'orario non caricato'

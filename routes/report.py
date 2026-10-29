@@ -475,6 +475,31 @@ def singolo_pdf(id):
 
 
 # ── STAMPA SOLO GRIGLIA ORARIA ───────────────────────────────
+ORA_LABEL_STAMPA = {
+    1: '7:45–8:40',   2: '8:40–9:35',   3: '9:35–10:40',
+    4: '10:40–11:30', 5: '11:30–12:25', 6: '12:25–13:25',
+    7: '13:25–14:25', 8: '14:25–15:25', 9: '15:25–16:25',
+}
+
+
+def _orario_html(d, valido_dal=None):
+    from models.orario_docente import griglia_settimanale, GIORNI
+    from modules.pdf_fonts import contesto_open_sans
+    orario, ore_list, giorni_usati = griglia_settimanale(d.id, completa_se_vuota=True)
+    return render_template('report/orario_print.html',
+        docente=d, orario=orario, ore_list=ore_list, giorni_usati=giorni_usati,
+        giorni_nomi=GIORNI, ora_label=ORA_LABEL_STAMPA, oggi=date.today(),
+        valido_dal=valido_dal, **contesto_open_sans(),
+    )
+
+
+def orario_pdf_bytes(d, valido_dal=None):
+    """PDF della griglia oraria di un docente (solleva se WeasyPrint non c'e').
+    valido_dal: data scritta nel PDF ("Orario valido dal ...")."""
+    from weasyprint import HTML
+    return HTML(string=_orario_html(d, valido_dal)).write_pdf()
+
+
 @report_bp.route('/report/docente/<int:id>/orario-pdf')
 def orario_pdf(id):
     """PDF con la sola griglia oraria settimanale di un docente --
@@ -485,29 +510,11 @@ def orario_pdf(id):
     importato per lui (casi reali Rignanese/Mascolo, Sessione 69
     addendum 7) -- vedi griglia_settimanale(..., completa_se_vuota=True).
     """
-    from models.orario_docente import griglia_settimanale, GIORNI
-
     d = Docente.query.get_or_404(id)
-    orario, ore_list, giorni_usati = griglia_settimanale(id, completa_se_vuota=True)
-
-    ORA_LABEL = {
-        1: '7:45–8:40',   2: '8:40–9:35',   3: '9:35–10:40',
-        4: '10:40–11:30', 5: '11:30–12:25', 6: '12:25–13:25',
-        7: '13:25–14:25', 8: '14:25–15:25', 9: '15:25–16:25',
-    }
-
-    from modules.pdf_fonts import contesto_open_sans
-    html_content = render_template('report/orario_print.html',
-        docente=d, orario=orario, ore_list=ore_list, giorni_usati=giorni_usati,
-        giorni_nomi=GIORNI, ora_label=ORA_LABEL, oggi=date.today(),
-        **contesto_open_sans(),
-    )
-
+    html_content = _orario_html(d)
     try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html_content).write_pdf()
         return send_file(
-            io.BytesIO(pdf_bytes),
+            io.BytesIO(orario_pdf_bytes(d)),
             mimetype='application/pdf',
             as_attachment=True,
             download_name=f'orario_{d.cognome}_{date.today().isoformat()}.pdf'

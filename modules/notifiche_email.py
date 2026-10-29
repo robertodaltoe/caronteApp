@@ -399,17 +399,16 @@ def _pdf_banca_ore(docente):
     return _genera_pdf_bytes(docente)
 
 
-def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
-    """Se oggetto/corpo sono passati dalla pagina, diventano il modello salvato."""
-    if oggetto is not None or corpo is not None:
-        imposta_modello_banca_ore(oggetto, corpo)
+def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, nome_pdf, pdf_fn, messaggio_gia_inviata):
+    """Invio comune ai messaggi con un PDF per docente (banca ore, orario).
+    Rispetta modalita', lista di prova, tetto e anti-duplicato; un errore resta riinviabile."""
     mod = modalita()
     if mod == 'off':
         return [('—', 'errore', 'invio disattivato')]
     scelti = {int(i) for i in ids_docenti}
     solo_a = _solo_a()
     risultati = []
-    for p in proposte_banca_ore(mese):
+    for p in proposte:
         if p['docente'].id not in scelti:
             continue
         if len(risultati) >= MAX_PER_INVIO:
@@ -417,34 +416,137 @@ def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
             break
         nome = p['docente'].cognome
         if p['variante'] == 'gia_inviata':
-            risultati.append((nome, 'saltata', 'già inviato questo mese'))
+            risultati.append((nome, 'saltata', messaggio_gia_inviata))
             continue
         if p['blocco']:
-            _registra(p, mese, 'saltata', p['blocco'], 'banca_ore')
+            _registra(p, periodo, 'saltata', p['blocco'], tipo)
             risultati.append((nome, 'saltata', p['blocco']))
             continue
         if mod == 'simulato':
-            _registra(p, mese, 'simulata', None, 'banca_ore')
+            _registra(p, periodo, 'simulata', None, tipo)
             risultati.append((nome, 'simulata', None))
             continue
         if solo_a and p['email'] not in solo_a:
-            _registra(p, mese, 'saltata', 'fuori lista di prova', 'banca_ore')
+            _registra(p, periodo, 'saltata', 'fuori lista di prova', tipo)
             risultati.append((nome, 'saltata', 'fuori lista di prova'))
             continue
         note = None
         try:
             allegati = []
             try:
-                allegati = [(f'Banca_ore_{nome}.pdf', _pdf_banca_ore(p['docente']))]
+                allegati = [(f'{nome_pdf}_{nome}.pdf', pdf_fn(p['docente']))]
             except Exception:
-                note = 'inviato senza PDF'   # i valori sono comunque nel testo
+                note = 'inviato senza PDF'
             from modules.gmail_invio import invia
             invia(p['email'], p['oggetto'], p['corpo'], allegati)
         except Exception as e:
             db.session.rollback()
-            _registra(p, mese, 'errore', str(e)[:240], 'banca_ore')
+            _registra(p, periodo, 'errore', str(e)[:240], tipo)
             risultati.append((nome, 'errore', str(e)[:120]))
             continue
-        _registra(p, mese, 'inviata', note, 'banca_ore')
+        _registra(p, periodo, 'inviata', note, tipo)
         risultati.append((nome, 'inviata', note))
     return risultati
+
+
+def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
+    """Se oggetto/corpo sono passati dalla pagina, diventano il modello salvato."""
+    if oggetto is not None or corpo is not None:
+        imposta_modello_banca_ore(oggetto, corpo)
+    if modalita() == 'off':
+        return [('—', 'errore', 'invio disattivato')]
+    return _invia_con_pdf(proposte_banca_ore(mese), ids_docenti, mese, 'banca_ore',
+                          'Banca_ore', lambda d: _pdf_banca_ore(d), 'già inviato questo mese')
+
+
+# ── ORARIO DEI DOCENTI (invio una tantum a ogni nuova versione) ──
+ORARIO_DEFAULT = {
+    'oggetto': 'Il tuo orario delle lezioni — valido dal {DATA}',
+    'corpo': ("Gentile prof. {COGNOME},\n\n"
+              "in allegato trovi il tuo orario settimanale delle lezioni, valido dal {DATA}.\n\n"
+              "Se noti errori o sovrapposizioni, scrivi alla vicepresidenza.\n\n"
+              "Cordiali saluti,\nVicepresidenza"),
+}
+_CHIAVI_ORARIO = {k: f'email_orario_{k}' for k in ORARIO_DEFAULT}
+SEGNAPOSTO_ORARIO = '{COGNOME} {NOME} {EMAIL} {DATA}'
+
+
+def modello_orario():
+    out = {}
+    for k, d in ORARIO_DEFAULT.items():
+        v = _config(_CHIAVI_ORARIO[k])
+        out[k] = v if v and v.strip() else d
+    return out
+
+
+def imposta_modello_orario(oggetto, corpo):
+    from models.config_app import ConfigApp
+    for k, v, lim in (('oggetto', oggetto, 200), ('corpo', corpo, 4000)):
+        v = (v or '').strip()[:lim]
+        r = ConfigApp.query.filter_by(chiave=_CHIAVI_ORARIO[k]).first()
+        if r is None:
+            db.session.add(ConfigApp(chiave=_CHIAVI_ORARIO[k], valore=v))
+        else:
+            r.valore = v
+    db.session.commit()
+
+
+def _sostituisci_orario(testo, docente, valido_dal):
+    return (testo.replace('{COGNOME}', docente.cognome or '')
+                 .replace('{NOME}', docente.nome or '')
+                 .replace('{EMAIL}', docente.email or '')
+                 .replace('{DATA}', valido_dal.strftime('%d/%m/%Y')))
+
+
+def valido_dal_default():
+    """Inizio di validita' dell'orario caricato, se noto; altrimenti oggi."""
+    from models.orario_docente import validita_orario_corrente
+    ini, _ = validita_orario_corrente()
+    return ini or date.today()
+
+
+def _righe_orario(id_docente):
+    from models.orario_docente import OrarioDocente
+    righe = []
+    for s in (OrarioDocente.query.filter_by(id_docente=id_docente)
+              .order_by(OrarioDocente.giorno, OrarioDocente.ora).all()):
+        if s.classe and s.classe not in ('---', '-x-', ''):
+            righe.append(f'{s.giorno}-{s.ora}-{s.classe}-{s.materia or ""}')
+    return righe
+
+
+def proposte_orario(valido_dal):
+    """Una proposta per ogni docente attivo. Chiave di versione = data 'valido dal';
+    stessa data e stesso orario = gia' inviato; stessa data ma orario diverso = aggiornamento."""
+    mod = modello_orario()
+    out = []
+    for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome, Docente.nome).all():
+        righe = _righe_orario(d.id)
+        h = _hash(righe)
+        prec = _ultimo_inviato(d.id, valido_dal, 'orario')
+        variante = 'nuova' if prec is None else ('gia_inviata' if prec.hash_contenuto == h else 'aggiornamento')
+        agg = 'AGGIORNAMENTO ' if variante == 'aggiornamento' else ''
+        oggetto = agg + _sostituisci_orario(mod['oggetto'], d, valido_dal)
+        corpo = _sostituisci_orario(mod['corpo'], d, valido_dal)
+        email = (d.email or '').strip().lower()
+        blocco = None
+        if not righe:
+            blocco = 'orario non caricato'
+        elif not email:
+            blocco = 'email mancante'
+        elif not email.endswith(DOMINIO_AMMESSO):
+            blocco = 'indirizzo fuori dominio'
+        out.append(dict(docente=d, email=email, righe=righe, variante=variante,
+                        oggetto=oggetto, corpo=corpo, hash=h, blocco=blocco))
+    return out
+
+
+def invia_orario(valido_dal, ids_docenti, oggetto=None, corpo=None):
+    if oggetto is not None or corpo is not None:
+        imposta_modello_orario(oggetto, corpo)
+    if modalita() == 'off':
+        return [('—', 'errore', 'invio disattivato')]
+    from routes.report import orario_pdf_bytes
+    return _invia_con_pdf(proposte_orario(valido_dal), ids_docenti, valido_dal, 'orario',
+                          'Orario', lambda d: orario_pdf_bytes(d, valido_dal),
+                          'già inviato per questa versione')
