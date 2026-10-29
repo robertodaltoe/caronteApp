@@ -35,6 +35,7 @@
     <tr>
         <td style="white-space:nowrap;">
             <span class="badge badge-grigio">{{ a.tipo_label }}</span>
+            <span style="font-size:.7rem; color:var(--grigio);">[{{ a.id }}]</span>
         </td>
         <td class="wrap">{{ a.descrizione or '—' }}</td>
         <td class="wrap">
@@ -77,6 +78,11 @@
             <div style="display:flex; gap:4px; justify-content:flex-end;">
                 <a href="{{ url_for('attivita.modifica', id=a.id) }}"
                    class="btn btn-primary btn-sm">{{ icon('edit') }}</a>
+                {% if a.stato == 'annullata' %}
+                <form method="post" action="{{ url_for('attivita.riattiva', id=a.id) }}" style="display:inline;">
+                    <button class="btn btn-success btn-sm" type="submit">Riattiva</button>
+                </form>
+                {% else %}
                 {% if a.tipo in ('fsl','progetto') %}
                 <a href="{{ url_for('attivita.calendario_fsl', id=a.id) }}"
                    class="btn btn-sm" style="background:#0369a1; color:white;"
@@ -87,6 +93,7 @@
                       style="display:inline;">
                     <button class="btn btn-danger btn-sm" type="submit">{{ icon('close') }}</button>
                 </form>
+                {% endif %}
             </div>
         </td>
         {% endif %}
@@ -121,6 +128,28 @@
 </h2>
 <div style="opacity:.6;">
 {{ tabella_attivita(passate, true) }}
+</div>
+{% endif %}
+
+{# ── ANNULLATE ─────────────────────────────────────────────── #}
+{% if annullate %}
+<h2 style="font-size:1rem; font-weight:700; color:var(--grigio); margin-bottom:8px;">
+    Annullate
+    <span style="font-size:.8rem; font-weight:400; margin-left:6px;">{{ annullate|length }}</span>
+</h2>
+<div style="opacity:.6;">
+{{ tabella_attivita(annullate, true) }}
+</div>
+{% endif %}
+
+{# ── ANNULLATE ─────────────────────────────────────────────── #}
+{% if annullate %}
+<h2 style="font-size:1rem; font-weight:700; color:var(--grigio); margin-bottom:8px;">
+    Annullate
+    <span style="font-size:.8rem; font-weight:400; margin-left:6px;">{{ annullate|length }}</span>
+</h2>
+<div style="opacity:.6;">
+{{ tabella_attivita(annullate, true) }}
 </div>
 {% endif %}
 

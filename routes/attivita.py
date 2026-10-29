@@ -421,8 +421,11 @@ def lista():
                .filter_by(stato='attiva')
                .filter(AttivitaFuoriAula.data_fine < oggi)
                .order_by(AttivitaFuoriAula.data_inizio.desc()).all())
+    annullate = (AttivitaFuoriAula.query
+                 .filter_by(stato='annullata')
+                 .order_by(AttivitaFuoriAula.data_inizio.desc()).all())
     return render_template('attivita/lista.html',
-        future=future, passate=passate, oggi=oggi)
+        future=future, passate=passate, annullate=annullate, oggi=oggi)
 
 # ── Nuova ──────────────────────────────────────────────────────
 @attivita_bp.route('/attivita/nuova', methods=['GET','POST'])
@@ -538,6 +541,15 @@ def annulla(id):
     _pulisci_effetti(att); att.stato='annullata'; db.session.commit()
     flash(f'Attività annullata: {att.tipo_label}.','warning')
     return redirect(url_for('attivita.lista'))
+
+@attivita_bp.route('/attivita/<int:id>/riattiva', methods=['POST'])
+def riattiva(id):
+    att=db.session.get(AttivitaFuoriAula,id)
+    if not att: from flask import abort; abort(404)
+    att.stato='attiva'; db.session.flush()
+    stats=genera_effetti(att); db.session.commit()
+    flash(f'Attività riattivata: {att.tipo_label}. {stats["indisp"]} indisp, {stats["assenze"]} assenze.','success')
+    return redirect(url_for('attivita.modifica', id=att.id))
 
 # ── Modifica ───────────────────────────────────────────────────
 @attivita_bp.route('/attivita/<int:id>/modifica', methods=['GET','POST'])
