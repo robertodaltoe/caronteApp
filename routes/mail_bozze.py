@@ -268,6 +268,8 @@ def notifiche_supplenze_impostazioni():
     if nuova in ne.MODALITA_VALIDE:
         ne.imposta(nuova, request.form.get('solo_a', ''))
         auth_log('impostazioni_notifiche_email', f'modalita={nuova}')
+    if request.form.get('torna') == 'orari':
+        return redirect(url_for('mail_bozze.orari_docenti', valido_dal=request.form.get('valido_dal', '')))
     if request.form.get('torna') == 'banca_ore':
         return redirect(url_for('mail_bozze.report_banca_ore', mese=request.form.get('mese', '')))
     return redirect(url_for('mail_bozze.notifiche_supplenze',
@@ -318,6 +320,54 @@ def report_banca_ore_pdf(id_docente):
         return f'PDF non disponibile su questo computer ({e}).', 503
     return Response(dati, mimetype='application/pdf',
                     headers={'Content-Disposition': f'inline; filename=Banca_ore_{doc.cognome}.pdf'})
+
+
+# ── ORARIO DEI DOCENTI via email (una tantum a ogni nuova versione) ──
+def _valido_dal_da_richiesta(valore):
+    from modules import notifiche_email as ne
+    try:
+        return date.fromisoformat(valore or '')
+    except ValueError:
+        return ne.valido_dal_default()
+
+
+def _render_orari(valido_dal, risultati=None):
+    from modules import notifiche_email as ne
+    return render_template('notifiche_orari.html', valido_dal=valido_dal,
+        proposte=ne.proposte_orario(valido_dal), modalita=ne.modalita(),
+        solo_a=sorted(ne._solo_a()), risultati=risultati,
+        modello=ne.modello_orario(), segnaposto=ne.SEGNAPOSTO_ORARIO)
+
+
+@mail_bozze_bp.route('/mail-bozze/orari-docenti')
+def orari_docenti():
+    return _render_orari(_valido_dal_da_richiesta(request.args.get('valido_dal')))
+
+
+@mail_bozze_bp.route('/mail-bozze/orari-docenti/invia', methods=['POST'])
+def orari_docenti_invia():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    valido_dal = _valido_dal_da_richiesta(request.form.get('valido_dal'))
+    risultati = ne.invia_orario(valido_dal, request.form.getlist('docenti'),
+                                request.form.get('oggetto', ''), request.form.get('corpo', ''))
+    auth_log('orari_docenti_email',
+             f'{valido_dal.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
+    return _render_orari(valido_dal, risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/orari-docenti/pdf/<int:id_docente>')
+def orari_docenti_pdf(id_docente):
+    """Il PDF che verrebbe allegato (per controllarlo prima di inviare)."""
+    from routes.report import orario_pdf_bytes
+    doc = Docente.query.get_or_404(id_docente)
+    valido_dal = _valido_dal_da_richiesta(request.args.get('valido_dal'))
+    try:
+        dati = orario_pdf_bytes(doc, valido_dal)
+    except Exception as e:
+        return f'PDF non disponibile su questo computer ({e}).', 503
+    return Response(dati, mimetype='application/pdf',
+                    headers={'Content-Disposition': f'inline; filename=Orario_{doc.cognome}.pdf'})
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/modello', methods=['POST'])
