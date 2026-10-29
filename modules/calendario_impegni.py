@@ -45,6 +45,10 @@ ORE_FASCE = {
     7: ('13:25', '14:25'), 8: ('14:25', '15:25'), 9: ('15:25', '16:25'),
 }
 
+# Eventi per cui il piano di lavoro individuale esonera il docente
+# (negli altri conta solo la selezione dei partecipanti).
+TIPI_CON_PIANO_INDIVIDUALE = {'collegio', 'consiglio_classe', 'glo', 'dipartimento', 'riunione_materia'}
+
 _CLASSI_NON_REALI = {None, '', '---', '-x-', 'POTENZIAMENTO'}
 _TIPI_ORA_REALI = {'lezione', 'compresenza'}
 
@@ -156,7 +160,11 @@ def raccogli_impegni(data_da, data_a, id_docente=None, fonti=None, con_conflitti
                 continue
             convocati = ev.partecipanti_convocati_ids
             facoltativi = set()
-            if con_facoltativi and any(
+            if con_facoltativi and ev.tipo not in TIPI_CON_PIANO_INDIVIDUALE:
+                # Formazione e altri eventi: conta solo chi e' tra i
+                # partecipanti selezionati, il piano individuale non c'entra.
+                convocati = {p.id_docente for p in ev.partecipanti if p.id_docente}
+            elif con_facoltativi and any(
                     data_da <= d <= data_a for d in
                     ([x.data for x in ev.sessioni] if ev.sessioni else [ev.data])):
                 # Esonerati dal proprio piano individuale (anche se non

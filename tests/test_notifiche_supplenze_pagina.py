@@ -194,3 +194,23 @@ def test_pagina_calendario_docenti_e_invio_simulato(app_reale, monkeypatch):
         AttivitaIst.query.filter_by(id=id_e).delete()
         Docente.query.filter_by(id=id_d).delete()
         db.session.commit()
+
+
+def test_intestazione_notifiche_supplenze_ha_i_pulsanti_delle_altre_pagine(app_reale):
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        for url in ('/mail-bozze/report-banca-ore', '/mail-bozze/orari-docenti', '/mail-bozze/calendario-docenti'):
+            assert f'href="{url}"' in corpo
+
+
+def test_barra_invio_email_uguale_nelle_quattro_pagine_con_la_corrente_evidenziata(app_reale):
+    import re
+    pagine = {'supplenze': '/mail-bozze/notifiche-supplenze', 'banca_ore': '/mail-bozze/report-banca-ore',
+              'orari': '/mail-bozze/orari-docenti', 'calendario': '/mail-bozze/calendario-docenti'}
+    with app_reale.test_client() as c:
+        for chiave, url in pagine.items():
+            corpo = c.get(url).get_data(as_text=True)
+            for u in pagine.values():
+                assert f'href="{u}"' in corpo
+            attivi = re.findall(r'<a href="([^"]+)" class="btn btn-sm btn-primary"\s+aria-current="page"', corpo)
+            assert attivi == [pagine[chiave]]
