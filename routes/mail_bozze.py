@@ -268,6 +268,8 @@ def notifiche_supplenze_impostazioni():
     if nuova in ne.MODALITA_VALIDE:
         ne.imposta(nuova, request.form.get('solo_a', ''))
         auth_log('impostazioni_notifiche_email', f'modalita={nuova}')
+    if request.form.get('torna') == 'calendario':
+        return redirect(url_for('mail_bozze.calendario_docenti', mese=request.form.get('mese', '')))
     if request.form.get('torna') == 'orari':
         return redirect(url_for('mail_bozze.orari_docenti', valido_dal=request.form.get('valido_dal', '')))
     if request.form.get('torna') == 'banca_ore':
@@ -368,6 +370,63 @@ def orari_docenti_pdf(id_docente):
         return f'PDF non disponibile su questo computer ({e}).', 503
     return Response(dati, mimetype='application/pdf',
                     headers={'Content-Disposition': f'inline; filename=Orario_{doc.cognome}.pdf'})
+
+
+# ── CALENDARIO MENSILE DEGLI IMPEGNI via email (PDF agenda + .ics) ──
+def _mese_calendario(valore):
+    from modules import notifiche_email as ne
+    try:
+        return date.fromisoformat((valore or '') + '-01').replace(day=1)
+    except ValueError:
+        return ne.mese_calendario_default()
+
+
+def _render_calendario(mese, risultati=None):
+    from modules import notifiche_email as ne
+    return render_template('notifiche_calendario.html', mese=mese,
+        proposte=ne.proposte_calendario(mese), modalita=ne.modalita(),
+        solo_a=sorted(ne._solo_a()), risultati=risultati,
+        modello=ne.modello_calendario(), segnaposto=ne.SEGNAPOSTO_CALENDARIO)
+
+
+@mail_bozze_bp.route('/mail-bozze/calendario-docenti')
+def calendario_docenti():
+    return _render_calendario(_mese_calendario(request.args.get('mese')))
+
+
+@mail_bozze_bp.route('/mail-bozze/calendario-docenti/invia', methods=['POST'])
+def calendario_docenti_invia():
+    from modules import notifiche_email as ne
+    from routes.auth import log as auth_log
+    mese = _mese_calendario(request.form.get('mese'))
+    risultati = ne.invia_calendario(mese, request.form.getlist('docenti'),
+                                    request.form.get('oggetto', ''), request.form.get('corpo', ''))
+    auth_log('calendario_docenti_email',
+             f'{mese.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
+    return _render_calendario(mese, risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/calendario-docenti/pdf/<int:id_docente>')
+def calendario_docenti_pdf(id_docente):
+    """Il PDF che verrebbe allegato (per controllarlo prima di inviare)."""
+    from modules.calendario_agenda import agenda_pdf_bytes
+    doc = Docente.query.get_or_404(id_docente)
+    mese = _mese_calendario(request.args.get('mese'))
+    try:
+        dati = agenda_pdf_bytes(doc, mese)
+    except Exception as e:
+        return f'PDF non disponibile su questo computer ({e}).', 503
+    return Response(dati, mimetype='application/pdf',
+                    headers={'Content-Disposition': f'inline; filename=Impegni_{doc.cognome}.pdf'})
+
+
+@mail_bozze_bp.route('/mail-bozze/calendario-docenti/ics/<int:id_docente>')
+def calendario_docenti_ics(id_docente):
+    from modules.calendario_agenda import ics_mese
+    doc = Docente.query.get_or_404(id_docente)
+    mese = _mese_calendario(request.args.get('mese'))
+    return Response(ics_mese(doc, mese), mimetype='text/calendar',
+                    headers={'Content-Disposition': f'attachment; filename=Impegni_{doc.cognome}.ics'})
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/modello', methods=['POST'])

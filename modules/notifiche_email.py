@@ -399,8 +399,16 @@ def _pdf_banca_ore(docente):
     return _genera_pdf_bytes(docente)
 
 
-def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, nome_pdf, pdf_fn, messaggio_gia_inviata):
-    """Invio comune ai messaggi con un PDF per docente (banca ore, orario).
+class _AllegatiParziali(Exception):
+    """Un allegato non si e' potuto creare: si invia comunque con quelli riusciti."""
+    def __init__(self, allegati):
+        super().__init__('allegati parziali')
+        self.allegati = allegati
+
+
+def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, allegati_fn, messaggio_gia_inviata):
+    """Invio comune ai messaggi con allegati per docente (banca ore, orario, calendario).
+    allegati_fn(docente) -> lista di (nome_file, bytes).
     Rispetta modalita', lista di prova, tetto e anti-duplicato; un errore resta riinviabile."""
     mod = modalita()
     if mod == 'off':
@@ -434,7 +442,9 @@ def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, nome_pdf, pdf_fn, messa
         try:
             allegati = []
             try:
-                allegati = [(f'{nome_pdf}_{nome}.pdf', pdf_fn(p['docente']))]
+                allegati = allegati_fn(p['docente'])
+            except _AllegatiParziali as parz:
+                allegati, note = parz.allegati, 'inviato senza PDF'
             except Exception:
                 note = 'inviato senza PDF'
             from modules.gmail_invio import invia
@@ -456,7 +466,8 @@ def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
     if modalita() == 'off':
         return [('—', 'errore', 'invio disattivato')]
     return _invia_con_pdf(proposte_banca_ore(mese), ids_docenti, mese, 'banca_ore',
-                          'Banca_ore', lambda d: _pdf_banca_ore(d), 'già inviato questo mese')
+                          lambda d: [(f'Banca_ore_{d.cognome}.pdf', _pdf_banca_ore(d))],
+                          'già inviato questo mese')
 
 
 # ── ORARIO DEI DOCENTI (invio una tantum a ogni nuova versione) ──
@@ -548,5 +559,104 @@ def invia_orario(valido_dal, ids_docenti, oggetto=None, corpo=None):
         return [('—', 'errore', 'invio disattivato')]
     from routes.report import orario_pdf_bytes
     return _invia_con_pdf(proposte_orario(valido_dal), ids_docenti, valido_dal, 'orario',
-                          'Orario', lambda d: orario_pdf_bytes(d, valido_dal),
+                          lambda d: [(f'Orario_{d.cognome}.pdf', orario_pdf_bytes(d, valido_dal))],
                           'già inviato per questa versione')
+
+
+# ── CALENDARIO MENSILE DEGLI IMPEGNI (PDF agenda + file .ics) ─────
+CALENDARIO_DEFAULT = {
+    'oggetto': 'I tuoi impegni di {MESE} — promemoria',
+    'corpo': ("Gentile prof. {COGNOME},\n\n"
+              "in allegato trovi il calendario dei tuoi impegni di {MESE}: il PDF da consultare o "
+              "stampare e il file .ics da importare nel tuo calendario (Google, Outlook, Apple).\n\n"
+              "È un promemoria: fanno fede le circolari pubblicate sul registro elettronico. "
+              "Se gli impegni cambiano dopo questo invio, riceverai un aggiornamento.\n\n"
+              "Cordiali saluti,\nVicepresidenza"),
+}
+_CHIAVI_CALENDARIO = {k: f'email_cal_{k}' for k in CALENDARIO_DEFAULT}
+SEGNAPOSTO_CALENDARIO = '{COGNOME} {NOME} {EMAIL} {MESE}'
+
+
+def modello_calendario():
+    out = {}
+    for k, d in CALENDARIO_DEFAULT.items():
+        v = _config(_CHIAVI_CALENDARIO[k])
+        out[k] = v if v and v.strip() else d
+    return out
+
+
+def imposta_modello_calendario(oggetto, corpo):
+    from models.config_app import ConfigApp
+    for k, v, lim in (('oggetto', oggetto, 200), ('corpo', corpo, 4000)):
+        v = (v or '').strip()[:lim]
+        r = ConfigApp.query.filter_by(chiave=_CHIAVI_CALENDARIO[k]).first()
+        if r is None:
+            db.session.add(ConfigApp(chiave=_CHIAVI_CALENDARIO[k], valore=v))
+        else:
+            r.valore = v
+    db.session.commit()
+
+
+def mese_calendario_default(oggi=None):
+    """Dal 15 del mese si propone il mese dopo, prima il mese in corso."""
+    oggi = oggi or date.today()
+    if oggi.day >= 15:
+        return (oggi.replace(day=1) + timedelta(days=32)).replace(day=1)
+    return oggi.replace(day=1)
+
+
+def _sostituisci_calendario(testo, docente, mese):
+    from modules.calendario_agenda import nome_mese
+    return (testo.replace('{COGNOME}', docente.cognome or '')
+                 .replace('{NOME}', docente.nome or '')
+                 .replace('{EMAIL}', docente.email or '')
+                 .replace('{MESE}', nome_mese(mese)))
+
+
+def proposte_calendario(mese):
+    """Una proposta per ogni docente attivo con almeno un impegno nel mese.
+    Un invio per mese; se gli impegni cambiano dopo l'invio, AGGIORNAMENTO."""
+    from modules.calendario_agenda import impegni_mese
+    mod = modello_calendario()
+    out = []
+    for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome, Docente.nome).all():
+        imp = impegni_mese(d, mese)
+        righe = [f"{e['data']}|{e['ora_inizio']}|{e['ora_fine']}|{e['titolo']}|{e['classe']}" for e in imp]
+        h = _hash(righe)
+        prec = _ultimo_inviato(d.id, mese, 'calendario')
+        variante = 'nuova' if prec is None else ('gia_inviata' if prec.hash_contenuto == h else 'aggiornamento')
+        agg = 'AGGIORNAMENTO ' if variante == 'aggiornamento' else ''
+        oggetto = agg + _sostituisci_calendario(mod['oggetto'], d, mese)
+        corpo = _sostituisci_calendario(mod['corpo'], d, mese)
+        email = (d.email or '').strip().lower()
+        blocco = None
+        if not imp:
+            blocco = 'nessun impegno nel mese'
+        elif not email:
+            blocco = 'email mancante'
+        elif not email.endswith(DOMINIO_AMMESSO):
+            blocco = 'indirizzo fuori dominio'
+        out.append(dict(docente=d, email=email, righe=righe, variante=variante, n_impegni=len(imp),
+                        oggetto=oggetto, corpo=corpo, hash=h, blocco=blocco))
+    return out
+
+
+def invia_calendario(mese, ids_docenti, oggetto=None, corpo=None):
+    if oggetto is not None or corpo is not None:
+        imposta_modello_calendario(oggetto, corpo)
+    if modalita() == 'off':
+        return [('—', 'errore', 'invio disattivato')]
+    from modules.calendario_agenda import agenda_pdf_bytes, ics_mese, impegni_mese
+
+    def allegati(d):
+        imp = impegni_mese(d, mese)
+        base = f'Impegni_{mese.year}-{mese.month:02d}_{d.cognome}'
+        lista = [(f'{base}.ics', ics_mese(d, mese, imp))]
+        try:
+            lista.insert(0, (f'{base}.pdf', agenda_pdf_bytes(d, mese, imp)))
+        except Exception:
+            raise _AllegatiParziali(lista)   # il file .ics parte comunque
+        return lista
+
+    return _invia_con_pdf(proposte_calendario(mese), ids_docenti, mese, 'calendario',
+                          allegati, 'già inviato per questo mese')
