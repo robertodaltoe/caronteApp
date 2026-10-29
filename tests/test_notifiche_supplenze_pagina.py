@@ -155,3 +155,42 @@ def test_pagina_orari_docenti_e_invio_simulato(app_reale, monkeypatch):
         OrarioDocente.query.filter_by(id_docente=id_d).delete()
         Docente.query.filter_by(id=id_d).delete()
         db.session.commit()
+
+
+def test_pagina_calendario_docenti_e_invio_simulato(app_reale, monkeypatch):
+    import re
+    from models import db
+    from models.docente import Docente
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    from models.email_uscita import EmailUscita
+    from models.config_app import ConfigApp
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'simulato')
+    with app_reale.app_context():
+        d = Docente(cognome='ProvaCalendario', nome='T', email='prova.cal@davincichiavenna.edu.it', attivo=True)
+        db.session.add(d); db.session.flush()
+        ev = AttivitaIst(tipo='altro', titolo='Riunione di prova', data=date(2031, 3, 10),
+                         ora_inizio='15:00', ora_fine='17:00', origine='manuale')
+        db.session.add(ev); db.session.flush()
+        db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=d.id))
+        db.session.commit()
+        id_d, id_e = d.id, ev.id
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/calendario-docenti?mese=2031-03').get_data(as_text=True)
+        assert 'ProvaCalendario' in corpo and 'Seleziona tutti' in corpo
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/calendario-docenti/invia',
+                   data={'csrf_token': tok, 'mese': '2031-03', 'docenti': [id_d],
+                         'oggetto': 'Impegni {MESE}', 'corpo': 'Ciao {COGNOME}'})
+        assert r.status_code == 200 and 'simulata' in r.get_data(as_text=True)
+        assert c.get(f'/mail-bozze/calendario-docenti/pdf/{id_d}?mese=2031-03').status_code in (200, 503)
+        ics = c.get(f'/mail-bozze/calendario-docenti/ics/{id_d}?mese=2031-03')
+        assert ics.status_code == 200 and b'Riunione di prova' in ics.data
+        for url in ('mail-bozze/report-banca-ore', 'mail-bozze/orari-docenti', 'mail-bozze/notifiche-supplenze'):
+            assert 'calendario-docenti' in c.get('/' + url).get_data(as_text=True)
+    with app_reale.app_context():
+        ConfigApp.query.filter(ConfigApp.chiave.like('email_cal_%')).delete(synchronize_session=False)
+        EmailUscita.query.filter_by(id_docente=id_d).delete()
+        AttivitaIstPartecipante.query.filter_by(id_attivita=id_e).delete()
+        AttivitaIst.query.filter_by(id=id_e).delete()
+        Docente.query.filter_by(id=id_d).delete()
+        db.session.commit()

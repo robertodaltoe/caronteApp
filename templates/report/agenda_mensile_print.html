@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Impegni {{ mese_nome }} — {{ docente.cognome }}</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+@font-face {
+    font-family: 'Open Sans'; font-weight: 400; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_400 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 600; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_600 }}) format('woff2');
+}
+@font-face {
+    font-family: 'Open Sans'; font-weight: 700; font-style: normal;
+    src: url(data:font/woff2;base64,{{ FONT_OS_700 }}) format('woff2');
+}
+@page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+body { font-family: 'Open Sans', Arial, sans-serif; font-size:10pt; color:#1e2939; }
+h1 { font-size:16pt; color:#7a1c17; margin-bottom:2px; }
+.sub { font-size:9pt; color:#6b7280; margin-bottom:12px; }
+
+table.intestazione { width:100%; margin-bottom:14px; border-collapse:collapse; }
+table.intestazione td { vertical-align:top; }
+table.mini { border-collapse:collapse; font-size:8pt; }
+table.mini th { color:#7a1c17; font-weight:600; padding:2px 5px; text-align:center; }
+table.mini td { text-align:center; padding:3px 5px; color:#6b7280; width:26px; }
+table.mini td.fuori { color:transparent; }
+table.mini td.con { background:#7a1c17; color:white; font-weight:700; border-radius:3px; }
+
+table.giorno { width:100%; border-collapse:collapse; margin-bottom:4px; border-top:1px solid #d9dfe6; page-break-inside:avoid; }
+table.giorno td { vertical-align:top; padding-top:6px; }
+td.data { width:62px; text-align:center; }
+.data .num { font-size:20pt; font-weight:700; color:#7a1c17; line-height:1; }
+.data .nome { font-size:8pt; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+.evento { padding:0 0 7px; page-break-inside:avoid; }
+table.riga1 { width:100%; border-collapse:collapse; }
+table.riga1 td { vertical-align:top; padding:0; }
+td.ora { width:104px; font-weight:700; font-size:9.5pt; color:#1e2939; }
+.titolo { font-weight:600; font-size:10pt; overflow-wrap:anywhere; word-wrap:break-word; }
+.dettagli { margin-left:104px; font-size:8.5pt; color:#6b7280; overflow-wrap:anywhere; }
+.badge { display:inline-block; background:#f3e5e2; color:#7a1c17; border-radius:8px; padding:0 7px; margin-right:6px; }
+
+.vuoto { font-size:10pt; color:#6b7280; padding:16px 0; }
+.piede { margin-top:16px; font-size:7.5pt; color:#9ca3af; border-top:1px solid #d9dfe6; padding-top:6px; }
+</style>
+</head>
+<body>
+
+<table class="intestazione"><tr>
+    <td>
+        <h1>Impegni di {{ mese_nome }}</h1>
+        <div class="sub">Prof. {{ docente.cognome }} {{ docente.nome or '' }} — {{ n_impegni }} impegni — generato il {{ oggi.strftime('%d/%m/%Y') }}</div>
+    </td>
+    <td style="width:210px;">
+    <table class="mini" align="right">
+        <thead><tr>{% for g in giorni_brevi %}<th>{{ g }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for sett in settimane %}
+        <tr>{% for g in sett %}<td class="{{ 'fuori' if g == 0 else ('con' if g in con_impegni else '') }}">{{ g if g else '·' }}</td>{% endfor %}</tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </td>
+</tr></table>
+
+{% if not giorni %}
+<div class="vuoto">Nessun impegno registrato per questo mese.</div>
+{% endif %}
+
+{% for d, eventi in giorni %}
+<table class="giorno"><tr>
+    <td class="data">
+        <div class="num">{{ d.day }}</div>
+        <div class="nome">{{ giorni_brevi[d.weekday()] }}</div>
+    </td>
+    <td>
+        {% for e in eventi %}
+        <div class="evento">
+            <table class="riga1"><tr>
+                <td class="ora">{{ e.orario }}</td>
+                <td class="titolo">{{ e.titolo }}</td>
+            </tr></table>
+            <div class="dettagli">
+                <span class="badge">{{ e.etichetta }}</span>
+                {% if e.classe %}Classe {{ e.classe }}{% endif %}
+                {% if e.ds %}{% if e.classe %} · {% endif %}con il Dirigente scolastico{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </td>
+</tr></table>
+{% endfor %}
+
+<div class="piede">CaronteApp — promemoria personale degli impegni. Fanno fede le circolari pubblicate sul registro elettronico.</div>
+
+</body>
+</html>

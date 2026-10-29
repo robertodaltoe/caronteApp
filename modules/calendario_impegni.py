@@ -253,7 +253,7 @@ def _piega(riga):
     return '\r\n '.join(p.decode('utf-8') for p in pezzi)
 
 
-def genera_ics(nome_calendario, impegni, adesso):
+def genera_ics(nome_calendario, impegni, adesso, mostra_docenti=True):
     """Testo iCal (CRLF). Orari "floating" (senza fuso): Google Calendar li
     legge nel fuso del calendario di destinazione. Gli impegni senza
     orario diventano eventi di giornata."""
@@ -275,7 +275,7 @@ def genera_ics(nome_calendario, impegni, adesso):
             desc.append(e['tipo'])
         if e['classe']:
             desc.append(f"Classe {e['classe']}")
-        if e['docenti']:
+        if mostra_docenti and e['docenti']:
             desc.append('Docenti: ' + ', '.join(e['docenti']))
         if desc:
             righe.append(f"DESCRIPTION:{_esc(chr(10).join(desc))}")

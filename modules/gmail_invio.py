@@ -77,7 +77,10 @@ def costruisci(destinatario, oggetto, corpo, allegati=()):
     m['Subject'] = oggetto
     m.set_content(corpo)
     for nome, dati in allegati:
-        m.add_attachment(dati, maintype='application', subtype='pdf', filename=nome)
+        if nome.lower().endswith('.ics'):
+            m.add_attachment(dati, maintype='text', subtype='calendar', filename=nome)
+        else:
+            m.add_attachment(dati, maintype='application', subtype='pdf', filename=nome)
     return m
 
 

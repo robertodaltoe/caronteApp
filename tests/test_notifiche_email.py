@@ -270,3 +270,58 @@ def test_orario_senza_righe_non_inviabile(app):
         _doc()
         db.session.commit()
         assert ne.proposte_orario(date(2026, 11, 3))[0]['blocco'] == 'orario non caricato'
+
+
+def _impegno(titolo, giorno, docente, ini='15:00', fine='17:00'):
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    ev = AttivitaIst(tipo='altro', titolo=titolo, data=giorno, ora_inizio=ini, ora_fine=fine,
+                     origine='manuale')
+    db.session.add(ev)
+    db.session.flush()
+    db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=docente.id))
+    db.session.commit()
+
+
+def test_calendario_proposte_invio_pdf_e_ics(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    monkeypatch.setattr('modules.calendario_agenda.agenda_pdf_bytes', lambda *a, **k: b'%PDF-agenda')
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', 'v@davincichiavenna.edu.it')   # Verdi senza impegni
+        _impegno('Collegio docenti', date(2031, 3, 10), a)
+        p = {x['docente'].cognome: x for x in ne.proposte_calendario(mese)}
+        assert p['Rossi']['n_impegni'] == 1 and p['Rossi']['variante'] == 'nuova'
+        assert p['Verdi']['blocco'] == 'nessun impegno nel mese'
+        r = dict((n, s) for n, s, _ in ne.invia_calendario(mese, [a.id, b.id]))
+        assert r == {'Rossi': 'inviata', 'Verdi': 'saltata'}
+        nomi = [n for n, _ in inviati[0][3]]
+        assert nomi == ['Impegni_2031-03_Rossi.pdf', 'Impegni_2031-03_Rossi.ics']
+        assert {x['docente'].cognome: x['variante'] for x in ne.proposte_calendario(mese)}['Rossi'] == 'gia_inviata'
+        _impegno('Consiglio di classe', date(2031, 3, 12), a)
+        pr = {x['docente'].cognome: x for x in ne.proposte_calendario(mese)}['Rossi']
+        assert pr['variante'] == 'aggiornamento' and pr['oggetto'].startswith('AGGIORNAMENTO ')
+
+
+def test_calendario_pdf_non_disponibile_invia_il_solo_ics(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+
+    def rotto(*a, **k):
+        raise RuntimeError('no weasyprint')
+    monkeypatch.setattr('modules.calendario_agenda.agenda_pdf_bytes', rotto)
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a = _doc()
+        _impegno('Collegio docenti', date(2031, 3, 10), a)
+        r = ne.invia_calendario(mese, [a.id])
+        assert r[0][1] == 'inviata'
+        assert [n for n, _ in inviati[0][3]] == ['Impegni_2031-03_Rossi.ics']
+
+
+def test_calendario_mese_default():
+    assert ne.mese_calendario_default(date(2026, 10, 14)) == date(2026, 10, 1)
+    assert ne.mese_calendario_default(date(2026, 10, 15)) == date(2026, 11, 1)
+    assert ne.mese_calendario_default(date(2026, 12, 20)) == date(2027, 1, 1)
