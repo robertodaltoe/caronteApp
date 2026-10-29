@@ -92,6 +92,12 @@ def nuova():
             note       = request.form.get(f'note[{idx}]', '').strip()
             genera_sup = request.form.get(f'genera_supplenza[{idx}]') == '1'
             ore_sel    = request.form.getlist(f'ore[{idx}][]')
+            # La casella "Tutta" del form invia value="": significa tutta la
+            # giornata, come nessuna ora spuntata. Senza questa normalizzazione
+            # ore_sel=[''] finiva nel ramo "ore singole" con ore_int vuoto e
+            # le supplenze non venivano mai generate.
+            if '' in ore_sel:
+                ore_sel = []
             ore_int    = [int(o) for o in ore_sel if o]
             # ore_sel è lista di stringhe es. ['1','3','5'] — None = tutta la giornata
 
