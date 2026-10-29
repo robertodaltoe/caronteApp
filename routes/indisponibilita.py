@@ -123,6 +123,8 @@ def nuova():
                                 genera_supplenza=genera_sup,
                             ))
                             inseriti += 1
+                        elif genera_sup and not gia.genera_supplenza:
+                            gia.genera_supplenza = True
                     if genera_sup and ore_int:
                         da_generare.append((id_docente, data, None, None, ore_int))
                 else:
@@ -138,17 +140,23 @@ def nuova():
                             genera_supplenza=genera_sup,
                         ))
                         inseriti += 1
+                    elif genera_sup and not gia.genera_supplenza:
+                        gia.genera_supplenza = True
                     if genera_sup:
                         da_generare.append((id_docente, data, 1, 9, None))
 
         db.session.flush()
+        n_supplenze = 0
         for id_docente, data, o_ini, o_fine, ore_s in da_generare:
-            _genera_supplenze(id_docente, data, o_ini, o_fine,
+            n_supplenze += _genera_supplenze(id_docente, data, o_ini, o_fine,
                                assegnabile=True, note_display='',
                                ore_singole=ore_s)
 
         db.session.commit()
-        flash(f'Registrate {inseriti} indisponibilità.', 'success')
+        msg = f'Registrate {inseriti} indisponibilità.'
+        if da_generare:
+            msg += f' Supplenze generate: {n_supplenze}.'
+        flash(msg, 'success')
         return redirect(url_for('dashboard.index',
             data=(prima_data or date.today()).isoformat()))
 

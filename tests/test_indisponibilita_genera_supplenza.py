@@ -116,3 +116,29 @@ def test_casella_tutta_del_form_genera_supplenze(app, db_session):
         assert len(indisp) == 1 and indisp[0].ora is None
         sup = Supplenza.query.filter_by(id_assente=d.id).order_by(Supplenza.ora).all()
         assert [s.ora for s in sup] == [1, 3]
+
+
+def test_riga_esistente_senza_flag_si_aggiorna_e_genera(app, db_session):
+    """Indisponibilità già salvata senza 'genera supplenza': rifare
+    l'inserimento con la spunta aggiorna la riga e crea le supplenze."""
+    with app.app_context():
+        d = crea_docente()
+        db.session.add(OrarioDocente(id_docente=d.id, giorno=3, ora=1, classe='1ALSU', materia='X'))
+        db.session.add(Indisponibilita(id_docente=d.id, data=date(2026, 10, 1), ora=None,
+                                       motivo='riunione', genera_supplenza=False))
+        db.session.commit()
+
+        if 'indisponibilita' not in app.blueprints:
+            app.register_blueprint(indisp_bp)
+        if 'dashboard' not in app.blueprints:
+            app.register_blueprint(dashboard_bp)
+        c = app.test_client()
+        r = c.post('/indisponibilita/nuova', data={
+            'n_righe': '1', 'id_docente[0]': str(d.id), 'tipo[0]': 'singola',
+            'motivo[0]': 'riunione', 'data[0]': '2026-10-01',
+            'ore[0][]': [''], 'genera_supplenza[0]': '1',
+        })
+        assert r.status_code == 302
+        indisp = Indisponibilita.query.filter_by(id_docente=d.id).all()
+        assert len(indisp) == 1 and indisp[0].genera_supplenza is True
+        assert Supplenza.query.filter_by(id_assente=d.id).count() == 1
