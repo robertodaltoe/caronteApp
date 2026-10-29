@@ -11,12 +11,7 @@
             Controlla l'anteprima e invia.
         </p>
     </div>
-    <div style="display:flex; gap:8px; flex-shrink:0; white-space:nowrap;">
-        <a href="{{ url_for('mail_bozze.report_banca_ore') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Report banca ore</a>
-        <a href="{{ url_for('mail_bozze.orari_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Orari dei docenti</a>
-        <a href="{{ url_for('mail_bozze.calendario_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Calendario impegni</a>
-        <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Report</a>
-    </div>
+    {% set attiva = 'supplenze' %}{% include '_nav_invio_email.html' %}
 </div>
 
 <div class="card" style="padding:12px 16px; margin-bottom:12px;">

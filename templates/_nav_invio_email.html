@@ -1,0 +1,13 @@
+{# Barra comune delle quattro pagine di invio email: stessi pulsanti, stesso ordine,
+   quella aperta evidenziata. Uso: {% set attiva = 'supplenze' %}{% include '_nav_invio_email.html' %} #}
+{% from '_icons.html' import icon %}
+<div style="display:flex; gap:8px; flex-shrink:0; white-space:nowrap;">
+    {% for chiave, endpoint, testo in [('supplenze', 'mail_bozze.notifiche_supplenze', 'Notifiche supplenze'),
+                                       ('banca_ore', 'mail_bozze.report_banca_ore', 'Report banca ore'),
+                                       ('orari', 'mail_bozze.orari_docenti', 'Orari dei docenti'),
+                                       ('calendario', 'mail_bozze.calendario_docenti', 'Calendario impegni')] %}
+    <a href="{{ url_for(endpoint) }}" class="btn btn-sm {{ 'btn-primary' if chiave == attiva else 'btn-success' }}"
+       {% if chiave == attiva %}aria-current="page" style="box-shadow:0 0 0 3px #f3e5e2; cursor:default;"{% endif %}>{{ icon('mail') }} {{ testo }}</a>
+    {% endfor %}
+    <a href="{{ url_for('report.index') }}" class="btn btn-sm" style="background:#6b7280; color:white;">{{ icon('arrow-left') }} Report</a>
+</div>

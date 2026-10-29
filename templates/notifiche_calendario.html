@@ -43,12 +43,7 @@
             e il file <strong>.ics</strong> da importare nel calendario (Google, Outlook, Apple), dal tuo account.
         </p>
     </div>
-    <div style="display:flex; gap:8px; flex-shrink:0; white-space:nowrap;">
-        <a href="{{ url_for('mail_bozze.report_banca_ore') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Report banca ore</a>
-        <a href="{{ url_for('mail_bozze.notifiche_supplenze') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Notifiche supplenze</a>
-        <a href="{{ url_for('mail_bozze.orari_docenti') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Orari dei docenti</a>
-        <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Report</a>
-    </div>
+    {% set attiva = 'calendario' %}{% include '_nav_invio_email.html' %}
 </div>
 
 <div class="card" style="padding:10px 16px; margin-bottom:12px;">
