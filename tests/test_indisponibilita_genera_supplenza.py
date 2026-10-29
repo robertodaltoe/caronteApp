@@ -90,3 +90,29 @@ def test_genera_supplenza_giornata_intera(app, db_session):
         assert Indisponibilita.query.filter_by(id_docente=d.id, ora=None).count() == 1
         sup = Supplenza.query.filter_by(id_assente=d.id).all()
         assert {s.classe for s in sup} == {'1ALSU', '2BCAT'}
+
+
+def test_casella_tutta_del_form_genera_supplenze(app, db_session):
+    """La casella "Tutta" del form invia ore[idx][]="" (value vuoto): deve
+    valere come tutta la giornata e generare le supplenze, non ignorarle."""
+    with app.app_context():
+        d = crea_docente()
+        db.session.add(OrarioDocente(id_docente=d.id, giorno=3, ora=1, classe='1ALSU', materia='X'))
+        db.session.add(OrarioDocente(id_docente=d.id, giorno=3, ora=3, classe='2BCAT', materia='Y'))
+        db.session.commit()
+
+        if 'indisponibilita' not in app.blueprints:
+            app.register_blueprint(indisp_bp)
+        if 'dashboard' not in app.blueprints:
+            app.register_blueprint(dashboard_bp)
+        c = app.test_client()
+        r = c.post('/indisponibilita/nuova', data={
+            'n_righe': '1', 'id_docente[0]': str(d.id), 'tipo[0]': 'singola',
+            'motivo[0]': 'gara', 'data[0]': '2026-10-01',
+            'ore[0][]': [''], 'genera_supplenza[0]': '1',
+        })
+        assert r.status_code == 302
+        indisp = Indisponibilita.query.filter_by(id_docente=d.id).all()
+        assert len(indisp) == 1 and indisp[0].ora is None
+        sup = Supplenza.query.filter_by(id_assente=d.id).order_by(Supplenza.ora).all()
+        assert [s.ora for s in sup] == [1, 3]
