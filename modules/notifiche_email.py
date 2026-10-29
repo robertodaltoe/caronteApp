@@ -114,6 +114,48 @@ def imposta_modello(saluto, apertura, chiusura):
     db.session.commit()
 
 
+BANCA_ORE_DEFAULT = {
+    'oggetto': 'Report banca ore — {MESE}',
+    'corpo': ("Gentile prof. {COGNOME},\n\n"
+              "in allegato trovi il tuo report individuale della banca ore, "
+              "con date e tipologia delle supplenze.\n\n"
+              "Ti preghiamo di verificare i dati e di comunicare eventuali "
+              "discrepanze alla vicepresidenza.\n\n"
+              "Cordiali saluti,\nVicepresidenza"),
+}
+_CHIAVI_BANCA_ORE = {k: f'email_bo_{k}' for k in BANCA_ORE_DEFAULT}
+SEGNAPOSTO_BANCA_ORE = '{COGNOME} {NOME} {EMAIL} {MESE}'
+
+
+def modello_banca_ore():
+    """Oggetto e testo del report banca ore: impostazione salvata, altrimenti default."""
+    out = {}
+    for k, d in BANCA_ORE_DEFAULT.items():
+        v = _config(_CHIAVI_BANCA_ORE[k])
+        out[k] = v if v and v.strip() else d
+    return out
+
+
+def imposta_modello_banca_ore(oggetto, corpo):
+    """Salva oggetto e testo; un campo vuoto ripristina il default."""
+    from models.config_app import ConfigApp
+    for k, v, lim in (('oggetto', oggetto, 200), ('corpo', corpo, 4000)):
+        v = (v or '').strip()[:lim]
+        r = ConfigApp.query.filter_by(chiave=_CHIAVI_BANCA_ORE[k]).first()
+        if r is None:
+            db.session.add(ConfigApp(chiave=_CHIAVI_BANCA_ORE[k], valore=v))
+        else:
+            r.valore = v
+    db.session.commit()
+
+
+def _sostituisci_banca_ore(testo, docente, mese):
+    return (testo.replace('{COGNOME}', docente.cognome or '')
+                 .replace('{NOME}', docente.nome or '')
+                 .replace('{EMAIL}', docente.email or '')
+                 .replace('{MESE}', f'{mese.month:02d}/{mese.year}'))
+
+
 def _sostituisci(testo, docente, giorno):
     return (testo.replace('{GIORNO}', _quando(giorno))
                  .replace('{NOME}', docente.nome or '')
@@ -329,9 +371,8 @@ def _saldi_testo(saldi):
 def proposte_banca_ore(mese):
     """Una proposta per ogni docente attivo, mese = primo giorno del mese.
     Un solo invio per mese; se i saldi cambiano si propone un aggiornamento."""
-    from config_anno import get_anno_corrente
     from routes.report import get_saldi_docente
-    anno = get_anno_corrente()
+    mod = modello_banca_ore()
     out = []
     for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome, Docente.nome).all():
         saldi = get_saldi_docente(d.id)
@@ -339,16 +380,9 @@ def proposte_banca_ore(mese):
         h = _hash(righe)
         prec = _ultimo_inviato(d.id, mese, 'banca_ore')
         variante = 'nuova' if prec is None else ('gia_inviata' if prec.hash_contenuto == h else 'aggiornamento')
-        mese_txt = f'{mese.month:02d}/{mese.year}'
         agg = 'AGGIORNAMENTO ' if variante == 'aggiornamento' else ''
-        oggetto = f'{agg}Report banca ore - {mese_txt}'
-        corpo = '\n'.join([
-            _saluto(d), '',
-            f'questo è il tuo report della banca ore per l\'a.s. {anno}, aggiornato a {date.today().strftime("%d/%m/%Y")}'
-            + (' (sostituisce il precedente)' if variante == 'aggiornamento' else '') + ':',
-            ''] + righe + [
-            '', 'In allegato il dettaglio in PDF. Se noti discrepanze, scrivi alla vicepresidenza.',
-            '', 'Messaggio automatico di Caronte.'])
+        oggetto = agg + _sostituisci_banca_ore(mod['oggetto'], d, mese)
+        corpo = _sostituisci_banca_ore(mod['corpo'], d, mese)
         email = (d.email or '').strip().lower()
         blocco = None
         if not email:
@@ -365,7 +399,10 @@ def _pdf_banca_ore(docente):
     return _genera_pdf_bytes(docente)
 
 
-def invia_banca_ore(mese, ids_docenti):
+def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
+    """Se oggetto/corpo sono passati dalla pagina, diventano il modello salvato."""
+    if oggetto is not None or corpo is not None:
+        imposta_modello_banca_ore(oggetto, corpo)
     mod = modalita()
     if mod == 'off':
         return [('—', 'errore', 'invio disattivato')]

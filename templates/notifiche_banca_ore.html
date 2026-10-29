@@ -2,45 +2,70 @@
 {% from '_icons.html' import icon %}
 {% block title %}Report banca ore via email{% endblock %}
 
+{% block extra_style %}
+<style>
+.docenti-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:16px; box-sizing:border-box; }
+.doc-card { display:flex; align-items:center; gap:6px; padding:6px 10px;
+    border:2px solid #e5eaf0; border-radius:8px; cursor:pointer;
+    transition:all .12s; background:white; }
+.doc-card:hover { border-color:var(--blu); background:#f0f6ff; }
+.doc-card.selezionato { border-color:var(--blu); background:#dbeafe; }
+.doc-card.non-inviabile { opacity:.5; cursor:not-allowed; }
+.doc-card input[type=checkbox] { width:16px; height:16px; flex-shrink:0; }
+.doc-nome { font-size:.85rem; font-weight:700; color:var(--blu); }
+.doc-email { font-size:.72rem; color:var(--grigio); }
+.doc-stato { font-size:.7rem; color:#92400e; }
+.doc-pdf { font-size:.7rem; margin-left:auto; }
+.barra-azioni { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:10px 14px; background:#f8fafc; border-radius:8px;
+    border:1px solid #e5eaf0; margin-bottom:16px; }
+.contatore { font-size:.82rem; font-weight:700; color:var(--blu);
+    background:#dbeafe; padding:4px 12px; border-radius:12px; }
+.testo-mail textarea { width:100%; border:1px solid #d1d5db; border-radius:8px;
+    padding:10px 12px; font-family:var(--font); font-size:.88rem;
+    resize:vertical; line-height:1.5; }
+.segnaposto { font-size:.75rem; color:var(--grigio); margin-top:4px; }
+.segnaposto code { background:#f0f4f8; padding:1px 5px; border-radius:3px;
+    font-size:.8em; color:#374151; }
+@media (max-width:1100px) { .docenti-grid { grid-template-columns:repeat(3, 1fr); } }
+</style>
+{% endblock %}
+
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div>
         <h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('mail') }} Report banca ore via email</h1>
         <p style="font-size:.83rem; color:var(--grigio); margin-top:3px;">
-            Un messaggio per ogni docente con i saldi e il PDF del report. Un invio al mese; se i saldi cambiano si propone un aggiornamento.
+            Seleziona i docenti, scrivi oggetto e testo, poi <strong>Invia</strong>: ogni docente riceve il testo
+            e il <strong>proprio PDF riepilogativo</strong> (con date e tipologia delle supplenze) dal tuo account.
         </p>
     </div>
-    <a href="{{ url_for('mail_bozze.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Bozze email</a>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('mail_bozze.notifiche_supplenze') }}" class="btn btn-sm btn-success">{{ icon('mail') }} Notifiche supplenze</a>
+        <a href="{{ url_for('report.index') }}" class="btn btn-sm btn-primary">{{ icon('arrow-left') }} Report</a>
+    </div>
 </div>
 
-<div class="card" style="padding:12px 16px; margin-bottom:12px;">
-    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <label for="mese" style="font-weight:700; font-size:.88rem;">Mese</label>
-        <input type="month" id="mese" name="mese" value="{{ mese.strftime('%Y-%m') }}">
-        <button class="btn btn-sm btn-primary" type="submit">Mostra</button>
-    </form>
-</div>
-
-<div class="card" style="padding:12px 16px; margin-bottom:12px;">
+<div class="card" style="padding:10px 16px; margin-bottom:12px;">
     <form method="post" action="{{ url_for('mail_bozze.notifiche_supplenze_impostazioni') }}"
           style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:.85rem;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="mese" value="{{ mese.strftime('%Y-%m') }}">
-        <strong>Modalità invio</strong>
+        <input type="hidden" name="torna" value="banca_ore">
+        <strong>Invio</strong>
         <select name="modalita">
             <option value="off" {{ 'selected' if modalita == 'off' }}>Spento (solo anteprima)</option>
             <option value="simulato" {{ 'selected' if modalita == 'simulato' }}>Simulato (registra, non spedisce)</option>
             <option value="reale" {{ 'selected' if modalita == 'reale' }}>Reale (spedisce)</option>
         </select>
         <label>Solo a (prova, separati da virgola; vuoto = tutti)
-            <input type="text" name="solo_a" value="{{ solo_a|join(', ') }}" size="40">
+            <input type="text" name="solo_a" value="{{ solo_a|join(', ') }}" size="34">
         </label>
         <button class="btn btn-sm btn-primary" type="submit">Salva</button>
+        <span style="font-size:.75rem; color:var(--grigio); margin-left:auto;">
+            «Reale» funziona solo sul PC server, dove è configurato l'accesso Google.
+        </span>
     </form>
-    <p style="font-size:.75rem; color:var(--grigio); margin:6px 0 0;">
-        Con «Reale» l'invio parte dal tuo account Google solo dopo l'autorizzazione (vedi guida);
-        finché non è configurata ogni invio risulta «errore» e si può ripetere.
-    </p>
 </div>
 
 {% if risultati %}
@@ -54,50 +79,128 @@
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('mail_bozze.report_banca_ore_invia') }}">
+<form method="post" action="{{ url_for('mail_bozze.report_banca_ore_invia') }}" id="form-invio">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="mese" value="{{ mese.strftime('%Y-%m') }}">
-    {% if not proposte %}
-    <div class="card" style="padding:16px;">Nessun docente attivo.</div>
-    {% endif %}
-    {% if proposte %}
-    <div style="display:flex; gap:8px; margin-bottom:10px;">
-        <button type="button" class="btn btn-sm btn-primary" onclick="selezionaDocenti(true)">Seleziona tutti</button>
-        <button type="button" class="btn btn-sm" onclick="selezionaDocenti(false)">Deseleziona tutti</button>
-    </div>
-    {% endif %}
-    {% for p in proposte %}
-    <div class="card" style="padding:12px 16px; margin-bottom:10px;">
-        <label style="display:flex; gap:10px; align-items:center; font-weight:700; color:var(--blu);">
-            <input type="checkbox" name="docenti" value="{{ p.docente.id }}"
-                   {% if p.variante != 'gia_inviata' and not p.blocco %}checked{% endif %}
-                   {% if p.variante == 'gia_inviata' or p.blocco %}disabled{% endif %}>
-            {{ p.docente.cognome }} {{ p.docente.nome or '' }}
-            <span style="font-weight:400; font-size:.8rem; color:var(--grigio);">{{ p.email or 'senza email' }}</span>
-            <span style="font-size:.75rem; padding:2px 8px; border-radius:10px; background:#eef2f7;">
-                {% if p.blocco %}non inviabile: {{ p.blocco }}
-                {% elif p.variante == 'gia_inviata' %}già inviato questo mese
-                {% elif p.variante == 'nuova' %}nuova
-                {% elif p.variante == 'aggiornamento' %}aggiornamento
-                {% else %}aggiornamento{% endif %}
-            </span>
-        </label>
-        <details style="margin-top:6px;">
-            <summary style="cursor:pointer; font-size:.82rem;">Anteprima</summary>
-            <p style="font-size:.82rem; margin:6px 0 2px;"><strong>Oggetto:</strong> {{ p.oggetto }}</p>
-            <pre style="white-space:pre-wrap; font-family:var(--font); font-size:.82rem; background:#f8fafc; padding:8px 10px; border-radius:6px;">{{ p.corpo }}</pre>
+
+    <div class="card testo-mail" style="margin-bottom:16px; padding:16px 20px;">
+        <h2 style="margin-bottom:12px;">{{ icon('edit') }} Oggetto e testo (uguali per tutti i selezionati)</h2>
+        <div class="form-group" style="margin-bottom:12px;">
+            <label for="oggetto" style="font-weight:700; font-size:.88rem;">Oggetto *</label>
+            <input type="text" id="oggetto" name="oggetto" value="{{ modello.oggetto }}" oninput="aggiornaAnteprima()"
+                   style="width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:.88rem;">
+        </div>
+        <div class="form-group">
+            <label for="corpo" style="font-weight:700; font-size:.88rem;">Corpo del messaggio *</label>
+            <textarea id="corpo" name="corpo" rows="8" oninput="aggiornaAnteprima()">{{ modello.corpo }}</textarea>
+            <p class="segnaposto">
+                Segnaposto: <code>{COGNOME}</code> cognome &nbsp;·&nbsp; <code>{NOME}</code> nome &nbsp;·&nbsp;
+                <code>{EMAIL}</code> indirizzo &nbsp;·&nbsp; <code>{MESE}</code> mese del report.
+                Il testo che scrivi qui viene salvato quando premi Invia.
+            </p>
+        </div>
+        <details style="margin-top:10px;" id="box-anteprima">
+            <summary style="cursor:pointer; font-size:.85rem; font-weight:700;">Anteprima per <span id="anteprima-chi">—</span></summary>
+            <p style="font-size:.82rem; margin:8px 0 2px;"><strong>Oggetto:</strong> <span id="anteprima-oggetto"></span></p>
+            <pre id="anteprima-corpo" style="white-space:pre-wrap; font-family:var(--font); font-size:.82rem; background:#f8fafc; padding:8px 10px; border-radius:6px; margin:0;"></pre>
+            <p style="font-size:.78rem; color:var(--grigio); margin:6px 0 0;">Allegato: il PDF del docente (link «PDF» sulla sua scheda per vederlo).</p>
         </details>
     </div>
-    {% endfor %}
-    {% if proposte %}
-    <button class="btn btn-success" type="submit" {% if modalita == 'off' %}disabled{% endif %}>
-        {{ icon('mail') }} {{ 'Registra (simulato)' if modalita == 'simulato' else 'Invia ai selezionati' }}
-    </button>
-    {% endif %}
+
+    <div class="card" style="padding:14px 14px;">
+        <div class="barra-azioni">
+            <button type="button" class="btn btn-sm btn-primary" onclick="selezionaTutti(true)">{{ icon('check') }} Seleziona tutti</button>
+            <button type="button" class="btn btn-sm" style="background:#6b7280;color:white;" onclick="selezionaTutti(false)">Deseleziona tutti</button>
+            <span class="contatore" id="contatore">0 selezionati</span>
+            {% if proposte %}
+            <button class="btn btn-success" type="submit" id="btn-invia" style="margin-left:auto;"
+                    {% if modalita == 'off' %}disabled title="Invio spento: scegli Simulato o Reale"{% endif %}>
+                {{ icon('mail') }} {{ 'Registra (simulato)' if modalita == 'simulato' else 'Invia ai selezionati' }}
+            </button>
+            {% endif %}
+        </div>
+
+        <h2 style="margin-bottom:10px;">{{ icon('person') }} Docenti ({{ proposte|length }})
+            <span style="font-weight:400; font-size:.8rem; margin-left:10px;">
+                Mese
+                <input type="month" id="mese-sel" value="{{ mese.strftime('%Y-%m') }}"
+                       onchange="location.href='?mese=' + this.value">
+            </span>
+        </h2>
+        {% if not proposte %}<p>Nessun docente attivo.</p>{% endif %}
+        <div class="docenti-grid">
+            {% for p in proposte %}
+            {% set bloccato = p.variante == 'gia_inviata' or p.blocco %}
+            <label class="doc-card {{ 'non-inviabile' if bloccato }}" id="card-{{ p.docente.id }}">
+                <input type="checkbox" name="docenti" value="{{ p.docente.id }}"
+                       data-cognome="{{ p.docente.cognome }}" data-nome="{{ p.docente.nome or '' }}" data-email="{{ p.email }}"
+                       {% if bloccato %}disabled{% endif %}
+                       onchange="cambiaScelta(this)">
+                <div>
+                    <div class="doc-nome">{{ p.docente.cognome }}{% if p.docente.nome %} {{ p.docente.nome[0] }}.{% endif %}</div>
+                    <div class="doc-email">{{ p.email or 'senza email' }}</div>
+                    {% if p.blocco %}<div class="doc-stato">non inviabile: {{ p.blocco }}</div>
+                    {% elif p.variante == 'gia_inviata' %}<div class="doc-stato">già inviato questo mese</div>
+                    {% elif p.variante == 'aggiornamento' %}<div class="doc-stato">aggiornamento</div>{% endif %}
+                </div>
+                <a class="doc-pdf" href="{{ url_for('mail_bozze.report_banca_ore_pdf', id_docente=p.docente.id) }}"
+                   target="_blank" onclick="event.stopPropagation()">PDF</a>
+            </label>
+            {% endfor %}
+        </div>
+        <p style="font-size:.78rem; margin:0;">
+            <a href="{{ url_for('mail_bozze.bozze_locali') }}">Vecchio metodo: bozze per Mail.app o file .eml</a>
+            (non invia nulla, utile come ripiego).
+        </p>
+    </div>
 </form>
+
 <script>
-function selezionaDocenti(stato) {
-    document.querySelectorAll('input[name="docenti"]:not(:disabled)').forEach(function (c) { c.checked = stato; });
+const MESE_TXT = '{{ "%02d/%d"|format(mese.month, mese.year) }}';
+
+function caselle() { return [...document.querySelectorAll('.docenti-grid input[type=checkbox]')]; }
+
+function sost(testo, c) {
+    return testo.replaceAll('{COGNOME}', c.dataset.cognome).replaceAll('{NOME}', c.dataset.nome)
+                .replaceAll('{EMAIL}', c.dataset.email).replaceAll('{MESE}', MESE_TXT);
 }
+
+function aggiornaAnteprima() {
+    const c = caselle().find(x => x.checked) || caselle().find(x => !x.disabled);
+    if (!c) return;
+    document.getElementById('anteprima-chi').textContent = c.dataset.cognome + ' ' + c.dataset.nome;
+    document.getElementById('anteprima-oggetto').textContent = sost(document.getElementById('oggetto').value, c);
+    document.getElementById('anteprima-corpo').textContent = sost(document.getElementById('corpo').value, c);
+}
+
+function aggiornaContatore() {
+    const n = caselle().filter(c => c.checked).length;
+    document.getElementById('contatore').textContent = n + ' selezionati';
+    aggiornaAnteprima();
+}
+
+function cambiaScelta(c) {
+    document.getElementById('card-' + c.value).classList.toggle('selezionato', c.checked);
+    aggiornaContatore();
+}
+
+function selezionaTutti(stato) {
+    caselle().filter(c => !c.disabled).forEach(c => {
+        c.checked = stato;
+        document.getElementById('card-' + c.value).classList.toggle('selezionato', stato);
+    });
+    aggiornaContatore();
+}
+
+document.getElementById('form-invio').addEventListener('submit', function (e) {
+    const n = caselle().filter(c => c.checked).length;
+    if (!n) { e.preventDefault(); return; }
+    if (!document.getElementById('oggetto').value.trim() || !document.getElementById('corpo').value.trim()) {
+        e.preventDefault(); return;
+    }
+    if (!confirm('Inviare il report a ' + n + ' docenti?')) e.preventDefault();
+});
+
+document.addEventListener('DOMContentLoaded', aggiornaContatore);
 </script>
 {% endblock %}

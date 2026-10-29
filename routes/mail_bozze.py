@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for, Response
 from models import db
 from models.docente import Docente
 from models.supplenza import Supplenza
@@ -46,6 +46,13 @@ def _esc(s):
 # ── PAGINA ────────────────────────────────────────────────────
 @mail_bozze_bp.route('/mail-bozze')
 def index():
+    # l'invio del report banca ore (con testo modificabile e PDF) e' la pagina principale
+    return redirect(url_for('mail_bozze.report_banca_ore'))
+
+
+@mail_bozze_bp.route('/mail-bozze/bozze-locali')
+def bozze_locali():
+    """Vecchio metodo: bozze per Mail.app / file .eml (ripiego, non invia nulla)."""
     docenti = Docente.query.filter_by(attivo=True).order_by(Docente.cognome).all()
     return render_template('mail_bozze.html', docenti=docenti, oggi=date.today())
 
@@ -261,6 +268,8 @@ def notifiche_supplenze_impostazioni():
     if nuova in ne.MODALITA_VALIDE:
         ne.imposta(nuova, request.form.get('solo_a', ''))
         auth_log('impostazioni_notifiche_email', f'modalita={nuova}')
+    if request.form.get('torna') == 'banca_ore':
+        return redirect(url_for('mail_bozze.report_banca_ore', mese=request.form.get('mese', '')))
     return redirect(url_for('mail_bozze.notifiche_supplenze',
                             data=request.form.get('data', '')))
 
@@ -278,7 +287,8 @@ def _render_banca_ore(mese, risultati=None):
     from modules import notifiche_email as ne
     return render_template('notifiche_banca_ore.html', mese=mese,
         proposte=ne.proposte_banca_ore(mese), modalita=ne.modalita(),
-        solo_a=sorted(ne._solo_a()), risultati=risultati)
+        solo_a=sorted(ne._solo_a()), risultati=risultati,
+        modello=ne.modello_banca_ore(), segnaposto=ne.SEGNAPOSTO_BANCA_ORE)
 
 
 @mail_bozze_bp.route('/mail-bozze/report-banca-ore')
@@ -291,10 +301,23 @@ def report_banca_ore_invia():
     from modules import notifiche_email as ne
     from routes.auth import log as auth_log
     mese = _mese_da_richiesta(request.form.get('mese'))
-    risultati = ne.invia_banca_ore(mese, request.form.getlist('docenti'))
+    risultati = ne.invia_banca_ore(mese, request.form.getlist('docenti'),
+                                   request.form.get('oggetto', ''), request.form.get('corpo', ''))
     auth_log('report_banca_ore_email',
              f'{mese.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return _render_banca_ore(mese, risultati)
+
+
+@mail_bozze_bp.route('/mail-bozze/report-banca-ore/pdf/<int:id_docente>')
+def report_banca_ore_pdf(id_docente):
+    """Il PDF che verrebbe allegato alla mail del docente (per controllarlo prima di inviare)."""
+    doc = Docente.query.get_or_404(id_docente)
+    try:
+        dati = _genera_pdf_bytes(doc)
+    except Exception as e:
+        return f'PDF non disponibile su questo computer ({e}).', 503
+    return Response(dati, mimetype='application/pdf',
+                    headers={'Content-Disposition': f'inline; filename=Banca_ore_{doc.cognome}.pdf'})
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/modello', methods=['POST'])

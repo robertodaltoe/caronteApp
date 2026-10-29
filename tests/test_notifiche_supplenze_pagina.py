@@ -69,14 +69,18 @@ def test_pagina_report_banca_ore_e_invio_simulato(app_reale, monkeypatch):
         id_d = d.id
     with app_reale.test_client() as c:
         corpo = c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
-        assert 'ProvaBanca' in corpo and 'Saldo netto' in corpo
+        assert 'ProvaBanca' in corpo and 'Corpo del messaggio' in corpo
         assert 'Seleziona tutti' in corpo and 'Deseleziona tutti' in corpo
         tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
         mese = re.search(r'name="mese" value="([^"]+)"', corpo).group(1)
         r = c.post('/mail-bozze/report-banca-ore/invia',
-                   data={'csrf_token': tok, 'mese': mese, 'docenti': [id_d]})
+                   data={'csrf_token': tok, 'mese': mese, 'docenti': [id_d],
+                         'oggetto': 'Prova {MESE}', 'corpo': 'Testo mio per {COGNOME}'})
         assert r.status_code == 200 and 'simulata' in r.get_data(as_text=True)
+        assert 'Testo mio per {COGNOME}' in c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
     with app_reale.app_context():
+        from models.config_app import ConfigApp
+        ConfigApp.query.filter(ConfigApp.chiave.in_(['email_bo_oggetto', 'email_bo_corpo'])).delete(synchronize_session=False)
         EmailUscita.query.filter_by(id_docente=id_d).delete()
         Docente.query.filter_by(id=id_d).delete()
         db.session.commit()
@@ -96,4 +100,27 @@ def test_salvataggio_modello_dalla_pagina(app_reale):
         assert 'Buongiorno,' in c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
     with app_reale.app_context():
         ConfigApp.query.filter(ConfigApp.chiave.like('email_modello_%')).delete(synchronize_session=False)
+        db.session.commit()
+
+
+def test_bozze_email_porta_alla_pagina_banca_ore_e_vecchio_metodo_resta(app_reale):
+    with app_reale.test_client() as c:
+        r = c.get('/mail-bozze')
+        assert r.status_code == 302 and r.headers['Location'].endswith('/mail-bozze/report-banca-ore')
+        assert c.get('/mail-bozze/bozze-locali').status_code == 200
+        assert 'bozze-locali' in c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
+
+
+def test_impostazioni_dalla_pagina_banca_ore_tornano_alla_pagina_banca_ore(app_reale):
+    import re
+    from models import db
+    from models.config_app import ConfigApp
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/report-banca-ore').get_data(as_text=True)
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/notifiche-supplenze/impostazioni',
+                   data={'csrf_token': tok, 'modalita': 'off', 'solo_a': '', 'torna': 'banca_ore', 'mese': '2026-10'})
+        assert r.status_code == 302 and '/mail-bozze/report-banca-ore' in r.headers['Location']
+    with app_reale.app_context():
+        ConfigApp.query.filter(ConfigApp.chiave.in_(['email_modalita', 'email_solo_a'])).delete(synchronize_session=False)
         db.session.commit()
