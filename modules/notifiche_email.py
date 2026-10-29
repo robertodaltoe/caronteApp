@@ -570,6 +570,8 @@ CALENDARIO_DEFAULT = {
               "in allegato trovi il calendario dei tuoi impegni di {MESE}: il PDF da consultare o "
               "stampare e il file .ics da importare nel tuo calendario (Google, Outlook, Apple).\n\n"
               "È un promemoria: fanno fede le circolari pubblicate sul registro elettronico. "
+              "Gli impegni segnati come facoltativi riguardano eventi a cui, secondo il tuo piano di "
+              "lavoro individuale, non sei convocato: puoi partecipare se lo desideri.\n"
               "Se gli impegni cambiano dopo questo invio, riceverai un aggiornamento.\n\n"
               "Cordiali saluti,\nVicepresidenza"),
 }
@@ -622,7 +624,7 @@ def proposte_calendario(mese):
     out = []
     for d in Docente.query.filter_by(attivo=True).order_by(Docente.cognome, Docente.nome).all():
         imp = tutti.get(d.id, [])
-        righe = [f"{e['data']}|{e['ora_inizio']}|{e['ora_fine']}|{e['titolo']}|{e['classe']}" for e in imp]
+        righe = [f"{e['data']}|{e['ora_inizio']}|{e['ora_fine']}|{e['titolo']}|{e['classe']}|{int(bool(e.get('facoltativo')))}" for e in imp]
         h = _hash(righe)
         prec = _ultimo_inviato(d.id, mese, 'calendario')
         variante = 'nuova' if prec is None else ('gia_inviata' if prec.hash_contenuto == h else 'aggiornamento')

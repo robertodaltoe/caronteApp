@@ -43,6 +43,7 @@ td.ora { width:104px; font-weight:700; font-size:9.5pt; color:#1e2939; }
 .dettagli { margin-left:104px; font-size:8.5pt; color:#6b7280; overflow-wrap:anywhere; }
 .badge { display:inline-block; background:#f3e5e2; color:#7a1c17; border-radius:8px; padding:0 7px; margin-right:6px; }
 
+.facolt { margin-left:104px; font-size:8.5pt; font-style:italic; color:#92400e; }
 .vuoto { font-size:10pt; color:#6b7280; padding:16px 0; }
 .piede { margin-top:16px; font-size:7.5pt; color:#9ca3af; border-top:1px solid #d9dfe6; padding-top:6px; }
 </style>
@@ -88,6 +89,7 @@ td.ora { width:104px; font-weight:700; font-size:9.5pt; color:#1e2939; }
                 {% if e.classe %}Classe {{ e.classe }}{% endif %}
                 {% if e.ds %}{% if e.classe %} · {% endif %}con il Dirigente scolastico{% endif %}
             </div>
+            {% if e.facoltativo %}<div class="facolt">Non sei tra i convocati (piano di lavoro individuale): la partecipazione è facoltativa.</div>{% endif %}
         </div>
         {% endfor %}
     </td>

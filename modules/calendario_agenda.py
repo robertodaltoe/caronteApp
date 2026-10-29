@@ -26,7 +26,8 @@ def nome_mese(mese):
 def impegni_mese(docente, mese):
     """Impegni personali del mese (mese = primo giorno)."""
     ultimo = date(mese.year, mese.month, calendar.monthrange(mese.year, mese.month)[1])
-    return raccogli_impegni(mese, ultimo, id_docente=docente.id, fonti=FONTI_PERSONALI, con_conflitti=False)
+    return raccogli_impegni(mese, ultimo, id_docente=docente.id, fonti=FONTI_PERSONALI, con_conflitti=False,
+                           con_facoltativi=True)
 
 
 def impegni_mese_tutti(mese):
@@ -34,14 +35,19 @@ def impegni_mese_tutti(mese):
     (la pagina d'invio la usa per tutti i docenti insieme)."""
     ultimo = date(mese.year, mese.month, calendar.monthrange(mese.year, mese.month)[1])
     out = {}
-    for e in raccogli_impegni(mese, ultimo, fonti=FONTI_PERSONALI, con_conflitti=False):
+    for e in raccogli_impegni(mese, ultimo, fonti=FONTI_PERSONALI, con_conflitti=False,
+                              con_facoltativi=True):
         for i in e['id_docenti']:
             out.setdefault(i, []).append(e)
+        for i in e['id_facoltativi']:
+            out.setdefault(i, []).append(dict(e, facoltativo=True))
     return out
 
 
 def ics_mese(docente, mese, impegni=None):
     imp = impegni_mese(docente, mese) if impegni is None else impegni
+    imp = [dict(e, titolo=e['titolo'] + ' (non convocato: partecipazione facoltativa)')
+           if e.get('facoltativo') else e for e in imp]
     return genera_ics(f'Caronte – impegni {nome_mese(mese)} ({docente.cognome})',
                       imp, datetime.utcnow(), mostra_docenti=False).encode('utf-8')
 
