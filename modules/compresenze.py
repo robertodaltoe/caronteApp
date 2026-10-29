@@ -72,8 +72,11 @@ def compagni_presenti(id_docente, giorno, ora, classe, data):
         if assente:
             continue
         # Indisponibile (BIM, simulazione, ecc.)?
-        indisp = Indisponibilita.query.filter_by(
-            id_docente=cid, data=data, ora=ora
+        # ora=None = indisponibile tutta la giornata
+        indisp = Indisponibilita.query.filter(
+            Indisponibilita.id_docente == cid,
+            Indisponibilita.data == data,
+            (Indisponibilita.ora == ora) | (Indisponibilita.ora.is_(None)),
         ).first()
         if indisp:
             continue

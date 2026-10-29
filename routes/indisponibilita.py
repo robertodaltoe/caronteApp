@@ -74,6 +74,12 @@ def nuova():
         n_righe   = int(request.form.get('n_righe', 1))
         inseriti  = 0
         prima_data = None
+        # Le supplenze si generano dopo aver registrato TUTTE le righe:
+        # _genera_supplenze salta le ore in compresenza se il compagno
+        # risulta presente, quindi due docenti indisponibili insieme
+        # (stessa classe/ora) si coprirebbero a vicenda in modo
+        # dipendente dall'ordine di inserimento.
+        da_generare = []
         utente_corrente = g.utente.username if getattr(g, 'utente', None) else None
 
         for idx in range(n_righe):
@@ -112,9 +118,7 @@ def nuova():
                             ))
                             inseriti += 1
                     if genera_sup and ore_int:
-                        _genera_supplenze(id_docente, data, None, None,
-                                           assegnabile=True, note_display='',
-                                           ore_singole=ore_int)
+                        da_generare.append((id_docente, data, None, None, ore_int))
                 else:
                     # Tutta la giornata
                     gia = Indisponibilita.query.filter_by(
@@ -129,8 +133,13 @@ def nuova():
                         ))
                         inseriti += 1
                     if genera_sup:
-                        _genera_supplenze(id_docente, data, 1, 9,
-                                           assegnabile=True, note_display='')
+                        da_generare.append((id_docente, data, 1, 9, None))
+
+        db.session.flush()
+        for id_docente, data, o_ini, o_fine, ore_s in da_generare:
+            _genera_supplenze(id_docente, data, o_ini, o_fine,
+                               assegnabile=True, note_display='',
+                               ore_singole=ore_s)
 
         db.session.commit()
         flash(f'Registrate {inseriti} indisponibilità.', 'success')
