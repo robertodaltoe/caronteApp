@@ -347,7 +347,7 @@ def test_calendario_esonerato_dal_piano_vede_l_impegno_come_facoltativo(app, mon
     mese = date(2031, 3, 1)
     with app.test_request_context():
         a, b, c = _doc(), _doc('Verdi', 'v@davincichiavenna.edu.it'), _doc('Neri', 'n@davincichiavenna.edu.it')
-        ev = AttivitaIst(tipo='altro', titolo='Collegio', data=date(2031, 3, 10), ora_inizio='15:00',
+        ev = AttivitaIst(tipo='collegio', titolo='Collegio', data=date(2031, 3, 10), ora_inizio='15:00',
                          ora_fine='17:00', origine='manuale')
         db.session.add(ev); db.session.flush()
         for d in (a, b):
@@ -366,3 +366,21 @@ def test_calendario_esonerato_dal_piano_vede_l_impegno_come_facoltativo(app, mon
         assert b'facoltativa' in ics_mese(b, mese)
         p = {x['docente'].cognome: x for x in ne.proposte_calendario(mese)}
         assert p['Verdi']['n_impegni'] == 1 and p['Neri']['n_impegni'] == 1
+
+
+def test_calendario_piano_individuale_solo_per_collegio_consigli_glo_dipartimenti_materie(app, monkeypatch):
+    from models.attivita_ist import AttivitaIst, AttivitaIstPartecipante
+    from modules.calendario_agenda import impegni_mese_tutti
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a, b = _doc(), _doc('Verdi', 'v@davincichiavenna.edu.it')
+        for tipo, titolo in [('collegio', 'Collegio'), ('formazione', 'Corso')]:
+            ev = AttivitaIst(tipo=tipo, titolo=titolo, data=date(2031, 3, 10), ora_inizio='15:00',
+                             ora_fine='17:00', origine='manuale')
+            db.session.add(ev); db.session.flush()
+            db.session.add(AttivitaIstPartecipante(id_attivita=ev.id, id_docente=a.id))
+        db.session.commit()
+        monkeypatch.setattr('routes.attivita_ist._esonerati_da_piano', lambda e: {b.id})
+        tutti = impegni_mese_tutti(mese)
+        assert [(e['titolo'], e['facoltativo']) for e in tutti[a.id]] == [('Collegio', False), ('Corso', False)]
+        assert [(e['titolo'], e['facoltativo']) for e in tutti[b.id]] == [('Collegio', True)]
