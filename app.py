@@ -642,6 +642,10 @@ def create_app(avvio_con_reloader=True):
         from modules.auto_sync import avvia_thread_autosync
         avvia_thread_autosync(app)
         print('[auto_sync] thread avviato — primo giro tra ~10s, poi ogni 30s.', flush=True)
+        # Invio automatico delle notifiche supplenze (spento finche' non lo
+        # si attiva da /mail-bozze/notifiche-supplenze, vedi modules/invio_automatico.py).
+        from modules.invio_automatico import avvia_thread as avvia_invio_automatico
+        avvia_invio_automatico(app)
 
     return app
 

@@ -215,3 +215,22 @@ def test_barra_invio_email_uguale_nelle_quattro_pagine_con_la_corrente_evidenzia
             assert 'name="reinvia"' not in corpo or 'Reinvia anche a chi' in corpo
             attivi = re.findall(r'<a href="([^"]+)" class="btn btn-sm btn-primary"\s+aria-current="page"', corpo)
             assert attivi == [pagine[chiave]]
+
+
+def test_pagina_supplenze_invio_automatico_attiva_e_orario(app_reale):
+    import re
+    from models import db
+    from models.config_app import ConfigApp
+    with app_reale.test_client() as c:
+        corpo = c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+        assert 'Invio automatico' in corpo and 'name="ora"' in corpo and 'spento' in corpo
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', corpo).group(1)
+        r = c.post('/mail-bozze/notifiche-supplenze/automatico',
+                   data={'csrf_token': tok, 'attivo': '1', 'ora': '14:45'}, follow_redirects=True)
+        corpo = r.get_data(as_text=True)
+        assert 'ATTIVO' in corpo and 'value="14:45"' in corpo
+        c.post('/mail-bozze/notifiche-supplenze/automatico', data={'csrf_token': tok, 'ora': '14:45'})
+        assert 'ATTIVO' not in c.get('/mail-bozze/notifiche-supplenze').get_data(as_text=True)
+    with app_reale.app_context():
+        ConfigApp.query.filter(ConfigApp.chiave.like('auto_supplenze%')).delete(synchronize_session=False)
+        db.session.commit()

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for, Response
+from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for, Response, flash
 from models import db
 from models.docente import Docente
 from models.supplenza import Supplenza
@@ -230,6 +230,11 @@ def scarica_ps1():
 
 
 # ── NOTIFICHE SUPPLENZE (email ai docenti il giorno prima) ────
+def _automatico():
+    from modules import invio_automatico as ia
+    return ia.impostazioni()
+
+
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze')
 def notifiche_supplenze():
     from modules import notifiche_email as ne
@@ -240,7 +245,7 @@ def notifiche_supplenze():
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
         solo_a=sorted(ne._solo_a()), risultati=None, modello=ne.modello(),
-        segnaposto=ne.SEGNAPOSTO)
+        segnaposto=ne.SEGNAPOSTO, automatico=_automatico())
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/invia', methods=['POST'])
@@ -258,7 +263,7 @@ def notifiche_supplenze_invia():
     return render_template('notifiche_supplenze.html', giorno=giorno,
         proposte=ne.proposte_supplenze(giorno), modalita=ne.modalita(),
         solo_a=sorted(ne._solo_a()), risultati=risultati, modello=ne.modello(),
-        segnaposto=ne.SEGNAPOSTO)
+        segnaposto=ne.SEGNAPOSTO, automatico=_automatico())
 
 
 @mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/impostazioni', methods=['POST'])
@@ -277,6 +282,19 @@ def notifiche_supplenze_impostazioni():
         return redirect(url_for('mail_bozze.report_banca_ore', mese=request.form.get('mese', '')))
     return redirect(url_for('mail_bozze.notifiche_supplenze',
                             data=request.form.get('data', '')))
+
+
+@mail_bozze_bp.route('/mail-bozze/notifiche-supplenze/automatico', methods=['POST'])
+def notifiche_supplenze_automatico():
+    from modules import invio_automatico as ia
+    from routes.auth import log as auth_log
+    attivo = request.form.get('attivo') == '1'
+    ia.imposta(attivo, request.form.get('ora', ''))
+    imp = ia.impostazioni()
+    auth_log('impostazioni_invio_automatico',
+             f'supplenze: {"attivo" if imp["attivo"] else "spento"} alle {imp["ora"]}')
+    flash(f'Invio automatico {"attivato" if imp["attivo"] else "disattivato"} (ore {imp["ora"]}).', 'success')
+    return redirect(url_for('mail_bozze.notifiche_supplenze', data=request.form.get('data', '')))
 
 
 # ── REPORT BANCA ORE via email (mensile, tutti i docenti) ─────
