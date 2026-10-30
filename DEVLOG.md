@@ -2,6 +2,41 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 84 — Autosync: merge a riempimento dell'anagrafica docenti (email, ricevimento)
+
+Roberto lavora da casa sul Mac e le modifiche all'anagrafica (import email,
+PR #46) non arrivavano al database del server. Causa: il PC server e' l'unico
+master (non fa `sync_db.py scarica`, di proposito) e l'autosync unisce solo
+assenze, supplenze, indisponibilita', sostituzioni_scrutinio. Sessione in
+sandbox Linux (cloud), nessun accesso a `database.db`.
+
+- `modules/auto_sync.py::_merge_riempimento_docenti`, chiamata da
+  `_merge_additivo`. Per i docenti presenti su entrambe le macchine
+  (abbinati per cognome+nome esatti, senza maiuscole/spazi) un campo vuoto
+  da una parte si copia dall'altra; compilato e diverso su entrambe ->
+  conflitto in `/sync/conflitti`. Campi: `email`; ricevimento
+  (`colloqui_giorno/ora_inizio/ora_fine` copiati come gruppo) e righe
+  `docenti_colloqui_anno` mancanti in locale (una riga locale, anche
+  "nessun colloquio", non si tocca).
+- Non crea ne' elimina docenti, non tocca altri campi, salta omonimi (su
+  una qualunque delle due parti) e docenti anonimizzati. Campi esclusi di
+  proposito: giorni di presenza/ora di uscita (vuoto = "nessuna
+  restrizione", non "non inserito"), note, contratti, organico.
+- Il valore locale che manca sul remoto conta come "da pubblicare"
+  (`solo_locali`), cosi' l'altra postazione lo riceve; i riempimenti locali
+  fanno ripubblicare.
+- Refactor: il blocco "crea/aggiorna conflitto + gia' rifiutato con tieni
+  locale" e' ora `_segnala_conflitto`, usato anche dalle tabelle esistenti.
+  Verificato con snapshot-diff (vecchio vs nuovo codice, stesso scenario,
+  3 giri compreso "tieni locale"): stato di assenze/supplenze/conflitti
+  identico.
+- `/sync/conflitti`: etichette per `docenti` ed i nuovi campi.
+- Limite noto: "vuoto" = "non ancora inserito"; un campo svuotato apposta
+  puo' essere riempito di nuovo da una copia remota rimasta indietro.
+  La risoluzione "tieni remoto" usa cognome+nome come chiave: un omonimo
+  creato dopo verrebbe aggiornato insieme (gli omonimi attuali sono saltati).
+- Test: `tests/test_auto_sync_anagrafica_riempimento.py` (17). Suite 782 verdi.
+
 ## Sessione 83 — Verifica email docenti da CSV della console Workspace
 
 Roberto: vuole verificare/importare in blocco gli indirizzi istituzionali
