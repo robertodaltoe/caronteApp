@@ -120,3 +120,44 @@ def app_con_blueprint(app):
     if 'recupero' not in app.blueprints:
         app.register_blueprint(recupero_bp)
     return app
+
+
+@pytest.fixture
+def app_reale():
+    """App vera (app.py::create_app) su un database vuoto in /tmp, mai il
+    database.db reale (CLAUDE.md, regola 1). Login saltato come negli altri
+    test di rendering."""
+    import shutil
+    import tempfile
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # noqa: F841
+    tmp_dir = tempfile.mkdtemp()
+    db_copia = os.path.join(tmp_dir, 'database_test.db')
+    orig_join = os.path.join
+
+    def _patched_join(*args):
+        if args and args[-1] == 'database.db':
+            return db_copia
+        return orig_join(*args)
+
+    os.environ['CARONTE_SKIP_LOGIN'] = '1'
+    os.environ['CARONTE_DEBUG'] = '1'
+    os.path.join = _patched_join
+    try:
+        from app import create_app
+        flask_app = create_app()
+    finally:
+        os.path.join = orig_join
+    assert db_copia in flask_app.config['SQLALCHEMY_DATABASE_URI']
+    flask_app.config['TESTING'] = True
+    flask_app.config['WTF_CSRF_ENABLED'] = False
+    from models.utente import Utente
+    with flask_app.app_context():
+        if not Utente.query.filter_by(username='dsga', attivo=True).first():
+            u = Utente(username='dsga', nome='DSGA', ruolo='dsga')
+            u.set_pin('0000')
+            db.session.add(u)
+            db.session.commit()
+    yield flask_app
+    with flask_app.app_context():
+        db.session.remove()
+    shutil.rmtree(tmp_dir, ignore_errors=True)
