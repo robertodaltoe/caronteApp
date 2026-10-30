@@ -85,7 +85,8 @@
         <label style="display:flex; gap:10px; align-items:center; font-weight:700; color:var(--blu);">
             <input type="checkbox" name="docenti" value="{{ p.docente.id }}"
                    {% if p.variante != 'gia_inviata' and not p.blocco %}checked{% endif %}
-                   {% if p.variante == 'gia_inviata' or p.blocco %}disabled{% endif %}>
+                   {% if p.variante == 'gia_inviata' or p.blocco %}disabled{% endif %}
+                   {% if p.variante == 'gia_inviata' and not p.blocco %}data-gia="1"{% endif %}>
             {{ p.docente.cognome }} {{ p.docente.nome or '' }}
             <span style="font-weight:400; font-size:.8rem; color:var(--grigio);">{{ p.email or 'senza email' }}</span>
             <span style="font-size:.75rem; padding:2px 8px; border-radius:10px; background:#eef2f7;">
@@ -104,6 +105,12 @@
     </div>
     {% endfor %}
     {% if proposte %}
+    <label style="font-size:.82rem; display:inline-flex; gap:5px; align-items:center; cursor:pointer; margin-right:12px;"
+           title="Per rimandare il messaggio (es. dopo aver cambiato il testo) a chi l'ha già ricevuto. L'oggetto riporterà «REINVIO».">
+        <input type="checkbox" name="reinvia" value="1" id="reinvia" onchange="
+            document.querySelectorAll('input[data-gia]').forEach(c => { c.disabled = !this.checked; c.checked = this.checked && c.checked; });">
+        Reinvia anche a chi l'ha già ricevuto
+    </label>
     <button class="btn btn-success" type="submit" {% if modalita == 'off' %}disabled{% endif %}>
         {{ icon('mail') }} {{ 'Registra (simulato)' if modalita == 'simulato' else 'Invia ai selezionati' }}
     </button>

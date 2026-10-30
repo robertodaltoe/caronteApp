@@ -384,3 +384,37 @@ def test_calendario_piano_individuale_solo_per_collegio_consigli_glo_dipartiment
         tutti = impegni_mese_tutti(mese)
         assert [(e['titolo'], e['facoltativo']) for e in tutti[a.id]] == [('Collegio', False), ('Corso', False)]
         assert [(e['titolo'], e['facoltativo']) for e in tutti[b.id]] == [('Collegio', True)]
+
+
+def test_reinvio_volontario_a_chi_ha_gia_ricevuto(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    monkeypatch.setattr('modules.notifiche_email._pdf_banca_ore', lambda d: b'%PDF')
+    mese = date(2031, 3, 1)
+    with app.test_request_context():
+        a = _doc()
+        db.session.commit()
+        assert dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [a.id], 'Ogg', 'Testo'))['Rossi'] == 'inviata'
+        # stessi dati, nessun reinvio
+        assert dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [a.id], 'Ogg', 'Testo nuovo'))['Rossi'] == 'saltata'
+        # reinvio voluto: parte con il testo modificato e l'oggetto lo dichiara
+        r = dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [a.id], 'Ogg', 'Testo nuovo', reinvia=True))
+        assert r['Rossi'] == 'inviata' and len(inviati) == 2
+        assert inviati[1][1].startswith('REINVIO ') and 'Testo nuovo' in inviati[1][2]
+        # un indirizzo non valido resta bloccato anche con reinvio
+        b = _doc('Verdi', 'x@gmail.com')
+        db.session.commit()
+        assert dict((n, s) for n, s, _ in ne.invia_banca_ore(mese, [b.id], reinvia=True))['Verdi'] == 'saltata'
+
+
+def test_reinvio_supplenze(app, monkeypatch):
+    monkeypatch.setenv('CARONTE_EMAIL_MODE', 'reale')
+    inviati = []
+    monkeypatch.setattr('modules.gmail_invio.invia', lambda *a, **k: inviati.append(a))
+    with app.test_request_context():
+        g, sost, ass = _setup()
+        assert dict((n, s) for n, s, _ in ne.invia_supplenze(g, [sost.id]))['Rossi'] == 'inviata'
+        assert dict((n, s) for n, s, _ in ne.invia_supplenze(g, [sost.id]))['Rossi'] == 'saltata'
+        assert dict((n, s) for n, s, _ in ne.invia_supplenze(g, [sost.id], reinvia=True))['Rossi'] == 'inviata'
+        assert inviati[1][1].startswith('REINVIO ')

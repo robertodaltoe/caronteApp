@@ -212,5 +212,6 @@ def test_barra_invio_email_uguale_nelle_quattro_pagine_con_la_corrente_evidenzia
             corpo = c.get(url).get_data(as_text=True)
             for u in pagine.values():
                 assert f'href="{u}"' in corpo
+            assert 'name="reinvia"' not in corpo or 'Reinvia anche a chi' in corpo
             attivi = re.findall(r'<a href="([^"]+)" class="btn btn-sm btn-primary"\s+aria-current="page"', corpo)
             assert attivi == [pagine[chiave]]
