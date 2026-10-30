@@ -22,6 +22,30 @@ con un INSERT grezzo e `banca_ore` non è sincronizzata.
 - Test: `tests/test_banca_ore_riallineamento.py`. Sandbox Linux (nessun
   database reale toccato).
 
+## Sessione 85 — /sync/conflitti leggibile (nomi al posto degli id)
+
+Roberto: nella pagina dei conflitti compariva il numero id del docente e non
+si capiva cosa si stava approvando. Sandbox Linux (cloud), nessun accesso a
+`database.db`. Solo vista: nessuna modifica a come si rilevano o risolvono i
+conflitti.
+
+- `modules/sync_conflitti_vista.py` (nuovo): traduce i dati grezzi in testo.
+  Docenti (`id_docente/id_assente/id_sostituto`) -> "COGNOME Nome", date ->
+  "gio 15/10/2026", booleani -> Sì/No, timestamp -> gg/mm/aaaa hh:mm.
+  Titolo e riga di contesto per tabella (assenza: docente, data, ore;
+  supplenza: assente, data, ora, classe; scrutinio: evento e assente;
+  anagrafica: docente). Sotto ciascuna colonna: ultima modifica (o
+  inserimento) e autore di quella versione, per capire quale e' piu' recente.
+- `routes/sync_conflitti.py::index` usa il modulo; anche l'elenco dei
+  conflitti risolti mostra il titolo leggibile.
+- Template: testo introduttivo aggiornato (30 secondi, tabelle coperte),
+  spiegazione dei due pulsanti.
+- Gli id dei docenti si risolvono sul DB locale (il sync suppone gia' che
+  siano uguali sulle due postazioni); un id sconosciuto mostra "docente #N
+  (non in anagrafica qui)".
+- Test: `tests/test_sync_conflitti_leggibili.py` (6, app vera su DB in /tmp);
+  fixture `app_reale` aggiunta a `tests/conftest.py`. Impilata sulla PR #47.
+
 ## Sessione 84 — Autosync: merge a riempimento dell'anagrafica docenti (email, ricevimento)
 
 Roberto lavora da casa sul Mac e le modifiche all'anagrafica (import email,

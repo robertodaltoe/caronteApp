@@ -5,11 +5,12 @@
 
 <h1 style="margin-bottom:4px;">Modifiche da confermare</h1>
 <p style="color:var(--grigio); font-size:.9rem; margin-bottom:20px;">
-    Il sync automatico controlla ogni minuto se dall'altra postazione sono
-    arrivate modifiche alle assenze o alle supplenze. Le righe nuove sono già
-    state unite in automatico. Quelle qui sotto invece riguardano la
-    <strong>stessa</strong> assenza/supplenza modificata in modo diverso su
-    due postazioni: scegli quale versione tenere.
+    Il sync automatico controlla ogni 30 secondi se dall'altra postazione sono
+    arrivate modifiche a assenze, supplenze, indisponibilità, sostituzioni agli
+    scrutini ed email/ricevimento dei docenti. Le righe nuove e i campi vuoti
+    sono già stati uniti in automatico. Quelle qui sotto invece riguardano la
+    <strong>stessa</strong> riga modificata in modo diverso su due postazioni:
+    scegli quale versione tenere. Vengono mostrati solo i campi che differiscono.
 </p>
 
 {% if not conflitti %}
@@ -25,12 +26,20 @@
             <span style="font-size:.72rem; font-weight:700; text-transform:uppercase; color:var(--blu-med); letter-spacing:.03em;">
                 {{ c.tabella_label }}
             </span>
-            <div style="font-weight:600; margin-top:2px;">{{ c.descrizione }}</div>
+            <div style="font-weight:600; margin-top:2px;">{{ c.titolo }}</div>
         </div>
         <span style="font-size:.75rem; color:var(--grigio); white-space:nowrap;">
             rilevato {{ c.rilevato_il.strftime('%d/%m %H:%M') if c.rilevato_il else '' }}
         </span>
     </div>
+
+    {% if c.contesto %}
+    <div style="display:flex; flex-wrap:wrap; gap:6px 18px; font-size:.82rem; margin-bottom:12px; color:var(--grigio);">
+        {% for etichetta, valore in c.contesto %}
+        <span>{{ etichetta }}: <strong style="color:#374151;">{{ valore }}</strong></span>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <table style="width:100%; border-collapse:collapse; font-size:.88rem; margin-bottom:14px;">
         <thead>
@@ -38,11 +47,11 @@
                 <th style="padding:4px 8px 4px 0;">Campo</th>
                 <th style="padding:4px 8px;">
                     Qui (locale)
-                    {% if c.creato_da_locale %}<div style="text-transform:none; font-weight:400; color:var(--grigio); font-size:.72rem;">inserita da {{ c.creato_da_locale }}</div>{% endif %}
+                    {% if c.meta_locale %}<div style="text-transform:none; font-weight:400; color:var(--grigio); font-size:.72rem;">{{ c.meta_locale }}</div>{% endif %}
                 </th>
                 <th style="padding:4px 8px;">
                     Dall'altra postazione
-                    {% if c.creato_da_remoto %}<div style="text-transform:none; font-weight:400; color:var(--grigio); font-size:.72rem;">inserita da {{ c.creato_da_remoto }}</div>{% endif %}
+                    {% if c.meta_remoto %}<div style="text-transform:none; font-weight:400; color:var(--grigio); font-size:.72rem;">{{ c.meta_remoto }}</div>{% endif %}
                 </th>
             </tr>
         </thead>
@@ -50,13 +59,17 @@
             {% for riga in c.confronto %}
             <tr style="border-top:1px solid #eee;">
                 <td style="padding:6px 8px 6px 0; color:var(--grigio);">{{ riga.label }}</td>
-                <td class="wrap" style="padding:6px 8px; font-weight:600;">{{ riga.locale if riga.locale is not none else '—' }}</td>
-                <td class="wrap" style="padding:6px 8px; font-weight:600; color:#3730a3;">{{ riga.remoto if riga.remoto is not none else '—' }}</td>
+                <td class="wrap" style="padding:6px 8px; font-weight:600;">{{ riga.locale }}</td>
+                <td class="wrap" style="padding:6px 8px; font-weight:600; color:#3730a3;">{{ riga.remoto }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
+    <p style="font-size:.76rem; color:var(--grigio); margin:0 0 8px;">
+        «Locale»: la riga resta com'è su questa postazione e viene ripubblicata.
+        «Dall'altra postazione»: i campi qui sopra vengono sostituiti con i valori della colonna di destra.
+    </p>
     <div style="display:flex; gap:8px;">
         <form method="post" action="{{ url_for('sync_conflitti.risolvi', id=c.id) }}" style="display:inline;">
             <input type="hidden" name="scelta" value="locale">
@@ -82,7 +95,7 @@
     <table style="width:100%; border-collapse:collapse; font-size:.85rem; margin-top:10px;">
         <thead>
             <tr style="text-align:left; color:var(--grigio); font-size:.72rem; text-transform:uppercase;">
-                <th style="padding:4px 8px 4px 0;">Descrizione</th>
+                <th style="padding:4px 8px 4px 0;">Riga</th>
                 <th style="padding:4px 8px;">Scelta</th>
                 <th style="padding:4px 8px;">Da</th>
                 <th style="padding:4px 8px;">Quando</th>
@@ -91,7 +104,7 @@
         <tbody>
             {% for r in risolti_recenti %}
             <tr style="border-top:1px solid #eee;">
-                <td class="wrap" style="padding:6px 8px 6px 0;">{{ r.descrizione }}</td>
+                <td class="wrap" style="padding:6px 8px 6px 0;">{{ r.titolo }}</td>
                 <td style="padding:6px 8px;">{{ 'Locale' if r.scelta == 'locale' else 'Da Drive' }}</td>
                 <td style="padding:6px 8px;">{{ r.risolto_da or '—' }}</td>
                 <td style="padding:6px 8px;">{{ r.risolto_il.strftime('%d/%m %H:%M') if r.risolto_il else '' }}</td>
