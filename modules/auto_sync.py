@@ -539,6 +539,7 @@ def _merge_additivo(db, tmp_remoto_path):
 
         solo_locali += sum(1 for k in tomb_locali if k not in tomb_remote_set)
 
+        nuove_supplenze = []  # id locali delle supplenze appena importate
         for tabella, cfg in TABELLE.items():
             tomb_per_tabella = {chiave for (tab, chiave) in tomb_locali if tab == tabella}
             colonna_ts = cfg.get('colonna_timestamp')
@@ -605,11 +606,13 @@ def _merge_additivo(db, tmp_remoto_path):
                     colonne = cfg['colonne_insert']
                     valori = {c: r_remota.get(c) for c in colonne}
                     placeholders = ', '.join(f':{c}' for c in colonne)
-                    db.session.execute(
+                    res = db.session.execute(
                         text(f"INSERT INTO {tabella} ({', '.join(colonne)}) "
                              f"VALUES ({placeholders})"),
                         valori)
                     inserite += 1
+                    if tabella == 'supplenze':
+                        nuove_supplenze.append(res.lastrowid)
                     dettagli.append(f"+ {cfg['label'](r_remota)}")
                 else:
                     diversi = [c for c in cfg['campi_confronto']
@@ -623,6 +626,17 @@ def _merge_additivo(db, tmp_remoto_path):
                         conflitti_nuovi += 1
                     elif esito == 'aggiornato':
                         conflitti_aggiornati += 1
+
+        # Il movimento di banca ore non viaggia con la supplenza (la tabella
+        # banca_ore non è sincronizzata): per le supplenze a recupero appena
+        # importate lo si crea qui, come fa l'assegnazione manuale.
+        if nuove_supplenze:
+            from modules.banca_ore_riallineamento import trova, crea_movimento
+            db.session.flush()
+            for s in trova():
+                if s.id in nuove_supplenze:
+                    crea_movimento(s)
+                    dettagli.append(f"+ movimento banca ore: {s.data} ora {s.ora}")
 
         # --- anagrafica docenti: merge "a riempimento" (vedi sotto) ---
         anagrafica = _merge_riempimento_docenti(db, conn_remoto)

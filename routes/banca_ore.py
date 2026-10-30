@@ -143,3 +143,25 @@ def singolo(id):
         ore_ist=ore_ist,
         ruolo_utente=ruolo_utente,
     )
+
+
+@banca_ore_bp.route('/banca-ore/riallinea', methods=['GET', 'POST'])
+def riallinea():
+    """Supplenze a recupero assegnate ma senza movimento di banca ore:
+    elenco in sola lettura, scrittura solo per le righe spuntate."""
+    from flask import flash, redirect, url_for
+    from modules import banca_ore_riallineamento as ria
+
+    if request.method == 'POST':
+        n = ria.riallinea(request.form.getlist('supplenza'))
+        db.session.commit()
+        if n:
+            from routes.auth import log as auth_log
+            auth_log('riallinea_banca_ore', f'{n} movimenti creati')
+        flash(f'Creati {n} movimenti di banca ore.', 'success' if n else 'warning')
+        return redirect(url_for('banca_ore.riallinea'))
+
+    supplenze = ria.trova()
+    docenti = {d.id: d for d in Docente.query.filter(
+        Docente.id.in_({s.id_sostituto for s in supplenze})).all()} if supplenze else {}
+    return render_template('banca_ore/riallinea.html', supplenze=supplenze, docenti=docenti)

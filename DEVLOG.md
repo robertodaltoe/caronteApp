@@ -2,6 +2,26 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 86 — Banca ore: supplenze a recupero senza movimento
+
+Segnalazione: De Agostini ha una supplenza a recupero del 29/10 visibile nel
+dettaglio ma non conteggiata. Causa: il saldo legge `banca_ore`, non le
+supplenze; il movimento +60 min viene creato solo dai percorsi di
+assegnazione manuale/registrazione assenza, mentre l'autosync copia la riga
+con un INSERT grezzo e `banca_ore` non è sincronizzata.
+
+- `modules/banca_ore_riallineamento.py`: `trova()` (sola lettura) e
+  `riallinea(ids)` per le supplenze `recupero` assegnate senza movimento.
+- Pagina `/banca-ore/riallinea` (voce "Riallinea banca ore"): elenco con
+  spunte, scrive solo le righe scelte. Non corregge in automatico i casi
+  già esistenti (regola: segnalare, non decidere).
+- Autosync: le supplenze a recupero appena importate ricevono il movimento
+  nello stesso giro. Non toccate le anomalie preesistenti.
+- Non coperto: conflitto risolto "tieni remoto" (UPDATE grezzo) — resta
+  rilevabile dalla pagina di riallineamento.
+- Test: `tests/test_banca_ore_riallineamento.py`. Sandbox Linux (nessun
+  database reale toccato).
+
 ## Sessione 84 — Autosync: merge a riempimento dell'anagrafica docenti (email, ricevimento)
 
 Roberto lavora da casa sul Mac e le modifiche all'anagrafica (import email,
