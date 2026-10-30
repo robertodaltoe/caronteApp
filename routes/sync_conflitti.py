@@ -16,6 +16,7 @@ TABELLA_LABEL = {
     'supplenze':             'Supplenza',
     'indisponibilita':       'Indisponibilità docente',
     'sostituzioni_scrutinio': 'Sostituzione scrutinio',
+    'docenti':               'Anagrafica docente',
 }
 
 # Etichette leggibili per i nomi di colonna, usate nel confronto campo per campo
@@ -33,6 +34,10 @@ CAMPO_LABEL = {
     'n_protocollo':   'N. protocollo',
     'data_nomina':    'Data nomina',
     'note':           'Note interne',
+    'email':               'Email',
+    'colloqui_giorno':     'Ricevimento: giorno (0 = lunedì)',
+    'colloqui_ora_inizio': 'Ricevimento: ora di inizio',
+    'colloqui_ora_fine':   'Ricevimento: ora di fine',
 }
 
 

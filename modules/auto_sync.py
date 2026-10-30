@@ -37,6 +37,13 @@ le lapidi tra le macchine, non reintroduce mai una riga la cui chiave
 ha una lapide, ed elimina anche in locale una riga la cui chiave
 risulta lapidata dall'altra macchina.
 
+Anagrafica docenti (Sessione 84): NON e' un merge della tabella ma un
+"merge a riempimento" limitato a email e ricevimento (vedi
+_merge_riempimento_docenti): per i docenti gia' presenti su entrambe le
+macchine un campo vuoto da una parte si riempie con il valore dell'altra;
+valori diversi in entrambe finiscono in /sync/conflitti. Nessun docente
+viene creato o eliminato.
+
 Le cattedre annuali (assegnazioni_docenti/assegnazioni_classi) restano
 FUORI da questo meccanismo: la struttura padre-figlio e i conflitti su
 ore/classi richiedono lo stesso tipo di revisione manuale fatta per il
@@ -285,6 +292,199 @@ def _righe(conn, tabella):
         raise
 
 
+def _segnala_conflitto(tabella, chiave_json, descrizione, diversi, locale, remoto):
+    """Registra (o aggiorna) un conflitto in SyncConflitto per revisione
+    umana. Ritorna 'nuovo', 'aggiornato' oppure None se la stessa proposta
+    remota era gia' stata rifiutata con "tieni locale".
+
+    Usata dal merge additivo delle tabelle e dal merge a riempimento
+    dell'anagrafica docenti."""
+    from models import db
+    from models.sync_conflitto import SyncConflitto
+
+    esistente = SyncConflitto.query.filter_by(
+        tabella=tabella, chiave_logica=chiave_json, risolto=False).first()
+    if esistente:
+        esistente.campi_diversi = json.dumps(diversi)
+        esistente.dati_locali = json.dumps(locale, default=str)
+        esistente.dati_remoti = json.dumps(remoto, default=str)
+        esistente.aggiornato_il = datetime.utcnow()
+        return 'aggiornato'
+
+    # Scegliendo "tieni versione locale" il contenuto non cambia: resta
+    # diverso da quello remoto anche dopo la risoluzione. Senza questo
+    # controllo, il giro successivo lo vedrebbe di nuovo diverso e ne
+    # creerebbe uno NUOVO (nessun conflitto "non risolto" con questa
+    # chiave) -- un ciclo infinito. Se la stessa identica proposta
+    # remota era gia' stata rifiutata in passato, non richiederla di
+    # nuovo; se invece il valore remoto e' cambiato da allora, e' un
+    # conflitto genuinamente nuovo e va segnalato.
+    gia_deciso = (SyncConflitto.query
+                  .filter_by(tabella=tabella, chiave_logica=chiave_json,
+                             risolto=True, scelta='locale')
+                  .order_by(SyncConflitto.risolto_il.desc())
+                  .first())
+    if gia_deciso:
+        remoto_deciso = json.loads(gia_deciso.dati_remoti or '{}')
+        campi_decisi = set(json.loads(gia_deciso.campi_diversi or '[]'))
+        if (campi_decisi == set(diversi) and
+                all(remoto_deciso.get(c) == remoto.get(c) for c in diversi)):
+            return None  # stessa proposta gia' rifiutata: non richiedere di nuovo
+
+    db.session.add(SyncConflitto(
+        tabella=tabella,
+        chiave_logica=chiave_json,
+        descrizione=descrizione,
+        campi_diversi=json.dumps(diversi),
+        dati_locali=json.dumps(locale, default=str),
+        dati_remoti=json.dumps(remoto, default=str),
+    ))
+    return 'nuovo'
+
+
+# ── Anagrafica docenti: merge "a riempimento" ──────────────────────────
+# Non e' un merge della tabella: i docenti sono referenziati da quasi tutto
+# e gli id differiscono tra le macchine, quindi qui NON si crea e NON si
+# elimina nessun docente e non si tocca nessun campo oltre a quelli
+# elencati. Per un docente presente su entrambe le macchine (abbinato per
+# cognome+nome esatti, senza maiuscole/spazi) un campo vuoto da una parte e
+# compilato dall'altra viene copiato; se sono compilati e diversi e' un
+# conflitto da rivedere in /sync/conflitti. Gli omonimi (su qualunque delle
+# due parti) e i docenti anonimizzati vengono saltati.
+#
+# Limite noto: "vuoto" significa "non ancora inserito". Un campo svuotato
+# apposta qui (es. email di un docente uscito) puo' essere riempito di
+# nuovo da una copia remota rimasta indietro.
+CAMPI_RIEMPIMENTO_DOCENTI = [
+    # (etichetta, [colonne che si copiano insieme])
+    ('email', ['email']),
+    ('ricevimento', ['colloqui_giorno', 'colloqui_ora_inizio', 'colloqui_ora_fine']),
+]
+
+
+def _chiave_nome_docente(r):
+    return ((r.get('cognome') or '').strip().lower(), (r.get('nome') or '').strip().lower())
+
+
+def _vuoto_docente(colonna, valore):
+    if valore is None:
+        return True
+    if colonna == 'email':
+        return str(valore).strip().lower() in ('', 'none')
+    return str(valore).strip() == ''
+
+
+def _uguali_docente(colonna, a, b):
+    if colonna == 'email':
+        return str(a).strip().lower() == str(b).strip().lower()
+    return a == b
+
+
+def _merge_riempimento_docenti(db, conn_remoto):
+    """Vedi il commento sopra. Va chiamata dentro _merge_additivo, prima del
+    commit. Ritorna un dict di contatori."""
+    out = {'riempiti': 0, 'da_pubblicare': 0, 'conflitti_nuovi': 0,
+           'conflitti_aggiornati': 0, 'saltati': 0, 'dettagli': []}
+
+    remoti = _righe(conn_remoto, 'docenti')
+    if not remoti:
+        return out
+    locali = [dict(r._mapping) for r in db.session.execute(text("SELECT * FROM docenti"))]
+
+    def per_chiave(righe):
+        gruppi = {}
+        for r in righe:
+            if (r.get('cognome') or '').upper().startswith('ANONIMO_'):
+                continue
+            gruppi.setdefault(_chiave_nome_docente(r), []).append(r)
+        return gruppi
+
+    g_locali, g_remoti = per_chiave(locali), per_chiave(remoti)
+    adesso = datetime.utcnow()
+
+    abbinati = []   # (riga locale, riga remota)
+    for chiave, lista_locale in g_locali.items():
+        lista_remota = g_remoti.get(chiave)
+        if not lista_remota:
+            continue
+        if len(lista_locale) > 1 or len(lista_remota) > 1:
+            out['saltati'] += 1
+            out['dettagli'].append(
+                f"~ {lista_locale[0]['cognome']} {lista_locale[0]['nome']}: omonimi, "
+                "anagrafica non sincronizzata")
+            continue
+        abbinati.append((lista_locale[0], lista_remota[0]))
+
+    for loc, rem in abbinati:
+        nome = f"{loc['cognome']} {loc['nome']}".strip()
+        chiave_json = json.dumps({'cognome': loc['cognome'], 'nome': loc['nome']},
+                                 sort_keys=True)
+        for etichetta, colonne in CAMPI_RIEMPIMENTO_DOCENTI:
+            if not any(c in rem for c in colonne):
+                continue   # il remoto viene da codice piu' vecchio: campo assente
+            loc_vuoto = all(_vuoto_docente(c, loc.get(c)) for c in colonne)
+            rem_vuoto = all(_vuoto_docente(c, rem.get(c)) for c in colonne)
+            if rem_vuoto and loc_vuoto:
+                continue
+            if loc_vuoto:
+                sets = ', '.join(f'{c} = :{c}' for c in colonne)
+                valori = {c: rem.get(c) for c in colonne}
+                valori.update({'id': loc['id'], 'ora': adesso})
+                db.session.execute(
+                    text(f"UPDATE docenti SET {sets}, modificato_il = :ora WHERE id = :id"),
+                    valori)
+                out['riempiti'] += 1
+                out['dettagli'].append(f"+ {nome}: {etichetta} da Drive")
+            elif rem_vuoto:
+                out['da_pubblicare'] += 1
+            else:
+                diversi = [c for c in colonne
+                           if not _uguali_docente(c, loc.get(c), rem.get(c))
+                           and not (_vuoto_docente(c, loc.get(c)) and _vuoto_docente(c, rem.get(c)))]
+                if not diversi:
+                    continue
+                esito = _segnala_conflitto(
+                    'docenti', chiave_json, f"Anagrafica docente — {nome}", diversi,
+                    {c: loc.get(c) for c in colonne}, {c: rem.get(c) for c in colonne})
+                if esito == 'nuovo':
+                    out['conflitti_nuovi'] += 1
+                elif esito == 'aggiornato':
+                    out['conflitti_aggiornati'] += 1
+
+    # Ricevimento per anno scolastico: si aggiungono solo le righe che in
+    # locale non esistono affatto per quel docente e anno. Una riga locale
+    # (anche "nessun colloquio") e' una scelta esplicita: non si tocca.
+    if abbinati:
+        id_remoto_a_locale = {rem['id']: loc['id'] for loc, rem in abbinati}
+        anni_locali = {(r['id_docente'], r['anno_scol']) for r in
+                       (dict(x._mapping) for x in db.session.execute(
+                           text("SELECT id_docente, anno_scol FROM docenti_colloqui_anno")))}
+        for r in _righe(conn_remoto, 'docenti_colloqui_anno'):
+            id_loc = id_remoto_a_locale.get(r['id_docente'])
+            if id_loc is None or (id_loc, r['anno_scol']) in anni_locali:
+                continue
+            db.session.execute(
+                text("INSERT INTO docenti_colloqui_anno "
+                     "(id_docente, anno_scol, giorno, ora_inizio, ora_fine, creato_il) "
+                     "VALUES (:d, :a, :g, :i, :f, :c)"),
+                {'d': id_loc, 'a': r['anno_scol'], 'g': r.get('giorno'),
+                 'i': r.get('ora_inizio'), 'f': r.get('ora_fine'), 'c': adesso})
+            anni_locali.add((id_loc, r['anno_scol']))
+            out['riempiti'] += 1
+            out['dettagli'].append(f"+ ricevimento {r['anno_scol']} (docente #{id_loc}) da Drive")
+
+        # Il contrario: righe per anno presenti qui ma non nel remoto vanno
+        # ripubblicate, altrimenti l'altra postazione non le vedrebbe mai.
+        anni_remoti = {(id_remoto_a_locale.get(r['id_docente']), r['anno_scol'])
+                       for r in _righe(conn_remoto, 'docenti_colloqui_anno')}
+        id_locali_abbinati = set(id_remoto_a_locale.values())
+        for (id_loc, anno) in anni_locali:
+            if id_loc in id_locali_abbinati and (id_loc, anno) not in anni_remoti:
+                out['da_pubblicare'] += 1
+
+    return out
+
+
 def _merge_additivo(db, tmp_remoto_path):
     """Confronta 'assenze'/'supplenze' tra il DB locale (via la sessione
     SQLAlchemy già connessa, viva, dell'app) e il DB remoto scaricato da
@@ -416,48 +616,20 @@ def _merge_additivo(db, tmp_remoto_path):
                                if r_remota.get(c) != locale.get(c)]
                     if not diversi:
                         continue
-                    esistente = SyncConflitto.query.filter_by(
-                        tabella=tabella, chiave_logica=chiave_json,
-                        risolto=False).first()
-                    if esistente:
-                        esistente.campi_diversi = json.dumps(diversi)
-                        esistente.dati_locali = json.dumps(locale, default=str)
-                        esistente.dati_remoti = json.dumps(r_remota, default=str)
-                        esistente.aggiornato_il = datetime.utcnow()
+                    esito = _segnala_conflitto(
+                        tabella, chiave_json, cfg['label'](r_remota), diversi,
+                        locale, r_remota)
+                    if esito == 'nuovo':
+                        conflitti_nuovi += 1
+                    elif esito == 'aggiornato':
                         conflitti_aggiornati += 1
-                        continue
 
-                    # Scegliendo "tieni versione locale" il contenuto non
-                    # cambia: resta diverso da quello remoto anche dopo la
-                    # risoluzione. Senza questo controllo, il giro
-                    # successivo lo vedrebbe di nuovo diverso e ne
-                    # creerebbe uno NUOVO (nessun conflitto "non risolto"
-                    # con questa chiave) — un ciclo infinito. Se la stessa
-                    # identica proposta remota era già stata rifiutata in
-                    # passato, non richiederla di nuovo; se invece il
-                    # valore remoto è cambiato da allora, è un conflitto
-                    # genuinamente nuovo e va segnalato.
-                    gia_deciso = (SyncConflitto.query
-                                  .filter_by(tabella=tabella, chiave_logica=chiave_json,
-                                             risolto=True, scelta='locale')
-                                  .order_by(SyncConflitto.risolto_il.desc())
-                                  .first())
-                    if gia_deciso:
-                        remoto_deciso = json.loads(gia_deciso.dati_remoti or '{}')
-                        campi_decisi = set(json.loads(gia_deciso.campi_diversi or '[]'))
-                        if (campi_decisi == set(diversi) and
-                                all(remoto_deciso.get(c) == r_remota.get(c) for c in diversi)):
-                            continue  # stessa proposta già rifiutata: non richiedere di nuovo
-
-                    db.session.add(SyncConflitto(
-                        tabella=tabella,
-                        chiave_logica=chiave_json,
-                        descrizione=cfg['label'](r_remota),
-                        campi_diversi=json.dumps(diversi),
-                        dati_locali=json.dumps(locale, default=str),
-                        dati_remoti=json.dumps(r_remota, default=str),
-                    ))
-                    conflitti_nuovi += 1
+        # --- anagrafica docenti: merge "a riempimento" (vedi sotto) ---
+        anagrafica = _merge_riempimento_docenti(db, conn_remoto)
+        conflitti_nuovi += anagrafica['conflitti_nuovi']
+        conflitti_aggiornati += anagrafica['conflitti_aggiornati']
+        solo_locali += anagrafica['da_pubblicare']
+        dettagli.extend(anagrafica['dettagli'])
 
         db.session.commit()
     except Exception:
@@ -472,6 +644,8 @@ def _merge_additivo(db, tmp_remoto_path):
         'conflitti_nuovi': conflitti_nuovi,
         'conflitti_aggiornati': conflitti_aggiornati,
         'solo_locali': solo_locali,
+        'riempiti': anagrafica['riempiti'],
+        'anagrafica_saltati': anagrafica['saltati'],
         'dettagli': dettagli,
     }
 
@@ -523,7 +697,8 @@ def esegui_sync_automatico(app):
         # l'altra macchina non le vedrebbe mai finché qualcuno non chiude
         # l'app (unico altro momento in cui si pubblica).
         global _ultima_pubblicazione
-        if risultato['inserite'] > 0 or risultato['solo_locali'] > 0:
+        if (risultato['inserite'] > 0 or risultato['solo_locali'] > 0
+                or risultato.get('riempiti', 0) > 0):
             carica(db_locale)
             _ultima_pubblicazione = time.monotonic()
         elif time.monotonic() - _ultima_pubblicazione >= PUBBLICAZIONE_PERIODICA_SECONDI:

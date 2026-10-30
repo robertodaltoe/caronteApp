@@ -250,6 +250,10 @@ sequenza durante il collaudo reale, tutti nel devlog sotto Task 46):
 - Non estendere il sync automatico a strutture con tabelle collegate
   (Assegnazioni, AttivitaFuoriAula) — motivo già valutato e respinto
   esplicitamente (Task 46, ultimo aggiornamento).
+  Eccezione approvata da Roberto (Sessione 84): sull'anagrafica docenti
+  esiste solo un merge "a riempimento" di email e ricevimento (campo
+  vuoto da una parte -> copiato, valori diversi -> conflitto); non crea
+  né elimina docenti. Altri campi dell'anagrafica vanno chiesti.
 - Non unire anagrafiche duplicate di docenti senza conferma esplicita
   di Roberto, anche quando il pattern sembra identico a casi già
   risolti (Agrò id 2/102, Tramontana id 81/96) — verificare sempre
