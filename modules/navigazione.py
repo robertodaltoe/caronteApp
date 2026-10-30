@@ -103,6 +103,8 @@ FUNZIONI = [
     # ── Banca ore e report ───────────────────────────────────────────
     dict(label='Banca ore', endpoint='banca_ore.index', gruppo='banca_report',
          sezione='banca_ore', icona='coin', parole='saldo ore debito credito', blueprint=True),
+    dict(label='Riallinea banca ore', endpoint='banca_ore.riallinea', gruppo='banca_report',
+         sezione='banca_ore', icona='coin', parole='movimenti mancanti supplenza recupero non conteggiata', blueprint=True),
     dict(label='Report', endpoint='report.index', gruppo='banca_report',
          sezione='report', icona='chart', parole='statistiche riepiloghi', blueprint=True),
     dict(label='Report per il dirigente', endpoint='report.dirigente', gruppo='banca_report',

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Riallinea banca ore{% endblock %}
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('coin') }} Supplenze a recupero senza movimento</h1>
+<p style="font-size:.78rem; margin-bottom:14px;"><a href="{{ url_for('banca_ore.index') }}">← Torna alla banca ore</a></p>
+<p style="font-size:.82rem; color:var(--grigio); max-width:680px; margin-bottom:12px;">
+    Il saldo conta un'ora di recupero solo se esiste il movimento <b>+1h</b> collegato alla supplenza.
+    Qui sotto le supplenze assegnate a recupero che ne sono prive. Non viene scritto nulla
+    finché non spunti le righe e confermi.
+</p>
+{% if supplenze %}
+<form method="post">
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px;">
+    <table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+        <thead><tr style="background:#f8fafc; text-align:left;">
+            <th style="padding:8px; width:30px;"></th><th style="padding:8px;">Data</th>
+            <th style="padding:8px;">Ora</th><th style="padding:8px;">Classe</th>
+            <th style="padding:8px;">Sostituto</th>
+        </tr></thead>
+        <tbody>
+        {% for s in supplenze %}
+        <tr style="border-top:1px solid #f1f3f5;">
+            <td style="padding:8px;"><input type="checkbox" name="supplenza" value="{{ s.id }}" checked></td>
+            <td style="padding:8px;">{{ s.data.strftime('%d/%m/%Y') }}</td>
+            <td style="padding:8px;">{{ s.ora }}</td>
+            <td style="padding:8px;">{{ s.classe or '—' }}</td>
+            <td style="padding:8px; font-weight:600;">{% set d = docenti.get(s.id_sostituto) %}{{ d.cognome ~ ' ' ~ d.nome if d else s.id_sostituto }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">{{ icon('check') }} Crea i movimenti selezionati</button>
+</form>
+{% else %}
+<div class="card" style="padding:16px;">Tutte le supplenze a recupero assegnate hanno il loro movimento.</div>
+{% endif %}
+{% endblock %}
