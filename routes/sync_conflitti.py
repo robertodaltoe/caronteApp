@@ -41,48 +41,23 @@ CAMPO_LABEL = {
 }
 
 
-def _riga_leggibile(dati_json, chiave_json):
-    """Unisce chiave logica + campi salvati in un unico dict per la vista."""
-    d = json.loads(dati_json) if dati_json else {}
-    k = json.loads(chiave_json) if chiave_json else {}
-    merged = dict(k)
-    merged.update(d)
-    return merged
-
-
 @sync_conflitti_bp.route('/sync/conflitti')
 def index():
+    from modules.sync_conflitti_vista import prepara_conflitti
     conflitti = (SyncConflitto.query
                  .filter_by(risolto=False)
                  .order_by(SyncConflitto.rilevato_il.desc())
                  .all())
+    vista = prepara_conflitti(conflitti, CAMPO_LABEL, TABELLA_LABEL)
 
-    vista = []
-    for c in conflitti:
-        campi_diversi = json.loads(c.campi_diversi) if c.campi_diversi else []
-        locale = _riga_leggibile(c.dati_locali, c.chiave_logica)
-        remoto = _riga_leggibile(c.dati_remoti, c.chiave_logica)
-        confronto = [{
-            'campo': campo,
-            'label': CAMPO_LABEL.get(campo, campo),
-            'locale': locale.get(campo),
-            'remoto': remoto.get(campo),
-        } for campo in campi_diversi]
-        vista.append({
-            'id': c.id,
-            'tabella_label': TABELLA_LABEL.get(c.tabella, c.tabella),
-            'descrizione': c.descrizione,
-            'rilevato_il': c.rilevato_il,
-            'aggiornato_il': c.aggiornato_il,
-            'confronto': confronto,
-            'creato_da_locale': locale.get('creato_da'),
-            'creato_da_remoto': remoto.get('creato_da'),
-        })
-
-    risolti_recenti = (SyncConflitto.query
-                        .filter_by(risolto=True)
-                        .order_by(SyncConflitto.risolto_il.desc())
-                        .limit(15).all())
+    risolti = (SyncConflitto.query
+               .filter_by(risolto=True)
+               .order_by(SyncConflitto.risolto_il.desc())
+               .limit(15).all())
+    risolti_recenti = [
+        {'titolo': v['titolo'], 'scelta': c.scelta, 'risolto_da': c.risolto_da,
+         'risolto_il': c.risolto_il}
+        for c, v in zip(risolti, prepara_conflitti(risolti, CAMPO_LABEL, TABELLA_LABEL))]
 
     return render_template('sync_conflitti.html',
                             conflitti=vista, risolti_recenti=risolti_recenti,
