@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Verifica email docenti{% endblock %}
+{% macro tabella_proposte(voci, spunta) %}
+<div class="card" style="padding:0; overflow:hidden; margin-bottom:14px;">
+<table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+    <thead><tr style="background:#f8fafc; text-align:left;">
+        <th style="padding:8px; width:30px;"></th><th style="padding:8px;">Docente</th>
+        <th style="padding:8px;">Email in Caronte</th><th style="padding:8px;">Email in Workspace</th>
+    </tr></thead>
+    <tbody>
+    {% for v in voci %}
+    <tr style="border-top:1px solid #f1f3f5;">
+        <td style="padding:8px;"><input type="checkbox" name="riga" {{ 'checked' if spunta }}
+            value="{{ v.docente.id }}|{{ v.email_attuale }}|{{ v.email_nuova }}"></td>
+        <td style="padding:8px; font-weight:600;">{{ v.docente.cognome }} {{ v.docente.nome }}</td>
+        <td style="padding:8px; color:var(--grigio);">{{ v.email_attuale or '—' }}</td>
+        <td style="padding:8px;">{{ v.email_nuova }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endmacro %}
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('person') }} Verifica email docenti</h1>
+<p style="font-size:.78rem; margin-bottom:14px;"><a href="{{ url_for('docenti.lista') }}">← Torna all'anagrafica docenti</a></p>
+
+<form method="post" enctype="multipart/form-data" class="card" style="padding:16px; max-width:680px; margin-bottom:16px;">
+    <p style="font-size:.82rem; color:var(--grigio); margin-bottom:10px;">
+        Dalla console Workspace: <b>Directory → Utenti → Scarica utenti</b> (meglio filtrando l'unità
+        organizzativa dei docenti), poi carica qui il file .csv. Vedrai un confronto con l'anagrafica;
+        <b>non viene scritto nulla</b> finché non scegli le righe e confermi.
+    </p>
+    <input type="file" name="file" accept=".csv,text/csv" required>
+    <button type="submit" class="btn btn-primary btn-sm">{{ icon('check') }} Confronta</button>
+</form>
+
+{% if esito %}
+<p style="font-size:.84rem; margin-bottom:12px;">
+    Letti {{ n_utenti }} account da <b>{{ nome_file }}</b>:
+    {{ esito.ok|length }} già corretti,
+    {{ esito.da_impostare|length }} da impostare,
+    {{ esito.differenti|length }} con email diversa,
+    {{ esito.ambigui|length + esito.nome_diverso|length }} da controllare a mano.
+</p>
+
+{% set proponibili = esito.da_impostare or esito.differenti %}
+{% if proponibili %}
+<form method="post" action="{{ url_for('docenti.verifica_email_applica') }}">
+    {% if esito.da_impostare %}
+    <h2 style="font-size:1rem;">Email mancante in Caronte ({{ esito.da_impostare|length }})</h2>
+    {{ tabella_proposte(esito.da_impostare, true) }}
+    {% endif %}
+    {% if esito.differenti %}
+    <h2 style="font-size:1rem;">Email diversa da quella in Workspace ({{ esito.differenti|length }})</h2>
+    <p style="font-size:.78rem; color:var(--grigio);">Non selezionate di proposito: controlla riga per riga
+        se vale quella di Workspace.</p>
+    {{ tabella_proposte(esito.differenti, false) }}
+    {% endif %}
+    <button type="submit" class="btn btn-success">{{ icon('check') }} Applica le righe selezionate</button>
+    <span style="font-size:.76rem; color:var(--grigio); margin-left:8px;">Prima di scrivere viene fatto un backup cifrato del database.</span>
+</form>
+{% else %}
+<p class="card" style="padding:12px 16px; font-size:.86rem;">{{ icon('check') }} Nessuna email da impostare o correggere.</p>
+{% endif %}
+
+{% if esito.ambigui %}
+<h2 style="font-size:1rem; margin-top:22px;">Ambigui: da risolvere a mano ({{ esito.ambigui|length }})</h2>
+<div class="card" style="padding:10px 16px; margin-bottom:14px; font-size:.84rem;">
+    {% for a in esito.ambigui %}
+    <div style="padding:6px 0; border-top:{{ '1px solid #f1f3f5' if not loop.first else 'none' }};">
+        {% if a.email %}L'indirizzo <b>{{ a.email }}</b> è scritto su più docenti:
+        {% elif a.utenti|length > 1 %}Più account per lo stesso docente:
+        {% else %}<b>{{ a.utente.cognome }} {{ a.utente.nome }}</b> ({{ a.utente.email }}) corrisponde a più docenti:{% endif %}
+        {% for d in a.docenti %}<a href="{{ url_for('docenti.modifica', id=d.id) }}">{{ d.cognome }} {{ d.nome }}</a>{{ ', ' if not loop.last }}{% endfor %}
+        {% if a.utenti|length > 1 %} — account: {% for u in a.utenti %}{{ u.email }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if esito.nome_diverso %}
+<h2 style="font-size:1rem;">Email di Caronte uguale, ma con un nome diverso ({{ esito.nome_diverso|length }})</h2>
+<div class="card" style="padding:10px 16px; margin-bottom:14px; font-size:.84rem;">
+    {% for v in esito.nome_diverso %}
+    <div style="padding:6px 0;"><a href="{{ url_for('docenti.modifica', id=v.docente.id) }}">{{ v.docente.cognome }} {{ v.docente.nome }}</a>
+        ha {{ v.email_attuale }}, che in Workspace è di <b>{{ v.utente.cognome }} {{ v.utente.nome }}</b>.
+        {% for d in v.stesso_nome %}Esiste anche <a href="{{ url_for('docenti.modifica', id=d.id) }}">{{ d.cognome }} {{ d.nome }}</a> in anagrafica.{% endfor %}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if esito.account_attivo_docente_inattivo or esito.sospesi_con_docente_attivo %}
+<h2 style="font-size:1rem;">Stato degli account</h2>
+<div class="card" style="padding:10px 16px; margin-bottom:14px; font-size:.84rem;">
+    {% for v in esito.account_attivo_docente_inattivo %}
+    <div style="padding:4px 0;">{{ icon('warning') }} Account <b>attivo</b> ({{ v.utente.email }}) di un docente non più attivo in Caronte:
+        <a href="{{ url_for('docenti.modifica', id=v.docente.id) }}">{{ v.docente.cognome }} {{ v.docente.nome }}</a></div>
+    {% endfor %}
+    {% for v in esito.sospesi_con_docente_attivo %}
+    <div style="padding:4px 0;">{{ icon('warning') }} Account <b>sospeso</b> ({{ v.utente.email }}) di un docente attivo in Caronte:
+        <a href="{{ url_for('docenti.modifica', id=v.docente.id) }}">{{ v.docente.cognome }} {{ v.docente.nome }}</a></div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if esito.docenti_senza_account %}
+<h2 style="font-size:1rem;">Docenti attivi senza account nel file ({{ esito.docenti_senza_account|length }})</h2>
+<div class="card" style="padding:10px 16px; margin-bottom:14px; font-size:.84rem;">
+    {% for d in esito.docenti_senza_account %}<a href="{{ url_for('docenti.modifica', id=d.id) }}">{{ d.cognome }} {{ d.nome }}</a>{{ ' · ' if not loop.last }}{% endfor %}
+</div>
+{% endif %}
+
+{% if esito.account_senza_docente %}
+<h2 style="font-size:1rem;">Account senza docente in anagrafica ({{ esito.account_senza_docente|length }})</h2>
+<div class="card" style="padding:10px 16px; margin-bottom:14px; font-size:.84rem;">
+    {% for u in esito.account_senza_docente %}{{ u.cognome }} {{ u.nome }} ({{ u.email }}{{ ', ' ~ u.ou if u.ou }}){{ ' · ' if not loop.last }}{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

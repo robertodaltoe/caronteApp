@@ -127,6 +127,106 @@ def lista():
                            tipo_contratto_labels_brevi=TIPO_CONTRATTO_LABELS_BREVI)
 
 
+# ── Verifica / import indirizzi email da CSV Workspace ─────────────────
+# Il CSV si scarica dalla console admin (Directory -> Utenti -> Scarica
+# utenti). Nessuna chiamata a Google e nessun segreto sul server: la pagina
+# confronta, l'utente sceglie, solo allora si scrive (con backup cifrato).
+
+@docenti_bp.route('/docenti/verifica-email', methods=['GET', 'POST'])
+def verifica_email():
+    from modules.verifica_email_docenti import leggi_csv, confronta, ErroreCsv
+    if request.method == 'GET':
+        return render_template('docenti/verifica_email.html', esito=None)
+    f = request.files.get('file')
+    if not f or not f.filename:
+        flash('Scegli il file CSV scaricato dalla console Workspace.', 'warning')
+        return redirect(url_for('docenti.verifica_email'))
+    try:
+        utenti = leggi_csv(f.read())
+    except ErroreCsv as e:
+        flash(f'File non leggibile: {e}', 'error')
+        return redirect(url_for('docenti.verifica_email'))
+    esito = confronta(utenti, Docente.query.order_by(Docente.cognome, Docente.nome).all())
+    return render_template('docenti/verifica_email.html', esito=esito,
+                           n_utenti=len(utenti), nome_file=f.filename)
+
+
+def _backup_pre_import_email():
+    """Backup cifrato del database reale prima di scrivere. Ritorna il path,
+    o None se il database non è un file (es. test in memoria)."""
+    import os
+    from flask import current_app
+    uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if not uri.startswith('sqlite:///') or uri.endswith(':memory:'):
+        return None
+    db_path = uri[len('sqlite:///'):]
+    if not os.path.isfile(db_path):
+        return None
+    from modules.backup_cifrato import crea_backup_cifrato
+    backup_dir = os.path.join(os.path.dirname(db_path), 'data', 'backup')
+    return crea_backup_cifrato(db_path, backup_dir, suffisso='_pre_import_email_docenti')
+
+
+@docenti_bp.route('/docenti/verifica-email/applica', methods=['POST'])
+def verifica_email_applica():
+    """Applica le righe scelte. Ogni riga arriva come 'id|email_vecchia|email_nuova';
+    si salta se nel frattempo l'email attuale è cambiata, se la nuova non è
+    valida o se appartiene già a un altro docente."""
+    from modules.verifica_email_docenti import EMAIL_RE, email_pulita
+    from routes.auth import log as auth_log
+
+    righe = []
+    for raw in request.form.getlist('riga'):
+        parti = raw.split('|', 2)
+        if len(parti) != 3:
+            continue
+        try:
+            righe.append((int(parti[0]), parti[1].strip().lower(), parti[2].strip().lower()))
+        except ValueError:
+            continue
+    if not righe:
+        flash('Nessuna riga selezionata.', 'warning')
+        return redirect(url_for('docenti.verifica_email'))
+
+    backup = _backup_pre_import_email()
+
+    in_uso = {email_pulita(d.email): d.id for d in Docente.query.all() if email_pulita(d.email)}
+    applicate, saltate = 0, []
+    for id_doc, vecchia, nuova in righe:
+        d = db.session.get(Docente, id_doc)
+        if not d:
+            continue
+        nome = f'{d.cognome} {d.nome}'.strip()
+        if not EMAIL_RE.match(nuova):
+            saltate.append(f'{nome}: indirizzo non valido')
+        elif email_pulita(d.email) != vecchia:
+            saltate.append(f'{nome}: l\'email è cambiata dopo l\'anteprima')
+        elif in_uso.get(nuova, d.id) != d.id:
+            saltate.append(f'{nome}: {nuova} è già assegnata a un altro docente')
+        else:
+            if vecchia:
+                in_uso.pop(vecchia, None)
+            d.email = nuova
+            in_uso[nuova] = d.id
+            applicate += 1
+    db.session.commit()
+
+    integrita = db.session.execute(db.text('PRAGMA integrity_check')).scalar()
+    auth_log('import_email_docenti',
+             f'{applicate} email aggiornate, {len(saltate)} saltate'
+             + (f', backup {backup}' if backup else ''))
+    msg = f'{applicate} indirizzi email aggiornati.'
+    if backup:
+        import os
+        msg += f' Backup cifrato: {os.path.basename(backup)}.'
+    if integrita != 'ok':
+        msg += f' ATTENZIONE: controllo di integrità del database = {integrita}.'
+    flash(msg, 'success' if applicate and integrita == 'ok' else 'warning')
+    for s in saltate:
+        flash(f'Saltato — {s}', 'warning')
+    return redirect(url_for('docenti.lista'))
+
+
 @docenti_bp.route('/docenti/<int:id>/riattiva', methods=['POST'])
 def riattiva(id):
     """
