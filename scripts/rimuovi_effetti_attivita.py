@@ -39,7 +39,11 @@ def main():
 
     app = create_app()
     with app.app_context():
-        docs = Docente.query.filter(Docente.cognome.ilike(f'%{a.docente}%')).all()
+        # Cognome esatto in priorità ("Parolo" non deve trovare "Comparolo");
+        # in alternativa corrispondenza parziale.
+        docs = Docente.query.filter(db.func.lower(Docente.cognome) == a.docente.lower()).all()
+        if not docs:
+            docs = Docente.query.filter(Docente.cognome.ilike(f'%{a.docente}%')).all()
         if len(docs) != 1:
             print('Docenti trovati:', [(d.id, d.cognome, d.nome) for d in docs])
             print('Serve esattamente un docente: affina --docente.')
