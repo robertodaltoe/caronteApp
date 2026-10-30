@@ -2,6 +2,35 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 83 — Verifica email docenti da CSV della console Workspace
+
+Roberto: vuole verificare/importare in blocco gli indirizzi istituzionali
+nelle anagrafiche docente. Sessione in sandbox Linux (cloud); nessun accesso
+a `database.db`, test su DB isolati. Prima tappa del piano in
+`api_workspace/piano_quattro_funzioni.md`: nessuna API Google e nessun
+segreto sul server, si parte dal CSV (Directory -> Utenti -> Scarica utenti).
+
+- `modules/verifica_email_docenti.py` (logica pura): `leggi_csv` (BOM,
+  `;`/`,`, intestazioni Google o italiane, righe senza email valida
+  ignorate) e `confronta` -> categorie: ok, da_impostare, differenti,
+  nome_diverso (email uguale ma nome diverso: caso Ghezzi), ambigui
+  (omonimi, due account per un docente, stessa email su due docenti),
+  sospesi con docente attivo, account attivo di docente non attivo,
+  docenti attivi senza account, account senza docente. Abbinamento: prima
+  per email gia' scritta, poi per nome (senza accenti/ordine), poi per
+  parte locale dell'indirizzo.
+- `routes/docenti.py`: `/docenti/verifica-email` (anteprima, non scrive) e
+  `/docenti/verifica-email/applica` (solo righe scelte; backup cifrato
+  `_pre_import_email_docenti` e `PRAGMA integrity_check` dopo; salta se
+  l'email e' cambiata dopo l'anteprima, non e' valida o e' di un altro
+  docente). Le email "differenti" sono proposte ma NON preselezionate.
+- Pulsante "Verifica email" nell'anagrafica docenti e voce nella
+  ricerca/menu (`modules/navigazione.py`).
+- Test: `tests/test_verifica_email_docenti.py` (25; le route sull'app
+  vera su DB in /tmp). Suite completa 756 verdi.
+- Prossimo (se Roberto vuole): pulsante con Directory API in sola lettura
+  al posto del CSV, solo con ruolo admin delegato di lettura.
+
 ## Sessione 82 — Docenti "Più scuole" esclusi dai suggerimenti supplenza
 
 Roberto: "giorni di presenza qui" e "orario spezzato" dovevano togliere

@@ -153,6 +153,8 @@ FUNZIONI = [
     # ── Docenti ──────────────────────────────────────────────────────
     dict(label='Anagrafica docenti', endpoint='docenti.lista', gruppo='docenti',
          sezione='docenti', icona='person', parole='docenti insegnanti elenco', blueprint=True),
+    dict(label='Verifica email docenti (CSV Workspace)', endpoint='docenti.verifica_email', gruppo='docenti',
+         sezione='docenti', icona='person', parole='email indirizzi mail workspace google csv import account', azione=True),
     dict(label='Sostituzioni docenti', endpoint='sostituzioni.index', gruppo='docenti',
          sezione='sostituzioni', icona='refresh', parole='supplente titolare temporanea definitiva', blueprint=True),
     dict(label='Docenti ↔ Classi di concorso', endpoint='impostazione_anno.docenti_classi_concorso', gruppo='docenti',
