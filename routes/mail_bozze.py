@@ -251,7 +251,8 @@ def notifiche_supplenze_invia():
         giorno = date.fromisoformat(request.form.get('data', ''))
     except ValueError:
         return redirect(url_for('mail_bozze.notifiche_supplenze'))
-    risultati = ne.invia_supplenze(giorno, request.form.getlist('docenti'))
+    risultati = ne.invia_supplenze(giorno, request.form.getlist('docenti'),
+                                  reinvia=request.form.get('reinvia') == '1')
     auth_log('notifiche_supplenze',
              f'{giorno.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return render_template('notifiche_supplenze.html', giorno=giorno,
@@ -306,7 +307,8 @@ def report_banca_ore_invia():
     from routes.auth import log as auth_log
     mese = _mese_da_richiesta(request.form.get('mese'))
     risultati = ne.invia_banca_ore(mese, request.form.getlist('docenti'),
-                                   request.form.get('oggetto', ''), request.form.get('corpo', ''))
+                                   request.form.get('oggetto', ''), request.form.get('corpo', ''),
+        reinvia=request.form.get('reinvia') == '1')
     auth_log('report_banca_ore_email',
              f'{mese.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return _render_banca_ore(mese, risultati)
@@ -352,7 +354,8 @@ def orari_docenti_invia():
     from routes.auth import log as auth_log
     valido_dal = _valido_dal_da_richiesta(request.form.get('valido_dal'))
     risultati = ne.invia_orario(valido_dal, request.form.getlist('docenti'),
-                                request.form.get('oggetto', ''), request.form.get('corpo', ''))
+                                request.form.get('oggetto', ''), request.form.get('corpo', ''),
+        reinvia=request.form.get('reinvia') == '1')
     auth_log('orari_docenti_email',
              f'{valido_dal.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return _render_orari(valido_dal, risultati)
@@ -400,7 +403,8 @@ def calendario_docenti_invia():
     from routes.auth import log as auth_log
     mese = _mese_calendario(request.form.get('mese'))
     risultati = ne.invia_calendario(mese, request.form.getlist('docenti'),
-                                    request.form.get('oggetto', ''), request.form.get('corpo', ''))
+                                    request.form.get('oggetto', ''), request.form.get('corpo', ''),
+        reinvia=request.form.get('reinvia') == '1')
     auth_log('calendario_docenti_email',
              f'{mese.isoformat()}: ' + ', '.join(f'{n} {s}' for n, s, _ in risultati))
     return _render_calendario(mese, risultati)

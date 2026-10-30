@@ -293,6 +293,12 @@ def proposte_supplenze(giorno):
     return out
 
 
+def _come_reinvio(p):
+    """Copia della proposta per un reinvio voluto (stesso contenuto, testo magari
+    cambiato): l'oggetto lo dichiara, cosi' il docente capisce che sostituisce il precedente."""
+    return dict(p, oggetto='REINVIO ' + p['oggetto'])
+
+
 def _registra(p, giorno, stato, dettaglio=None, tipo='supplenze'):
     db.session.add(EmailUscita(
         tipo=tipo, giorno=giorno, hash_contenuto=p['hash'],
@@ -302,7 +308,7 @@ def _registra(p, giorno, stato, dettaglio=None, tipo='supplenze'):
     db.session.commit()
 
 
-def invia_supplenze(giorno, ids_docenti, mittente=None):
+def invia_supplenze(giorno, ids_docenti, mittente=None, reinvia=False):
     """Invia/registra le proposte selezionate. Ricalcola tutto dal DB (non
     si fida del contenuto della form). Ritorna lista di (cognome, stato, dettaglio)."""
     mod = modalita()
@@ -321,8 +327,10 @@ def invia_supplenze(giorno, ids_docenti, mittente=None):
             break
         nome = p['docente'].cognome
         if p['variante'] == 'gia_inviata':
-            risultati.append((nome, 'saltata', 'già inviata'))
-            continue
+            if not reinvia:
+                risultati.append((nome, 'saltata', 'già inviata'))
+                continue
+            p = _come_reinvio(p)
         if p['blocco']:
             _registra(p, giorno, 'saltata', p['blocco'])
             risultati.append((nome, 'saltata', p['blocco']))
@@ -406,7 +414,7 @@ class _AllegatiParziali(Exception):
         self.allegati = allegati
 
 
-def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, allegati_fn, messaggio_gia_inviata):
+def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, allegati_fn, messaggio_gia_inviata, reinvia=False):
     """Invio comune ai messaggi con allegati per docente (banca ore, orario, calendario).
     allegati_fn(docente) -> lista di (nome_file, bytes).
     Rispetta modalita', lista di prova, tetto e anti-duplicato; un errore resta riinviabile."""
@@ -424,8 +432,10 @@ def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, allegati_fn, messaggio_
             break
         nome = p['docente'].cognome
         if p['variante'] == 'gia_inviata':
-            risultati.append((nome, 'saltata', messaggio_gia_inviata))
-            continue
+            if not reinvia:
+                risultati.append((nome, 'saltata', messaggio_gia_inviata))
+                continue
+            p = _come_reinvio(p)
         if p['blocco']:
             _registra(p, periodo, 'saltata', p['blocco'], tipo)
             risultati.append((nome, 'saltata', p['blocco']))
@@ -459,7 +469,7 @@ def _invia_con_pdf(proposte, ids_docenti, periodo, tipo, allegati_fn, messaggio_
     return risultati
 
 
-def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
+def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None, reinvia=False):
     """Se oggetto/corpo sono passati dalla pagina, diventano il modello salvato."""
     if oggetto is not None or corpo is not None:
         imposta_modello_banca_ore(oggetto, corpo)
@@ -467,7 +477,7 @@ def invia_banca_ore(mese, ids_docenti, oggetto=None, corpo=None):
         return [('—', 'errore', 'invio disattivato')]
     return _invia_con_pdf(proposte_banca_ore(mese), ids_docenti, mese, 'banca_ore',
                           lambda d: [(f'Banca_ore_{d.cognome}.pdf', _pdf_banca_ore(d))],
-                          'già inviato questo mese')
+                          'già inviato questo mese', reinvia)
 
 
 # ── ORARIO DEI DOCENTI (invio una tantum a ogni nuova versione) ──
@@ -552,7 +562,7 @@ def proposte_orario(valido_dal):
     return out
 
 
-def invia_orario(valido_dal, ids_docenti, oggetto=None, corpo=None):
+def invia_orario(valido_dal, ids_docenti, oggetto=None, corpo=None, reinvia=False):
     if oggetto is not None or corpo is not None:
         imposta_modello_orario(oggetto, corpo)
     if modalita() == 'off':
@@ -560,7 +570,7 @@ def invia_orario(valido_dal, ids_docenti, oggetto=None, corpo=None):
     from routes.report import orario_pdf_bytes
     return _invia_con_pdf(proposte_orario(valido_dal), ids_docenti, valido_dal, 'orario',
                           lambda d: [(f'Orario_{d.cognome}.pdf', orario_pdf_bytes(d, valido_dal))],
-                          'già inviato per questa versione')
+                          'già inviato per questa versione', reinvia)
 
 
 # ── CALENDARIO MENSILE DEGLI IMPEGNI (PDF agenda + file .ics) ─────
@@ -644,7 +654,7 @@ def proposte_calendario(mese):
     return out
 
 
-def invia_calendario(mese, ids_docenti, oggetto=None, corpo=None):
+def invia_calendario(mese, ids_docenti, oggetto=None, corpo=None, reinvia=False):
     if oggetto is not None or corpo is not None:
         imposta_modello_calendario(oggetto, corpo)
     if modalita() == 'off':
@@ -662,4 +672,4 @@ def invia_calendario(mese, ids_docenti, oggetto=None, corpo=None):
         return lista
 
     return _invia_con_pdf(proposte_calendario(mese), ids_docenti, mese, 'calendario',
-                          allegati, 'già inviato per questo mese')
+                          allegati, 'già inviato per questo mese', reinvia)

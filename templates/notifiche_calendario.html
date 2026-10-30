@@ -112,6 +112,11 @@
             <button type="button" class="btn btn-sm btn-primary" onclick="selezionaTutti(true)">{{ icon('check') }} Seleziona tutti</button>
             <button type="button" class="btn btn-sm" style="background:#6b7280;color:white;" onclick="selezionaTutti(false)">Deseleziona tutti</button>
             <span class="contatore" id="contatore">0 selezionati</span>
+            <label style="font-size:.82rem; display:flex; gap:5px; align-items:center; cursor:pointer;"
+                   title="Per rimandare il messaggio (es. dopo aver cambiato il testo) a chi l'ha già ricevuto. L'oggetto riporterà «REINVIO».">
+                <input type="checkbox" name="reinvia" value="1" id="reinvia" onchange="aggiornaReinvio()">
+                Reinvia anche a chi l'ha già ricevuto
+            </label>
             {% if proposte %}
             <button class="btn btn-success" type="submit" id="btn-invia" style="margin-left:auto;"
                     {% if modalita == 'off' %}disabled title="Invio spento: scegli Simulato o Reale"{% endif %}>
@@ -135,6 +140,7 @@
                 <input type="checkbox" name="docenti" value="{{ p.docente.id }}"
                        data-cognome="{{ p.docente.cognome }}" data-nome="{{ p.docente.nome or '' }}" data-email="{{ p.email }}"
                        {% if bloccato %}disabled{% endif %}
+                       {% if p.variante == 'gia_inviata' and not p.blocco %}data-gia="1"{% endif %}
                        onchange="cambiaScelta(this)">
                 <div>
                     <div class="doc-nome">{{ p.docente.cognome }}{% if p.docente.nome %} {{ p.docente.nome[0] }}.{% endif %}</div>
@@ -187,6 +193,18 @@ function cambiaScelta(c) {
     aggiornaContatore();
 }
 
+function aggiornaReinvio() {
+    const on = document.getElementById('reinvia').checked;
+    document.querySelectorAll('input[data-gia="1"]').forEach(c => {
+        c.disabled = !on;
+        if (!on) c.checked = false;
+        const card = document.getElementById('card-' + c.value);
+        card.classList.toggle('non-inviabile', !on);
+        card.classList.toggle('selezionato', c.checked);
+    });
+    aggiornaContatore();
+}
+
 function selezionaTutti(stato) {
     caselle().filter(c => !c.disabled).forEach(c => {
         c.checked = stato;
@@ -201,7 +219,8 @@ document.getElementById('form-invio').addEventListener('submit', function (e) {
     if (!document.getElementById('oggetto').value.trim() || !document.getElementById('corpo').value.trim()) {
         e.preventDefault(); return;
     }
-    if (!confirm('Inviare il calendario a ' + n + ' docenti?')) e.preventDefault();
+    const rein = document.getElementById('reinvia').checked && caselle().some(c => c.checked && c.dataset.gia);
+    if (!confirm((rein ? 'ATTENZIONE: include reinvii a chi ha già ricevuto il messaggio.\n\n' : '') + 'Inviare il calendario a ' + n + ' docenti?')) e.preventDefault();
 });
 
 document.addEventListener('DOMContentLoaded', aggiornaContatore);
