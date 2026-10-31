@@ -36,6 +36,16 @@
     </div>
 </div>
 
+<!-- COPIA DA DRIVE -->
+<div class="card" style="margin-bottom:20px;">
+    <h2>{{ icon('download') }} Copia l'orario da Drive</h2>
+    <p style="color:var(--grigio); font-size:.85rem; margin:6px 0 10px;">
+        Porta qui l'orario globale e quello di sostegno dal database pubblicato su Drive
+        dall'altra postazione (es. il Mac da casa). Anteprima e backup prima di scrivere.
+    </p>
+    <a href="{{ url_for('sync.orario_da_drive') }}" class="btn btn-sm btn-primary">{{ icon('refresh') }} Confronta con Drive</a>
+</div>
+
 <!-- AGGIORNA ORARIO -->
 <div class="card" style="margin-bottom:20px;">
     <h2>⇧︎ Aggiorna orario</h2>

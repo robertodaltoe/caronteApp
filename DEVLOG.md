@@ -2,6 +2,29 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 87 — Copia dell'orario (globale + sostegno) da Drive
+
+Richiesta: far arrivare sul server l'orario sistemato dal Mac. L'orario non
+entra nell'autosync (l'import sostituisce tutto: un merge riga per riga
+mescolerebbe orari vecchi e nuovi), quindi la strada è una sostituzione
+esplicita e a comando.
+
+- `modules/orario_da_drive.py`: `confronta()` (sola lettura, differenze per
+  docente con i nomi) e `applica()` per `orario_docenti`, `orario_sostegno`,
+  `orario_placeholder`. Rifiuta un remoto senza orario globale e un remoto
+  cambiato dopo l'anteprima (impronta). Righe di docenti assenti in locale
+  saltate e contate. `alias_posti_vacanti` non copiata (FK verso tabelle non
+  sincronizzate).
+- Pagina `/sincronizzazione/orario-da-drive` (pulsante in "Sincronizzazione
+  orario"): anteprima con data di pubblicazione del file su Drive, conferma,
+  backup cifrato `_pre_orario_da_drive`, sostituzione, poi stesse
+  conseguenze dell'import (supplenze mancanti, posti vacanti) e
+  `PRAGMA integrity_check`.
+- Limite noto: i `sostituzioni_docente` collegati a righe di
+  `orario_docenti` per id risentono come già con l'import (ids nuovi).
+- Test: `tests/test_orario_da_drive.py` (modulo + pagine su app reale in
+  /tmp). Sandbox Linux, nessun database reale toccato.
+
 ## Sessione 86 — Banca ore: supplenze a recupero senza movimento
 
 Segnalazione: De Agostini ha una supplenza a recupero del 29/10 visibile nel

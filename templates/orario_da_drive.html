@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from '_icons.html' import icon %}
+{% block title %}Copia orario da Drive{% endblock %}
+{% block content %}
+<h1 style="font-size:1.4rem; color:var(--blu);">{{ icon('refresh') }} Copia orario da Drive</h1>
+<p style="font-size:.78rem; margin-bottom:14px;"><a href="{{ url_for('sync.index') }}">← Torna alla sincronizzazione orario</a></p>
+
+<p style="font-size:.84rem; color:var(--grigio); max-width:720px; margin-bottom:12px;">
+    Confronto tra l'orario di questo computer e quello contenuto nel database pubblicato su Drive
+    {% if pubblicato_il %}(ultima pubblicazione: <b>{{ pubblicato_il.strftime('%d/%m/%Y %H:%M') }}</b>){% endif %}.
+    Confermando, l'orario globale, quello di sostegno e i posti vacanti di qui vengono
+    <b>sostituiti</b> da quelli di Drive. Prima viene fatto un backup cifrato.
+    Se la data di pubblicazione è più vecchia delle tue ultime modifiche all'orario, non confermare.
+</p>
+
+{% for t in esito.tabelle %}
+<div class="card" style="padding:14px; margin-bottom:12px;">
+    <h2 style="font-size:1rem;">{{ t.etichetta }}</h2>
+    {% if t.assente %}
+        <p style="font-size:.82rem; color:var(--grigio);">Il file su Drive non contiene questa tabella: resta com'è.</p>
+    {% else %}
+        <p style="font-size:.84rem;">Qui: <b>{{ t.locali }}</b> righe · Su Drive: <b>{{ t.remote }}</b> ·
+            <span style="color:var(--verde);">+{{ t.aggiunte }}</span> /
+            <span style="color:var(--rosso);">−{{ t.rimosse }}</span>
+            {% if t.saltate %} · {{ t.saltate }} saltate (docente non presente qui){% endif %}</p>
+        {% if t.per_titolare %}
+        <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+            {% for nome, d in t.per_titolare %}
+            <tr style="border-top:1px solid #f1f3f5;">
+                <td style="padding:5px 8px; font-weight:600;">{{ nome }}</td>
+                <td style="padding:5px 8px; color:var(--verde);">+{{ d['+'] }}</td>
+                <td style="padding:5px 8px; color:var(--rosso);">−{{ d['-'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="font-size:.82rem; color:var(--grigio);">Nessuna differenza.</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endfor %}
+
+{% if esito.applicabile %}
+<form method="post" action="{{ url_for('sync.orario_da_drive_applica') }}">
+    <input type="hidden" name="impronta" value="{{ esito.impronta }}">
+    <button type="submit" class="btn btn-primary btn-sm">{{ icon('check') }} Sostituisci l'orario di qui con quello di Drive</button>
+</form>
+{% else %}
+<div class="card" style="padding:14px; color:var(--rosso);">{{ esito.motivo }}</div>
+{% endif %}
+{% endblock %}

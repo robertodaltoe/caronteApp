@@ -345,3 +345,111 @@ def posto_nomina():
     flash(f'{doc.cognome} nominato: {esito["ore"]} ore nel suo orario, '
           f'{esito["supplenze_cancellate"]} supplenze del posto cancellate.', 'success')
     return redirect(url_for('sync.index'))
+
+
+# ── COPIA ORARIO DA DRIVE (globale + sostegno) ────────────────
+def _scarica_remoto_orario():
+    """Decifra in un file temporaneo il database pubblicato su Drive.
+    Ritorna (path, data_ultima_modifica) oppure (None, messaggio_errore)."""
+    from datetime import datetime
+    from pathlib import Path
+    from flask import current_app
+    from sync_db import cartella_drive, DRIVE_DB_NAME
+    from modules.backup_cifrato import decifra_file
+    cartella = cartella_drive()
+    if not cartella:
+        return None, 'Google Drive non trovato su questo computer.'
+    origine = Path(cartella) / DRIVE_DB_NAME
+    if not origine.exists():
+        return None, 'Nessun database pubblicato su Drive.'
+    tmp_dir = Path(current_app.root_path) / 'data' / 'tmp_autosync'
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp = tmp_dir / 'orario_da_drive.db'
+    try:
+        decifra_file(str(origine), str(tmp))
+    except Exception as e:
+        return None, f'Impossibile decifrare il database di Drive: {e}'
+    return str(tmp), datetime.fromtimestamp(origine.stat().st_mtime)
+
+
+def _elimina_file(path):
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
+@sync_bp.route('/sincronizzazione/orario-da-drive')
+def orario_da_drive():
+    from modules import orario_da_drive as odd
+    percorso, info = _scarica_remoto_orario()
+    if not percorso:
+        flash(info, 'error')
+        return redirect(url_for('sync.index'))
+    try:
+        esito = odd.confronta(db, percorso)
+    finally:
+        _elimina_file(percorso)
+    return render_template('orario_da_drive.html', esito=esito, pubblicato_il=info)
+
+
+@sync_bp.route('/sincronizzazione/orario-da-drive/applica', methods=['POST'])
+def orario_da_drive_applica():
+    from datetime import date
+    from flask import current_app
+    from modules import orario_da_drive as odd
+    from modules import auto_sync
+    from routes.auth import log as auth_log
+
+    if not auto_sync._LOCK.acquire(blocking=False):
+        flash('Un giro di sincronizzazione è in corso: riprova fra un minuto.', 'warning')
+        return redirect(url_for('sync.orario_da_drive'))
+    try:
+        percorso, info = _scarica_remoto_orario()
+        if not percorso:
+            flash(info, 'error')
+            return redirect(url_for('sync.index'))
+        try:
+            uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
+            backup = None
+            if uri.startswith('sqlite:///') and not uri.endswith(':memory:'):
+                from modules.backup_cifrato import crea_backup_cifrato
+                db_path = uri[len('sqlite:///'):]
+                backup = crea_backup_cifrato(
+                    db_path, os.path.join(os.path.dirname(db_path), 'data', 'backup'),
+                    suffisso='_pre_orario_da_drive')
+            try:
+                scritte = odd.applica(db, percorso, request.form.get('impronta', ''))
+                db.session.commit()
+            except odd.RemotoSenzaOrario as e:
+                db.session.rollback()
+                flash(str(e), 'error')
+                return redirect(url_for('sync.orario_da_drive'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Errore durante la copia dell\'orario: {e}', 'error')
+                return redirect(url_for('sync.index'))
+        finally:
+            _elimina_file(percorso)
+    finally:
+        auto_sync._LOCK.release()
+
+    # Stesse conseguenze di un import dell'orario.
+    from modules.assenze_registrazione import rigenera_supplenze_mancanti
+    from modules.posti_vacanti import ricalcola_supplenze_posti
+    rigenerate = rigenera_supplenze_mancanti(data_da=date.today())
+    esito_posti = ricalcola_supplenze_posti()
+    if db.session.execute(db.text('PRAGMA integrity_check')).scalar() != 'ok':
+        flash('Attenzione: il controllo di integrità del database non è "ok".', 'error')
+    auth_log('orario_da_drive',
+             ', '.join(f'{t}: {n}' for t, n in scritte.items()))
+    msg = 'Orario copiato da Drive: ' + ', '.join(f'{n} righe in {t}' for t, n in scritte.items()) + '.'
+    if rigenerate:
+        msg += f' {rigenerate} supplenze da assegnare generate per assenze già registrate.'
+    if esito_posti['create'] or esito_posti['cancellate']:
+        msg += (f' Posti vacanti: {esito_posti["create"]} supplenze aggiunte, '
+                f'{esito_posti["cancellate"]} rimosse.')
+    if backup:
+        msg += f' Backup prima della copia: {os.path.basename(backup)}.'
+    flash(msg, 'success')
+    return redirect(url_for('sync.index'))
