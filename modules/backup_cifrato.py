@@ -105,6 +105,10 @@ def crea_backup_cifrato(db_path, backup_dir, suffisso=''):
     if os.path.exists(vecchio):
         os.remove(vecchio)
 
+    # Copia di sicurezza su Drive (best effort: non blocca mai il backup)
+    from modules.backup_drive import copia_su_drive
+    copia_su_drive(dest)
+
     return dest
 
 
