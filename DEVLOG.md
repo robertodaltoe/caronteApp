@@ -2,6 +2,22 @@
 
 > File di log persistente delle sessioni di sviluppo con Claude.
 
+## Sessione 88 — Backup cifrati copiati su Drive (passo C del piano Workspace)
+
+Dopo ogni `crea_backup_cifrato` la stessa copia (già cifrata) viene duplicata
+in `Drive Desktop/CaronteApp/Backup`, senza API né token (solo cartella
+locale). Best effort: se Drive manca o la copia fallisce resta valido il
+backup locale e si scrive un avviso nel log. Retention (default, da
+confermare): gli ultimi 14 più il più recente di ogni mese; file con nome
+non standard mai toccati. Spenta nei test e con `CARONTE_BACKUP_DRIVE=0`.
+
+- `modules/backup_drive.py`, aggancio in `modules/backup_cifrato.py`.
+- Nota: i backup sono cifrati con la chiave locale `data/backup/.backup_key`:
+  su Drive non servono a niente senza quella chiave (da conservare a parte).
+- Cartella: `CaronteApp/Backup` (stessa radice di `sync_db.py`), non la
+  struttura `Caronte/Backup` ipotizzata nel piano.
+- Test: `tests/test_backup_drive.py`. Nessun database reale toccato.
+
 ## Sessione 87 — Copia dell'orario (globale + sostegno) da Drive
 
 Richiesta: far arrivare sul server l'orario sistemato dal Mac. L'orario non
